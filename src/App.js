@@ -29,7 +29,7 @@ const App = () => {
         []
     );
 
-    const theme = createTheme(
+    const theme = React.useMemo(() => createTheme(
         {
             scrollbarStyles: {
                 "&::-webkit-scrollbar": {
@@ -38,7 +38,7 @@ const App = () => {
                 },
                 "&::-webkit-scrollbar-thumb": {
                     boxShadow: 'inset 0 0 6px rgba(0, 0, 0, 0.3)',
-                    backgroundColor: "#1976D2",
+                    backgroundColor: mode === "light" ? "#BDBDBD" : "#1976D2",
                 },
             },
             scrollbarStylesSoft: {
@@ -46,56 +46,56 @@ const App = () => {
                     width: "8px",
                 },
                 "&::-webkit-scrollbar-thumb": {
-                    backgroundColor: mode === "light" ? "#F3F3F3" : "#333333",
+                    backgroundColor: mode === "light" ? "#E0E0E0" : "#333333",
                 },
             },
             palette: {
-                type: "dark",
+                type: mode,
                 primary: {
                     main: "#0EA5E9", // azul da LP (cta gradient)
-                    contrastText: "#F9FAFB",
+                    contrastText: mode === "light" ? "#FFFFFF" : "#F9FAFB",
                 },
                 secondary: {
                     main: "#22C55E", // verde da LP
-                    contrastText: "#0B1120",
+                    contrastText: mode === "light" ? "#FFFFFF" : "#0B1120",
                 },
                 background: {
-                    default: "#020617", // fundo geral escuro
-                    paper: "#0B1120",   // cards / superfícies
+                    default: mode === "light" ? "#F5F5F5" : "#020617", // fundo geral
+                    paper: mode === "light" ? "#FFFFFF" : "#0B1120",   // cards / superfícies
                 },
                 text: {
-                    primary: "#E5E7EB",
-                    secondary: "#9CA3AF",
+                    primary: mode === "light" ? "#1F2937" : "#E5E7EB",
+                    secondary: mode === "light" ? "#6B7280" : "#9CA3AF",
                 },
-                dark: { main: "#020617" },
-                light: { main: "#0B1120" },
-                tabHeaderBackground: "#020617",
-                optionsBackground: "#0F172A",
-                options: "#0F172A",
+                dark: { main: mode === "light" ? "#F5F5F5" : "#020617" },
+                light: { main: mode === "light" ? "#FFFFFF" : "#0B1120" },
+                tabHeaderBackground: mode === "light" ? "#FFFFFF" : "#020617",
+                optionsBackground: mode === "light" ? "#F9FAFB" : "#0F172A",
+                options: mode === "light" ? "#F9FAFB" : "#0F172A",
                 fontecor: "#22C55E",
-                fancyBackground: "#020617",
-                bordabox: "#1F2937",
-                newmessagebox: "#020617",
-                inputdigita: "#020617",
-                contactdrawer: "#020617",
-                announcements: "#020617",
-                login: "rgba(15, 23, 42, 0.98)",
-                announcementspopover: "#020617",
-                chatlist: "#020617",
-                boxlist: "#020617",
-                boxchatlist: "#020617",
-                total: "#020617",
-                messageIcons: "#9CA3AF",
-                inputBackground: "#020617",
+                fancyBackground: mode === "light" ? "#F5F5F5" : "#020617",
+                bordabox: mode === "light" ? "#E5E7EB" : "#1F2937",
+                newmessagebox: mode === "light" ? "#FFFFFF" : "#020617",
+                inputdigita: mode === "light" ? "#FFFFFF" : "#020617",
+                contactdrawer: mode === "light" ? "#FFFFFF" : "#020617",
+                announcements: mode === "light" ? "#FFFFFF" : "#020617",
+                login: mode === "light" ? "rgba(255, 255, 255, 0.98)" : "rgba(15, 23, 42, 0.98)",
+                announcementspopover: mode === "light" ? "#FFFFFF" : "#020617",
+                chatlist: mode === "light" ? "#FFFFFF" : "#020617",
+                boxlist: mode === "light" ? "#FFFFFF" : "#020617",
+                boxchatlist: mode === "light" ? "#FFFFFF" : "#020617",
+                total: mode === "light" ? "#FFFFFF" : "#020617",
+                messageIcons: mode === "light" ? "#6B7280" : "#9CA3AF",
+                inputBackground: mode === "light" ? "#FFFFFF" : "#020617",
                 barraSuperior: "linear-gradient(to right, #0EA5E9, #22C55E)",
-                boxticket: "#020617",
-                campaigntab: "#020617",
-                mediainput: "#020617",
+                boxticket: mode === "light" ? "#FFFFFF" : "#020617",
+                campaigntab: mode === "light" ? "#FFFFFF" : "#020617",
+                mediainput: mode === "light" ? "#FFFFFF" : "#020617",
             },
             mode,
         },
         locale
-    );
+    ), [mode, locale]);
 
     useEffect(() => {
         const i18nlocale = localStorage.getItem("i18nextLng");

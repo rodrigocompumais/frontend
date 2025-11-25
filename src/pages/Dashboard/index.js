@@ -54,7 +54,7 @@ const useStyles = makeStyles((theme) => ({
   cardAvatar: {
     fontSize: "55px",
     color: grey[500],
-    backgroundColor: "#ffffff",
+    backgroundColor: theme.palette.type === 'dark' ? "#ffffff" : theme.palette.background.paper,
     width: theme.spacing(7),
     height: theme.spacing(7),
   },
@@ -115,7 +115,7 @@ const useStyles = makeStyles((theme) => ({
     //backgroundColor: "palette",
     //backgroundColor: theme.palette.primary.main,
     backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
-    color: "#eee",
+    color: theme.palette.type === 'dark' ? "#eee" : "#ffffff",
   },
   card2: {
     padding: theme.spacing(2),
@@ -126,7 +126,7 @@ const useStyles = makeStyles((theme) => ({
     //backgroundColor: "palette",
     //backgroundColor: theme.palette.primary.main,
     backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
-    color: "#eee",
+    color: theme.palette.type === 'dark' ? "#eee" : "#ffffff",
   },
   card3: {
     padding: theme.spacing(2),
@@ -136,7 +136,7 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
   //backgroundColor: theme.palette.primary.main,
     backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
-    color: "#eee",
+    color: theme.palette.type === 'dark' ? "#eee" : "#ffffff",
   },
   card4: {
     padding: theme.spacing(2),
@@ -146,7 +146,7 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     //backgroundColor: theme.palette.primary.main,
     backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
-    color: "#eee",
+    color: theme.palette.type === 'dark' ? "#eee" : "#ffffff",
   },
   card5: {
     padding: theme.spacing(2),
@@ -156,7 +156,7 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     //backgroundColor: theme.palette.primary.main,
     backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
-    color: "#eee",
+    color: theme.palette.type === 'dark' ? "#eee" : "#ffffff",
   },
   card6: {
     padding: theme.spacing(2),
@@ -166,7 +166,7 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     //backgroundColor: theme.palette.primary.main,
     backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
-    color: "#eee",
+    color: theme.palette.type === 'dark' ? "#eee" : "#ffffff",
   },
   card7: {
     padding: theme.spacing(2),
@@ -176,7 +176,7 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     //backgroundColor: theme.palette.primary.main,
     backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
-    color: "#eee",
+    color: theme.palette.type === 'dark' ? "#eee" : "#ffffff",
   },
   card8: {
     padding: theme.spacing(2),
@@ -186,7 +186,7 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     //backgroundColor: theme.palette.primary.main,
     backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
-    color: "#eee",
+    color: theme.palette.type === 'dark' ? "#eee" : "#ffffff",
   },
   card9: {
     padding: theme.spacing(2),
@@ -196,7 +196,7 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     //backgroundColor: theme.palette.primary.main,
     backgroundColor: theme.palette.type === 'dark' ? theme.palette.boxticket.main : theme.palette.primary.main,
-    color: "#eee",
+    color: theme.palette.type === 'dark' ? "#eee" : "#ffffff",
   },
   fixedHeightPaper2: {
     padding: theme.spacing(2),
