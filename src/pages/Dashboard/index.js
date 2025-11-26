@@ -17,11 +17,11 @@ import AccessAlarmIcon from '@material-ui/icons/AccessAlarm';
 import TimerIcon from '@material-ui/icons/Timer';
 import RefreshIcon from "@material-ui/icons/Refresh";
 import TrendingUpIcon from "@material-ui/icons/TrendingUp";
-import CampaignIcon from "@material-ui/icons/Send";
+import SendIcon from "@material-ui/icons/Send";
 import AssignmentIcon from "@material-ui/icons/Assignment";
 import WifiIcon from "@material-ui/icons/Wifi";
 import PeopleIcon from "@material-ui/icons/People";
-import MessageIcon from "@material-ui/icons/Message";
+import ChatIcon from "@material-ui/icons/Chat";
 
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
@@ -145,6 +145,7 @@ const Dashboard = () => {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const { find } = useDashboard();
+  const { count: contactsCount } = useContacts({});
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -216,15 +217,6 @@ const Dashboard = () => {
       .add(minutes, "minutes")
       .format("HH[h] mm[m]");
   }
-
-  const GetContacts = (all) => {
-    let props = {};
-    if (all) {
-      props = {};
-    }
-    const { count } = useContacts(props);
-    return count;
-  };
 
   return (
     <div className={classes.root}>
@@ -316,7 +308,7 @@ const Dashboard = () => {
           <Grid item xs={6} sm={4} md={2}>
             <StatCard
               title="Contatos"
-              value={GetContacts(true) || 0}
+              value={contactsCount || 0}
               icon={GroupAddIcon}
               color="#8B5CF6"
               gradient={["#8B5CF6", "#7C3AED"]}
@@ -371,7 +363,7 @@ const Dashboard = () => {
             <MiniStatCard
               title="Campanhas Ativas"
               value={extendedData.activeCampaigns || 0}
-              icon={CampaignIcon}
+              icon={SendIcon}
               color="#F59E0B"
               subtext="em andamento"
             />
@@ -381,7 +373,7 @@ const Dashboard = () => {
             <MiniStatCard
               title="Mensagens"
               value={extendedData.messagesSent || 0}
-              icon={MessageIcon}
+              icon={ChatIcon}
               color="#8B5CF6"
               subtext="enviadas no período"
             />
