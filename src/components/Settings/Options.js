@@ -15,7 +15,10 @@ import { ToastContainer, toast } from 'react-toastify';
 import { makeStyles } from "@material-ui/core/styles";
 import { grey, blue } from "@material-ui/core/colors";
 import { Tabs, Tab } from "@material-ui/core";
+import Button from "@material-ui/core/Button";
+import CircularProgress from "@material-ui/core/CircularProgress";
 import { i18n } from "../../translate/i18n";
+import api from "../../services/api";
 
 //import 'react-toastify/dist/ReactToastify.css';
  
@@ -111,6 +114,7 @@ export default function Options(props) {
 
   const [geminiApiKey, setGeminiApiKey] = useState("");
   const [loadingGeminiApiKey, setLoadingGeminiApiKey] = useState(false);
+  const [testingGeminiApiKey, setTestingGeminiApiKey] = useState(false);
   
   // recursos a mais da plw design
 
@@ -390,6 +394,28 @@ export default function Options(props) {
     toast.success(i18n.t("settings.options.toasts.success"));
     setLoadingGeminiApiKey(false);
   }
+
+  async function handleTestGeminiApiKey() {
+    if (!geminiApiKey || geminiApiKey.trim() === "") {
+      toast.error("Por favor, insira uma chave da API do Gemini antes de testar.");
+      return;
+    }
+
+    setTestingGeminiApiKey(true);
+    try {
+      const { data } = await api.get("/ai/test-key");
+      if (data.valid) {
+        toast.success(data.message || "Chave da API do Gemini válida e funcionando!");
+      } else {
+        toast.error(data.message || "Chave da API do Gemini inválida.");
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || "Erro ao testar chave da API";
+      toast.error(errorMessage);
+    } finally {
+      setTestingGeminiApiKey(false);
+    }
+  }
   return (
     <>
       <Grid spacing={3} container>
@@ -584,7 +610,7 @@ export default function Options(props) {
       </Grid>
       <Grid spacing={3} container style={{ marginBottom: 10 }}>
         <Grid xs={12} sm={6} md={6} item>
-          <FormControl className={classes.selectContainer}>
+          <FormControl className={classes.selectContainer} style={{ width: "100%" }}>
             <TextField
               id="geminiApiKey"
               name="geminiApiKey"
@@ -597,7 +623,18 @@ export default function Options(props) {
                 handleGeminiApiKey(e.target.value);
               }}
               placeholder={i18n.t("settings.options.fields.geminiApiKey.placeholder")}
+              style={{ marginBottom: 8 }}
             />
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleTestGeminiApiKey}
+              disabled={testingGeminiApiKey || loadingGeminiApiKey || !geminiApiKey}
+              startIcon={testingGeminiApiKey ? <CircularProgress size={16} /> : null}
+              style={{ marginTop: 8 }}
+            >
+              {testingGeminiApiKey ? "Testando..." : "Testar Chave"}
+            </Button>
             <FormHelperText>
               {loadingGeminiApiKey && i18n.t("settings.options.updating")}
             </FormHelperText>
