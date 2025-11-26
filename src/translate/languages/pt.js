@@ -1317,10 +1317,67 @@ const messages = {
         },
       },
       todolist: {
+        title: "Minhas Tarefas",
         input: "Nova tarefa",
         buttons: {
           add: "Adicionar",
           save: "Salvar",
+          newTask: "Nova Tarefa",
+        },
+        filters: {
+          search: "Buscar tarefas...",
+          status: "Status",
+          priority: "Prioridade",
+          category: "Categoria",
+          all: "Todos",
+        },
+        status: {
+          pending: "Pendente",
+          in_progress: "Em Andamento",
+          completed: "Concluída",
+          cancelled: "Cancelada",
+        },
+        priority: {
+          low: "Baixa",
+          medium: "Média",
+          high: "Alta",
+          urgent: "Urgente",
+        },
+        stats: {
+          total: "Total",
+          pending: "Pendentes",
+          inProgress: "Em Andamento",
+          completed: "Concluídas",
+        },
+        modal: {
+          titleNew: "Nova Tarefa",
+          titleEdit: "Editar Tarefa",
+          title: "Título",
+          description: "Descrição",
+          dueDate: "Data de Vencimento",
+          assignedTo: "Responsável",
+          category: "Categoria",
+        },
+        card: {
+          overdue: "Atrasada",
+          today: "Hoje",
+          tomorrow: "Amanhã",
+        },
+        toasts: {
+          created: "Tarefa criada com sucesso!",
+          updated: "Tarefa atualizada com sucesso!",
+          deleted: "Tarefa excluída com sucesso!",
+          completed: "Tarefa concluída!",
+          reopened: "Tarefa reaberta",
+          error: "Erro ao processar tarefa",
+        },
+        empty: {
+          title: "Nenhuma tarefa encontrada",
+          description: "Clique no botão + para criar sua primeira tarefa",
+        },
+        views: {
+          list: "Lista",
+          kanban: "Kanban",
         },
       },
       helps: {
