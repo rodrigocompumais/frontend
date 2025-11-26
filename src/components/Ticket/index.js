@@ -4,7 +4,7 @@ import { useParams, useHistory } from "react-router-dom";
 import { toast } from "react-toastify";
 import clsx from "clsx";
 
-import { Paper, makeStyles } from "@material-ui/core";
+import { Paper, makeStyles, useTheme } from "@material-ui/core";
 
 import ContactDrawer from "../ContactDrawer";
 import MessageInput from "../MessageInputCustom/";
@@ -61,6 +61,7 @@ const Ticket = () => {
   const { ticketId } = useParams();
   const history = useHistory();
   const classes = useStyles();
+  const theme = useTheme();
 
   const { user } = useContext(AuthContext);
 
@@ -179,7 +180,14 @@ const Ticket = () => {
           {renderTicketInfo()}
           <TicketActionButtons ticket={ticket} />
         </TicketHeader>
-        <Paper>
+        <Paper 
+          elevation={0}
+          style={{
+            borderRadius: 0,
+            borderTop: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
+            borderBottom: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
+          }}
+        >
           <TagsContainer ticket={ticket} />
         </Paper>
         <ReplyMessageProvider>{renderMessagesList()}</ReplyMessageProvider>
