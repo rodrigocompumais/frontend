@@ -1492,6 +1492,11 @@ const messages = {
             sendGreetingMessageOneQueues: {
               title: "Enviar saudação quando houver somente 1 fila<",
             },
+            geminiApiKey: {
+              title: "Gemini API Key",
+              placeholder: "Informe sua chave da API Gemini",
+              helper: "Use sua chave da API Gemini (modelo gratuito) para ativar os resumos de IA no dashboard.",
+            },
             disabled: "Desabilitado",
             active: "Ativo",
             enabled: "Habilitado",

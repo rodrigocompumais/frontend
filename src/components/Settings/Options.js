@@ -108,6 +108,9 @@ export default function Options(props) {
 
   const [asaasType, setAsaasType] = useState("");
   const [loadingAsaasType, setLoadingAsaasType] = useState(false);
+
+  const [geminiApiKey, setGeminiApiKey] = useState("");
+  const [loadingGeminiApiKey, setLoadingGeminiApiKey] = useState(false);
   
   // recursos a mais da plw design
 
@@ -193,6 +196,11 @@ export default function Options(props) {
       const asaasType = settings.find((s) => s.key === "asaas");
       if (asaasType) {
         setAsaasType(asaasType.value);
+      }
+
+      const geminiKey = settings.find((s) => s.key === "geminiApiKey");
+      if (geminiKey) {
+        setGeminiApiKey(geminiKey.value);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -370,6 +378,17 @@ export default function Options(props) {
     });
     toast.success(i18n.t("settings.options.toasts.success"));
     setLoadingAsaasType(false);
+  }
+
+  async function handleGeminiApiKey(value) {
+    setGeminiApiKey(value);
+    setLoadingGeminiApiKey(true);
+    await update({
+      key: "geminiApiKey",
+      value,
+    });
+    toast.success(i18n.t("settings.options.toasts.success"));
+    setLoadingGeminiApiKey(false);
   }
   return (
     <>
@@ -562,7 +581,33 @@ export default function Options(props) {
             label={i18n.t("settings.options.tabs.integrations")} />
 
         </Tabs>
-
+      </Grid>
+      <Grid spacing={3} container style={{ marginBottom: 10 }}>
+        <Grid xs={12} sm={6} md={6} item>
+          <FormControl className={classes.selectContainer}>
+            <TextField
+              id="geminiApiKey"
+              name="geminiApiKey"
+              margin="dense"
+              label={i18n.t("settings.options.fields.geminiApiKey.title")}
+              variant="outlined"
+              type="password"
+              value={geminiApiKey}
+              onChange={async (e) => {
+                handleGeminiApiKey(e.target.value);
+              }}
+              placeholder={i18n.t("settings.options.fields.geminiApiKey.placeholder")}
+            />
+            <FormHelperText>
+              {loadingGeminiApiKey && i18n.t("settings.options.updating")}
+            </FormHelperText>
+          </FormControl>
+        </Grid>
+        <Grid xs={12} sm={6} md={6} item>
+          <Typography variant="body2" color="textSecondary">
+            {i18n.t("settings.options.fields.geminiApiKey.helper")}
+          </Typography>
+        </Grid>
       </Grid>
       {/*-----------------IXC DESATIVADO 4.6.5-----------------*/}
       {/*<Grid spacing={3} container
