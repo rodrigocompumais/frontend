@@ -1,7 +1,9 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
 import { makeStyles } from "@material-ui/core/styles";
-import Particles from "react-tsparticles";
+
+// Importação dinâmica para evitar erros de SSR/inicialização
+let Particles = null;
 
 const useStyles = makeStyles(() => ({
   root: {
@@ -14,10 +16,31 @@ const useStyles = makeStyles(() => ({
 
 const ParticlesBackground = () => {
   const classes = useStyles();
+  const [ParticlesComponent, setParticlesComponent] = useState(null);
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    // Carregar o componente de partículas de forma assíncrona
+    const loadParticles = async () => {
+      try {
+        const module = await import("react-tsparticles");
+        setParticlesComponent(() => module.default);
+      } catch (error) {
+        console.warn("Erro ao carregar react-tsparticles:", error);
+        setHasError(true);
+      }
+    };
+    loadParticles();
+  }, []);
+
+  // Se houver erro ou ainda carregando, não renderizar nada
+  if (hasError || !ParticlesComponent) {
+    return <div className={classes.root} />;
+  }
 
   return (
     <div className={classes.root}>
-      <Particles
+      <ParticlesComponent
         id="tsparticles"
         options={{
           fullScreen: { enable: false },
