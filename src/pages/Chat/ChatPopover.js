@@ -17,6 +17,7 @@ import {
   ListItemText,
   Paper,
   Typography,
+  useTheme,
 } from "@material-ui/core";
 import api from "../../services/api";
 import { isArray } from "lodash";
@@ -35,7 +36,28 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: 500,
     padding: theme.spacing(1),
     overflowY: "scroll",
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"}`,
     ...theme.scrollbarStyles,
+  },
+  listItem: {
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    "&:hover": {
+      backgroundColor: theme.palette.type === "dark" 
+        ? "rgba(255, 255, 255, 0.08)" 
+        : "rgba(0, 0, 0, 0.04)",
+    },
+  },
+  listItemText: {
+    color: theme.palette.text.primary,
+    "& .MuiListItemText-primary": {
+      color: theme.palette.text.primary,
+    },
+    "& .MuiListItemText-secondary": {
+      color: theme.palette.text.secondary,
+    },
   },
 }));
 
@@ -96,6 +118,7 @@ const reducer = (state, action) => {
 };
 
 export default function ChatPopover() {
+  const theme = useTheme();
   const classes = useStyles();
 
   const { user } = useContext(AuthContext);
@@ -247,11 +270,18 @@ export default function ChatPopover() {
           vertical: "top",
           horizontal: "center",
         }}
+        PaperProps={{
+          style: {
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+          }
+        }}
       >
         <Paper
           variant="outlined"
           onScroll={handleScroll}
           className={classes.mainPaper}
+          elevation={0}
         >
           <List
             component="nav"
@@ -262,19 +292,22 @@ export default function ChatPopover() {
               chats.map((item, key) => (
                 <ListItem
                   key={key}
+                  className={classes.listItem}
                   style={{
-                    background: key % 2 === 0 ? "#ededed" : "white",
-                    border: "1px solid #eee",
+                    border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"}`,
                     cursor: "pointer",
+                    marginBottom: theme.spacing(0.5),
+                    borderRadius: theme.spacing(0.5),
                   }}
                   onClick={() => goToMessages(item)}
                   button
                 >
                   <ListItemText
+                    className={classes.listItemText}
                     primary={item.lastMessage}
                     secondary={
                       <>
-                        <Typography component="span" style={{ fontSize: 12 }}>
+                        <Typography component="span" style={{ fontSize: 12, color: theme.palette.text.secondary }}>
                           {datetimeToClient(item.updatedAt)}
                         </Typography>
                         <span style={{ marginTop: 5, display: "block" }}></span>
@@ -284,7 +317,12 @@ export default function ChatPopover() {
                 </ListItem>
               ))}
             {isArray(chats) && chats.length === 0 && (
-              <ListItemText primary={i18n.t("mainDrawer.appBar.notRegister")} />
+              <ListItem>
+                <ListItemText 
+                  className={classes.listItemText}
+                  primary={i18n.t("mainDrawer.appBar.notRegister")} 
+                />
+              </ListItem>
             )}
           </List>
         </Paper>

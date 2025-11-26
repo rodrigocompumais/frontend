@@ -26,6 +26,8 @@ const useStyles = makeStyles(theme => ({
 	tabContainer: {
 		overflowY: "auto",
 		maxHeight: 350,
+		backgroundColor: theme.palette.background.paper,
+		color: theme.palette.text.primary,
 		...theme.scrollbarStyles,
 	},
 	popoverPaper: {
@@ -33,12 +35,27 @@ const useStyles = makeStyles(theme => ({
 		maxWidth: 350,
 		marginLeft: theme.spacing(2),
 		marginRight: theme.spacing(1),
+		backgroundColor: theme.palette.background.paper,
+		color: theme.palette.text.primary,
+		border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"}`,
+		boxShadow: theme.shadows[8],
 		[theme.breakpoints.down("sm")]: {
 			maxWidth: 270,
 		},
 	},
 	noShadow: {
 		boxShadow: "none !important",
+	},
+	listItem: {
+		color: theme.palette.text.primary,
+		"&:hover": {
+			backgroundColor: theme.palette.type === "dark" 
+				? "rgba(255, 255, 255, 0.08)" 
+				: "rgba(0, 0, 0, 0.04)",
+		},
+	},
+	listItemText: {
+		color: theme.palette.text.primary,
 	},
 }));
 
@@ -251,8 +268,11 @@ const NotificationsPopOver = (volume) => {
 			>
 				<List dense className={classes.tabContainer}>
 					{notifications.length === 0 ? (
-						<ListItem>
-							<ListItemText>{i18n.t("notifications.noTickets")}</ListItemText>
+						<ListItem className={classes.listItem}>
+							<ListItemText 
+								className={classes.listItemText}
+								primary={i18n.t("notifications.noTickets")}
+							/>
 						</ListItem>
 					) : (
 						notifications.map(ticket => (

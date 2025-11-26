@@ -21,6 +21,7 @@ import {
   DialogActions,
   Button,
   DialogContentText,
+  useTheme,
 } from "@material-ui/core";
 import api from "../../services/api";
 import { isArray } from "lodash";
@@ -34,7 +35,28 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: 5000,
     padding: theme.spacing(1),
     overflowY: "scroll",
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.2)" : "rgba(0, 0, 0, 0.1)"}`,
     ...theme.scrollbarStyles,
+  },
+  listItem: {
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    "&:hover": {
+      backgroundColor: theme.palette.type === "dark" 
+        ? "rgba(255, 255, 255, 0.08)" 
+        : "rgba(0, 0, 0, 0.04)",
+    },
+  },
+  listItemText: {
+    color: theme.palette.text.primary,
+    "& .MuiListItemText-primary": {
+      color: theme.palette.text.primary,
+    },
+    "& .MuiListItemText-secondary": {
+      color: theme.palette.text.secondary,
+    },
   },
 }));
 
@@ -128,6 +150,7 @@ const reducer = (state, action) => {
 };
 
 export default function AnnouncementsPopover() {
+  const theme = useTheme();
   const classes = useStyles();
 
   const [loading, setLoading] = useState(false);
@@ -271,11 +294,18 @@ export default function AnnouncementsPopover() {
           vertical: "top",
           horizontal: "center",
         }}
+        PaperProps={{
+          style: {
+            backgroundColor: theme.palette.background.paper,
+            color: theme.palette.text.primary,
+          }
+        }}
       >
         <Paper
           variant="outlined"
           onScroll={handleScroll}
           className={classes.mainPaper}
+          elevation={0}
         >
           <List
             component="nav"
@@ -286,11 +316,13 @@ export default function AnnouncementsPopover() {
               announcements.map((item, key) => (
                 <ListItem
                   key={key}
+                  className={classes.listItem}
                   style={{
-                    //background: key % 2 === 0 ? "#ededed" : "white",
-                    border: "1px solid #eee",
+                    border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"}`,
                     borderLeft: borderPriority(item.priority),
                     cursor: "pointer",
+                    marginBottom: theme.spacing(0.5),
+                    borderRadius: theme.spacing(0.5),
                   }}
                   onClick={() => handleShowAnnouncementDialog(item)}
                 >
@@ -303,14 +335,15 @@ export default function AnnouncementsPopover() {
                     </ListItemAvatar>
                   )}
                   <ListItemText
+                    className={classes.listItemText}
                     primary={item.title}
                     secondary={
                       <>
-                        <Typography component="span" style={{ fontSize: 12 }}>
+                        <Typography component="span" style={{ fontSize: 12, color: theme.palette.text.secondary }}>
                           {moment(item.createdAt).format("DD/MM/YYYY")}
                         </Typography>
                         <span style={{ marginTop: 5, display: "block" }}></span>
-                        <Typography component="span" variant="body2">
+                        <Typography component="span" variant="body2" style={{ color: theme.palette.text.secondary }}>
                           {item.text}
                         </Typography>
                       </>
@@ -319,7 +352,12 @@ export default function AnnouncementsPopover() {
                 </ListItem>
               ))}
             {isArray(announcements) && announcements.length === 0 && (
-              <ListItemText primary="Nenhum registro" />
+              <ListItem>
+                <ListItemText 
+                  className={classes.listItemText}
+                  primary="Nenhum registro" 
+                />
+              </ListItem>
             )}
           </List>
         </Paper>
