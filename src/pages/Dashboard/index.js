@@ -268,22 +268,26 @@ const Dashboard = () => {
   }
 
   const handleGenerateSummary = async () => {
-    if (!selectedAgentId) {
-      toast.error("Selecione um atendente para gerar o resumo");
-      return;
-    }
-
     setSummaryLoading(true);
     setSummaryText("");
 
     try {
-      const selectedAgent = attendants.find((a) => a.id === Number(selectedAgentId));
-      setSummaryAgentName(selectedAgent?.name || "Atendente");
+      // Se tiver atendente selecionado, buscar nome dele, senão é resumo geral
+      if (selectedAgentId) {
+        const selectedAgent = attendants.find((a) => a.id === Number(selectedAgentId));
+        setSummaryAgentName(selectedAgent?.name || "Atendente");
+      } else {
+        setSummaryAgentName("Resumo Geral da Operação");
+      }
 
       const params = {
-        agentId: Number(selectedAgentId),
         maxMessages: 200,
       };
+
+      // Só enviar agentId se tiver selecionado
+      if (selectedAgentId) {
+        params.agentId = Number(selectedAgentId);
+      }
 
       if (!isEmpty(dateFrom) && moment(dateFrom).isValid()) {
         params.dateStart = moment(dateFrom).format("YYYY-MM-DD");
@@ -588,12 +592,15 @@ const Dashboard = () => {
               </Typography>
               <Box style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <FormControl size="small" style={{ minWidth: 200 }}>
-                  <InputLabel>Selecione o Atendente</InputLabel>
+                  <InputLabel>Filtrar por Atendente</InputLabel>
                   <Select
                     value={selectedAgentId}
                     onChange={(e) => setSelectedAgentId(e.target.value)}
-                    label="Selecione o Atendente"
+                    label="Filtrar por Atendente"
                   >
+                    <MenuItem value="">
+                      <em>📊 Resumo Geral (Todos)</em>
+                    </MenuItem>
                     {attendants.map((attendant) => (
                       <MenuItem key={attendant.id} value={attendant.id}>
                         {attendant.name}
@@ -605,7 +612,7 @@ const Dashboard = () => {
                   className={classes.summaryButton}
                   startIcon={summaryLoading ? <CircularProgress size={16} color="inherit" /> : <ExtensionIcon />}
                   onClick={handleGenerateSummary}
-                  disabled={!selectedAgentId || summaryLoading}
+                  disabled={summaryLoading}
                   variant="contained"
                 >
                   Resumo IA
