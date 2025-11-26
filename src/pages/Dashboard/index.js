@@ -22,6 +22,20 @@ import AssignmentIcon from "@material-ui/icons/Assignment";
 import WifiIcon from "@material-ui/icons/Wifi";
 import PeopleIcon from "@material-ui/icons/People";
 import ChatIcon from "@material-ui/icons/Chat";
+import SmartToyIcon from "@material-ui/icons/SmartToy";
+import GetAppIcon from "@material-ui/icons/GetApp";
+import CloseIcon from "@material-ui/icons/Close";
+import Dialog from "@material-ui/core/Dialog";
+import DialogTitle from "@material-ui/core/DialogTitle";
+import DialogContent from "@material-ui/core/DialogContent";
+import DialogActions from "@material-ui/core/DialogActions";
+import Button from "@material-ui/core/Button";
+import CircularProgress from "@material-ui/core/CircularProgress";
+import Select from "@material-ui/core/Select";
+import MenuItem from "@material-ui/core/MenuItem";
+import FormControl from "@material-ui/core/FormControl";
+import InputLabel from "@material-ui/core/InputLabel";
+import toastError from "../../errors/toastError";
 
 import { makeStyles } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
@@ -131,6 +145,36 @@ const useStyles = makeStyles((theme) => ({
     "0%": { transform: "rotate(0deg)" },
     "100%": { transform: "rotate(360deg)" },
   },
+  summaryButton: {
+    background: "linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%)",
+    color: "#FFFFFF",
+    textTransform: "none",
+    fontWeight: 600,
+    padding: theme.spacing(1, 2),
+    "&:hover": {
+      background: "linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%)",
+    },
+  },
+  summaryModal: {
+    "& .MuiDialog-paper": {
+      maxWidth: "800px",
+      width: "90%",
+    },
+  },
+  summaryContent: {
+    padding: theme.spacing(2),
+    whiteSpace: "pre-wrap",
+    lineHeight: 1.6,
+    maxHeight: "60vh",
+    overflowY: "auto",
+    ...theme.scrollbarStyles,
+  },
+  summaryHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: theme.spacing(2),
+  },
 }));
 
 const Dashboard = () => {
@@ -144,6 +188,11 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [summaryModalOpen, setSummaryModalOpen] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState("");
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryText, setSummaryText] = useState("");
+  const [summaryAgentName, setSummaryAgentName] = useState("");
   const { find } = useDashboard();
   const { count: contactsCount } = useContacts({});
 
@@ -217,6 +266,73 @@ const Dashboard = () => {
       .add(minutes, "minutes")
       .format("HH[h] mm[m]");
   }
+
+  const handleGenerateSummary = async () => {
+    if (!selectedAgentId) {
+      toast.error("Selecione um atendente para gerar o resumo");
+      return;
+    }
+
+    setSummaryLoading(true);
+    setSummaryText("");
+
+    try {
+      const selectedAgent = attendants.find((a) => a.id === Number(selectedAgentId));
+      setSummaryAgentName(selectedAgent?.name || "Atendente");
+
+      const params = {
+        agentId: Number(selectedAgentId),
+        maxMessages: 200,
+      };
+
+      if (!isEmpty(dateFrom) && moment(dateFrom).isValid()) {
+        params.dateStart = moment(dateFrom).format("YYYY-MM-DD");
+      }
+
+      if (!isEmpty(dateTo) && moment(dateTo).isValid()) {
+        params.dateEnd = moment(dateTo).format("YYYY-MM-DD");
+      }
+
+      if (period > 0 && isEmpty(dateFrom) && isEmpty(dateTo)) {
+        const startDate = moment().subtract(period, "days");
+        params.dateStart = startDate.format("YYYY-MM-DD");
+        params.dateEnd = moment().format("YYYY-MM-DD");
+      }
+
+      const { data } = await api.post("/ai/summary/agent", params);
+      setSummaryText(data.summary || "Nenhum resumo disponível.");
+      setSummaryModalOpen(true);
+    } catch (err) {
+      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
+        toast.error("Configure a API Key do Gemini em Configurações → Integrações");
+      } else {
+        toastError(err);
+      }
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const handleDownloadSummary = () => {
+    const agentName = summaryAgentName.replace(/\s+/g, "-");
+    const dateStr = moment().format("YYYY-MM-DD");
+    const filename = `resumo-ia-${agentName}-${dateStr}.txt`;
+
+    const content = `Resumo IA das Conversas - ${summaryAgentName}\n` +
+      `Gerado em: ${moment().format("DD/MM/YYYY HH:mm:ss")}\n` +
+      `Período: ${dateFrom || "Últimos " + period + " dias"} até ${dateTo || moment().format("DD/MM/YYYY")}\n\n` +
+      `========================================\n\n${summaryText}`;
+
+    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className={classes.root}>
@@ -466,9 +582,36 @@ const Dashboard = () => {
         {/* Attendants Table */}
         {attendants.length > 0 && (
           <>
-            <Typography className={classes.sectionTitle}>
-              👥 Status dos Atendentes
-            </Typography>
+            <Box className={classes.summaryHeader}>
+              <Typography className={classes.sectionTitle}>
+                👥 Status dos Atendentes
+              </Typography>
+              <Box style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <FormControl size="small" style={{ minWidth: 200 }}>
+                  <InputLabel>Selecione o Atendente</InputLabel>
+                  <Select
+                    value={selectedAgentId}
+                    onChange={(e) => setSelectedAgentId(e.target.value)}
+                    label="Selecione o Atendente"
+                  >
+                    {attendants.map((attendant) => (
+                      <MenuItem key={attendant.id} value={attendant.id}>
+                        {attendant.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Button
+                  className={classes.summaryButton}
+                  startIcon={summaryLoading ? <CircularProgress size={16} color="inherit" /> : <SmartToyIcon />}
+                  onClick={handleGenerateSummary}
+                  disabled={!selectedAgentId || summaryLoading}
+                  variant="contained"
+                >
+                  Resumo IA
+                </Button>
+              </Box>
+            </Box>
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <TableAttendantsStatus
@@ -479,6 +622,43 @@ const Dashboard = () => {
             </Grid>
           </>
         )}
+
+        {/* Summary Modal */}
+        <Dialog
+          open={summaryModalOpen}
+          onClose={() => setSummaryModalOpen(false)}
+          className={classes.summaryModal}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span>Resumo IA das Conversas – {summaryAgentName}</span>
+              <IconButton size="small" onClick={() => setSummaryModalOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Typography className={classes.summaryContent}>
+              {summaryText || "Carregando resumo..."}
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setSummaryModalOpen(false)} color="secondary">
+              Fechar
+            </Button>
+            <Button
+              onClick={handleDownloadSummary}
+              color="primary"
+              variant="contained"
+              startIcon={<GetAppIcon />}
+              disabled={!summaryText}
+            >
+              Baixar Relatório
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Container>
     </div>
   );
