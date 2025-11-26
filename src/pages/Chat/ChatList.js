@@ -28,19 +28,86 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     height: "calc(100% - 58px)",
     overflow: "hidden",
-    borderRadius: 0,
-    backgroundColor: theme.palette.boxlist, //DARK MODE PLW DESIGN//
+    borderRadius: theme.spacing(2),
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
   },
   chatList: {
     display: "flex",
     flexDirection: "column",
     position: "relative",
     flex: 1,
-    overflowY: "scroll",
+    overflowY: "auto",
+    overflowX: "hidden",
+    padding: theme.spacing(1),
     ...theme.scrollbarStyles,
   },
   listItem: {
     cursor: "pointer",
+    borderRadius: theme.spacing(1.5),
+    marginBottom: theme.spacing(0.5),
+    padding: theme.spacing(1.5),
+    transition: "all 0.2s ease",
+    border: `1px solid transparent`,
+    "&:hover": {
+      backgroundColor: theme.palette.type === "dark" 
+        ? "rgba(255, 255, 255, 0.05)" 
+        : "rgba(0, 0, 0, 0.04)",
+      transform: "translateX(4px)",
+    },
+    [theme.breakpoints.down("sm")]: {
+      padding: theme.spacing(1),
+      borderRadius: theme.spacing(1),
+    },
+  },
+  listItemActive: {
+    backgroundColor: theme.palette.type === "dark" 
+      ? "rgba(14, 165, 233, 0.15)" 
+      : "rgba(14, 165, 233, 0.08)",
+    borderLeft: `4px solid ${theme.palette.primary.main}`,
+    "&:hover": {
+      backgroundColor: theme.palette.type === "dark" 
+        ? "rgba(14, 165, 233, 0.2)" 
+        : "rgba(14, 165, 233, 0.12)",
+    },
+  },
+  listItemText: {
+    "& .MuiListItemText-primary": {
+      fontSize: "0.9375rem",
+      fontWeight: 500,
+      color: theme.palette.text.primary,
+      marginBottom: theme.spacing(0.25),
+    },
+    "& .MuiListItemText-secondary": {
+      fontSize: "0.8125rem",
+      color: theme.palette.text.secondary,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    },
+  },
+  badge: {
+    "& .MuiChip-root": {
+      height: "20px",
+      fontSize: "0.6875rem",
+      fontWeight: 600,
+      backgroundColor: theme.palette.secondary.main,
+      color: "#FFFFFF",
+    },
+  },
+  actionButtons: {
+    display: "flex",
+    gap: theme.spacing(0.5),
+  },
+  iconButton: {
+    padding: theme.spacing(0.75),
+    color: theme.palette.text.secondary,
+    "&:hover": {
+      backgroundColor: theme.palette.type === "dark" 
+        ? "rgba(255, 255, 255, 0.1)" 
+        : "rgba(0, 0, 0, 0.08)",
+      color: theme.palette.text.primary,
+    },
   },
 }));
 
@@ -93,9 +160,10 @@ export default function ChatList({
         {unreads > 0 && (
           <Chip
             size="small"
-            style={{ marginLeft: 5 }}
+            style={{ marginLeft: 8 }}
             label={unreads}
             color="secondary"
+            className={classes.badge}
           />
         )}
       </>
@@ -108,11 +176,10 @@ export default function ChatList({
       : "";
   };
 
-  const getItemStyle = (chat) => {
-    return {
-      borderLeft: chat.uuid === id ? "6px solid #002d6e" : null,
-      backgroundColor: chat.uuid === id ? "theme.palette.chatlist" : null,
-    };
+  const getItemClassName = (chat) => {
+    return chat.uuid === id 
+      ? `${classes.listItem} ${classes.listItemActive}` 
+      : classes.listItem;
   };
 
   return (
@@ -134,40 +201,45 @@ export default function ChatList({
                 <ListItem
                   onClick={() => goToMessages(chat)}
                   key={key}
-                  className={classes.listItem}
-                  style={getItemStyle(chat)}
+                  className={getItemClassName(chat)}
                   button
                 >
                   <ListItemText
+                    className={classes.listItemText}
                     primary={getPrimaryText(chat)}
                     secondary={getSecondaryText(chat)}
                   />
                   {chat.ownerId === user.id && (
                     <ListItemSecondaryAction>
-                      <IconButton
-                        onClick={() => {
-                          goToMessages(chat).then(() => {
-                            handleEditChat(chat);
-                          });
-                        }}
-                        edge="end"
-                        aria-label="delete"
-                        size="small"
-                        style={{ marginRight: 5 }}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                      <IconButton
-                        onClick={() => {
-                          setSelectedChat(chat);
-                          setConfirmModalOpen(true);
-                        }}
-                        edge="end"
-                        aria-label="delete"
-                        size="small"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
+                      <div className={classes.actionButtons}>
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            goToMessages(chat).then(() => {
+                              handleEditChat(chat);
+                            });
+                          }}
+                          edge="end"
+                          aria-label="edit"
+                          size="small"
+                          className={classes.iconButton}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedChat(chat);
+                            setConfirmModalOpen(true);
+                          }}
+                          edge="end"
+                          aria-label="delete"
+                          size="small"
+                          className={classes.iconButton}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </div>
                     </ListItemSecondaryAction>
                   )}
                 </ListItem>

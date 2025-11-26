@@ -36,16 +36,27 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     height: `calc(100% - 48px)`,
     overflowY: "hidden",
-    border: "1px solid rgba(0, 0, 0, 0.12)",
+    borderRadius: theme.spacing(2),
+    backgroundColor: theme.palette.background.default,
+    border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
   },
   gridContainer: {
     flex: 1,
     height: "100%",
-    border: "1px solid rgba(0, 0, 0, 0.12)",
-    backgroundColor: theme.palette.dark,
+    borderRadius: theme.spacing(2),
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
+    overflow: "hidden",
   },
   gridItem: {
     height: "100%",
+    "&:first-child": {
+      borderRight: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
+      [theme.breakpoints.down("md")]: {
+        borderRight: "none",
+        borderBottom: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
+      },
+    },
   },
   gridItemTab: {
     height: "92%",
@@ -53,7 +64,28 @@ const useStyles = makeStyles((theme) => ({
   },
   btnContainer: {
     textAlign: "right",
-    padding: 10,
+    padding: theme.spacing(2),
+    backgroundColor: theme.palette.background.paper,
+    borderBottom: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
+  },
+  newButton: {
+    borderRadius: theme.spacing(1.5),
+    textTransform: "none",
+    fontWeight: 600,
+    padding: theme.spacing(1, 2.5),
+    boxShadow: theme.shadows[2],
+    "&:hover": {
+      boxShadow: theme.shadows[4],
+    },
+  },
+  tabs: {
+    backgroundColor: theme.palette.background.paper,
+    borderBottom: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
+    "& .MuiTab-root": {
+      textTransform: "none",
+      fontWeight: 500,
+      minHeight: 48,
+    },
   },
 }));
 
@@ -344,6 +376,7 @@ function Chat(props) {
                 }}
                 color="primary"
                 variant="contained"
+                className={classes.newButton}
               >
                 {i18n.t("chat.buttons.new")}
               </Button>
@@ -388,6 +421,7 @@ function Chat(props) {
             textColor="primary"
             onChange={(e, v) => setTab(v)}
             aria-label="disabled tabs example"
+            className={classes.tabs}
           >
             <Tab label={i18n.t("chat.chats")} />
             <Tab label={i18n.t("chat.messages")} />
@@ -400,6 +434,7 @@ function Chat(props) {
                 onClick={() => setShowDialog(true)}
                 color="primary"
                 variant="contained"
+                className={classes.newButton}
               >
                 {i18n.t("chat.buttons.newChat")}
               </Button>
