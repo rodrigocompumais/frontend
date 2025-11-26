@@ -52,14 +52,14 @@ const useStyles = makeStyles(theme => ({
 		padding: theme.spacing(1, 2.5),
 		textTransform: "none",
 		fontWeight: 600,
-		background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+		background: "linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%)",
 		color: "#FFFFFF",
 		boxShadow: theme.shadows[2],
 		transition: "all 0.3s ease",
 		"&:hover": {
 			boxShadow: theme.shadows[4],
 			transform: "translateY(-2px)",
-			background: "linear-gradient(135deg, #059669 0%, #10B981 100%)",
+			background: "linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%)",
 		},
 	},
 	reopenButton: {
@@ -105,10 +105,10 @@ const useStyles = makeStyles(theme => ({
 	resolveIconButton: {
 		borderRadius: theme.spacing(1.5),
 		padding: theme.spacing(1),
-		color: "#10B981",
+		color: theme.palette.primary.main,
 		transition: "all 0.2s ease",
 		"&:hover": {
-			backgroundColor: "rgba(16, 185, 129, 0.1)",
+			backgroundColor: "rgba(14, 165, 233, 0.1)",
 			transform: "scale(1.1)",
 		},
 	},

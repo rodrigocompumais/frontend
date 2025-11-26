@@ -87,7 +87,7 @@ const App = () => {
                 total: mode === "light" ? "#FFFFFF" : "#020617",
                 messageIcons: mode === "light" ? "#6B7280" : "#9CA3AF",
                 inputBackground: mode === "light" ? "#FFFFFF" : "#020617",
-                barraSuperior: "linear-gradient(to right, #0EA5E9, #22C55E)",
+                barraSuperior: "linear-gradient(to right, #0EA5E9, #38BDF8)",
                 boxticket: mode === "light" ? "#FFFFFF" : "#020617",
                 campaigntab: mode === "light" ? "#FFFFFF" : "#020617",
                 mediainput: mode === "light" ? "#FFFFFF" : "#020617",
