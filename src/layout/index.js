@@ -35,6 +35,7 @@ import AnnouncementsPopover from "../components/AnnouncementsPopover";
 import logo from "../assets/logo.png";
 import { SocketContext } from "../context/Socket/SocketContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
+import AiChatFloating from "../components/AiChatFloating";
 
 import { useDate } from "../hooks/useDate";
 
@@ -511,6 +512,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
 
         {children ? children : null}
       </main>
+      <AiChatFloating />
     </div>
   );
 };
