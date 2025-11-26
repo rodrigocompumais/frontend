@@ -38,7 +38,7 @@ import {
 import { toast } from "react-toastify";
 import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { socketConnection } from "../../services/socket";
+import { SocketContext } from "../../context/Socket/SocketContext";
 import TaskCard from "../../components/TaskCard";
 import TaskModal from "../../components/TaskModal";
 import { i18n } from "../../translate/i18n";
@@ -205,6 +205,7 @@ const ToDoList = () => {
   const classes = useStyles();
   const theme = useTheme();
   const { user } = useContext(AuthContext);
+  const socketManager = useContext(SocketContext);
 
   const [tasks, setTasks] = useState([]);
   const [stats, setStats] = useState({
@@ -262,8 +263,8 @@ const ToDoList = () => {
   }, [fetchTasks, fetchStats]);
 
   useEffect(() => {
-    const companyId = user.companyId;
-    const socket = socketConnection({ companyId });
+    const companyId = localStorage.getItem("companyId");
+    const socket = socketManager.getSocket(companyId);
 
     socket.on(`company-${companyId}-task`, (data) => {
       if (data.action === "create" || data.action === "update") {
@@ -279,7 +280,7 @@ const ToDoList = () => {
     return () => {
       socket.disconnect();
     };
-  }, [user.companyId, fetchTasks, fetchStats]);
+  }, [socketManager, fetchTasks, fetchStats]);
 
   const handleToggleComplete = async (taskId, newStatus) => {
     try {
