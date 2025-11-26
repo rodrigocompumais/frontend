@@ -31,6 +31,7 @@ import api from "../../services/api";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ContactListItemModal from "../../components/ContactListItemModal";
 import ConfirmationModal from "../../components/ConfirmationModal/";
+import AddExistingContactsModal from "../../components/AddExistingContactsModal";
 
 import { i18n } from "../../translate/i18n";
 import MainHeader from "../../components/MainHeader";
@@ -117,6 +118,7 @@ const ContactListItems = () => {
   const [hasMore, setHasMore] = useState(false);
   const [contactList, setContactList] = useState({});
   const fileUploadRef = useRef(null);
+  const [addExistingModalOpen, setAddExistingModalOpen] = useState(false);
 
   const { findById: findContactList } = useContactLists();
 
@@ -247,6 +249,14 @@ const ContactListItems = () => {
     history.push("/contact-lists");
   };
 
+  const handleOpenAddExistingModal = () => {
+    setAddExistingModalOpen(true);
+  };
+
+  const handleCloseAddExistingModal = () => {
+    setAddExistingModalOpen(false);
+  };
+
   return (
     <MainContainer className={classes.mainContainer}>
       <ContactListItemModal
@@ -255,6 +265,11 @@ const ContactListItems = () => {
         aria-labelledby="form-dialog-title"
         contactId={selectedContactId}
       ></ContactListItemModal>
+      <AddExistingContactsModal
+        open={addExistingModalOpen}
+        onClose={handleCloseAddExistingModal}
+        contactListId={contactListId}
+      />
       <ConfirmationModal
         title={
           deletingContact
@@ -288,8 +303,8 @@ const ContactListItems = () => {
             <Title>{contactList.name}</Title>
           </Grid>
           <Grid xs={12} sm={7} item>
-            <Grid spacing={2} container>
-              <Grid xs={12} sm={6} item>
+            <Grid spacing={1} container>
+              <Grid xs={12} sm={4} item>
                 <TextField
                   fullWidth
                   placeholder={i18n.t("contactListItems.searchPlaceholder")}
@@ -305,7 +320,7 @@ const ContactListItems = () => {
                   }}
                 />
               </Grid>
-              <Grid xs={4} sm={2} item>
+              <Grid xs={6} sm={2} item>
                 <Button
                   fullWidth
                   variant="contained"
@@ -315,7 +330,7 @@ const ContactListItems = () => {
                   {i18n.t("contactListItems.buttons.lists")}
                 </Button>
               </Grid>
-              <Grid xs={4} sm={2} item>
+              <Grid xs={6} sm={2} item>
                 <Button
                   fullWidth
                   variant="contained"
@@ -328,7 +343,17 @@ const ContactListItems = () => {
                   {i18n.t("contactListItems.buttons.import")}
                 </Button>
               </Grid>
-              <Grid xs={4} sm={2} item>
+              <Grid xs={6} sm={2} item>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  color="primary"
+                  onClick={handleOpenAddExistingModal}
+                >
+                  {i18n.t("contactListItems.buttons.addExisting")}
+                </Button>
+              </Grid>
+              <Grid xs={6} sm={2} item>
                 <Button
                   fullWidth
                   variant="contained"

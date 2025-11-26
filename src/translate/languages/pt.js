@@ -571,6 +571,27 @@ const messages = {
           add: "Adicionar Prompt",
         },
       },
+      addExistingContactsModal: {
+        title: "Adicionar Contatos Existentes",
+        searchPlaceholder: "Pesquisar contatos...",
+        selectedCount: "{{count}} selecionado(s)",
+        noContacts: "Nenhum contato encontrado",
+        table: {
+          name: "Nome",
+          number: "Número",
+          email: "E-mail",
+        },
+        buttons: {
+          add: "Adicionar {{count}}",
+          cancel: "Cancelar",
+          selectAll: "Selecionar Todos",
+          clearSelection: "Limpar Seleção",
+        },
+        toasts: {
+          success: "{{count}} contato(s) adicionado(s) com sucesso! ({{skipped}} duplicado(s) ignorado(s))",
+          noSelection: "Selecione pelo menos um contato",
+        },
+      },
       contactModal: {
         title: {
           add: "Adicionar contato",
@@ -1044,6 +1065,7 @@ const messages = {
         searchPlaceholder: "Pesquisa",
         buttons: {
           add: "Novo",
+          addExisting: "Existentes",
           lists: "Listas",
           import: "Importar",
         },
