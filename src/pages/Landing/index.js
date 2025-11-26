@@ -287,7 +287,7 @@ const Landing = () => {
     const message = encodeURIComponent(
       `Olá! Tenho interesse no plano *${plan.name}* - R$ ${plan.value?.toFixed(2)}/mês.\n\nRecursos: ${features.join(", ")}.\n\nGostaria de mais informações!`
     );
-    window.open(`https://wa.me/5533511861?text=${message}`, "_blank");
+    window.open(`https://wa.me/553433511861?text=${message}`, "_blank");
   };
 
   // Formatar valor para moeda brasileira

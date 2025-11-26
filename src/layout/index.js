@@ -78,9 +78,8 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "space-between",
     padding: "0 8px",
     minHeight: "48px",
-    [theme.breakpoints.down("sm")]: {
-      height: "48px"
-    }
+    height: "48px",
+    boxSizing: "border-box",
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
@@ -140,6 +139,7 @@ const useStyles = makeStyles((theme) => ({
   },
   appBarSpacer: {
     minHeight: "48px",
+    height: "48px",
   },
   content: {
     flex: 1,
