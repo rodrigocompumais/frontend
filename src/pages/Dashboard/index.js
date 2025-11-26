@@ -22,7 +22,7 @@ import AssignmentIcon from "@material-ui/icons/Assignment";
 import WifiIcon from "@material-ui/icons/Wifi";
 import PeopleIcon from "@material-ui/icons/People";
 import ChatIcon from "@material-ui/icons/Chat";
-import PsychologyIcon from "@material-ui/icons/Psychology";
+import ExtensionIcon from "@material-ui/icons/Extension";
 import GetAppIcon from "@material-ui/icons/GetApp";
 import CloseIcon from "@material-ui/icons/Close";
 import Dialog from "@material-ui/core/Dialog";
@@ -603,7 +603,7 @@ const Dashboard = () => {
                 </FormControl>
                 <Button
                   className={classes.summaryButton}
-                  startIcon={summaryLoading ? <CircularProgress size={16} color="inherit" /> : <PsychologyIcon />}
+                  startIcon={summaryLoading ? <CircularProgress size={16} color="inherit" /> : <ExtensionIcon />}
                   onClick={handleGenerateSummary}
                   disabled={!selectedAgentId || summaryLoading}
                   variant="contained"
