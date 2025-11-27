@@ -33,6 +33,9 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
+import ChatAIButton from "../ChatAIButton";
+import ChatAIModal from "../ChatAIModal";
+import { toast } from "react-toastify";
 
 const useStyles = makeStyles((theme) => ({
   messagesListWrapper: {
@@ -327,6 +330,16 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const messageOptionsMenuOpen = Boolean(anchorEl);
   const currentTicketId = useRef(ticketId);
+  
+  // Estados para IA
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [aiMode, setAiMode] = useState("analyze");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState("");
+  const [aiSuggestions, setAiSuggestions] = useState([]);
+  const [aiKeyPoints, setAiKeyPoints] = useState([]);
+  const [aiAudioSummary, setAiAudioSummary] = useState("");
+  const [aiAudioCount, setAiAudioCount] = useState(0);
 
   const socketManager = useContext(SocketContext);
 
@@ -810,6 +823,92 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
     }
   };
 
+  const handleAnalyzeChat = async () => {
+    setAiModalOpen(true);
+    setAiMode("analyze");
+    setAiLoading(true);
+    setAiAnalysis("");
+    setAiKeyPoints([]);
+    
+    try {
+      const { data } = await api.post("/chat-ai/analyze", {
+        ticketId: ticketId,
+      });
+      setAiAnalysis(data.analysis || "");
+      setAiKeyPoints(data.keyPoints || []);
+    } catch (err) {
+      toastError(err);
+      toast.error("Erro ao analisar conversa");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleSummarizeAudios = async () => {
+    setAiModalOpen(true);
+    setAiMode("audio");
+    setAiLoading(true);
+    setAiAudioSummary("");
+    setAiAudioCount(0);
+    
+    try {
+      const { data } = await api.post("/chat-ai/audio-summary", {
+        ticketId: ticketId,
+      });
+      setAiAudioSummary(data.summary || "");
+      setAiAudioCount(data.audioCount || 0);
+    } catch (err) {
+      toastError(err);
+      toast.error("Erro ao resumir áudios");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleSuggestResponse = async () => {
+    setAiModalOpen(true);
+    setAiMode("suggest");
+    setAiLoading(true);
+    setAiSuggestions([]);
+    
+    try {
+      const { data } = await api.post("/chat-ai/analyze", {
+        ticketId: ticketId,
+        suggestResponse: true,
+      });
+      setAiSuggestions(data.suggestions || []);
+      setAiKeyPoints(data.keyPoints || []);
+    } catch (err) {
+      toastError(err);
+      toast.error("Erro ao sugerir resposta");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleSendQuestion = async (question) => {
+    setAiLoading(true);
+    try {
+      const { data } = await api.post("/chat-ai/analyze", {
+        ticketId: ticketId,
+        question: question,
+      });
+      setAiAnalysis(data.analysis || "");
+      setAiKeyPoints(data.keyPoints || []);
+    } catch (err) {
+      toastError(err);
+      toast.error("Erro ao processar pergunta");
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const handleSelectSuggestion = (suggestion) => {
+    // Copiar sugestão para área de transferência ou input
+    navigator.clipboard.writeText(suggestion);
+    toast.success("Sugestão copiada para área de transferência!");
+  };
+
   return (
     <div className={classes.messagesListWrapper}>
       <MessageOptionsMenu
@@ -830,6 +929,27 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
           <CircularProgress className={classes.circleLoading} />
         </div>
       )}
+      {ticketId && (
+        <ChatAIButton
+          ticketId={ticketId}
+          onAnalyzeChat={handleAnalyzeChat}
+          onSummarizeAudios={handleSummarizeAudios}
+          onSuggestResponse={handleSuggestResponse}
+        />
+      )}
+      <ChatAIModal
+        open={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        mode={aiMode}
+        loading={aiLoading}
+        analysis={aiAnalysis}
+        suggestions={aiSuggestions}
+        keyPoints={aiKeyPoints}
+        audioSummary={aiAudioSummary}
+        audioCount={aiAudioCount}
+        onSendQuestion={handleSendQuestion}
+        onSelectSuggestion={handleSelectSuggestion}
+      />
     </div>
   );
 };
