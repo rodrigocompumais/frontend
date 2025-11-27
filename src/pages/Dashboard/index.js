@@ -31,6 +31,7 @@ import WifiIcon from "@material-ui/icons/Wifi";
 import PeopleIcon from "@material-ui/icons/People";
 import ChatIcon from "@material-ui/icons/Chat";
 import ExtensionIcon from "@material-ui/icons/Extension";
+import StarsIcon from "@material-ui/icons/Stars";
 import GetAppIcon from "@material-ui/icons/GetApp";
 import CloseIcon from "@material-ui/icons/Close";
 import OpenInNewIcon from "@material-ui/icons/OpenInNew";
@@ -690,7 +691,7 @@ const Dashboard = () => {
           <Box className={classes.aiSummaryCardContent}>
             <Box className={classes.aiSummaryCardLeft}>
               <Box className={classes.aiSummaryCardIcon}>
-                <ExtensionIcon />
+                <StarsIcon />
               </Box>
               <Box>
                 <Typography className={classes.aiSummaryCardTitle}>
@@ -708,7 +709,7 @@ const Dashboard = () => {
                 handleGenerateSummary();
               }}
               disabled={summaryLoading}
-              startIcon={summaryLoading ? <CircularProgress size={16} color="inherit" /> : <ExtensionIcon />}
+              startIcon={summaryLoading ? <CircularProgress size={16} color="inherit" /> : <StarsIcon />}
             >
               {summaryLoading ? "Gerando..." : "Gerar Resumo"}
             </Button>

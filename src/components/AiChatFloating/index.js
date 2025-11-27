@@ -14,7 +14,7 @@ import {
   Tooltip,
   Zoom,
 } from "@material-ui/core";
-import ExtensionIcon from "@material-ui/icons/Extension";
+import StarsIcon from "@material-ui/icons/Stars";
 import SendIcon from "@material-ui/icons/Send";
 import CloseIcon from "@material-ui/icons/Close";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
@@ -414,7 +414,7 @@ const AiChatFloating = () => {
           {/* Header */}
           <Box className={classes.chatHeader}>
             <Box className={classes.headerTitle}>
-              <ExtensionIcon />
+              <StarsIcon />
               <Typography variant="subtitle1" style={{ fontWeight: 600 }}>
                 Compuchat
               </Typography>
@@ -445,7 +445,7 @@ const AiChatFloating = () => {
           <Box className={classes.messagesArea}>
             {messages.length === 0 ? (
               <Box className={classes.emptyState}>
-                <ExtensionIcon className={classes.emptyIcon} />
+                <StarsIcon className={classes.emptyIcon} />
                 <Typography variant="body1" gutterBottom>
                   Olá! Sou o Compuchat, seu assistente inteligente.
                 </Typography>
@@ -547,7 +547,7 @@ const AiChatFloating = () => {
               onClick={() => setOpen(!open)}
               aria-label="Chat com IA"
             >
-              {open ? <CloseIcon /> : <ExtensionIcon />}
+              {open ? <CloseIcon /> : <StarsIcon />}
             </Fab>
           </Badge>
         </Box>
