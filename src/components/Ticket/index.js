@@ -16,7 +16,7 @@ import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { TagsContainer } from "../TagsContainer";
+import { TagsDropdown } from "../TagsDropdown";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
 
@@ -180,16 +180,6 @@ const Ticket = () => {
           {renderTicketInfo()}
           <TicketActionButtons ticket={ticket} />
         </TicketHeader>
-        <Paper 
-          elevation={0}
-          style={{
-            borderRadius: 0,
-            borderTop: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
-            borderBottom: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
-          }}
-        >
-          <TagsContainer ticket={ticket} />
-        </Paper>
         <ReplyMessageProvider>{renderMessagesList()}</ReplyMessageProvider>
       </Paper>
       <ContactDrawer
