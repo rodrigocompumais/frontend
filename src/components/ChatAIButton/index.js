@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { IconButton, Menu, MenuItem, Tooltip, makeStyles, Box, Typography } from "@material-ui/core";
-import { HiSparkles } from "react-icons/hi";
+import GeminiIcon from "../GeminiIcon";
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
@@ -72,7 +72,7 @@ const ChatAIButton = ({ ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestRes
           aria-label="Melhorar mensagem"
           size="small"
         >
-          <HiSparkles size={24} className={classes.faviconIcon} />
+          <GeminiIcon size={24} className={classes.faviconIcon} />
         </IconButton>
       </Tooltip>
     );
@@ -88,7 +88,7 @@ const ChatAIButton = ({ ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestRes
           aria-label="Analisar conversa"
           size="small"
         >
-          <HiSparkles size={24} className={classes.faviconIcon} />
+          <GeminiIcon size={24} className={classes.faviconIcon} />
         </IconButton>
       </Tooltip>
     );
@@ -104,7 +104,7 @@ const ChatAIButton = ({ ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestRes
           aria-label="Chat AI"
           size="small"
         >
-          <HiSparkles size={24} className={classes.faviconIcon} />
+          <GeminiIcon size={24} className={classes.faviconIcon} />
         </IconButton>
       </Tooltip>
       <Menu
