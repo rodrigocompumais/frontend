@@ -35,7 +35,6 @@ import { useLocalStorage } from "../../hooks/useLocalStorage";
 import toastError from "../../errors/toastError";
 
 import useQuickMessages from "../../hooks/useQuickMessages";
-import ChatAIButton from "../ChatAIButton";
 
 const Mp3Recorder = new MicRecorder({ bitRate: 128 });
 
@@ -465,7 +464,7 @@ const CustomInput = (props) => {
 };
 
 const MessageInputCustom = (props) => {
-  const { ticketStatus, ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestResponse } = props;
+  const { ticketStatus, ticketId } = props;
   const classes = useStyles();
 
   const [medias, setMedias] = useState([]);
@@ -754,15 +753,6 @@ const MessageInputCustom = (props) => {
             disableOption={disableOption}
             handleQuickAnswersClick={handleQuickAnswersClick}
           />
-
-          {ticketId && onAnalyzeChat && (
-            <ChatAIButton
-              ticketId={ticketId}
-              onAnalyzeChat={onAnalyzeChat}
-              onSummarizeAudios={onSummarizeAudios}
-              onSuggestResponse={onSuggestResponse}
-            />
-          )}
 
           <ActionButtons
             inputMessage={inputMessage}

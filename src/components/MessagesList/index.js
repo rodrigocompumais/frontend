@@ -317,7 +317,7 @@ const reducer = (state, action) => {
   }
 };
 
-const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
+const MessagesList = ({ ticket, ticketId, isGroup }) => {
   const classes = useStyles();
 
   const [messagesList, dispatch] = useReducer(reducer, []);
@@ -908,17 +908,6 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
     navigator.clipboard.writeText(suggestion);
     toast.success("Sugestão copiada para área de transferência!");
   };
-
-  // Expor handlers para o componente pai
-  useEffect(() => {
-    if (onAiHandlersReady && ticketId) {
-      onAiHandlersReady({
-        handleAnalyzeChat,
-        handleSummarizeAudios,
-        handleSuggestResponse
-      });
-    }
-  }, [ticketId, onAiHandlersReady]);
 
   return (
     <div className={classes.messagesListWrapper}>
