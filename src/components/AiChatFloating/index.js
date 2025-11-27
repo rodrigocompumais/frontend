@@ -14,13 +14,13 @@ import {
   Tooltip,
   Zoom,
 } from "@material-ui/core";
-import StarsIcon from "@material-ui/icons/Stars";
 import SendIcon from "@material-ui/icons/Send";
 import CloseIcon from "@material-ui/icons/Close";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import MinimizeIcon from "@material-ui/icons/Remove";
 import AssessmentIcon from "@material-ui/icons/Assessment";
 import api from "../../services/api";
+import favicon from "../../assets/favicon.ico";
 import { toast } from "react-toastify";
 import toastError from "../../errors/toastError";
 
@@ -139,6 +139,21 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     alignItems: "center",
     gap: theme.spacing(1),
+  },
+  faviconIcon: {
+    width: 24,
+    height: 24,
+    objectFit: "contain",
+  },
+  faviconIconLarge: {
+    width: 48,
+    height: 48,
+    objectFit: "contain",
+  },
+  faviconFab: {
+    width: 24,
+    height: 24,
+    objectFit: "contain",
   },
   headerActions: {
     display: "flex",
@@ -414,7 +429,7 @@ const AiChatFloating = () => {
           {/* Header */}
           <Box className={classes.chatHeader}>
             <Box className={classes.headerTitle}>
-              <StarsIcon />
+              <img src={favicon} alt="Compuchat" className={classes.faviconIcon} />
               <Typography variant="subtitle1" style={{ fontWeight: 600 }}>
                 Compuchat
               </Typography>
@@ -445,7 +460,7 @@ const AiChatFloating = () => {
           <Box className={classes.messagesArea}>
             {messages.length === 0 ? (
               <Box className={classes.emptyState}>
-                <StarsIcon className={classes.emptyIcon} />
+                <img src={favicon} alt="Compuchat" className={classes.faviconIconLarge} />
                 <Typography variant="body1" gutterBottom>
                   Olá! Sou o Compuchat, seu assistente inteligente.
                 </Typography>
@@ -547,7 +562,7 @@ const AiChatFloating = () => {
               onClick={() => setOpen(!open)}
               aria-label="Chat com IA"
             >
-              {open ? <CloseIcon /> : <StarsIcon />}
+              {open ? <CloseIcon /> : <img src={favicon} alt="Compuchat" className={classes.faviconFab} />}
             </Fab>
           </Badge>
         </Box>
