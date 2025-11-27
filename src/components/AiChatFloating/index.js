@@ -416,7 +416,7 @@ const AiChatFloating = () => {
             <Box className={classes.headerTitle}>
               <ExtensionIcon />
               <Typography variant="subtitle1" style={{ fontWeight: 600 }}>
-                Assistente IA
+                Compuchat
               </Typography>
             </Box>
             <Box className={classes.headerActions}>
@@ -447,7 +447,7 @@ const AiChatFloating = () => {
               <Box className={classes.emptyState}>
                 <ExtensionIcon className={classes.emptyIcon} />
                 <Typography variant="body1" gutterBottom>
-                  Olá! Sou seu assistente de IA.
+                  Olá! Sou o Compuchat, seu assistente inteligente.
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
                   Pergunte sobre atendimentos, estatísticas, conversas e muito mais.
@@ -521,7 +521,7 @@ const AiChatFloating = () => {
       <Box className={classes.fabContainer}>
         {/* Botão Resumo IA (aparece no hover) */}
         <Box className={classes.fabWrapper}>
-          <span className={classes.fabLabel}>📊 Resumo IA</span>
+          <span className={classes.fabLabel}>📊 Resumo Compuchat</span>
           <Fab
             size="medium"
             className={classes.fabSecondary}
@@ -535,7 +535,7 @@ const AiChatFloating = () => {
         {/* Botão FAB Principal */}
         <Box className={classes.fabWrapper}>
           <span className={classes.fabLabel}>
-            {open ? "Fechar" : "💬 Chat IA"}
+            {open ? "Fechar" : "💬 Compuchat"}
           </span>
           <Badge
             badgeContent={messages.length > 0 && !open ? messages.length : 0}

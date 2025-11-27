@@ -681,7 +681,7 @@ const Dashboard = () => {
           </Grid>
         </Grid>
 
-        {/* Card Resumo IA Destacado */}
+        {/* Card Resumo Compuchat Destacado */}
         <Box 
           className={classes.aiSummaryCard} 
           onClick={handleGenerateSummary}
@@ -694,7 +694,7 @@ const Dashboard = () => {
               </Box>
               <Box>
                 <Typography className={classes.aiSummaryCardTitle}>
-                  📊 Resumo Inteligente com IA
+                  📊 Resumo Inteligente - Compuchat
                 </Typography>
                 <Typography className={classes.aiSummaryCardSubtitle}>
                   Análise completa dos atendimentos, pendências e insights para melhorar sua operação
@@ -761,39 +761,9 @@ const Dashboard = () => {
         {/* Attendants Table */}
         {attendants.length > 0 && (
           <>
-            <Box className={classes.summaryHeader}>
-              <Typography className={classes.sectionTitle}>
-                👥 Status dos Atendentes
-              </Typography>
-              <Box style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <FormControl size="small" style={{ minWidth: 200 }}>
-                  <InputLabel>Filtrar por Atendente</InputLabel>
-                  <Select
-                    value={selectedAgentId}
-                    onChange={(e) => setSelectedAgentId(e.target.value)}
-                    label="Filtrar por Atendente"
-                  >
-                    <MenuItem value="">
-                      <em>📊 Resumo Geral (Todos)</em>
-                    </MenuItem>
-                    {attendants.map((attendant) => (
-                      <MenuItem key={attendant.id} value={attendant.id}>
-                        {attendant.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                <Button
-                  className={classes.summaryButton}
-                  startIcon={summaryLoading ? <CircularProgress size={16} color="inherit" /> : <ExtensionIcon />}
-                  onClick={handleGenerateSummary}
-                  disabled={summaryLoading}
-                  variant="contained"
-                >
-                  Resumo IA
-                </Button>
-              </Box>
-            </Box>
+            <Typography className={classes.sectionTitle}>
+              👥 Status dos Atendentes
+            </Typography>
             <Grid container spacing={3}>
               <Grid item xs={12}>
                 <TableAttendantsStatus
@@ -815,7 +785,7 @@ const Dashboard = () => {
         >
           <DialogTitle>
             <Box style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>Resumo IA das Conversas – {summaryAgentName}</span>
+              <span>🤖 Compuchat - {summaryAgentName}</span>
               <IconButton size="small" onClick={() => setSummaryModalOpen(false)}>
                 <CloseIcon />
               </IconButton>
