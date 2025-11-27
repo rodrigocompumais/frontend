@@ -19,11 +19,15 @@ import IconButton from "@material-ui/core/IconButton";
 import Menu from "@material-ui/core/Menu";
 import MenuItem from "@material-ui/core/MenuItem";
 import Chip from "@material-ui/core/Chip";
+import CircularProgress from "@material-ui/core/CircularProgress";
 
 import MoreVertIcon from "@material-ui/icons/MoreVert";
 import VisibilityIcon from "@material-ui/icons/Visibility";
 import WhatsAppIcon from "@material-ui/icons/WhatsApp";
 import AndroidIcon from "@material-ui/icons/Android";
+import CheckCircleIcon from "@material-ui/icons/CheckCircle";
+import ReplayIcon from "@material-ui/icons/Replay";
+import FolderIcon from "@material-ui/icons/Folder";
 
 import { i18n } from "../../translate/i18n";
 
@@ -174,6 +178,19 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing(0.5),
   },
 
+  menuQueue: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(0.5),
+    marginTop: theme.spacing(0.5),
+  },
+
+  queueChip: {
+    height: 24,
+    fontSize: "0.75rem",
+    fontWeight: 500,
+  },
+
   unreadBadge: {
     position: "absolute",
     top: 8,
@@ -196,6 +213,29 @@ const useStyles = makeStyles((theme) => ({
       backgroundColor: theme.palette.type === "dark"
         ? "rgba(255, 255, 255, 0.08)"
         : "rgba(0, 0, 0, 0.04)",
+    },
+  },
+
+  actionIconButton: {
+    padding: theme.spacing(0.5),
+    "&:hover": {
+      backgroundColor: theme.palette.type === "dark"
+        ? "rgba(255, 255, 255, 0.08)"
+        : "rgba(0, 0, 0, 0.04)",
+    },
+  },
+
+  closeIcon: {
+    color: "#ef4444",
+    "&:hover": {
+      color: "#dc2626",
+    },
+  },
+
+  reopenIcon: {
+    color: blue[600],
+    "&:hover": {
+      color: blue[700],
     },
   },
 }));
@@ -427,12 +467,54 @@ const TicketListItemCustom = ({ ticket }) => {
                 )}
               </Box>
               <Box display="flex" flexDirection="column" alignItems="flex-end" ml={1}>
-                <Typography className={classes.timeText}>
-                  {ticket.updatedAt &&
-                    (isSameDay(parseISO(ticket.updatedAt), new Date())
-                      ? format(parseISO(ticket.updatedAt), "HH:mm")
-                      : format(parseISO(ticket.updatedAt), "dd/MM/yyyy"))}
-                </Typography>
+                <Box display="flex" alignItems="center">
+                  <Typography className={classes.timeText} style={{ marginRight: 4 }}>
+                    {ticket.updatedAt &&
+                      (isSameDay(parseISO(ticket.updatedAt), new Date())
+                        ? format(parseISO(ticket.updatedAt), "HH:mm")
+                        : format(parseISO(ticket.updatedAt), "dd/MM/yyyy"))}
+                  </Typography>
+                  {ticket.status !== "pending" && ticket.status !== "closed" && (
+                    <Tooltip title={i18n.t("ticketsList.buttons.closed")}>
+                      <IconButton
+                        size="small"
+                        className={`${classes.actionIconButton} ${classes.closeIcon}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleCloseTicket(ticket.id);
+                        }}
+                        disabled={loading}
+                        aria-label="finalizar ticket"
+                      >
+                        {loading ? (
+                          <CircularProgress size={16} />
+                        ) : (
+                          <CheckCircleIcon fontSize="small" />
+                        )}
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                  {ticket.status === "closed" && (
+                    <Tooltip title={i18n.t("ticketsList.buttons.reopen")}>
+                      <IconButton
+                        size="small"
+                        className={`${classes.actionIconButton} ${classes.reopenIcon}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReopenTicket(ticket.id);
+                        }}
+                        disabled={loading}
+                        aria-label="reabrir ticket"
+                      >
+                        {loading ? (
+                          <CircularProgress size={16} />
+                        ) : (
+                          <ReplayIcon fontSize="small" />
+                        )}
+                      </IconButton>
+                    </Tooltip>
+                  )}
+                </Box>
                 <IconButton
                   size="small"
                   className={classes.moreButton}
@@ -463,34 +545,6 @@ const TicketListItemCustom = ({ ticket }) => {
           }
         />
 
-        <ListItemSecondaryAction>
-          {ticket.status !== "pending" && ticket.status !== "closed" && (
-            <ButtonWithSpinner
-              className={`${classes.actionButton} ${classes.closeButton}`}
-              size="small"
-              loading={loading}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleCloseTicket(ticket.id);
-              }}
-            >
-              {i18n.t("ticketsList.buttons.closed")}
-            </ButtonWithSpinner>
-          )}
-          {ticket.status === "closed" && (
-            <ButtonWithSpinner
-              className={`${classes.actionButton} ${classes.reopenButton}`}
-              size="small"
-              loading={loading}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleReopenTicket(ticket.id);
-              }}
-            >
-              {i18n.t("ticketsList.buttons.reopen")}
-            </ButtonWithSpinner>
-          )}
-        </ListItemSecondaryAction>
 
         <Menu
           anchorEl={anchorEl}
@@ -504,6 +558,23 @@ const TicketListItemCustom = ({ ticket }) => {
             },
           }}
         >
+          {ticket.queue && (
+            <Box className={classes.menuSection}>
+              <Typography className={classes.menuSectionTitle}>Fila</Typography>
+              <Box className={classes.menuQueue}>
+                <FolderIcon fontSize="small" style={{ color: ticket.queue?.color || "#7C7C7C" }} />
+                <Chip
+                  label={ticket.queue?.name || i18n.t("ticketsListItem.noQueue")}
+                  size="small"
+                  className={classes.queueChip}
+                  style={{
+                    backgroundColor: ticket.queue?.color || "#7C7C7C",
+                    color: "#FFFFFF",
+                  }}
+                />
+              </Box>
+            </Box>
+          )}
           {whatsAppName && (
             <Box className={classes.menuSection}>
               <Typography className={classes.menuSectionTitle}>
@@ -525,7 +596,7 @@ const TicketListItemCustom = ({ ticket }) => {
               </Box>
             </Box>
           )}
-          {(!whatsAppName && (!tag || tag.length === 0)) && (
+          {(!ticket.queue && !whatsAppName && (!tag || tag.length === 0)) && (
             <MenuItem className={classes.menuItem} disabled>
               Nenhuma informação adicional
             </MenuItem>
