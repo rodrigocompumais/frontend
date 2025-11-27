@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useHistory } from "react-router-dom";
 import {
   Fab,
   TextField,
@@ -11,12 +12,14 @@ import {
   Collapse,
   Badge,
   Tooltip,
+  Zoom,
 } from "@material-ui/core";
 import ExtensionIcon from "@material-ui/icons/Extension";
 import SendIcon from "@material-ui/icons/Send";
 import CloseIcon from "@material-ui/icons/Close";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import MinimizeIcon from "@material-ui/icons/Remove";
+import AssessmentIcon from "@material-ui/icons/Assessment";
 import api from "../../services/api";
 import { toast } from "react-toastify";
 import toastError from "../../errors/toastError";
@@ -36,7 +39,23 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "flex-end",
     gap: theme.spacing(2),
   },
-  // Botão FAB
+  // Container dos FABs com hover
+  fabContainer: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-end",
+    gap: theme.spacing(1.5),
+    "&:hover $fabSecondary": {
+      opacity: 1,
+      transform: "translateX(0) scale(1)",
+      pointerEvents: "auto",
+    },
+    "&:hover $fabLabel": {
+      opacity: 1,
+      transform: "translateX(0)",
+    },
+  },
+  // Botão FAB principal
   fab: {
     background: "linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%)",
     color: "#FFFFFF",
@@ -47,6 +66,44 @@ const useStyles = makeStyles((theme) => ({
       transform: "scale(1.05)",
       boxShadow: "0 6px 25px rgba(14, 165, 233, 0.5)",
     },
+  },
+  // Botão FAB secundário (Resumo IA)
+  fabSecondary: {
+    background: "linear-gradient(135deg, #8B5CF6 0%, #A78BFA 100%)",
+    color: "#FFFFFF",
+    boxShadow: "0 4px 20px rgba(139, 92, 246, 0.4)",
+    opacity: 0,
+    transform: "translateX(20px) scale(0.8)",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    pointerEvents: "none",
+    "&:hover": {
+      background: "linear-gradient(135deg, #A78BFA 0%, #8B5CF6 100%)",
+      transform: "translateX(0) scale(1.05) !important",
+      boxShadow: "0 6px 25px rgba(139, 92, 246, 0.5)",
+    },
+  },
+  // Label do FAB secundário
+  fabLabel: {
+    position: "absolute",
+    right: 60,
+    backgroundColor: theme.palette.type === "dark" ? "#1F2937" : "#FFFFFF",
+    color: theme.palette.text.primary,
+    padding: "6px 12px",
+    borderRadius: 8,
+    fontSize: "0.8rem",
+    fontWeight: 500,
+    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.15)",
+    whiteSpace: "nowrap",
+    opacity: 0,
+    transform: "translateX(10px)",
+    transition: "all 0.3s ease",
+    pointerEvents: "none",
+  },
+  // Wrapper para FAB com label
+  fabWrapper: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
   },
   fabOpen: {
     background: "linear-gradient(135deg, #EF4444 0%, #F87171 100%)",
@@ -318,6 +375,18 @@ const AiChatFloating = () => {
     toast.info("Histórico de conversa limpo");
   };
 
+  const history = useHistory();
+  
+  const handleGoToSummary = () => {
+    // Navegar para o dashboard e focar na seção de resumo
+    history.push("/dashboard");
+    // Pequeno delay para garantir que a página carregou
+    setTimeout(() => {
+      // Disparar evento customizado para abrir o resumo
+      window.dispatchEvent(new CustomEvent("openAiSummary"));
+    }, 500);
+  };
+
   const formatTime = (dateStr) => {
     const date = new Date(dateStr);
     const now = new Date();
@@ -448,22 +517,41 @@ const AiChatFloating = () => {
         </Paper>
       </Collapse>
 
-      {/* Botão FAB */}
-      <Tooltip title={open ? "Fechar chat" : "Abrir assistente IA"} placement="left">
-        <Badge
-          badgeContent={messages.length > 0 && !open ? messages.length : 0}
-          className={classes.badge}
-          max={99}
-        >
+      {/* Container dos FABs com hover */}
+      <Box className={classes.fabContainer}>
+        {/* Botão Resumo IA (aparece no hover) */}
+        <Box className={classes.fabWrapper}>
+          <span className={classes.fabLabel}>📊 Resumo IA</span>
           <Fab
-            className={`${classes.fab} ${open ? classes.fabOpen : ""}`}
-            onClick={() => setOpen(!open)}
-            aria-label="Chat com IA"
+            size="medium"
+            className={classes.fabSecondary}
+            onClick={handleGoToSummary}
+            aria-label="Resumo IA"
           >
-            {open ? <CloseIcon /> : <ExtensionIcon />}
+            <AssessmentIcon />
           </Fab>
-        </Badge>
-      </Tooltip>
+        </Box>
+
+        {/* Botão FAB Principal */}
+        <Box className={classes.fabWrapper}>
+          <span className={classes.fabLabel}>
+            {open ? "Fechar" : "💬 Chat IA"}
+          </span>
+          <Badge
+            badgeContent={messages.length > 0 && !open ? messages.length : 0}
+            className={classes.badge}
+            max={99}
+          >
+            <Fab
+              className={`${classes.fab} ${open ? classes.fabOpen : ""}`}
+              onClick={() => setOpen(!open)}
+              aria-label="Chat com IA"
+            >
+              {open ? <CloseIcon /> : <ExtensionIcon />}
+            </Fab>
+          </Badge>
+        </Box>
+      </Box>
     </Box>
   );
 };

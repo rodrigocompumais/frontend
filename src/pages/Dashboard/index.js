@@ -175,6 +175,74 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     marginBottom: theme.spacing(2),
   },
+  // Card destacado de Resumo IA
+  aiSummaryCard: {
+    background: "linear-gradient(135deg, #8B5CF6 0%, #6366F1 50%, #0EA5E9 100%)",
+    borderRadius: 16,
+    padding: theme.spacing(3),
+    color: "#FFFFFF",
+    position: "relative",
+    overflow: "hidden",
+    cursor: "pointer",
+    transition: "all 0.3s ease",
+    "&:hover": {
+      transform: "translateY(-4px)",
+      boxShadow: "0 20px 40px rgba(139, 92, 246, 0.3)",
+    },
+    "&::before": {
+      content: '""',
+      position: "absolute",
+      top: 0,
+      right: 0,
+      width: "50%",
+      height: "100%",
+      background: "radial-gradient(circle at top right, rgba(255,255,255,0.15) 0%, transparent 60%)",
+    },
+  },
+  aiSummaryCardContent: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    position: "relative",
+    zIndex: 1,
+  },
+  aiSummaryCardLeft: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(2),
+  },
+  aiSummaryCardIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 16,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    "& svg": {
+      fontSize: 32,
+    },
+  },
+  aiSummaryCardTitle: {
+    fontSize: "1.25rem",
+    fontWeight: 700,
+    marginBottom: 4,
+  },
+  aiSummaryCardSubtitle: {
+    fontSize: "0.85rem",
+    opacity: 0.9,
+  },
+  aiSummaryCardButton: {
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    color: "#FFFFFF",
+    fontWeight: 600,
+    padding: theme.spacing(1, 3),
+    borderRadius: 12,
+    textTransform: "none",
+    "&:hover": {
+      backgroundColor: "rgba(255, 255, 255, 0.3)",
+    },
+  },
 }));
 
 const Dashboard = () => {
@@ -248,6 +316,19 @@ const Dashboard = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Listener para abrir resumo IA via evento customizado
+  useEffect(() => {
+    const handleOpenSummary = () => {
+      // Gerar resumo geral automaticamente
+      handleGenerateSummary();
+    };
+    
+    window.addEventListener("openAiSummary", handleOpenSummary);
+    return () => {
+      window.removeEventListener("openAiSummary", handleOpenSummary);
+    };
+  }, [attendants, period, dateFrom, dateTo]); // eslint-disable-line
 
   // Auto-refresh
   useEffect(() => {
@@ -539,6 +620,40 @@ const Dashboard = () => {
             />
           </Grid>
         </Grid>
+
+        {/* Card Resumo IA Destacado */}
+        <Box 
+          className={classes.aiSummaryCard} 
+          onClick={handleGenerateSummary}
+          style={{ marginBottom: 24, marginTop: 8 }}
+        >
+          <Box className={classes.aiSummaryCardContent}>
+            <Box className={classes.aiSummaryCardLeft}>
+              <Box className={classes.aiSummaryCardIcon}>
+                <ExtensionIcon />
+              </Box>
+              <Box>
+                <Typography className={classes.aiSummaryCardTitle}>
+                  📊 Resumo Inteligente com IA
+                </Typography>
+                <Typography className={classes.aiSummaryCardSubtitle}>
+                  Análise completa dos atendimentos, pendências e insights para melhorar sua operação
+                </Typography>
+              </Box>
+            </Box>
+            <Button 
+              className={classes.aiSummaryCardButton}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleGenerateSummary();
+              }}
+              disabled={summaryLoading}
+              startIcon={summaryLoading ? <CircularProgress size={16} color="inherit" /> : <ExtensionIcon />}
+            >
+              {summaryLoading ? "Gerando..." : "Gerar Resumo"}
+            </Button>
+          </Box>
+        </Box>
 
         {/* Charts Section */}
         <Typography className={classes.sectionTitle}>
