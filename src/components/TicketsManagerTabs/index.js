@@ -5,8 +5,6 @@ import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
 import SearchIcon from "@material-ui/icons/Search";
 import InputBase from "@material-ui/core/InputBase";
-import Tabs from "@material-ui/core/Tabs";
-import Tab from "@material-ui/core/Tab";
 import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
@@ -189,7 +187,6 @@ const TicketsManagerTabs = () => {
 
   const [searchParam, setSearchParam] = useState("");
   const [tab, setTab] = useState("open");
-  const [tabOpen, setTabOpen] = useState("open");
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
   const [showAllTickets, setShowAllTickets] = useState(false);
   const searchInputRef = useRef();
@@ -240,21 +237,6 @@ const TicketsManagerTabs = () => {
     setTab(newValue);
   };
 
-  const handleChangeTabOpen = (e, newValue) => {
-    setTabOpen(newValue);
-  };
-
-  const applyPanelStyle = (status) => {
-    if (tabOpen !== status) {
-      return { 
-        display: "none",
-        width: 0, 
-        height: 0,
-        overflow: "hidden"
-      };
-    }
-    return {};
-  };
 
   const handleCloseOrOpenTicket = (ticket) => {
     setNewTicketModalOpen(false);
@@ -420,51 +402,17 @@ const TicketsManagerTabs = () => {
         )}
       </Paper>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
-        <Tabs
-          value={tabOpen}
-          onChange={handleChangeTabOpen}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="fullWidth"
-        >
-          <Tab
-            label={
-              <Badge
-                className={classes.badge}
-                badgeContent={openCount}
-                color="primary"
-              >
-                {i18n.t("ticketsList.assignedHeader")}
-              </Badge>
-            }
-            value={"open"}
-          />
-          <Tab
-            label={
-              <Badge
-                className={classes.badge}
-                badgeContent={pendingCount}
-                color="secondary"
-              >
-                {i18n.t("ticketsList.pendingHeader")}
-              </Badge>
-            }
-            value={"pending"}
-          />
-        </Tabs>
         <Paper className={classes.ticketsWrapper}>
           <TicketsList
             status="open"
             showAll={showAllTickets}
             selectedQueueIds={selectedQueueIds}
             updateCount={(val) => setOpenCount(val)}
-            style={applyPanelStyle("open")}
           />
           <TicketsList
             status="pending"
             selectedQueueIds={selectedQueueIds}
             updateCount={(val) => setPendingCount(val)}
-            style={applyPanelStyle("pending")}
           />
         </Paper>
       </TabPanel>
