@@ -929,14 +929,6 @@ const MessagesList = ({ ticket, ticketId, isGroup }) => {
           <CircularProgress className={classes.circleLoading} />
         </div>
       )}
-      {ticketId && (
-        <ChatAIButton
-          ticketId={ticketId}
-          onAnalyzeChat={handleAnalyzeChat}
-          onSummarizeAudios={handleSummarizeAudios}
-          onSuggestResponse={handleSuggestResponse}
-        />
-      )}
       <ChatAIModal
         open={aiModalOpen}
         onClose={() => setAiModalOpen(false)}
