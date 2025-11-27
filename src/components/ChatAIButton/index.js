@@ -1,34 +1,22 @@
 import React, { useState } from "react";
-import { Fab, Menu, MenuItem, Tooltip, makeStyles, Box, Typography } from "@material-ui/core";
+import { IconButton, Menu, MenuItem, Tooltip, makeStyles, Box, Typography } from "@material-ui/core";
 import favicon from "../../assets/favicon.ico";
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
-  fab: {
-    position: "absolute",
-    bottom: theme.spacing(2),
-    right: theme.spacing(2),
-    background: "transparent",
-    boxShadow: "0 4px 20px rgba(14, 165, 233, 0.4)",
+  iconButton: {
+    padding: theme.spacing(1),
+    marginRight: theme.spacing(0.5),
     transition: "all 0.3s ease",
-    overflow: "hidden",
-    zIndex: 10,
     "&:hover": {
       transform: "scale(1.1)",
-      boxShadow: "0 6px 25px rgba(14, 165, 233, 0.5)",
     },
   },
-  faviconFab: {
-    width: "100%",
-    height: "100%",
+  faviconIcon: {
+    width: 24,
+    height: 24,
     objectFit: "cover",
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
     borderRadius: "50%",
-    zIndex: 0,
   },
   menuItem: {
     padding: theme.spacing(1.5, 2),
@@ -70,14 +58,14 @@ const ChatAIButton = ({ ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestRes
   return (
     <>
       <Tooltip title="Compuchat - Assistente IA">
-        <Fab
-          size="medium"
-          className={classes.fab}
+        <IconButton
+          className={classes.iconButton}
           onClick={handleOpenMenu}
           aria-label="Chat AI"
+          size="small"
         >
-          <img src={favicon} alt="Compuchat" className={classes.faviconFab} />
-        </Fab>
+          <img src={favicon} alt="Compuchat" className={classes.faviconIcon} />
+        </IconButton>
       </Tooltip>
       <Menu
         anchorEl={anchorEl}
