@@ -211,16 +211,15 @@ const TicketsListCustom = (props) => {
     const notBelongsToUserQueues = (ticket) =>
       ticket.queueId && selectedQueueIds.indexOf(ticket.queueId) === -1;
 
-    socket.on("ready", () => {
+    const handleReady = () => {
       if (status) {
         socket.emit("joinTickets", status);
       } else {
         socket.emit("joinNotification");
       }
-    });
+    };
 
-    socket.on(`company-${companyId}-ticket`, (data) => {
-      
+    const handleTicket = (data) => {
       if (data.action === "updateUnread") {
         dispatch({
           type: "RESET_UNREAD",
@@ -250,9 +249,9 @@ const TicketsListCustom = (props) => {
           payload: data.ticket,
         });
       }
-    });
+    };
 
-    socket.on(`company-${companyId}-appMessage`, (data) => {
+    const handleAppMessage = (data) => {
       const queueIds = queues.map((q) => q.id);
       if (
         profile === "user" &&
@@ -268,19 +267,27 @@ const TicketsListCustom = (props) => {
           payload: data.ticket,
         });
       }
-    });
+    };
 
-    socket.on(`company-${companyId}-contact`, (data) => {
+    const handleContact = (data) => {
       if (data.action === "update") {
         dispatch({
           type: "UPDATE_TICKET_CONTACT",
           payload: data.contact,
         });
       }
-    });
+    };
+
+    socket.on("ready", handleReady);
+    socket.on(`company-${companyId}-ticket`, handleTicket);
+    socket.on(`company-${companyId}-appMessage`, handleAppMessage);
+    socket.on(`company-${companyId}-contact`, handleContact);
 
     return () => {
-      socket.disconnect();
+      socket.off("ready", handleReady);
+      socket.off(`company-${companyId}-ticket`, handleTicket);
+      socket.off(`company-${companyId}-appMessage`, handleAppMessage);
+      socket.off(`company-${companyId}-contact`, handleContact);
     };
   }, [status, showAll, user, selectedQueueIds, tags, users, profile, queues, socketManager]);
 

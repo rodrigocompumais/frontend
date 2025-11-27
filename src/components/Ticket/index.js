@@ -107,9 +107,8 @@ const Ticket = () => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
-    socket.on("ready", () => socket.emit("joinChatBox", `${ticket.id}`));
-
-    socket.on(`company-${companyId}-ticket`, (data) => {
+    const handleReady = () => socket.emit("joinChatBox", `${ticket.id}`);
+    const handleTicket = (data) => {
       if (data.action === "update" && data.ticket.id === ticket.id) {
         setTicket(data.ticket);
       }
@@ -118,9 +117,8 @@ const Ticket = () => {
         // toast.success("Ticket deleted sucessfully.");
         history.push("/tickets");
       }
-    });
-
-    socket.on(`company-${companyId}-contact`, (data) => {
+    };
+    const handleContact = (data) => {
       if (data.action === "update") {
         setContact((prevState) => {
           if (prevState.id === data.contact?.id) {
@@ -129,10 +127,16 @@ const Ticket = () => {
           return prevState;
         });
       }
-    });
+    };
+
+    socket.on("ready", handleReady);
+    socket.on(`company-${companyId}-ticket`, handleTicket);
+    socket.on(`company-${companyId}-contact`, handleContact);
 
     return () => {
-      socket.disconnect();
+      socket.off("ready", handleReady);
+      socket.off(`company-${companyId}-ticket`, handleTicket);
+      socket.off(`company-${companyId}-contact`, handleContact);
     };
   }, [ticketId, ticket, history, socketManager]);
 

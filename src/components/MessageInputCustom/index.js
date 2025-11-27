@@ -774,73 +774,73 @@ const MessageInputCustom = (props) => {
     );
   else {
     return (
-      <>
-      <Paper square elevation={0} className={classes.mainWrapper}>
-        {replyingMessage && renderReplyingMessage(replyingMessage)}
-        <div className={classes.newMessageBox}>
-          <EmojiOptions
-            disabled={disableOption()}
-            handleAddEmoji={handleAddEmoji}
-            showEmoji={showEmoji}
-            setShowEmoji={setShowEmoji}
-          />
-
-          <FileInput
-            disableOption={disableOption}
-            handleChangeMedias={handleChangeMedias}
-          />
-
-          <SignSwitch
-            width={props.width}
-            setSignMessage={setSignMessage}
-            signMessage={signMessage}
-          />
-
-          <CustomInput
-            loading={loading}
-            inputRef={inputRef}
-            ticketStatus={ticketStatus}
-            inputMessage={inputMessage}
-            setInputMessage={setInputMessage}
-            // handleChangeInput={handleChangeInput}
-            handleSendMessage={handleSendMessage}
-            handleInputPaste={handleInputPaste}
-            disableOption={disableOption}
-            handleQuickAnswersClick={handleQuickAnswersClick}
-          />
-
-          {ticketId && (
-            <ChatAIButton
-              ticketId={ticketId}
-              onImproveMessage={handleImproveMessage}
-              simple={true}
+      <React.Fragment>
+        <Paper square elevation={0} className={classes.mainWrapper}>
+          {replyingMessage && renderReplyingMessage(replyingMessage)}
+          <div className={classes.newMessageBox}>
+            <EmojiOptions
+              disabled={disableOption()}
+              handleAddEmoji={handleAddEmoji}
+              showEmoji={showEmoji}
+              setShowEmoji={setShowEmoji}
             />
-          )}
 
-          <ActionButtons
-            inputMessage={inputMessage}
-            loading={loading}
-            recording={recording}
-            ticketStatus={ticketStatus}
-            handleSendMessage={handleSendMessage}
-            handleCancelAudio={handleCancelAudio}
-            handleUploadAudio={handleUploadAudio}
-            handleStartRecording={handleStartRecording}
-          />
-        </div>
-      </Paper>
-      <MessageImproveModal
-        open={improveModalOpen}
-        onClose={() => {
-          setImproveModalOpen(false);
-          setImprovedText("");
-        }}
-        loading={improveLoading}
-        originalText={inputMessage.trim()}
-        improvedText={improvedText}
-        onUseImproved={handleUseImprovedText}
-      />
-    </>
+            <FileInput
+              disableOption={disableOption}
+              handleChangeMedias={handleChangeMedias}
+            />
+
+            <SignSwitch
+              width={props.width}
+              setSignMessage={setSignMessage}
+              signMessage={signMessage}
+            />
+
+            <CustomInput
+              loading={loading}
+              inputRef={inputRef}
+              ticketStatus={ticketStatus}
+              inputMessage={inputMessage}
+              setInputMessage={setInputMessage}
+              // handleChangeInput={handleChangeInput}
+              handleSendMessage={handleSendMessage}
+              handleInputPaste={handleInputPaste}
+              disableOption={disableOption}
+              handleQuickAnswersClick={handleQuickAnswersClick}
+            />
+
+            {ticketId && (
+              <ChatAIButton
+                ticketId={ticketId}
+                onImproveMessage={handleImproveMessage}
+                simple={true}
+              />
+            )}
+
+            <ActionButtons
+              inputMessage={inputMessage}
+              loading={loading}
+              recording={recording}
+              ticketStatus={ticketStatus}
+              handleSendMessage={handleSendMessage}
+              handleCancelAudio={handleCancelAudio}
+              handleUploadAudio={handleUploadAudio}
+              handleStartRecording={handleStartRecording}
+            />
+          </div>
+        </Paper>
+        <MessageImproveModal
+          open={improveModalOpen}
+          onClose={() => {
+            setImproveModalOpen(false);
+            setImprovedText("");
+          }}
+          loading={improveLoading}
+          originalText={inputMessage.trim()}
+          improvedText={improvedText}
+          onUseImproved={handleUseImprovedText}
+        />
+      </React.Fragment>
     );
   }
 };

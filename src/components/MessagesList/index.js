@@ -385,9 +385,8 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
-    socket.on("ready", () => socket.emit("joinChatBox", `${ticket.id}`));
-
-    socket.on(`company-${companyId}-appMessage`, (data) => {
+    const handleReady = () => socket.emit("joinChatBox", `${ticket.id}`);
+    const handleAppMessage = (data) => {
       if (data.action === "create" && data.message.ticketId === currentTicketId.current) {
         dispatch({ type: "ADD_MESSAGE", payload: data.message });
         scrollToBottom();
@@ -396,10 +395,14 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
       if (data.action === "update" && data.message.ticketId === currentTicketId.current) {
         dispatch({ type: "UPDATE_MESSAGE", payload: data.message });
       }
-    });
+    };
+
+    socket.on("ready", handleReady);
+    socket.on(`company-${companyId}-appMessage`, handleAppMessage);
 
     return () => {
-      socket.disconnect();
+      socket.off("ready", handleReady);
+      socket.off(`company-${companyId}-appMessage`, handleAppMessage);
     };
   }, [ticketId, ticket, socketManager]);
 
