@@ -19,7 +19,11 @@ const QrcodeModal = ({ open, onClose, whatsAppId }) => {
 
       try {
         const { data } = await api.get(`/whatsapp/${whatsAppId}`);
-        setQrCode(data.qrcode);
+        // Validar o QR code antes de definir
+        const qrValue = data.qrcode && typeof data.qrcode === 'string' && data.qrcode.trim() !== '' 
+          ? data.qrcode.trim() 
+          : '';
+        setQrCode(qrValue);
       } catch (err) {
         toastError(err);
       }
@@ -34,10 +38,14 @@ const QrcodeModal = ({ open, onClose, whatsAppId }) => {
 
     socket.on(`company-${companyId}-whatsappSession`, (data) => {
       if (data.action === "update" && data.session.id === whatsAppId) {
-        setQrCode(data.session.qrcode);
+        // Validar o QR code antes de definir
+        const qrValue = data.session.qrcode && typeof data.session.qrcode === 'string' && data.session.qrcode.trim() !== ''
+          ? data.session.qrcode.trim()
+          : '';
+        setQrCode(qrValue);
       }
 
-      if (data.action === "update" && data.session.qrcode === "") {
+      if (data.action === "update" && (!data.session.qrcode || data.session.qrcode === "" || data.session.qrcode.trim() === "")) {
         onClose();
       }
     });
@@ -69,7 +77,7 @@ const QrcodeModal = ({ open, onClose, whatsAppId }) => {
             </Typography>
           </div>
           <div>
-            {qrCode ? (
+            {qrCode && qrCode.trim() !== '' ? (
               <QRCode value={qrCode} size={256} />
             ) : (
               <span>{i18n.t("qrCodeModal.waiting")}</span>
