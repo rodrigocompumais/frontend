@@ -26,7 +26,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const ChatAIButton = ({ ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestResponse }) => {
+const ChatAIButton = ({ ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestResponse, simple = false }) => {
   const classes = useStyles();
   const [anchorEl, setAnchorEl] = useState(null);
 
@@ -55,6 +55,23 @@ const ChatAIButton = ({ ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestRes
 
   const menuOpen = Boolean(anchorEl);
 
+  // Modo simples: apenas botão de análise de conversa
+  if (simple && onAnalyzeChat) {
+    return (
+      <Tooltip title="Analisar conversa - Compuchat">
+        <IconButton
+          className={classes.iconButton}
+          onClick={handleAnalyzeChat}
+          aria-label="Analisar conversa"
+          size="small"
+        >
+          <img src={favicon} alt="Compuchat" className={classes.faviconIcon} />
+        </IconButton>
+      </Tooltip>
+    );
+  }
+
+  // Modo completo: menu com todas as opções
   return (
     <>
       <Tooltip title="Compuchat - Assistente IA">

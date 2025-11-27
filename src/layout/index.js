@@ -1,4 +1,5 @@
 import React, { useState, useContext, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import clsx from "clsx";
 import moment from "moment";
 import {
@@ -35,6 +36,7 @@ import AnnouncementsPopover from "../components/AnnouncementsPopover";
 import logo from "../assets/logo.png";
 import { SocketContext } from "../context/Socket/SocketContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
+import AiChatFloating from "../components/AiChatFloating";
 
 import { useDate } from "../hooks/useDate";
 
@@ -179,6 +181,8 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const LoggedInLayout = ({ children, themeToggle }) => {
+  const location = useLocation();
+  const isDashboard = location.pathname === "/dashboard" || location.pathname === "/";
   const classes = useStyles();
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
@@ -511,6 +515,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
 
         {children ? children : null}
       </main>
+      {isDashboard && <AiChatFloating />}
     </div>
   );
 };

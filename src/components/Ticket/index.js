@@ -12,6 +12,7 @@ import TicketHeader from "../TicketHeader";
 import TicketInfo from "../TicketInfo";
 import TicketActionButtons from "../TicketActionButtonsCustom";
 import MessagesList from "../MessagesList";
+import ChatAIModal from "../ChatAIModal";
 import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import toastError from "../../errors/toastError";
@@ -69,6 +70,7 @@ const Ticket = () => {
   const [loading, setLoading] = useState(true);
   const [contact, setContact] = useState({});
   const [ticket, setTicket] = useState({});
+  const [aiHandlers, setAiHandlers] = useState(null);
 
   const socketManager = useContext(SocketContext);
 
@@ -161,10 +163,14 @@ const Ticket = () => {
           ticket={ticket}
           ticketId={ticket.id}
           isGroup={ticket.isGroup}
+          onAiHandlersReady={setAiHandlers}
         ></MessagesList>
         <MessageInput 
           ticketId={ticket.id} 
           ticketStatus={ticket.status}
+          onAnalyzeChat={aiHandlers?.handleAnalyzeChat}
+          onSummarizeAudios={aiHandlers?.handleSummarizeAudios}
+          onSuggestResponse={aiHandlers?.handleSuggestResponse}
         />
       </>
     );
