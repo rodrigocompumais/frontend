@@ -15,7 +15,7 @@ import {
 } from "@material-ui/core";
 import CloseIcon from "@material-ui/icons/Close";
 import CheckIcon from "@material-ui/icons/Check";
-import GeminiIcon from "../GeminiIcon";
+import { HiSparkles } from "react-icons/hi";
 
 const useStyles = makeStyles((theme) => ({
   dialog: {
@@ -105,7 +105,7 @@ const MessageImproveModal = ({
     >
       <DialogTitle className={classes.dialogTitle}>
         <Box className={classes.headerBox}>
-          <GeminiIcon size={24} />
+          <HiSparkles size={24} />
           <Typography variant="h6">Melhorar Mensagem</Typography>
         </Box>
         <IconButton size="small" onClick={onClose}>
