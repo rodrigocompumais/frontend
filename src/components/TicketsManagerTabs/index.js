@@ -10,9 +10,20 @@ import Tab from "@material-ui/core/Tab";
 import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
+import FilterListIcon from "@material-ui/icons/FilterList";
+import AddIcon from "@material-ui/icons/Add";
 
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
+import Select from "@material-ui/core/Select";
+import MenuItem from "@material-ui/core/MenuItem";
+import FormControl from "@material-ui/core/FormControl";
+import InputLabel from "@material-ui/core/InputLabel";
+import IconButton from "@material-ui/core/IconButton";
+import Menu from "@material-ui/core/Menu";
+import Box from "@material-ui/core/Box";
+import Typography from "@material-ui/core/Typography";
+import Divider from "@material-ui/core/Divider";
 
 import NewTicketModal from "../NewTicketModal";
 import TicketsList from "../TicketsListCustom";
@@ -41,6 +52,20 @@ const useStyles = makeStyles(theme => ({
 	tabsHeader: {
 		flex: "none",
 		backgroundColor: theme.palette.tabHeaderBackground,
+		padding: theme.spacing(1, 2),
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "space-between",
+	},
+
+	tabSelect: {
+		minWidth: 180,
+		"& .MuiSelect-select": {
+			padding: theme.spacing(1, 2),
+			display: "flex",
+			alignItems: "center",
+			gap: theme.spacing(1),
+		},
 	},
 
 	tabsInternal: {
@@ -67,10 +92,29 @@ const useStyles = makeStyles(theme => ({
 
 	ticketOptionsBox: {
 		display: "flex",
-		justifyContent: "space-between",
+		justifyContent: "flex-end",
 		alignItems: "center",
 		background: theme.palette.optionsBackground,
 		padding: theme.spacing(1),
+		gap: theme.spacing(1),
+	},
+
+	filterMenu: {
+		"& .MuiPaper-root": {
+			minWidth: 250,
+		},
+	},
+
+	filterMenuItem: {
+		padding: theme.spacing(1.5, 2),
+	},
+
+	filterMenuSection: {
+		padding: theme.spacing(1, 2),
+		borderBottom: `1px solid ${theme.palette.divider}`,
+		"&:last-child": {
+			borderBottom: "none",
+		},
 	},
 
 	ticketSearchLine: {
@@ -159,6 +203,7 @@ const TicketsManagerTabs = () => {
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
+  const [filterMenuAnchor, setFilterMenuAnchor] = useState(null);
 
   useEffect(() => {
     if (user.profile.toUpperCase() === "ADMIN") {
@@ -222,6 +267,42 @@ const TicketsManagerTabs = () => {
     setSelectedUsers(users);
   };
 
+  const handleOpenFilterMenu = (event) => {
+    setFilterMenuAnchor(event.currentTarget);
+  };
+
+  const handleCloseFilterMenu = () => {
+    setFilterMenuAnchor(null);
+  };
+
+  const filterMenuOpen = Boolean(filterMenuAnchor);
+
+  const getTabLabel = (value) => {
+    switch (value) {
+      case "open":
+        return i18n.t("tickets.tabs.open.title");
+      case "closed":
+        return i18n.t("tickets.tabs.closed.title");
+      case "search":
+        return i18n.t("tickets.tabs.search.title");
+      default:
+        return "";
+    }
+  };
+
+  const getTabIcon = (value) => {
+    switch (value) {
+      case "open":
+        return <MoveToInboxIcon fontSize="small" />;
+      case "closed":
+        return <CheckBoxIcon fontSize="small" />;
+      case "search":
+        return <SearchIcon fontSize="small" />;
+      default:
+        return null;
+    }
+  };
+
   return (
     <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper}>
       <NewTicketModal
@@ -232,33 +313,48 @@ const TicketsManagerTabs = () => {
         }}
       />
       <Paper elevation={0} square className={classes.tabsHeader}>
-        <Tabs
-          value={tab}
-          onChange={handleChangeTab}
-          variant="fullWidth"
-          indicatorColor="primary"
-          textColor="primary"
-          aria-label="icon label tabs example"
-        >
-          <Tab
-            value={"open"}
-            icon={<MoveToInboxIcon />}
-            label={i18n.t("tickets.tabs.open.title")}
-            classes={{ root: classes.tab }}
-          />
-          <Tab
-            value={"closed"}
-            icon={<CheckBoxIcon />}
-            label={i18n.t("tickets.tabs.closed.title")}
-            classes={{ root: classes.tab }}
-          />
-          <Tab
-            value={"search"}
-            icon={<SearchIcon />}
-            label={i18n.t("tickets.tabs.search.title")}
-            classes={{ root: classes.tab }}
-          />
-        </Tabs>
+        <FormControl variant="outlined" size="small" className={classes.tabSelect}>
+          <Select
+            value={tab}
+            onChange={(e) => handleChangeTab(null, e.target.value)}
+            displayEmpty
+          >
+            <MenuItem value="open">
+              <Box display="flex" alignItems="center" gap={1}>
+                <MoveToInboxIcon fontSize="small" />
+                <Typography>{i18n.t("tickets.tabs.open.title")}</Typography>
+              </Box>
+            </MenuItem>
+            <MenuItem value="closed">
+              <Box display="flex" alignItems="center" gap={1}>
+                <CheckBoxIcon fontSize="small" />
+                <Typography>{i18n.t("tickets.tabs.closed.title")}</Typography>
+              </Box>
+            </MenuItem>
+            <MenuItem value="search">
+              <Box display="flex" alignItems="center" gap={1}>
+                <SearchIcon fontSize="small" />
+                <Typography>{i18n.t("tickets.tabs.search.title")}</Typography>
+              </Box>
+            </MenuItem>
+          </Select>
+        </FormControl>
+        <Box display="flex" alignItems="center" gap={1}>
+          {tab === "open" && (
+            <>
+              <Badge badgeContent={openCount} color="primary">
+                <Typography variant="body2" style={{ padding: "0 8px" }}>
+                  {i18n.t("ticketsList.assignedHeader")}
+                </Typography>
+              </Badge>
+              <Badge badgeContent={pendingCount} color="secondary">
+                <Typography variant="body2" style={{ padding: "0 8px" }}>
+                  {i18n.t("ticketsList.pendingHeader")}
+                </Typography>
+              </Badge>
+            </>
+          )}
+        </Box>
       </Paper>
       <Paper square elevation={0} className={classes.ticketOptionsBox}>
         {tab === "search" ? (
