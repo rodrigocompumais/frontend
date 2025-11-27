@@ -8,6 +8,7 @@ import InputBase from "@material-ui/core/InputBase";
 import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
+import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
 import FilterListIcon from "@material-ui/icons/FilterList";
 import AddIcon from "@material-ui/icons/Add";
 
@@ -269,6 +270,8 @@ const TicketsManagerTabs = () => {
     switch (value) {
       case "open":
         return i18n.t("tickets.tabs.open.title");
+      case "pending":
+        return i18n.t("ticketsList.pendingHeader");
       case "closed":
         return i18n.t("tickets.tabs.closed.title");
       case "search":
@@ -282,6 +285,8 @@ const TicketsManagerTabs = () => {
     switch (value) {
       case "open":
         return <MoveToInboxIcon fontSize="small" />;
+      case "pending":
+        return <HourglassEmptyIcon fontSize="small" />;
       case "closed":
         return <CheckBoxIcon fontSize="small" />;
       case "search":
@@ -311,6 +316,12 @@ const TicketsManagerTabs = () => {
               <Box display="flex" alignItems="center" gap={1}>
                 <MoveToInboxIcon fontSize="small" />
                 <Typography>{i18n.t("tickets.tabs.open.title")}</Typography>
+              </Box>
+            </MenuItem>
+            <MenuItem value="pending">
+              <Box display="flex" alignItems="center" gap={1}>
+                <HourglassEmptyIcon fontSize="small" />
+                <Typography>{i18n.t("ticketsList.pendingHeader")}</Typography>
               </Box>
             </MenuItem>
             <MenuItem value="closed">
@@ -402,19 +413,20 @@ const TicketsManagerTabs = () => {
         )}
       </Paper>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
-        <Paper className={classes.ticketsWrapper}>
-          <TicketsList
-            status="open"
-            showAll={showAllTickets}
-            selectedQueueIds={selectedQueueIds}
-            updateCount={(val) => setOpenCount(val)}
-          />
-          <TicketsList
-            status="pending"
-            selectedQueueIds={selectedQueueIds}
-            updateCount={(val) => setPendingCount(val)}
-          />
-        </Paper>
+        <TicketsList
+          status="open"
+          showAll={showAllTickets}
+          selectedQueueIds={selectedQueueIds}
+          updateCount={(val) => setOpenCount(val)}
+        />
+      </TabPanel>
+      <TabPanel value={tab} name="pending" className={classes.ticketsWrapper}>
+        <TicketsList
+          status="pending"
+          showAll={showAllTickets}
+          selectedQueueIds={selectedQueueIds}
+          updateCount={(val) => setPendingCount(val)}
+        />
       </TabPanel>
       <TabPanel value={tab} name="closed" className={classes.ticketsWrapper}>
         <TicketsList
