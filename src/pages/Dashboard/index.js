@@ -1,4 +1,5 @@
 import React, { useContext, useState, useEffect, useCallback } from "react";
+import { useHistory } from "react-router-dom";
 
 import Container from "@material-ui/core/Container";
 import Grid from "@material-ui/core/Grid";
@@ -8,6 +9,13 @@ import IconButton from "@material-ui/core/IconButton";
 import Tooltip from "@material-ui/core/Tooltip";
 import Switch from "@material-ui/core/Switch";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
+import Table from "@material-ui/core/Table";
+import TableBody from "@material-ui/core/TableBody";
+import TableCell from "@material-ui/core/TableCell";
+import TableHead from "@material-ui/core/TableHead";
+import TableRow from "@material-ui/core/TableRow";
+import Paper from "@material-ui/core/Paper";
+import Chip from "@material-ui/core/Chip";
 
 import CallIcon from "@material-ui/icons/Call";
 import GroupAddIcon from "@material-ui/icons/GroupAdd";
@@ -25,6 +33,7 @@ import ChatIcon from "@material-ui/icons/Chat";
 import ExtensionIcon from "@material-ui/icons/Extension";
 import GetAppIcon from "@material-ui/icons/GetApp";
 import CloseIcon from "@material-ui/icons/Close";
+import OpenInNewIcon from "@material-ui/icons/OpenInNew";
 import Dialog from "@material-ui/core/Dialog";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import DialogContent from "@material-ui/core/DialogContent";
@@ -261,8 +270,15 @@ const Dashboard = () => {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryText, setSummaryText] = useState("");
   const [summaryAgentName, setSummaryAgentName] = useState("");
+  // Estados para modal de tickets por status
+  const [ticketModalOpen, setTicketModalOpen] = useState(false);
+  const [ticketModalTitle, setTicketModalTitle] = useState("");
+  const [ticketModalStatus, setTicketModalStatus] = useState("");
+  const [ticketModalData, setTicketModalData] = useState([]);
+  const [ticketModalLoading, setTicketModalLoading] = useState(false);
   const { find } = useDashboard();
   const { count: contactsCount } = useContacts({});
+  const history = useHistory();
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -419,6 +435,46 @@ const Dashboard = () => {
     URL.revokeObjectURL(url);
   };
 
+  // Função para lidar com clique nos cards de status
+  const handleCardClick = async (status, title) => {
+    setTicketModalTitle(title);
+    setTicketModalStatus(status);
+    setTicketModalOpen(true);
+    setTicketModalLoading(true);
+    setTicketModalData([]);
+
+    try {
+      const { data } = await api.get("/tickets", {
+        params: {
+          status,
+          showAll: "true",
+          withUnreadMessages: "false",
+        },
+      });
+
+      // Extrair tickets da resposta
+      const tickets = data.tickets || data || [];
+      setTicketModalData(Array.isArray(tickets) ? tickets : []);
+    } catch (err) {
+      console.error("Erro ao buscar tickets:", err);
+      toastError(err);
+    } finally {
+      setTicketModalLoading(false);
+    }
+  };
+
+  // Função para abrir um ticket
+  const handleOpenTicket = (ticketId) => {
+    setTicketModalOpen(false);
+    history.push(`/tickets/${ticketId}`);
+  };
+
+  // Função para formatar tempo relativo
+  const formatRelativeTime = (date) => {
+    if (!date) return "-";
+    return moment(date).fromNow();
+  };
+
   return (
     <div className={classes.root}>
       <Container maxWidth="xl" className={classes.container}>
@@ -476,47 +532,51 @@ const Dashboard = () => {
 
         {/* Primary Stats */}
         <Grid container spacing={2} className={classes.statsSection}>
-          <Grid item xs={6} sm={4} md={2}>
+          <Grid item xs={4} sm={4} md={2}>
             <StatCard
               title="Em Atendimento"
               value={counters.supportHappening || 0}
               icon={CallIcon}
               color="#0EA5E9"
               gradient={["#0EA5E9", "#3B82F6"]}
+              onClick={() => handleCardClick("open", "Em Atendimento")}
             />
           </Grid>
 
-          <Grid item xs={6} sm={4} md={2}>
+          <Grid item xs={4} sm={4} md={2}>
             <StatCard
               title="Aguardando"
               value={counters.supportPending || 0}
               icon={HourglassEmptyIcon}
               color="#F59E0B"
               gradient={["#F59E0B", "#F97316"]}
+              onClick={() => handleCardClick("pending", "Aguardando")}
             />
           </Grid>
 
-          <Grid item xs={6} sm={4} md={2}>
+          <Grid item xs={4} sm={4} md={2}>
             <StatCard
               title="Finalizados"
               value={counters.supportFinished || 0}
               icon={CheckCircleIcon}
               color="#22C55E"
               gradient={["#22C55E", "#10B981"]}
+              onClick={() => handleCardClick("closed", "Finalizados")}
             />
           </Grid>
 
-          <Grid item xs={6} sm={4} md={2}>
+          <Grid item xs={4} sm={4} md={2}>
             <StatCard
               title="Contatos"
               value={contactsCount || 0}
               icon={GroupAddIcon}
               color="#8B5CF6"
               gradient={["#8B5CF6", "#7C3AED"]}
+              onClick={() => history.push("/contacts")}
             />
           </Grid>
 
-          <Grid item xs={6} sm={4} md={2}>
+          <Grid item xs={4} sm={4} md={2}>
             <StatCard
               title="T. Atendimento"
               value={formatTime(counters.avgSupportTime || 0)}
@@ -526,7 +586,7 @@ const Dashboard = () => {
             />
           </Grid>
 
-          <Grid item xs={6} sm={4} md={2}>
+          <Grid item xs={4} sm={4} md={2}>
             <StatCard
               title="T. Espera"
               value={formatTime(counters.avgWaitTime || 0)}
@@ -778,6 +838,120 @@ const Dashboard = () => {
               disabled={!summaryText}
             >
               Baixar Relatório
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        {/* Modal de Tickets por Status */}
+        <Dialog
+          open={ticketModalOpen}
+          onClose={() => setTicketModalOpen(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span>📋 {ticketModalTitle}</span>
+                <Chip 
+                  label={`${ticketModalData.length} tickets`} 
+                  size="small" 
+                  color="primary"
+                />
+              </Box>
+              <IconButton size="small" onClick={() => setTicketModalOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+          </DialogTitle>
+          <DialogContent style={{ padding: 0 }}>
+            {ticketModalLoading ? (
+              <Box style={{ display: "flex", justifyContent: "center", padding: 40 }}>
+                <CircularProgress />
+              </Box>
+            ) : ticketModalData.length === 0 ? (
+              <Box style={{ textAlign: "center", padding: 40, color: "#666" }}>
+                <Typography variant="body1">
+                  Nenhum ticket encontrado com status "{ticketModalTitle}"
+                </Typography>
+              </Box>
+            ) : (
+              <Paper style={{ maxHeight: 400, overflow: "auto" }}>
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell style={{ fontWeight: 600 }}>#ID</TableCell>
+                      <TableCell style={{ fontWeight: 600 }}>Contato</TableCell>
+                      <TableCell style={{ fontWeight: 600 }}>Atendente</TableCell>
+                      <TableCell style={{ fontWeight: 600 }}>Fila</TableCell>
+                      <TableCell style={{ fontWeight: 600 }}>Atualizado</TableCell>
+                      <TableCell style={{ fontWeight: 600 }} align="center">Ação</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {ticketModalData.map((ticket) => (
+                      <TableRow 
+                        key={ticket.id} 
+                        hover
+                        style={{ cursor: "pointer" }}
+                        onClick={() => handleOpenTicket(ticket.id)}
+                      >
+                        <TableCell>
+                          <Typography variant="body2" style={{ fontWeight: 500 }}>
+                            #{ticket.id}
+                          </Typography>
+                        </TableCell>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2" style={{ fontWeight: 500 }}>
+                              {ticket.contact?.name || "Sem nome"}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              {ticket.contact?.number || "-"}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          {ticket.user?.name || (
+                            <Chip label="Sem atendente" size="small" variant="outlined" />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {ticket.queue?.name || (
+                            <Chip label="Sem fila" size="small" variant="outlined" />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Tooltip title={moment(ticket.updatedAt).format("DD/MM/YYYY HH:mm")}>
+                            <Typography variant="body2">
+                              {formatRelativeTime(ticket.updatedAt)}
+                            </Typography>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell align="center">
+                          <Tooltip title="Abrir ticket">
+                            <IconButton 
+                              size="small" 
+                              color="primary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenTicket(ticket.id);
+                              }}
+                            >
+                              <OpenInNewIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Paper>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setTicketModalOpen(false)} color="secondary">
+              Fechar
             </Button>
           </DialogActions>
         </Dialog>

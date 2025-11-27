@@ -75,6 +75,7 @@ const StatCard = ({
   trend,
   trendValue,
   gradient,
+  onClick,
 }) => {
   const classes = useStyles();
 
@@ -88,6 +89,7 @@ const StatCard = ({
         color: "#FFFFFF",
       }}
       elevation={2}
+      onClick={onClick}
     >
       <Box
         className={classes.gradientOverlay}
