@@ -230,18 +230,18 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 500,
   },
 
-  unreadBadge: {
-    position: "absolute",
-    top: 8,
-    right: 8,
+  avatarBadge: {
     "& .MuiBadge-badge": {
       backgroundColor: green[500],
       color: "white",
       fontSize: "0.6875rem",
       fontWeight: 600,
-      minWidth: 18,
-      height: 18,
-      padding: "0 4px",
+      minWidth: 20,
+      height: 20,
+      padding: "0 5px",
+      borderRadius: "10px",
+      border: `2px solid ${theme.palette.background.paper}`,
+      boxShadow: theme.shadows[2],
     },
   },
 
@@ -443,18 +443,22 @@ const TicketListItemCustom = ({ ticket }) => {
           />
         </Tooltip>
 
-        {ticket.unreadMessages > 0 && (
-          <Badge
-            className={classes.unreadBadge}
-            badgeContent={ticket.unreadMessages}
-          />
-        )}
-
         <ListItemAvatar>
-          <Avatar
-            className={classes.avatar}
-            src={ticket?.contact?.profilePicUrl}
-          />
+          <Badge
+            className={classes.avatarBadge}
+            badgeContent={ticket.unreadMessages > 0 ? ticket.unreadMessages : 0}
+            max={99}
+            overlap="circle"
+            anchorOrigin={{
+              vertical: "top",
+              horizontal: "right",
+            }}
+          >
+            <Avatar
+              className={classes.avatar}
+              src={ticket?.contact?.profilePicUrl}
+            />
+          </Badge>
         </ListItemAvatar>
 
         <ListItemText
