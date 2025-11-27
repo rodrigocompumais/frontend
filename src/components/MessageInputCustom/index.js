@@ -681,11 +681,17 @@ const MessageInputCustom = (props) => {
 
       setImprovedText(data.improvedText || "");
     } catch (err) {
+      console.error("Erro ao melhorar mensagem:", err);
       toastError(err);
-      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
+      
+      if (err.response?.status === 404) {
+        toast.error("Rota não encontrada. Verifique se o backend está rodando e a rota /chat-ai/improve está disponível.");
+      } else if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
         toast.error("Configure a API Key do Gemini em Configurações → Integrações");
+      } else if (err.response?.status === 400) {
+        toast.error(err.response?.data?.error || "Erro ao melhorar mensagem");
       } else {
-        toast.error("Erro ao melhorar mensagem");
+        toast.error("Erro ao melhorar mensagem. Verifique sua conexão.");
       }
       setImproveModalOpen(false);
     } finally {

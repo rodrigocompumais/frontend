@@ -242,6 +242,14 @@ const TicketsListCustom = (props) => {
       if (data.action === "delete") {
         dispatch({ type: "DELETE_TICKET", payload: data.ticketId });
       }
+
+      // Atualizar contador quando ticket é criado
+      if (data.action === "create" && shouldUpdateTicket(data.ticket) && data.ticket.status === status) {
+        dispatch({
+          type: "UPDATE_TICKET",
+          payload: data.ticket,
+        });
+      }
     });
 
     socket.on(`company-${companyId}-appMessage`, (data) => {
@@ -277,11 +285,13 @@ const TicketsListCustom = (props) => {
   }, [status, showAll, user, selectedQueueIds, tags, users, profile, queues, socketManager]);
 
   useEffect(() => {
-    if (typeof updateCount === "function") {
-      updateCount(ticketsList.length);
+    if (typeof updateCount === "function" && status) {
+      // Filtrar apenas tickets do status atual
+      const filteredTickets = ticketsList.filter(t => t.status === status);
+      updateCount(filteredTickets.length);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ticketsList]);
+  }, [ticketsList, status]);
 
   const loadMore = () => {
     setPageNumber((prevState) => prevState + 1);
