@@ -36,6 +36,8 @@ import toastError from "../../errors/toastError";
 
 import useQuickMessages from "../../hooks/useQuickMessages";
 import ChatAIButton from "../ChatAIButton";
+import MessageImproveModal from "../MessageImproveModal";
+import { toast } from "react-toastify";
 
 const Mp3Recorder = new MicRecorder({ bitRate: 128 });
 
@@ -473,6 +475,9 @@ const MessageInputCustom = (props) => {
   const [showEmoji, setShowEmoji] = useState(false);
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
+  const [improveModalOpen, setImproveModalOpen] = useState(false);
+  const [improveLoading, setImproveLoading] = useState(false);
+  const [improvedText, setImprovedText] = useState("");
   const inputRef = useRef();
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
@@ -658,6 +663,48 @@ const MessageInputCustom = (props) => {
     return loading || recording || ticketStatus !== "open";
   };
 
+  const handleImproveMessage = async () => {
+    if (!ticketId) {
+      toast.error("Ticket não encontrado");
+      return;
+    }
+
+    setImproveModalOpen(true);
+    setImproveLoading(true);
+    setImprovedText("");
+
+    try {
+      const { data } = await api.post("/chat-ai/improve", {
+        ticketId: ticketId,
+        draftText: inputMessage.trim() || ""
+      });
+
+      setImprovedText(data.improvedText || "");
+    } catch (err) {
+      toastError(err);
+      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
+        toast.error("Configure a API Key do Gemini em Configurações → Integrações");
+      } else {
+        toast.error("Erro ao melhorar mensagem");
+      }
+      setImproveModalOpen(false);
+    } finally {
+      setImproveLoading(false);
+    }
+  };
+
+  const handleUseImprovedText = (text) => {
+    setInputMessage(text);
+    setImproveModalOpen(false);
+    setImprovedText("");
+    // Focar no input após aplicar o texto
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+      }
+    }, 100);
+  };
+
   const renderReplyingMessage = (message) => {
     return (
       <div className={classes.replyginMsgWrapper}>
@@ -721,6 +768,7 @@ const MessageInputCustom = (props) => {
     );
   else {
     return (
+      <>
       <Paper square elevation={0} className={classes.mainWrapper}>
         {replyingMessage && renderReplyingMessage(replyingMessage)}
         <div className={classes.newMessageBox}>
@@ -755,10 +803,10 @@ const MessageInputCustom = (props) => {
             handleQuickAnswersClick={handleQuickAnswersClick}
           />
 
-          {ticketId && onAnalyzeChat && (
+          {ticketId && (
             <ChatAIButton
               ticketId={ticketId}
-              onAnalyzeChat={onAnalyzeChat}
+              onImproveMessage={handleImproveMessage}
               simple={true}
             />
           )}
@@ -775,6 +823,18 @@ const MessageInputCustom = (props) => {
           />
         </div>
       </Paper>
+      <MessageImproveModal
+        open={improveModalOpen}
+        onClose={() => {
+          setImproveModalOpen(false);
+          setImprovedText("");
+        }}
+        loading={improveLoading}
+        originalText={inputMessage.trim()}
+        improvedText={improvedText}
+        onUseImproved={handleUseImprovedText}
+      />
+    </>
     );
   }
 };

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { IconButton, Menu, MenuItem, Tooltip, makeStyles, Box, Typography } from "@material-ui/core";
-import favicon from "../../assets/favicon.ico";
+import GeminiIcon from "../GeminiIcon";
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
@@ -26,7 +26,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const ChatAIButton = ({ ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestResponse, simple = false }) => {
+const ChatAIButton = ({ ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestResponse, onImproveMessage, simple = false }) => {
   const classes = useStyles();
   const [anchorEl, setAnchorEl] = useState(null);
 
@@ -53,9 +53,32 @@ const ChatAIButton = ({ ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestRes
     onSuggestResponse();
   };
 
+  const handleImproveMessage = () => {
+    handleCloseMenu();
+    if (onImproveMessage) {
+      onImproveMessage();
+    }
+  };
+
   const menuOpen = Boolean(anchorEl);
 
-  // Modo simples: apenas botão de análise de conversa
+  // Modo simples: botão de melhorar mensagem (nova funcionalidade principal)
+  if (simple && onImproveMessage) {
+    return (
+      <Tooltip title="Melhorar mensagem - Compuchat">
+        <IconButton
+          className={classes.iconButton}
+          onClick={handleImproveMessage}
+          aria-label="Melhorar mensagem"
+          size="small"
+        >
+          <GeminiIcon size={24} className={classes.faviconIcon} />
+        </IconButton>
+      </Tooltip>
+    );
+  }
+
+  // Modo simples: fallback para análise de conversa (compatibilidade)
   if (simple && onAnalyzeChat) {
     return (
       <Tooltip title="Analisar conversa - Compuchat">
@@ -65,7 +88,7 @@ const ChatAIButton = ({ ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestRes
           aria-label="Analisar conversa"
           size="small"
         >
-          <img src={favicon} alt="Compuchat" className={classes.faviconIcon} />
+          <GeminiIcon size={24} className={classes.faviconIcon} />
         </IconButton>
       </Tooltip>
     );
@@ -81,7 +104,7 @@ const ChatAIButton = ({ ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestRes
           aria-label="Chat AI"
           size="small"
         >
-          <img src={favicon} alt="Compuchat" className={classes.faviconIcon} />
+          <GeminiIcon size={24} className={classes.faviconIcon} />
         </IconButton>
       </Tooltip>
       <Menu
@@ -121,6 +144,16 @@ const ChatAIButton = ({ ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestRes
             </Typography>
           </Box>
         </MenuItem>
+        {onImproveMessage && (
+          <MenuItem onClick={handleImproveMessage} className={classes.menuItem}>
+            <Box display="flex" alignItems="center">
+              <span>✨</span>
+              <Typography className={classes.menuItemText}>
+                Melhorar mensagem
+              </Typography>
+            </Box>
+          </MenuItem>
+        )}
       </Menu>
     </>
   );

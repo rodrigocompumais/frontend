@@ -20,9 +20,16 @@ const QrcodeModal = ({ open, onClose, whatsAppId }) => {
       try {
         const { data } = await api.get(`/whatsapp/${whatsAppId}`);
         // Validar o QR code antes de definir
-        const qrValue = data.qrcode && typeof data.qrcode === 'string' && data.qrcode.trim() !== '' 
+        let qrValue = data.qrcode && typeof data.qrcode === 'string' && data.qrcode.trim() !== '' 
           ? data.qrcode.trim() 
           : '';
+        
+        // Verificar se o QR code contém URLs suspeitas
+        if (qrValue && (qrValue.includes('linktr.ee') || qrValue.includes('http://') || qrValue.includes('https://') || qrValue.startsWith('http'))) {
+          console.error('⚠️ QR Code inválido detectado no frontend:', qrValue.substring(0, 100));
+          qrValue = ''; // Limpar QR code inválido
+        }
+        
         setQrCode(qrValue);
       } catch (err) {
         toastError(err);
@@ -39,9 +46,16 @@ const QrcodeModal = ({ open, onClose, whatsAppId }) => {
     socket.on(`company-${companyId}-whatsappSession`, (data) => {
       if (data.action === "update" && data.session.id === whatsAppId) {
         // Validar o QR code antes de definir
-        const qrValue = data.session.qrcode && typeof data.session.qrcode === 'string' && data.session.qrcode.trim() !== ''
+        let qrValue = data.session.qrcode && typeof data.session.qrcode === 'string' && data.session.qrcode.trim() !== ''
           ? data.session.qrcode.trim()
           : '';
+        
+        // Verificar se o QR code contém URLs suspeitas
+        if (qrValue && (qrValue.includes('linktr.ee') || qrValue.includes('http://') || qrValue.includes('https://') || qrValue.startsWith('http'))) {
+          console.error('⚠️ QR Code inválido detectado via WebSocket:', qrValue.substring(0, 100));
+          qrValue = ''; // Limpar QR code inválido
+        }
+        
         setQrCode(qrValue);
       }
 

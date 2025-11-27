@@ -20,7 +20,7 @@ import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import MinimizeIcon from "@material-ui/icons/Remove";
 import AssessmentIcon from "@material-ui/icons/Assessment";
 import api from "../../services/api";
-import favicon from "../../assets/favicon.ico";
+import GeminiIcon from "../GeminiIcon";
 import { toast } from "react-toastify";
 import toastError from "../../errors/toastError";
 
@@ -443,7 +443,7 @@ const AiChatFloating = () => {
           {/* Header */}
           <Box className={classes.chatHeader}>
             <Box className={classes.headerTitle}>
-              <img src={favicon} alt="Compuchat" className={classes.faviconIcon} />
+              <GeminiIcon size={24} className={classes.faviconIcon} />
               <Typography variant="subtitle1" style={{ fontWeight: 600 }}>
                 Compuchat
               </Typography>
@@ -474,7 +474,7 @@ const AiChatFloating = () => {
           <Box className={classes.messagesArea}>
             {messages.length === 0 ? (
               <Box className={classes.emptyState}>
-                <img src={favicon} alt="Compuchat" className={classes.faviconIconLarge} />
+                <GeminiIcon size={48} className={classes.faviconIconLarge} />
                 <Typography variant="body1" gutterBottom>
                   Olá! Sou o Compuchat, seu assistente inteligente.
                 </Typography>
@@ -579,7 +579,7 @@ const AiChatFloating = () => {
               {open ? (
                 <CloseIcon style={{ position: "relative", zIndex: 1 }} />
               ) : (
-                <img src={favicon} alt="Compuchat" className={classes.faviconFab} />
+                <GeminiIcon size={24} className={classes.faviconFab} />
               )}
             </Fab>
           </Badge>
