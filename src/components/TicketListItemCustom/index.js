@@ -33,6 +33,7 @@ import { i18n } from "../../translate/i18n";
 
 import api from "../../services/api";
 import ButtonWithSpinner from "../ButtonWithSpinner";
+import MarkdownWrapper from "../MarkdownWrapper";
 import { Tooltip } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
@@ -119,6 +120,19 @@ const useStyles = makeStyles((theme) => ({
     fontSize: "0.8125rem",
     color: theme.palette.text.secondary,
     fontWeight: 400,
+  },
+
+  lastMessage: {
+    fontSize: "0.8125rem",
+    color: theme.palette.text.secondary,
+    fontWeight: 400,
+    marginTop: theme.spacing(0.25),
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    display: "-webkit-box",
+    WebkitLineClamp: 1,
+    WebkitBoxOrient: "vertical",
+    lineHeight: 1.4,
   },
 
   timeText: {
@@ -485,6 +499,15 @@ const TicketListItemCustom = ({ ticket }) => {
                 {!ticketUser && ticket.status === "pending" && (
                   <Typography className={classes.attendantName} noWrap>
                     Sem atendente
+                  </Typography>
+                )}
+                {ticket.lastMessage && (
+                  <Typography className={classes.lastMessage}>
+                    {ticket.lastMessage.includes('data:image/png;base64') ? (
+                      "📍 Localização"
+                    ) : (
+                      <MarkdownWrapper>{ticket.lastMessage}</MarkdownWrapper>
+                    )}
                   </Typography>
                 )}
               </Box>
