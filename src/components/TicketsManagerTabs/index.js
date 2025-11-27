@@ -246,8 +246,14 @@ const TicketsManagerTabs = () => {
 
   const applyPanelStyle = (status) => {
     if (tabOpen !== status) {
-      return { width: 0, height: 0 };
+      return { 
+        display: "none",
+        width: 0, 
+        height: 0,
+        overflow: "hidden"
+      };
     }
+    return {};
   };
 
   const handleCloseOrOpenTicket = (ticket) => {
@@ -341,18 +347,25 @@ const TicketsManagerTabs = () => {
         </FormControl>
         <Box display="flex" alignItems="center" gap={1}>
           {tab === "open" && (
-            <>
-              <Badge badgeContent={openCount} color="primary">
-                <Typography variant="body2" style={{ padding: "0 8px" }}>
-                  {i18n.t("ticketsList.assignedHeader")}
-                </Typography>
-              </Badge>
-              <Badge badgeContent={pendingCount} color="secondary">
-                <Typography variant="body2" style={{ padding: "0 8px" }}>
-                  {i18n.t("ticketsList.pendingHeader")}
-                </Typography>
-              </Badge>
-            </>
+            <FormControl variant="outlined" size="small" style={{ minWidth: 180 }}>
+              <Select
+                value={tabOpen}
+                onChange={(e) => handleChangeTabOpen(null, e.target.value)}
+              >
+                <MenuItem value="open">
+                  <Box display="flex" alignItems="center" justifyContent="space-between" width="100%">
+                    <Typography>{i18n.t("ticketsList.assignedHeader")}</Typography>
+                    <Badge badgeContent={openCount} color="primary" style={{ marginLeft: 8 }} />
+                  </Box>
+                </MenuItem>
+                <MenuItem value="pending">
+                  <Box display="flex" alignItems="center" justifyContent="space-between" width="100%">
+                    <Typography>{i18n.t("ticketsList.pendingHeader")}</Typography>
+                    <Badge badgeContent={pendingCount} color="secondary" style={{ marginLeft: 8 }} />
+                  </Box>
+                </MenuItem>
+              </Select>
+            </FormControl>
           )}
         </Box>
       </Paper>
@@ -370,76 +383,66 @@ const TicketsManagerTabs = () => {
           </div>
         ) : (
           <>
-            <Button
-              variant="outlined"
+            <IconButton
               color="primary"
               onClick={() => setNewTicketModalOpen(true)}
+              size="small"
+              style={{ marginRight: 8 }}
             >
-              {i18n.t("ticketsManager.buttons.newTicket")}
-            </Button>
-            <Can
-              role={user.profile}
-              perform="tickets-manager:showall"
-              yes={() => (
-                <FormControlLabel
-                  label={i18n.t("tickets.buttons.showAll")}
-                  labelPlacement="start"
-                  control={
-                    <Switch
-                      size="small"
-                      checked={showAllTickets}
-                      onChange={() =>
-                        setShowAllTickets((prevState) => !prevState)
+              <AddIcon />
+            </IconButton>
+            <IconButton
+              onClick={handleOpenFilterMenu}
+              size="small"
+              color={filterMenuOpen ? "primary" : "default"}
+            >
+              <FilterListIcon />
+            </IconButton>
+            <Menu
+              anchorEl={filterMenuAnchor}
+              open={filterMenuOpen}
+              onClose={handleCloseFilterMenu}
+              className={classes.filterMenu}
+            >
+              <Box className={classes.filterMenuSection}>
+                <Can
+                  role={user.profile}
+                  perform="tickets-manager:showall"
+                  yes={() => (
+                    <FormControlLabel
+                      label={i18n.t("tickets.buttons.showAll")}
+                      labelPlacement="start"
+                      control={
+                        <Switch
+                          size="small"
+                          checked={showAllTickets}
+                          onChange={() =>
+                            setShowAllTickets((prevState) => !prevState)
+                          }
+                          name="showAllTickets"
+                          color="primary"
+                        />
                       }
-                      name="showAllTickets"
-                      color="primary"
                     />
-                  }
+                  )}
                 />
-              )}
-            />
+              </Box>
+              <Divider />
+              <Box className={classes.filterMenuSection}>
+                <Typography variant="caption" color="textSecondary" style={{ padding: "8px 16px" }}>
+                  Filas
+                </Typography>
+                <TicketsQueueSelect
+                  selectedQueueIds={selectedQueueIds}
+                  userQueues={user?.queues}
+                  onChange={(values) => setSelectedQueueIds(values)}
+                />
+              </Box>
+            </Menu>
           </>
         )}
-        <TicketsQueueSelect
-          style={{ marginLeft: 6 }}
-          selectedQueueIds={selectedQueueIds}
-          userQueues={user?.queues}
-          onChange={(values) => setSelectedQueueIds(values)}
-        />
       </Paper>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
-        <Tabs
-          value={tabOpen}
-          onChange={handleChangeTabOpen}
-          indicatorColor="primary"
-          textColor="primary"
-          variant="fullWidth"
-        >
-          <Tab
-            label={
-              <Badge
-                className={classes.badge}
-                badgeContent={openCount}
-                color="primary"
-              >
-                {i18n.t("ticketsList.assignedHeader")}
-              </Badge>
-            }
-            value={"open"}
-          />
-          <Tab
-            label={
-              <Badge
-                className={classes.badge}
-                badgeContent={pendingCount}
-                color="secondary"
-              >
-                {i18n.t("ticketsList.pendingHeader")}
-              </Badge>
-            }
-            value={"pending"}
-          />
-        </Tabs>
         <Paper className={classes.ticketsWrapper}>
           <TicketsList
             status="open"

@@ -57,12 +57,13 @@ const useStyles = makeStyles((theme) => ({
   },
   // Botão FAB principal
   fab: {
-    background: "linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%)",
+    background: "transparent",
     color: "#FFFFFF",
     boxShadow: "0 4px 20px rgba(14, 165, 233, 0.4)",
     transition: "all 0.3s ease",
+    position: "relative",
+    overflow: "hidden",
     "&:hover": {
-      background: "linear-gradient(135deg, #38BDF8 0%, #0EA5E9 100%)",
       transform: "scale(1.05)",
       boxShadow: "0 6px 25px rgba(14, 165, 233, 0.5)",
     },
@@ -151,9 +152,22 @@ const useStyles = makeStyles((theme) => ({
     objectFit: "contain",
   },
   faviconFab: {
-    width: 24,
-    height: 24,
-    objectFit: "contain",
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: "50%",
+    zIndex: 0,
+  },
+  
+  fabWithBackground: {
+    "&:hover .faviconFab": {
+      opacity: 0.8,
+    },
   },
   headerActions: {
     display: "flex",
@@ -558,11 +572,15 @@ const AiChatFloating = () => {
             max={99}
           >
             <Fab
-              className={`${classes.fab} ${open ? classes.fabOpen : ""}`}
+              className={`${classes.fab} ${open ? classes.fabOpen : ""} ${!open ? classes.fabWithBackground : ""}`}
               onClick={() => setOpen(!open)}
               aria-label="Chat com IA"
             >
-              {open ? <CloseIcon /> : <img src={favicon} alt="Compuchat" className={classes.faviconFab} />}
+              {open ? (
+                <CloseIcon style={{ position: "relative", zIndex: 1 }} />
+              ) : (
+                <img src={favicon} alt="Compuchat" className={classes.faviconFab} />
+              )}
             </Fab>
           </Badge>
         </Box>
