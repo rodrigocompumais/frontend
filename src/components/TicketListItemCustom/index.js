@@ -88,6 +88,31 @@ const useStyles = makeStyles((theme) => ({
     fontSize: "0.9375rem",
     color: theme.palette.text.primary,
     marginBottom: theme.spacing(0.25),
+    paddingRight: 40, // Espaço para o botão de visualizar
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap",
+  },
+
+  contactNameWrapper: {
+    position: "relative",
+    width: "100%",
+  },
+
+  viewButton: {
+    position: "absolute",
+    right: 0,
+    top: 0,
+    padding: 4,
+    zIndex: 1,
+    backgroundColor: theme.palette.type === "dark"
+      ? theme.palette.background.paper
+      : "#FFFFFF",
+    "&:hover": {
+      backgroundColor: theme.palette.type === "dark"
+        ? "rgba(255, 255, 255, 0.1)"
+        : "rgba(0, 0, 0, 0.04)",
+    },
   },
 
   attendantName: {
@@ -422,7 +447,7 @@ const TicketListItemCustom = ({ ticket }) => {
           disableTypography
           primary={
             <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-              <Box flex={1} minWidth={0}>
+              <Box flex={1} minWidth={0} className={classes.contactNameWrapper}>
                 <Typography className={classes.contactName} noWrap>
                   {ticket.contact.name}
                   {ticket.chatbot && (
@@ -437,24 +462,21 @@ const TicketListItemCustom = ({ ticket }) => {
                       />
                     </Tooltip>
                   )}
-                  {profile === "admin" && (
-                    <Tooltip title={i18n.t("ticketsListItem.tooltip.peek")}>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenTicketMessageDialog(true);
-                        }}
-                        style={{
-                          padding: 4,
-                          marginLeft: 4,
-                        }}
-                      >
-                        <VisibilityIcon fontSize="small" style={{ color: blue[600] }} />
-                      </IconButton>
-                    </Tooltip>
-                  )}
                 </Typography>
+                {profile === "admin" && (
+                  <Tooltip title={i18n.t("ticketsListItem.tooltip.peek")}>
+                    <IconButton
+                      size="small"
+                      className={classes.viewButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenTicketMessageDialog(true);
+                      }}
+                    >
+                      <VisibilityIcon fontSize="small" style={{ color: blue[600] }} />
+                    </IconButton>
+                  </Tooltip>
+                )}
                 {ticketUser && (
                   <Typography className={classes.attendantName} noWrap>
                     Atendente: {ticketUser}
