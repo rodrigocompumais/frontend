@@ -106,20 +106,39 @@ const usePendingTicketNotification = () => {
       const isPending = data.ticket.status === "pending";
       const belongsToUser = shouldCountTicket(data.ticket);
 
+      console.log(`🎫 Evento de ticket [${data.action}]:`, {
+        ticketId,
+        status: data.ticket.status,
+        isPending,
+        belongsToUser,
+        currentPendingCount: pendingTicketsRef.current.size
+      });
+
       if (data.action === "update" || data.action === "create") {
+        const wasPending = pendingTicketsRef.current.has(ticketId);
+        
         if (isPending && belongsToUser) {
           // Adicionar ticket ao conjunto de pendentes
           pendingTicketsRef.current.add(ticketId);
+          if (!wasPending) {
+            console.log(`➕ Ticket ${ticketId} adicionado aos pendentes`);
+          }
         } else {
           // Remover ticket do conjunto (mudou de status ou não pertence mais ao usuário)
-          pendingTicketsRef.current.delete(ticketId);
+          if (wasPending) {
+            pendingTicketsRef.current.delete(ticketId);
+            console.log(`➖ Ticket ${ticketId} removido dos pendentes (status: ${data.ticket.status})`);
+          }
         }
         updateAudioState();
       }
 
       if (data.action === "delete") {
         // Ticket foi deletado, remover do conjunto
-        pendingTicketsRef.current.delete(ticketId);
+        const wasDeleted = pendingTicketsRef.current.delete(ticketId);
+        if (wasDeleted) {
+          console.log(`🗑️ Ticket ${ticketId} deletado dos pendentes`);
+        }
         updateAudioState();
       }
     };
