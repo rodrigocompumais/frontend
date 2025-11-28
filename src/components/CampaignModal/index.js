@@ -32,9 +32,12 @@ import {
   Select,
   Tab,
   Tabs,
+  Tooltip,
 } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ConfirmationModal from "../ConfirmationModal";
+import CampaignAIModal from "../CampaignAIModal";
+import GeminiIcon from "../GeminiIcon";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -117,6 +120,7 @@ const CampaignModal = ({
   const [campaignEditable, setCampaignEditable] = useState(true);
   const attachmentFile = useRef(null);
   const [tagLists, setTagLists] = useState([]);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -283,6 +287,23 @@ const CampaignModal = ({
     );
   };
 
+  const handleApplyAIMessages = (messages) => {
+    // Mensagens: [message1, message2, message3, message4, message5]
+    const [msg1, msg2, msg3, msg4, msg5] = messages;
+    
+    setCampaign(prev => ({
+      ...prev,
+      message1: msg1 || prev.message1,
+      message2: msg2 || prev.message2,
+      message3: msg3 || prev.message3,
+      message4: msg4 || prev.message4,
+      message5: msg5 || prev.message5,
+    }));
+    
+    // Voltar para a primeira aba para ver o resultado
+    setMessageTab(0);
+  };
+
   const cancelCampaign = async () => {
     try {
       await api.post(`/campaigns/${campaign.id}/cancel`);
@@ -315,6 +336,11 @@ const CampaignModal = ({
       >
         {i18n.t("campaigns.confirmationModal.deleteMessage")}
       </ConfirmationModal>
+      <CampaignAIModal
+        open={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        onApply={handleApplyAIMessages}
+      />
       <Dialog
         open={open}
         onClose={handleClose}
@@ -511,6 +537,28 @@ const CampaignModal = ({
                     </FormControl>
                   </Grid>
                   <Grid xs={12} item>
+                    <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                      <Typography variant="body2" color="textSecondary">
+                        Mensagens da Campanha
+                      </Typography>
+                      {campaignEditable && (
+                        <Tooltip title="Gerar mensagens com IA - Compuchat">
+                          <IconButton
+                            onClick={() => setAiModalOpen(true)}
+                            color="primary"
+                            size="small"
+                            style={{
+                              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                              color: "#fff",
+                              padding: "8px",
+                              transition: "all 0.3s ease",
+                            }}
+                          >
+                            <GeminiIcon size={20} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
                     <Tabs
                       value={messageTab}
                       indicatorColor="primary"
