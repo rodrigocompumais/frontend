@@ -33,6 +33,7 @@ import {
   Tab,
   Tabs,
   Tooltip,
+  Typography,
 } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ConfirmationModal from "../ConfirmationModal";
