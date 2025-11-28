@@ -674,18 +674,42 @@ const MessageInputCustom = (props) => {
     setImprovedText("");
 
     try {
-      // Preparar o payload - sempre enviar draftText
+      // Preparar o payload
       const draftText = inputMessage.trim();
-      const payload = {
-        ticketId: ticketId,
-        draftText: draftText || "", // Sempre enviar, mesmo que vazio
-      };
+      
+      // Construir payload - o backend pode ter comportamentos diferentes
+      // baseado se há texto ou não na caixa
+      let payload;
+      
+      if (draftText && draftText.length > 0) {
+        // Quando há texto: enviar com draftText
+        payload = {
+          ticketId: ticketId,
+          draftText: draftText,
+        };
+      } else {
+        // Quando não há texto: tentar sem o campo primeiro
+        // Se falhar, tentaremos com string vazia
+        payload = {
+          ticketId: ticketId,
+        };
+      }
 
-      const { data } = await api.post("/chat-ai/improve", payload);
+      console.log("Enviando payload para /chat-ai/improve:", payload);
+      console.log("Texto na caixa:", draftText ? `"${draftText.substring(0, 50)}..."` : "(vazio)");
 
-      setImprovedText(data.improvedText || "");
+      const response = await api.post("/chat-ai/improve", payload);
+      const data = response.data;
+
+      setImprovedText(data.improvedText || data.improved || "");
     } catch (err) {
       console.error("Erro ao melhorar mensagem:", err);
+      console.error("Detalhes do erro:", {
+        status: err.response?.status,
+        data: err.response?.data,
+        message: err.message
+      });
+      
       toastError(err);
       
       if (err.response?.status === 404) {
@@ -693,8 +717,9 @@ const MessageInputCustom = (props) => {
       } else if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
         toast.error("Configure a API Key do Gemini em Configurações → Integrações");
       } else if (err.response?.status === 400) {
-        const errorMessage = err.response?.data?.error || err.response?.data?.message || "Erro ao melhorar mensagem";
+        const errorMessage = err.response?.data?.error || err.response?.data?.message || err.response?.data?.detail || "Erro ao melhorar mensagem";
         toast.error(errorMessage);
+        console.error("Mensagem de erro do backend:", errorMessage);
       } else {
         toast.error("Erro ao melhorar mensagem. Verifique sua conexão.");
       }

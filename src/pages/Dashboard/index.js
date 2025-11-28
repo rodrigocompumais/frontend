@@ -306,18 +306,22 @@ const Dashboard = () => {
   }
 
   const handleGenerateSummary = async () => {
+    // Abrir o modal primeiro para mostrar a tela de carregamento
     setSummaryLoading(true);
     setSummaryText("");
+    
+    // Se tiver atendente selecionado, buscar nome dele, senão é resumo geral
+    if (selectedAgentId) {
+      const selectedAgent = attendants.find((a) => a.id === Number(selectedAgentId));
+      setSummaryAgentName(selectedAgent?.name || "Atendente");
+    } else {
+      setSummaryAgentName("Resumo Geral da Operação");
+    }
+    
+    // Abrir o modal imediatamente para mostrar o loading
+    setSummaryModalOpen(true);
 
     try {
-      // Se tiver atendente selecionado, buscar nome dele, senão é resumo geral
-      if (selectedAgentId) {
-        const selectedAgent = attendants.find((a) => a.id === Number(selectedAgentId));
-        setSummaryAgentName(selectedAgent?.name || "Atendente");
-      } else {
-        setSummaryAgentName("Resumo Geral da Operação");
-      }
-
       const params = {
         maxMessages: 200,
       };
@@ -343,13 +347,14 @@ const Dashboard = () => {
 
       const { data } = await api.post("/ai/summary/agent", params);
       setSummaryText(data.summary || "Nenhum resumo disponível.");
-      setSummaryModalOpen(true);
     } catch (err) {
       if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
         toast.error("Configure a API Key do Gemini em Configurações → Integrações");
       } else {
         toastError(err);
       }
+      // Fechar o modal em caso de erro
+      setSummaryModalOpen(false);
     } finally {
       setSummaryLoading(false);
     }
