@@ -1,31 +1,82 @@
 import { useEffect, useRef, useContext } from "react";
-import useSound from "use-sound";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import newChatSound from "../../assets/new_chat.mp3";
+import api from "../../services/api";
 
 const usePendingTicketNotification = () => {
   const { user } = useContext(AuthContext);
   const socketManager = useContext(SocketContext);
-  const [play, { stop }] = useSound(newChatSound, { 
-    loop: true,
-    volume: 0.5 
-  });
+  const audioRef = useRef(null);
   const isPlayingRef = useRef(false);
   const pendingTicketsRef = useRef(new Set());
+
+  // Inicializar elemento de áudio
+  useEffect(() => {
+    audioRef.current = new Audio(newChatSound);
+    audioRef.current.loop = true;
+    audioRef.current.volume = 0.5;
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+
+  // Buscar tickets pendentes iniciais
+  useEffect(() => {
+    const fetchInitialPendingTickets = async () => {
+      if (!user?.companyId) return;
+
+      try {
+        const { data } = await api.get("/tickets", {
+          params: {
+            status: "pending",
+            showAll: false,
+            pageNumber: 1,
+            queueIds: JSON.stringify(user.queues?.map(q => q.id) || [])
+          }
+        });
+
+        console.log("📋 Tickets pendentes iniciais:", data);
+
+        if (data?.tickets && data.tickets.length > 0) {
+          data.tickets.forEach(ticket => {
+            pendingTicketsRef.current.add(ticket.id);
+          });
+          console.log("✅ Tickets pendentes carregados:", pendingTicketsRef.current.size);
+          updateAudioState();
+        } else {
+          console.log("ℹ️ Nenhum ticket pendente encontrado inicialmente");
+        }
+      } catch (error) {
+        console.error("❌ Erro ao buscar tickets pendentes iniciais:", error);
+      }
+    };
+
+    fetchInitialPendingTickets();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.companyId]);
 
   // Controlar reprodução do áudio baseado no número de tickets pendentes
   const updateAudioState = () => {
     const hasPendingTickets = pendingTicketsRef.current.size > 0;
     
-    if (hasPendingTickets && !isPlayingRef.current) {
+    if (hasPendingTickets && !isPlayingRef.current && audioRef.current) {
       // Há tickets pendentes e o áudio não está tocando
-      play();
+      audioRef.current.play().catch(err => {
+        console.warn("Não foi possível tocar o áudio:", err);
+      });
       isPlayingRef.current = true;
-    } else if (!hasPendingTickets && isPlayingRef.current) {
+      console.log("🔊 Áudio iniciado - tickets pendentes:", pendingTicketsRef.current.size);
+    } else if (!hasPendingTickets && isPlayingRef.current && audioRef.current) {
       // Não há mais tickets pendentes, parar o áudio
-      stop();
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
       isPlayingRef.current = false;
+      console.log("🔇 Áudio parado - sem tickets pendentes");
     }
   };
 
@@ -84,14 +135,14 @@ const usePendingTicketNotification = () => {
       socket.off("ready", handleReady);
       socket.off(`company-${companyId}-ticket`, handleTicket);
       // Parar áudio ao desmontar
-      if (isPlayingRef.current) {
-        stop();
+      if (isPlayingRef.current && audioRef.current) {
+        audioRef.current.pause();
         isPlayingRef.current = false;
       }
       // Limpar conjunto
       pendingTicketsRef.current.clear();
     };
-  }, [user, socketManager, play, stop]);
+  }, [user, socketManager]);
 
   return null;
 };
