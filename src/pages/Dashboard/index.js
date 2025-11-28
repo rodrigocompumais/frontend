@@ -185,6 +185,14 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     marginBottom: theme.spacing(2),
   },
+  summaryLoadingBox: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing(6),
+    gap: theme.spacing(2),
+  },
 }));
 
 const Dashboard = () => {
@@ -691,9 +699,21 @@ const Dashboard = () => {
             </Box>
           </DialogTitle>
           <DialogContent>
-            <Typography className={classes.summaryContent}>
-              {summaryText || "Carregando resumo..."}
-            </Typography>
+            {summaryLoading ? (
+              <Box className={classes.summaryLoadingBox}>
+                <CircularProgress size={48} />
+                <Typography variant="body1" color="textSecondary">
+                  Gerando resumo com IA...
+                </Typography>
+                <Typography variant="body2" color="textSecondary" style={{ textAlign: "center", maxWidth: 400 }}>
+                  Isso pode levar alguns segundos. Por favor, aguarde.
+                </Typography>
+              </Box>
+            ) : (
+              <Typography className={classes.summaryContent}>
+                {summaryText || "Nenhum resumo disponível."}
+              </Typography>
+            )}
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setSummaryModalOpen(false)} color="secondary">

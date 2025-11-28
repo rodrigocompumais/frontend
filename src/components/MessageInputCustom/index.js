@@ -674,10 +674,14 @@ const MessageInputCustom = (props) => {
     setImprovedText("");
 
     try {
-      const { data } = await api.post("/chat-ai/improve", {
+      // Preparar o payload - sempre enviar draftText
+      const draftText = inputMessage.trim();
+      const payload = {
         ticketId: ticketId,
-        draftText: inputMessage.trim() || ""
-      });
+        draftText: draftText || "", // Sempre enviar, mesmo que vazio
+      };
+
+      const { data } = await api.post("/chat-ai/improve", payload);
 
       setImprovedText(data.improvedText || "");
     } catch (err) {
@@ -689,7 +693,8 @@ const MessageInputCustom = (props) => {
       } else if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
         toast.error("Configure a API Key do Gemini em Configurações → Integrações");
       } else if (err.response?.status === 400) {
-        toast.error(err.response?.data?.error || "Erro ao melhorar mensagem");
+        const errorMessage = err.response?.data?.error || err.response?.data?.message || "Erro ao melhorar mensagem";
+        toast.error(errorMessage);
       } else {
         toast.error("Erro ao melhorar mensagem. Verifique sua conexão.");
       }
