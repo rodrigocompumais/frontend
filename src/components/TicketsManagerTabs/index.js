@@ -34,6 +34,7 @@ import TicketsQueueSelect from "../TicketsQueueSelect";
 import { Button } from "@material-ui/core";
 import { TagsFilter } from "../TagsFilter";
 import { UsersFilter } from "../UsersFilter";
+import usePendingTicketNotification from "../../hooks/usePendingTicketNotification";
 
 const useStyles = makeStyles(theme => ({
 	ticketsWrapper: {
@@ -214,6 +215,9 @@ const TicketsManagerTabs = () => {
 
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+
+  // Hook para notificação sonora de tickets pendentes
+  usePendingTicketNotification();
 
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
@@ -460,7 +464,7 @@ const TicketsManagerTabs = () => {
           </>
         )}
       </Paper>
-      <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
+      <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={true}>
         <TicketsList
           status="open"
           showAll={showAllTickets}
@@ -468,7 +472,7 @@ const TicketsManagerTabs = () => {
           updateCount={(val) => setOpenCount(val)}
         />
       </TabPanel>
-      <TabPanel value={tab} name="pending" className={classes.ticketsWrapper}>
+      <TabPanel value={tab} name="pending" className={classes.ticketsWrapper} keepMounted={true}>
         <TicketsList
           status="pending"
           showAll={showAllTickets}

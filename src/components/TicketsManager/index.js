@@ -27,6 +27,7 @@ import TicketsQueueSelect from "../TicketsQueueSelect";
 
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import usePendingTicketNotification from "../../hooks/usePendingTicketNotification";
 
 const useStyles = makeStyles((theme) => ({
   ticketsWrapper: {
@@ -116,6 +117,9 @@ const TicketsManager = () => {
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [selectedTags, setSelectedTags] = useState([]);
+
+  // Hook para notificação sonora de tickets pendentes
+  usePendingTicketNotification();
 
   const userQueueIds = user.queues.map((q) => q.id);
   const [selectedQueueIds, setSelectedQueueIds] = useState(userQueueIds || []);
@@ -254,7 +258,7 @@ const TicketsManager = () => {
           onChange={(values) => setSelectedQueueIds(values)}
         />
       </Paper>
-      <TabPanel value={tab} name="open" className={classes.ticketsWrapper}>
+      <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={true}>
       <TagsFilter onFiltered={handleSelectedTags} />
         <Paper className={classes.ticketsWrapper}>
           <TicketsList
@@ -273,7 +277,7 @@ const TicketsManager = () => {
         </Paper>
       </TabPanel>
 
-      <TabPanel value={tab} name="pending" className={classes.ticketsWrapper}>
+      <TabPanel value={tab} name="pending" className={classes.ticketsWrapper} keepMounted={true}>
       <TagsFilter onFiltered={handleSelectedTags} />
         <TicketsList
           status="pending"
