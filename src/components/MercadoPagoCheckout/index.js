@@ -90,13 +90,24 @@ const useStyles = makeStyles((theme) => ({
     background: "rgba(30, 41, 59, 0.5)",
     padding: "8px 12px",
     transition: "all 0.3s ease",
+    position: "relative",
+    display: "block",
     "&:focus-within": {
       borderColor: "#00D9FF",
       borderWidth: 2,
     },
     "& iframe": {
-      border: "none",
-      background: "transparent",
+      border: "none !important",
+      background: "transparent !important",
+      width: "100% !important",
+      height: "100% !important",
+      minHeight: "32px !important",
+      position: "relative",
+      zIndex: 1,
+      pointerEvents: "auto",
+    },
+    "& *": {
+      pointerEvents: "auto",
     },
   },
 }));
@@ -560,10 +571,11 @@ const MercadoPagoCheckout = React.forwardRef(
           >
             Número do Cartão
           </Typography>
-          <Box
+          <div
             ref={cardNumberFrameRef}
             className={classes.mpFrame}
             id="cardNumber"
+            style={{ position: "relative" }}
           />
         </Box>
 
@@ -579,10 +591,11 @@ const MercadoPagoCheckout = React.forwardRef(
           >
             Nome no Cartão
           </Typography>
-          <Box
+          <div
             ref={cardholderNameFrameRef}
             className={classes.mpFrame}
             id="cardholderName"
+            style={{ position: "relative" }}
           />
         </Box>
 
@@ -599,10 +612,11 @@ const MercadoPagoCheckout = React.forwardRef(
             >
               Validade
             </Typography>
-            <Box
+            <div
               ref={expirationDateFrameRef}
               className={classes.mpFrame}
               id="expirationDate"
+              style={{ position: "relative" }}
             />
           </Box>
 
@@ -617,10 +631,11 @@ const MercadoPagoCheckout = React.forwardRef(
             >
               CVV
             </Typography>
-            <Box
+            <div
               ref={securityCodeFrameRef}
               className={classes.mpFrame}
               id="securityCode"
+              style={{ position: "relative" }}
             />
           </Box>
         </Box>
