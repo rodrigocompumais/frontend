@@ -375,7 +375,14 @@ const MercadoPagoCheckout = React.forwardRef(
 
     // Inicializar Mercado Pago SDK
     useEffect(() => {
-      if (window.MercadoPago && publicKey) {
+      // Verificar se o SDK está carregado
+      if (!window.MercadoPago) {
+        console.error("SDK do Mercado Pago não está disponível. Verifique se o script está carregado no index.html");
+        setError("SDK do Mercado Pago não está disponível");
+        return;
+      }
+
+      if (publicKey) {
         // Verificar se a chave pública é válida
         if (!publicKey || publicKey.trim() === "") {
           console.error("Public Key do Mercado Pago está vazia ou inválida");
@@ -398,32 +405,54 @@ const MercadoPagoCheckout = React.forwardRef(
         }
 
         try {
+          // Verificar se o construtor existe
+          if (typeof window.MercadoPago !== "function") {
+            console.error("window.MercadoPago não é uma função. SDK pode não estar carregado corretamente");
+            setError("SDK do Mercado Pago não está disponível corretamente");
+            return;
+          }
+
           const mercadoPago = new window.MercadoPago(publicKey, {
             locale: "pt-BR",
           });
           
           // Verificar se o SDK foi inicializado corretamente
-          if (!mercadoPago || !mercadoPago.fields) {
-            console.error("SDK do Mercado Pago não foi inicializado corretamente");
+          if (!mercadoPago) {
+            console.error("SDK do Mercado Pago não foi inicializado (retornou null/undefined)");
             setError("Erro ao inicializar sistema de pagamento");
+            return;
+          }
+
+          // Verificar se fields está disponível
+          if (!mercadoPago.fields) {
+            console.error("mercadoPago.fields não está disponível. SDK pode estar incompleto");
+            console.error("Objeto mercadoPago:", Object.keys(mercadoPago));
+            setError("SDK do Mercado Pago não possui a funcionalidade 'fields'");
+            return;
+          }
+
+          // Verificar se fields.create existe
+          if (typeof mercadoPago.fields.create !== "function") {
+            console.error("mercadoPago.fields.create não é uma função");
+            console.error("mercadoPago.fields:", Object.keys(mercadoPago.fields || {}));
+            setError("SDK do Mercado Pago não possui a função 'fields.create'");
             return;
           }
           
           setMp(mercadoPago);
           console.log("✓ Mercado Pago SDK inicializado com sucesso");
           console.log("✓ SDK versão:", mercadoPago.version || "desconhecida");
+          console.log("✓ Fields disponíveis:", Object.keys(mercadoPago.fields || {}));
         } catch (err) {
           console.error("✗ Erro ao inicializar Mercado Pago:", err);
           console.error("✗ Detalhes do erro:", {
             message: err.message,
             stack: err.stack,
-            publicKey: publicKey.substring(0, 20) + "..."
+            publicKey: publicKey.substring(0, 20) + "...",
+            windowMercadoPago: typeof window.MercadoPago
           });
           setError("Erro ao inicializar sistema de pagamento. Verifique a chave pública.");
         }
-      } else if (!window.MercadoPago) {
-        console.error("SDK do Mercado Pago não está carregado. Verifique se o script está incluído no index.html");
-        setError("SDK do Mercado Pago não está disponível");
       } else if (!publicKey) {
         console.warn("Public Key do Mercado Pago não foi fornecida");
       }
