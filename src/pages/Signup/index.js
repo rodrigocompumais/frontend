@@ -562,10 +562,9 @@ const SignUp = () => {
       }
 
       try {
-        // Obter dados do formulário de pagamento
-        const formData = checkoutRef.current?.getFormData();
-        if (!formData || !formData.token) {
-          toast.error("Erro ao processar dados do cartão");
+        // Usar o token que já foi gerado
+        if (!paymentToken || !paymentToken.token) {
+          toast.error("Erro ao processar dados do cartão. Por favor, tente novamente.");
           return;
         }
 
@@ -581,39 +580,56 @@ const SignUp = () => {
           },
           paymentData: {
             transactionAmount: selectedPlan.value,
-            paymentMethodId: formData.paymentMethodId || "visa",
-            token: formData.token,
-            installments: formData.installments || 1,
-            identificationType: formData.identificationType || "CPF",
-            identificationNumber: formData.identificationNumber,
+            paymentMethodId: paymentToken.paymentMethodId || "visa",
+            token: paymentToken.token,
+            installments: paymentToken.installments || 1,
+            identificationType: paymentToken.identificationType || "CPF",
+            identificationNumber: paymentToken.identificationNumber,
             payer: {
               email: values.email,
               firstName: values.name.split(" ")[0],
               lastName: values.name.split(" ").slice(1).join(" ") || "",
             },
-            issuerId: formData.issuerId || "",
+            issuerId: paymentToken.issuerId || "",
           },
         };
 
+        console.log("Enviando dados para cadastro com pagamento:", signupData);
+        
         const response = await openApi.post(
           "/companies/cadastro-with-payment",
           signupData
         );
 
-        if (response.data.success) {
+        console.log("Resposta do backend:", response.data);
+
+        if (response.data && response.data.success) {
           toast.success(
             "Conta criada e pagamento aprovado! Você já pode fazer login."
           );
-          history.push("/login");
+          setTimeout(() => {
+            history.push("/login");
+          }, 1500);
         } else {
           toast.warn(
             "Conta criada, mas pagamento pendente. Você receberá um email quando o pagamento for confirmado."
           );
-          history.push("/login");
+          setTimeout(() => {
+            history.push("/login");
+          }, 1500);
         }
       } catch (err) {
-        console.log(err);
-        toastError(err);
+        console.error("Erro completo:", err);
+        console.error("Erro response:", err.response);
+        console.error("Erro data:", err.response?.data);
+        
+        const errorMessage = err.response?.data?.message || 
+                            err.message || 
+                            "Erro ao criar conta. Por favor, tente novamente.";
+        
+        toast.error(errorMessage);
+        
+        // Não redirecionar em caso de erro, deixar o usuário tentar novamente
       }
     } else {
       // Cadastro sem pagamento (teste grátis)
@@ -656,6 +672,8 @@ const SignUp = () => {
 
   const handleTokenGenerated = (tokenData) => {
     setPaymentToken(tokenData);
+    // Token gerado, agora podemos processar o cadastro
+    // Mas não vamos chamar handleSignUp aqui, vamos esperar o submit do formulário
   };
 
   // Resetar validação quando mudar de step
@@ -778,25 +796,28 @@ const SignUp = () => {
                   } else if (currentStep === 2) {
                     // Gerar token do cartão antes de processar
                     try {
-                      if (checkoutRef.current && !paymentToken) {
+                      if (!paymentToken && checkoutRef.current) {
+                        // Gerar token primeiro
                         const tokenData = await checkoutRef.current.generateToken();
+                        // O onTokenGenerated será chamado automaticamente, mas vamos usar o tokenData diretamente
                         setPaymentToken(tokenData);
-                        // Aguardar um pouco para garantir que o token foi processado
-                        setTimeout(() => {
-                          handleSignUp(values, true);
-                          actions.setSubmitting(false);
-                        }, 300);
+                        // Aguardar um pouco para garantir que o estado foi atualizado
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                        // Agora processar o cadastro
+                        await handleSignUp(values, true);
+                        actions.setSubmitting(false);
                       } else if (paymentToken) {
-                        // Token já gerado, processar pagamento
-                        handleSignUp(values, true);
+                        // Token já gerado, processar pagamento diretamente
+                        await handleSignUp(values, true);
                         actions.setSubmitting(false);
                       } else {
                         toast.error("Por favor, preencha os dados de pagamento");
                         actions.setSubmitting(false);
                       }
                     } catch (err) {
-                      console.error("Erro ao gerar token:", err);
-                      toast.error(err.message || "Erro ao processar dados do cartão");
+                      console.error("Erro ao processar pagamento:", err);
+                      const errorMessage = err.response?.data?.message || err.message || "Erro ao processar pagamento";
+                      toast.error(errorMessage);
                       actions.setSubmitting(false);
                     }
                   }
