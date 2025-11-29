@@ -13,6 +13,7 @@
     "@material-ui/lab": "^4.0.0-alpha.56",
     "@material-ui/pickers": "^3.3.10",
     "@material-ui/styles": "^4.11.5",
+    "@mercadopago/sdk-react": "^2.0.0",
     "@mui/icons-material": "^5.16.14",
     "@mui/material": "^5.16.14",
     "@mui/x-date-pickers": "^6.0.1",
