@@ -119,15 +119,23 @@ const useStyles = makeStyles((theme) => ({
 const TrialIndicator = ({ collapsed = false }) => {
   const { user } = useContext(AuthContext);
 
-  const { daysLeft, progressValue, isExpired } = useMemo(() => {
-    if (!user?.company?.dueDate) {
-      return { daysLeft: 0, progressValue: 0, isExpired: true };
+  const { daysLeft, progressValue, isExpired, isTrialPeriod } = useMemo(() => {
+    if (!user?.company?.dueDate || !user?.company?.createdAt) {
+      return { daysLeft: 0, progressValue: 0, isExpired: true, isTrialPeriod: false };
     }
 
     const dueDate = moment(user.company.dueDate);
+    const createdAt = moment(user.company.createdAt);
     const today = moment();
     const days = dueDate.diff(today, "days");
     const expired = today.isAfter(dueDate);
+    
+    // Verificar se é período de teste grátis:
+    // - Empresa criada há menos de 7 dias
+    // - E o dueDate está dentro de 7 dias da criação
+    const daysSinceCreation = today.diff(createdAt, "days");
+    const daysFromCreationToDue = dueDate.diff(createdAt, "days");
+    const isTrial = daysSinceCreation <= 7 && daysFromCreationToDue <= 7;
     
     // Progresso baseado em 7 dias de teste
     const progress = expired ? 0 : Math.min(100, (days / 7) * 100);
@@ -136,13 +144,14 @@ const TrialIndicator = ({ collapsed = false }) => {
       daysLeft: Math.max(0, days),
       progressValue: progress,
       isExpired: expired,
+      isTrialPeriod: isTrial,
     };
-  }, [user?.company?.dueDate]);
+  }, [user?.company?.dueDate, user?.company?.createdAt]);
 
   const classes = useStyles({ daysLeft });
 
-  // Não mostrar se já expirou (a página de expiração cuida disso)
-  if (isExpired) {
+  // Não mostrar se não for período de teste ou se já expirou
+  if (!isTrialPeriod || isExpired) {
     return null;
   }
 
