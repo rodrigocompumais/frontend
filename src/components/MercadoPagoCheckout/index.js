@@ -89,7 +89,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const MercadoPagoCheckout = React.forwardRef(
-  ({ publicKey, planValue, planName, onTokenGenerated, onError, isVisible = true }, ref) => {
+  ({ publicKey, planValue, planName, onTokenGenerated, onError, isVisible = true, onValidationChange }, ref) => {
     const classes = useStyles();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -184,9 +184,44 @@ const MercadoPagoCheckout = React.forwardRef(
       }
     };
 
+    // Verificar se todos os campos estão preenchidos
+    const isFormValid = () => {
+      const cardNumberClean = cardNumber.replace(/\s/g, "");
+      const identificationNumberClean = identificationNumber.replace(/\D/g, "");
+      
+      return (
+        cardNumberClean.length >= 13 &&
+        cardholderName.trim().length >= 3 &&
+        expirationMonth.length === 2 &&
+        expirationYear.length === 2 &&
+        securityCode.length >= 3 &&
+        identificationNumberClean.length >= 11
+      );
+    };
+
+    // Notificar mudanças na validação
+    useEffect(() => {
+      if (onValidationChange) {
+        const cardNumberClean = cardNumber.replace(/\s/g, "");
+        const identificationNumberClean = identificationNumber.replace(/\D/g, "");
+        
+        const isValid = (
+          cardNumberClean.length >= 13 &&
+          cardholderName.trim().length >= 3 &&
+          expirationMonth.length === 2 &&
+          expirationYear.length === 2 &&
+          securityCode.length >= 3 &&
+          identificationNumberClean.length >= 11
+        );
+        
+        onValidationChange(isValid);
+      }
+    }, [cardNumber, cardholderName, expirationMonth, expirationYear, securityCode, identificationNumber, onValidationChange]);
+
     // Expor método generateToken via ref
     useImperativeHandle(ref, () => ({
       generateToken,
+      isFormValid,
       getFormData: () => ({
         cardNumber,
         cardholderName,

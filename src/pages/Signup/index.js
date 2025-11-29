@@ -474,6 +474,7 @@ const SignUp = () => {
   const [currentStep, setCurrentStep] = useState(1); // 1 = dados, 2 = pagamento
   const [publicKey, setPublicKey] = useState(null);
   const [paymentToken, setPaymentToken] = useState(null);
+  const [isPaymentFormValid, setIsPaymentFormValid] = useState(false);
   const checkoutRef = React.useRef(null);
 
   const { list: listPlans } = usePlans();
@@ -656,6 +657,13 @@ const SignUp = () => {
   const handleTokenGenerated = (tokenData) => {
     setPaymentToken(tokenData);
   };
+
+  // Resetar validação quando mudar de step
+  useEffect(() => {
+    if (currentStep !== 2) {
+      setIsPaymentFormValid(false);
+    }
+  }, [currentStep]);
 
   const formatCurrency = (value) => {
     if (!value && value !== 0) return "Consulte";
@@ -983,6 +991,9 @@ const SignUp = () => {
                               }
                               isVisible={currentStep === 2}
                               onTokenGenerated={handleTokenGenerated}
+                              onValidationChange={(isValid) => {
+                                setIsPaymentFormValid(isValid);
+                              }}
                               onError={(err) => {
                                 toast.error(err.message || "Erro ao processar pagamento");
                               }}
@@ -1009,7 +1020,7 @@ const SignUp = () => {
                               type="submit"
                               fullWidth
                               className={classes.submitButton}
-                              disabled={isSubmitting || !paymentToken}
+                              disabled={isSubmitting || !isPaymentFormValid}
                               endIcon={<CreditCardIcon />}
                             >
                               {isSubmitting ? (
