@@ -160,6 +160,9 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
     } catch (err) {
       if (err.response?.data?.error === "GEMINI_KEY_MISSING") {
         toast.error("Configure a API Key do Gemini em Configurações → Integrações");
+      } else if (err.response?.data?.message) {
+        // Mensagem específica do backend
+        toast.error(err.response.data.message);
       } else {
         toastError(err);
       }
@@ -178,7 +181,11 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
       setInitialMessage(data.message);
       toast.success("Nova mensagem gerada!");
     } catch (err) {
-      toastError(err);
+      if (err.response?.data?.message) {
+        toast.error(err.response.data.message);
+      } else {
+        toastError(err);
+      }
     } finally {
       setLoading(false);
     }
@@ -198,7 +205,11 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
       setStep(3);
       toast.success(`${data.variations?.length || 0} variações geradas com sucesso!`);
     } catch (err) {
-      toastError(err);
+      if (err.response?.data?.message) {
+        toast.error(err.response.data.message);
+      } else {
+        toastError(err);
+      }
       setStep(1); // Volta para o passo anterior em caso de erro
     } finally {
       setLoading(false);
