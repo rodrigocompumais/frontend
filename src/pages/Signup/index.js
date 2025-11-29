@@ -41,6 +41,10 @@ import { openApi } from "../../services/api";
 import toastError from "../../errors/toastError";
 import { i18n } from "../../translate/i18n";
 import moment from "moment";
+import MercadoPagoCheckout from "../../components/MercadoPagoCheckout";
+import ArrowBackIcon from "@material-ui/icons/ArrowBack";
+import ArrowForwardIcon from "@material-ui/icons/ArrowForward";
+import CreditCardIcon from "@material-ui/icons/CreditCard";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -351,6 +355,84 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "center",
     padding: theme.spacing(3),
   },
+  // Steps
+  stepsContainer: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    padding: theme.spacing(2),
+    background: "rgba(30, 41, 59, 0.3)",
+    borderRadius: 12,
+  },
+  step: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    padding: theme.spacing(1, 2),
+    borderRadius: 8,
+    transition: "all 0.3s ease",
+  },
+  stepActive: {
+    background: "rgba(0, 217, 255, 0.15)",
+    border: "1px solid rgba(0, 217, 255, 0.3)",
+  },
+  stepNumber: {
+    width: 28,
+    height: 28,
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontWeight: 700,
+    fontSize: "0.85rem",
+    background: "rgba(148, 163, 184, 0.2)",
+    color: "rgba(148, 163, 184, 0.8)",
+  },
+  stepNumberActive: {
+    background: "linear-gradient(135deg, #00D9FF, #22C55E)",
+    color: "#0A0A0F",
+  },
+  stepLabel: {
+    fontFamily: "'Inter', sans-serif",
+    fontSize: "0.9rem",
+    color: "rgba(148, 163, 184, 0.8)",
+  },
+  stepLabelActive: {
+    color: "#F9FAFB",
+    fontWeight: 600,
+  },
+  stepDivider: {
+    width: 40,
+    height: 2,
+    background: "rgba(148, 163, 184, 0.2)",
+    borderRadius: 2,
+  },
+  navigationButtons: {
+    display: "flex",
+    gap: theme.spacing(2),
+    marginTop: theme.spacing(3),
+  },
+  backButton: {
+    padding: "14px 24px",
+    borderRadius: 12,
+    fontFamily: "'Inter', sans-serif",
+    fontWeight: 600,
+    fontSize: "1rem",
+    textTransform: "none",
+    background: "transparent",
+    color: "#F9FAFB",
+    border: "1px solid rgba(148, 163, 184, 0.3)",
+    "&:hover": {
+      background: "rgba(148, 163, 184, 0.1)",
+      borderColor: "rgba(148, 163, 184, 0.5)",
+    },
+  },
+  paymentStepContainer: {
+    marginTop: theme.spacing(2),
+  },
 }));
 
 const UserSchema = Yup.object().shape({
@@ -388,6 +470,10 @@ const SignUp = () => {
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [currentStep, setCurrentStep] = useState(1); // 1 = dados, 2 = pagamento
+  const [publicKey, setPublicKey] = useState(null);
+  const [paymentToken, setPaymentToken] = useState(null);
+  const checkoutRef = React.useRef(null);
 
   const { list: listPlans } = usePlans();
 
@@ -412,24 +498,147 @@ const SignUp = () => {
     fetchData();
   }, [listPlans]);
 
-  const handleSignUp = async (values) => {
-    const signupData = {
-      ...values,
-      planId: selectedPlanId,
-      recurrence: "MENSAL",
-      dueDate: dueDate,
-      status: "t",
-      campaignsEnabled: true,
-    };
-
-    try {
-      await openApi.post("/companies/cadastro", signupData);
-      toast.success("Conta criada com sucesso! Você tem 7 dias de teste grátis.");
-      history.push("/login");
-    } catch (err) {
-      console.log(err);
-      toastError(err);
+  // Buscar public key do Mercado Pago
+  useEffect(() => {
+    // A public key deve vir de uma variável de ambiente ou endpoint específico
+    // Por enquanto, vamos buscar do backend
+    async function fetchPublicKey() {
+      try {
+        if (selectedPlanId) {
+          const selectedPlan = plans.find((p) => p.id === selectedPlanId);
+          if (selectedPlan) {
+            // Criar payment intent para obter public key
+            const response = await openApi.post("/mercadopago/create-payment-intent", {
+              transactionAmount: selectedPlan.value,
+              description: `Plano ${selectedPlan.name}`,
+            });
+            if (response.data.publicKey) {
+              setPublicKey(response.data.publicKey);
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao obter public key:", err);
+        // Fallback: tentar usar variável de ambiente se disponível
+        if (process.env.REACT_APP_MERCADOPAGO_PUBLIC_KEY) {
+          setPublicKey(process.env.REACT_APP_MERCADOPAGO_PUBLIC_KEY);
+        }
+      }
     }
+    if (selectedPlanId && plans.length > 0) {
+      fetchPublicKey();
+    }
+  }, [selectedPlanId, plans]);
+
+  const handleSignUp = async (values, withPayment = false) => {
+    if (withPayment && currentStep === 2) {
+      // Cadastro com pagamento
+      if (!paymentToken) {
+        toast.error("Por favor, preencha os dados de pagamento");
+        return;
+      }
+
+      const selectedPlan = plans.find((p) => p.id === selectedPlanId);
+      if (!selectedPlan) {
+        toast.error("Plano não encontrado");
+        return;
+      }
+
+      try {
+        // Obter dados do formulário de pagamento
+        const formData = checkoutRef.current?.getFormData();
+        if (!formData || !formData.token) {
+          toast.error("Erro ao processar dados do cartão");
+          return;
+        }
+
+        const signupData = {
+          companyData: {
+            name: values.name,
+            email: values.email,
+            phone: values.phone,
+            password: values.password,
+            planId: selectedPlanId,
+            campaignsEnabled: true,
+            recurrence: "MENSAL",
+          },
+          paymentData: {
+            transactionAmount: selectedPlan.value,
+            paymentMethodId: formData.paymentMethodId || "visa",
+            token: formData.token,
+            installments: formData.installments || 1,
+            identificationType: formData.identificationType || "CPF",
+            identificationNumber: formData.identificationNumber,
+            payer: {
+              email: values.email,
+              firstName: values.name.split(" ")[0],
+              lastName: values.name.split(" ").slice(1).join(" ") || "",
+            },
+            issuerId: formData.issuerId || "",
+          },
+        };
+
+        const response = await openApi.post(
+          "/companies/cadastro-with-payment",
+          signupData
+        );
+
+        if (response.data.success) {
+          toast.success(
+            "Conta criada e pagamento aprovado! Você já pode fazer login."
+          );
+          history.push("/login");
+        } else {
+          toast.warn(
+            "Conta criada, mas pagamento pendente. Você receberá um email quando o pagamento for confirmado."
+          );
+          history.push("/login");
+        }
+      } catch (err) {
+        console.log(err);
+        toastError(err);
+      }
+    } else {
+      // Cadastro sem pagamento (teste grátis)
+      const signupData = {
+        ...values,
+        planId: selectedPlanId,
+        recurrence: "MENSAL",
+        dueDate: dueDate,
+        status: "t",
+        campaignsEnabled: true,
+      };
+
+      try {
+        await openApi.post("/companies/cadastro", signupData);
+        toast.success("Conta criada com sucesso! Você tem 7 dias de teste grátis.");
+        history.push("/login");
+      } catch (err) {
+        console.log(err);
+        toastError(err);
+      }
+    }
+  };
+
+  const handleNextStep = async (values) => {
+    if (currentStep === 1) {
+      // Validar dados antes de avançar
+      if (!selectedPlanId) {
+        toast.error("Selecione um plano para continuar");
+        return;
+      }
+      setCurrentStep(2);
+    }
+  };
+
+  const handleBackStep = () => {
+    if (currentStep === 2) {
+      setCurrentStep(1);
+    }
+  };
+
+  const handleTokenGenerated = (tokenData) => {
+    setPaymentToken(tokenData);
   };
 
   const formatCurrency = (value) => {
@@ -486,23 +695,87 @@ const SignUp = () => {
             {/* Coluna Direita - Formulário */}
             <Grid item xs={12} md={7} className={classes.formColumn}>
               <Typography className={classes.formTitle}>
-                Criar conta gratuita
+                {currentStep === 1 ? "Criar conta" : "Dados de Pagamento"}
               </Typography>
+
+              {/* Steps Indicator */}
+              <Box className={classes.stepsContainer}>
+                <Box
+                  className={`${classes.step} ${
+                    currentStep === 1 ? classes.stepActive : ""
+                  }`}
+                >
+                  <Box
+                    className={`${classes.stepNumber} ${
+                      currentStep === 1 ? classes.stepNumberActive : ""
+                    }`}
+                  >
+                    1
+                  </Box>
+                  <Typography
+                    className={`${classes.stepLabel} ${
+                      currentStep === 1 ? classes.stepLabelActive : ""
+                    }`}
+                  >
+                    Dados da Empresa
+                  </Typography>
+                </Box>
+                <Box className={classes.stepDivider} />
+                <Box
+                  className={`${classes.step} ${
+                    currentStep === 2 ? classes.stepActive : ""
+                  }`}
+                >
+                  <Box
+                    className={`${classes.stepNumber} ${
+                      currentStep === 2 ? classes.stepNumberActive : ""
+                    }`}
+                  >
+                    2
+                  </Box>
+                  <Typography
+                    className={`${classes.stepLabel} ${
+                      currentStep === 2 ? classes.stepLabelActive : ""
+                    }`}
+                  >
+                    Pagamento
+                  </Typography>
+                </Box>
+              </Box>
 
               <Formik
                 initialValues={user}
                 enableReinitialize={true}
                 validationSchema={UserSchema}
-                onSubmit={(values, actions) => {
-                  if (!selectedPlanId) {
-                    toast.error("Selecione um plano para continuar");
+                onSubmit={async (values, actions) => {
+                  if (currentStep === 1) {
+                    handleNextStep(values);
                     actions.setSubmitting(false);
-                    return;
+                  } else if (currentStep === 2) {
+                    // Gerar token do cartão antes de processar
+                    try {
+                      if (checkoutRef.current && !paymentToken) {
+                        const tokenData = await checkoutRef.current.generateToken();
+                        setPaymentToken(tokenData);
+                        // Aguardar um pouco para garantir que o token foi processado
+                        setTimeout(() => {
+                          handleSignUp(values, true);
+                          actions.setSubmitting(false);
+                        }, 300);
+                      } else if (paymentToken) {
+                        // Token já gerado, processar pagamento
+                        handleSignUp(values, true);
+                        actions.setSubmitting(false);
+                      } else {
+                        toast.error("Por favor, preencha os dados de pagamento");
+                        actions.setSubmitting(false);
+                      }
+                    } catch (err) {
+                      console.error("Erro ao gerar token:", err);
+                      toast.error(err.message || "Erro ao processar dados do cartão");
+                      actions.setSubmitting(false);
+                    }
                   }
-                  setTimeout(() => {
-                    handleSignUp(values);
-                    actions.setSubmitting(false);
-                  }, 400);
                 }}
               >
                 {({ touched, errors, isSubmitting }) => (
@@ -603,77 +876,138 @@ const SignUp = () => {
                       }}
                     />
 
-                    {/* Seleção de Plano */}
-                    <Box className={classes.plansSection}>
-                      <Typography className={classes.plansSectionTitle}>
-                        Selecione seu plano
-                      </Typography>
+                    {currentStep === 1 ? (
+                      <>
+                        {/* Seleção de Plano */}
+                        <Box className={classes.plansSection}>
+                          <Typography className={classes.plansSectionTitle}>
+                            Selecione seu plano
+                          </Typography>
 
-                      {loadingPlans ? (
-                        <Box className={classes.loadingPlans}>
-                          <CircularProgress
-                            size={30}
-                            style={{ color: "#00D9FF" }}
-                          />
+                          {loadingPlans ? (
+                            <Box className={classes.loadingPlans}>
+                              <CircularProgress
+                                size={30}
+                                style={{ color: "#00D9FF" }}
+                              />
+                            </Box>
+                          ) : plans.length === 0 ? (
+                            <Typography style={{ color: "rgba(148, 163, 184, 0.7)", fontSize: "0.9rem", textAlign: "center", padding: "16px" }}>
+                              Nenhum plano disponível. Entre em contato para mais informações.
+                            </Typography>
+                          ) : (
+                            <Box className={classes.plansGrid}>
+                              {plans.map((plan, index) => {
+                                const isFeatured =
+                                  index === Math.floor(plans.length / 2);
+                                const isSelected = selectedPlanId === plan.id;
+
+                                return (
+                                  <Box
+                                    key={plan.id}
+                                    className={`${classes.planCard} ${
+                                      isSelected ? classes.planCardSelected : ""
+                                    } ${isFeatured ? classes.planCardFeatured : ""}`}
+                                    onClick={() => setSelectedPlanId(plan.id)}
+                                  >
+                                    <Typography className={classes.planName}>
+                                      {plan.name}
+                                    </Typography>
+                                    <Typography className={classes.planPrice}>
+                                      R$ {formatCurrency(plan.value)}/mês
+                                    </Typography>
+                                    <Box className={classes.planFeatures}>
+                                      <Box className={classes.planFeature}>
+                                        <CheckCircleIcon />
+                                        <span>{plan.users || 0} usuário(s)</span>
+                                      </Box>
+                                      <Box className={classes.planFeature}>
+                                        <CheckCircleIcon />
+                                        <span>{plan.connections || 0} WhatsApp</span>
+                                      </Box>
+                                      <Box className={classes.planFeature}>
+                                        <CheckCircleIcon />
+                                        <span>{plan.queues || 0} fila(s)</span>
+                                      </Box>
+                                    </Box>
+                                  </Box>
+                                );
+                              })}
+                            </Box>
+                          )}
                         </Box>
-                      ) : plans.length === 0 ? (
-                        <Typography style={{ color: "rgba(148, 163, 184, 0.7)", fontSize: "0.9rem", textAlign: "center", padding: "16px" }}>
-                          Nenhum plano disponível. Entre em contato para mais informações.
-                        </Typography>
-                      ) : (
-                        <Box className={classes.plansGrid}>
-                          {plans.map((plan, index) => {
-                            const isFeatured =
-                              index === Math.floor(plans.length / 2);
-                            const isSelected = selectedPlanId === plan.id;
 
-                            return (
-                              <Box
-                                key={plan.id}
-                                className={`${classes.planCard} ${
-                                  isSelected ? classes.planCardSelected : ""
-                                } ${isFeatured ? classes.planCardFeatured : ""}`}
-                                onClick={() => setSelectedPlanId(plan.id)}
-                              >
-                                <Typography className={classes.planName}>
-                                  {plan.name}
-                                </Typography>
-                                <Typography className={classes.planPrice}>
-                                  R$ {formatCurrency(plan.value)}/mês
-                                </Typography>
-                                <Box className={classes.planFeatures}>
-                                  <Box className={classes.planFeature}>
-                                    <CheckCircleIcon />
-                                    <span>{plan.users || 0} usuário(s)</span>
-                                  </Box>
-                                  <Box className={classes.planFeature}>
-                                    <CheckCircleIcon />
-                                    <span>{plan.connections || 0} WhatsApp</span>
-                                  </Box>
-                                  <Box className={classes.planFeature}>
-                                    <CheckCircleIcon />
-                                    <span>{plan.queues || 0} fila(s)</span>
-                                  </Box>
-                                </Box>
-                              </Box>
-                            );
-                          })}
+                        <Button
+                          type="submit"
+                          fullWidth
+                          className={classes.submitButton}
+                          disabled={isSubmitting || !selectedPlanId}
+                          endIcon={<ArrowForwardIcon />}
+                        >
+                          {isSubmitting ? (
+                            <CircularProgress size={24} style={{ color: "#0A0A0F" }} />
+                          ) : (
+                            "Continuar para pagamento"
+                          )}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        {/* Step 2: Pagamento */}
+                        <Box className={classes.paymentStepContainer}>
+                          {publicKey && selectedPlanId ? (
+                            <MercadoPagoCheckout
+                              ref={checkoutRef}
+                              publicKey={publicKey}
+                              planValue={
+                                plans.find((p) => p.id === selectedPlanId)?.value || 0
+                              }
+                              planName={
+                                plans.find((p) => p.id === selectedPlanId)?.name || ""
+                              }
+                              onTokenGenerated={handleTokenGenerated}
+                              onError={(err) => {
+                                toast.error(err.message || "Erro ao processar pagamento");
+                              }}
+                            />
+                          ) : (
+                            <Box className={classes.loadingPlans}>
+                              <CircularProgress
+                                size={30}
+                                style={{ color: "#00D9FF" }}
+                              />
+                            </Box>
+                          )}
+
+                          <Box className={classes.navigationButtons}>
+                            <Button
+                              onClick={handleBackStep}
+                              className={classes.backButton}
+                              startIcon={<ArrowBackIcon />}
+                              fullWidth
+                            >
+                              Voltar
+                            </Button>
+                            <Button
+                              type="submit"
+                              fullWidth
+                              className={classes.submitButton}
+                              disabled={isSubmitting || !paymentToken}
+                              endIcon={<CreditCardIcon />}
+                            >
+                              {isSubmitting ? (
+                                <CircularProgress
+                                  size={24}
+                                  style={{ color: "#0A0A0F" }}
+                                />
+                              ) : (
+                                "Finalizar cadastro e pagar"
+                              )}
+                            </Button>
+                          </Box>
                         </Box>
-                      )}
-                    </Box>
-
-                    <Button
-                      type="submit"
-                      fullWidth
-                      className={classes.submitButton}
-                      disabled={isSubmitting || !selectedPlanId}
-                    >
-                      {isSubmitting ? (
-                        <CircularProgress size={24} style={{ color: "#0A0A0F" }} />
-                      ) : (
-                        "Começar teste grátis"
-                      )}
-                    </Button>
+                      </>
+                    )}
 
                     <Typography className={classes.loginLink}>
                       Já tem uma conta?{" "}
