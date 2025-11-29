@@ -123,6 +123,13 @@ const MercadoPagoCheckout = React.forwardRef(
     const expirationDateFrameRef = useRef(null);
     const securityCodeFrameRef = useRef(null);
     const cardholderNameFrameRef = useRef(null);
+    
+    const framesRef = useRef({
+      cardNumber: null,
+      expirationDate: null,
+      securityCode: null,
+      cardholderName: null,
+    });
 
     // Inicializar Mercado Pago SDK
     useEffect(() => {
@@ -139,16 +146,74 @@ const MercadoPagoCheckout = React.forwardRef(
       }
     }, [publicKey]);
 
-    // Criar frames do Mercado Pago quando SDK estiver pronto
+    // Criar frames do Mercado Pago quando SDK estiver pronto e elementos existirem
     useEffect(() => {
-      if (mp && publicKey && cardNumberFrameRef.current) {
+      if (!mp || !publicKey) return;
+
+      // Função para verificar e montar frames
+      const checkAndMountFrames = () => {
+        // Verificar se todos os elementos existem no DOM e estão visíveis
+        const cardNumberEl = cardNumberFrameRef.current;
+        const expirationDateEl = expirationDateFrameRef.current;
+        const securityCodeEl = securityCodeFrameRef.current;
+        const cardholderNameEl = cardholderNameFrameRef.current;
+
+        if (!cardNumberEl || !expirationDateEl || !securityCodeEl || !cardholderNameEl) {
+          return false;
+        }
+
+        // Verificar se os elementos estão realmente no DOM
+        if (
+          !document.contains(cardNumberEl) ||
+          !document.contains(expirationDateEl) ||
+          !document.contains(securityCodeEl) ||
+          !document.contains(cardholderNameEl)
+        ) {
+          return false;
+        }
+
         try {
+          // Limpar frames anteriores se existirem
+          if (framesRef.current.cardNumber) {
+            try {
+              framesRef.current.cardNumber.unmount();
+            } catch (e) {
+              // Ignorar erros ao desmontar
+            }
+          }
+          if (framesRef.current.expirationDate) {
+            try {
+              framesRef.current.expirationDate.unmount();
+            } catch (e) {}
+          }
+          if (framesRef.current.securityCode) {
+            try {
+              framesRef.current.securityCode.unmount();
+            } catch (e) {}
+          }
+          if (framesRef.current.cardholderName) {
+            try {
+              framesRef.current.cardholderName.unmount();
+            } catch (e) {}
+          }
+
+          // Verificar novamente se os elementos ainda existem
+          if (
+            !cardNumberFrameRef.current ||
+            !expirationDateFrameRef.current ||
+            !securityCodeFrameRef.current ||
+            !cardholderNameFrameRef.current
+          ) {
+            return false;
+          }
+
           // Frame para número do cartão
           const cardNumberFrame = mp.fields
             .create("cardNumber", {
               placeholder: "Número do cartão",
             })
             .mount(cardNumberFrameRef.current);
+          framesRef.current.cardNumber = cardNumberFrame;
 
           // Frame para data de expiração
           const expirationDateFrame = mp.fields
@@ -156,6 +221,7 @@ const MercadoPagoCheckout = React.forwardRef(
               placeholder: "MM/AA",
             })
             .mount(expirationDateFrameRef.current);
+          framesRef.current.expirationDate = expirationDateFrame;
 
           // Frame para código de segurança
           const securityCodeFrame = mp.fields
@@ -163,6 +229,7 @@ const MercadoPagoCheckout = React.forwardRef(
               placeholder: "CVV",
             })
             .mount(securityCodeFrameRef.current);
+          framesRef.current.securityCode = securityCodeFrame;
 
           // Frame para nome do titular
           const cardholderNameFrame = mp.fields
@@ -170,37 +237,38 @@ const MercadoPagoCheckout = React.forwardRef(
               placeholder: "Nome no cartão",
             })
             .mount(cardholderNameFrameRef.current);
+          framesRef.current.cardholderName = cardholderNameFrame;
 
           // Listeners para obter dados dos frames
           cardNumberFrame.on("validityChange", (event) => {
-            if (event.isValid) {
-              setCardNumber(event.value);
-              if (event.issuer) {
-                setIssuerId(event.issuer.id);
+              if (event.isValid) {
+                setCardNumber(event.value);
+                if (event.issuer) {
+                  setIssuerId(event.issuer.id);
+                }
+                if (event.payment_method_id) {
+                  setPaymentMethodId(event.payment_method_id);
+                }
               }
-              if (event.payment_method_id) {
-                setPaymentMethodId(event.payment_method_id);
+            });
+
+            expirationDateFrame.on("validityChange", (event) => {
+              if (event.isValid) {
+                setExpirationDate(event.value);
               }
-            }
-          });
+            });
 
-          expirationDateFrame.on("validityChange", (event) => {
-            if (event.isValid) {
-              setExpirationDate(event.value);
-            }
-          });
+            securityCodeFrame.on("validityChange", (event) => {
+              if (event.isValid) {
+                setSecurityCode(event.value);
+              }
+            });
 
-          securityCodeFrame.on("validityChange", (event) => {
-            if (event.isValid) {
-              setSecurityCode(event.value);
-            }
-          });
-
-          cardholderNameFrame.on("validityChange", (event) => {
-            if (event.isValid) {
-              setCardholderName(event.value);
-            }
-          });
+            cardholderNameFrame.on("validityChange", (event) => {
+              if (event.isValid) {
+                setCardholderName(event.value);
+              }
+            });
 
           // Obter parcelas disponíveis quando BIN mudar
           cardNumberFrame.on("binChange", async (event) => {
@@ -229,12 +297,56 @@ const MercadoPagoCheckout = React.forwardRef(
               }
             }
           });
+
+          return true; // Frames montados com sucesso
         } catch (err) {
           console.error("Erro ao criar frames do Mercado Pago:", err);
           setError("Erro ao inicializar formulário de pagamento");
+          return false;
         }
+      };
+
+      // Tentar montar imediatamente
+      if (checkAndMountFrames()) {
+        return;
       }
-    }, [mp, publicKey, planValue]);
+
+      // Se não conseguir, tentar novamente após um pequeno delay
+      const mountFrames = setTimeout(() => {
+        checkAndMountFrames();
+      }, 200);
+
+      // Se ainda não conseguir, tentar novamente após mais tempo
+      const retryMount = setTimeout(() => {
+        checkAndMountFrames();
+      }, 500);
+
+      return () => {
+        clearTimeout(mountFrames);
+        clearTimeout(retryMount);
+        // Limpar frames ao desmontar
+        if (framesRef.current.cardNumber) {
+          try {
+            framesRef.current.cardNumber.unmount();
+          } catch (e) {}
+        }
+        if (framesRef.current.expirationDate) {
+          try {
+            framesRef.current.expirationDate.unmount();
+          } catch (e) {}
+        }
+        if (framesRef.current.securityCode) {
+          try {
+            framesRef.current.securityCode.unmount();
+          } catch (e) {}
+        }
+        if (framesRef.current.cardholderName) {
+          try {
+            framesRef.current.cardholderName.unmount();
+          } catch (e) {}
+        }
+      };
+    }, [mp, publicKey, planValue, installments]);
 
     // Gerar token do cartão
     const generateToken = async () => {
@@ -242,19 +354,37 @@ const MercadoPagoCheckout = React.forwardRef(
         throw new Error("Mercado Pago não inicializado");
       }
 
+      // Verificar se os frames estão prontos
+      if (
+        !framesRef.current.cardNumber ||
+        !framesRef.current.expirationDate ||
+        !framesRef.current.securityCode ||
+        !framesRef.current.cardholderName
+      ) {
+        throw new Error("Campos de pagamento não estão prontos. Aguarde um momento e tente novamente.");
+      }
+
       setLoading(true);
       setError(null);
 
       try {
-        const token = await mp.fields.createCardToken({
-          cardNumber: cardNumber,
-          cardholderName: cardholderName,
-          cardExpirationMonth: expirationDate.split("/")[0],
-          cardExpirationYear: "20" + expirationDate.split("/")[1],
-          securityCode: securityCode,
+        // Obter dados dos frames
+        const cardFormData = {
+          cardNumber: cardNumber || framesRef.current.cardNumber.getCardFormData?.()?.cardNumber,
+          cardholderName: cardholderName || framesRef.current.cardholderName.getCardFormData?.()?.cardholderName,
+          cardExpirationMonth: expirationDate.split("/")[0] || "",
+          cardExpirationYear: expirationDate.split("/")[1] ? "20" + expirationDate.split("/")[1] : "",
+          securityCode: securityCode || "",
           identificationType: identificationType,
           identificationNumber: identificationNumber.replace(/\D/g, ""),
-        });
+        };
+
+        // Validar dados antes de criar token
+        if (!cardFormData.cardNumber || !cardFormData.cardholderName || !cardFormData.cardExpirationMonth || !cardFormData.securityCode) {
+          throw new Error("Por favor, preencha todos os dados do cartão");
+        }
+
+        const token = await mp.fields.createCardToken(cardFormData);
 
         const tokenData = {
           token: token.id,
