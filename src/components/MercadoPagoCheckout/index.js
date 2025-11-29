@@ -190,23 +190,23 @@ const MercadoPagoCheckout = React.forwardRef(
     // Função auxiliar para montar um frame em um elemento
     const mountFrameToElement = React.useCallback((element, frameType) => {
       if (!element || !mp) {
-        return;
+        return false;
       }
 
       // Verificar se elemento está no DOM
       if (!document.contains(element)) {
         console.warn(`Elemento ${frameType} não está no DOM`);
-        return;
+        return false;
       }
 
       // Verificar se já está montado
       if (framesRef.current[frameType]) {
-        return;
+        return true;
       }
 
       // Verificar se já está sendo montado (evitar montagem duplicada)
       if (mountingRef.current[frameType]) {
-        return;
+        return false;
       }
 
       // Marcar como montando
@@ -228,10 +228,11 @@ const MercadoPagoCheckout = React.forwardRef(
           cardholderName: { placeholder: "Nome no cartão" },
         };
 
-        // Verificar se o elemento ainda existe e está no DOM antes de criar o frame
+        // Verificar novamente se o elemento ainda existe e está no DOM antes de criar o frame
         if (!document.contains(element)) {
-          console.error(`Elemento ${frameType} não está no DOM`);
-          return;
+          console.error(`Elemento ${frameType} foi removido do DOM antes de criar frame`);
+          mountingRef.current[frameType] = false;
+          return false;
         }
 
         // Verificar se o elemento tem dimensões válidas (não precisa estar na viewport)
@@ -239,21 +240,9 @@ const MercadoPagoCheckout = React.forwardRef(
         const hasValidDimensions = rect.width > 0 && rect.height > 0;
         
         if (!hasValidDimensions) {
-          console.warn(`Elemento ${frameType} não tem dimensões válidas (width: ${rect.width}, height: ${rect.height}), aguardando...`);
-          // Tentar novamente após um delay
-          setTimeout(() => {
-            if (document.contains(element)) {
-              const newRect = element.getBoundingClientRect();
-              if (newRect.width > 0 && newRect.height > 0) {
-                mountFrameToElement(element, frameType);
-              } else {
-                mountingRef.current[frameType] = false; // Resetar flag se ainda não tiver dimensões
-              }
-            } else {
-              mountingRef.current[frameType] = false; // Resetar flag se elemento não estiver no DOM
-            }
-          }, 500);
-          return;
+          console.warn(`Elemento ${frameType} não tem dimensões válidas (width: ${rect.width}, height: ${rect.height})`);
+          mountingRef.current[frameType] = false; // Resetar flag
+          return false;
         }
 
         // Criar e montar o frame
@@ -263,7 +252,14 @@ const MercadoPagoCheckout = React.forwardRef(
           // Verificar novamente se o elemento ainda existe antes de montar
           if (!document.contains(element)) {
             console.error(`Elemento ${frameType} foi removido do DOM antes de montar`);
-            return;
+            mountingRef.current[frameType] = false;
+            return false;
+          }
+
+          // Verificar se o elemento ainda está vazio (Mercado Pago precisa de elemento vazio)
+          if (element.children.length > 0 && !element.querySelector("iframe")) {
+            // Se tiver filhos que não são iframes, limpar
+            element.innerHTML = "";
           }
 
           // Montar o frame
@@ -339,16 +335,17 @@ const MercadoPagoCheckout = React.forwardRef(
           mountingRef.current[frameType] = false; // Resetar flag em caso de erro
           console.error(`Erro ao montar frame ${frameType}:`, mountError);
           
+          // Se o erro for "Container not found", pode ser que o elemento não esteja pronto
           // Não tentar novamente automaticamente - deixar o useEffect tentar
-          // O erro será tratado pelo retry do useEffect
-          return;
+          return false;
         }
       } catch (err) {
         mountingRef.current[frameType] = false; // Resetar flag em caso de erro
-        console.error(`Erro ao montar frame ${frameType}:`, err);
-        // Não definir erro global para não bloquear outros campos
-        // setError(`Erro ao inicializar campo ${frameType}: ${err.message}`);
+        console.error(`Erro geral ao montar frame ${frameType}:`, err);
+        return false;
       }
+      
+      return true;
     }, [mp, planValue, installments]);
 
     // Inicializar Mercado Pago SDK
@@ -394,20 +391,24 @@ const MercadoPagoCheckout = React.forwardRef(
       // Montar frames que ainda não foram montados
       let mounted = 0;
       if (cardNumberEl && !framesRef.current.cardNumber) {
-        mountFrameToElement(cardNumberEl, "cardNumber");
-        mounted++;
+        if (mountFrameToElement(cardNumberEl, "cardNumber")) {
+          mounted++;
+        }
       }
       if (expirationDateEl && !framesRef.current.expirationDate) {
-        mountFrameToElement(expirationDateEl, "expirationDate");
-        mounted++;
+        if (mountFrameToElement(expirationDateEl, "expirationDate")) {
+          mounted++;
+        }
       }
       if (securityCodeEl && !framesRef.current.securityCode) {
-        mountFrameToElement(securityCodeEl, "securityCode");
-        mounted++;
+        if (mountFrameToElement(securityCodeEl, "securityCode")) {
+          mounted++;
+        }
       }
       if (cardholderNameEl && !framesRef.current.cardholderName) {
-        mountFrameToElement(cardholderNameEl, "cardholderName");
-        mounted++;
+        if (mountFrameToElement(cardholderNameEl, "cardholderName")) {
+          mounted++;
+        }
       }
 
       return mounted > 0;
