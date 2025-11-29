@@ -234,26 +234,25 @@ const MercadoPagoCheckout = React.forwardRef(
           return;
         }
 
-        // Verificar se o elemento tem dimensões válidas e está visível
+        // Verificar se o elemento tem dimensões válidas (não precisa estar na viewport)
         const rect = element.getBoundingClientRect();
-        const isVisible = rect.width > 0 && rect.height > 0 && 
-                          rect.top >= 0 && 
-                          rect.left >= 0 &&
-                          rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
-                          rect.right <= (window.innerWidth || document.documentElement.clientWidth);
+        const hasValidDimensions = rect.width > 0 && rect.height > 0;
         
-        if (!isVisible) {
-          console.warn(`Elemento ${frameType} não está visível (width: ${rect.width}, height: ${rect.height}), aguardando...`);
+        if (!hasValidDimensions) {
+          console.warn(`Elemento ${frameType} não tem dimensões válidas (width: ${rect.width}, height: ${rect.height}), aguardando...`);
           // Tentar novamente após um delay
           setTimeout(() => {
             if (document.contains(element)) {
               const newRect = element.getBoundingClientRect();
               if (newRect.width > 0 && newRect.height > 0) {
                 mountFrameToElement(element, frameType);
+              } else {
+                mountingRef.current[frameType] = false; // Resetar flag se ainda não tiver dimensões
               }
+            } else {
+              mountingRef.current[frameType] = false; // Resetar flag se elemento não estiver no DOM
             }
-          }, 300);
-          mountingRef.current[frameType] = false; // Resetar flag
+          }, 500);
           return;
         }
 
@@ -335,79 +334,6 @@ const MercadoPagoCheckout = React.forwardRef(
           }
           
           mountingRef.current[frameType] = false; // Marcar como montado
-          
-          // Função para configurar o iframe quando ele for criado
-          const configureIframe = (iframe) => {
-            if (iframe) {
-              iframe.style.pointerEvents = "auto";
-              iframe.style.zIndex = "9999";
-              iframe.style.position = "relative";
-              iframe.style.cursor = "text";
-              iframe.style.width = "100%";
-              iframe.style.height = "100%";
-              iframe.style.minHeight = "32px";
-              iframe.style.border = "none";
-              iframe.style.background = "transparent";
-              console.log(`Iframe ${frameType} configurado com sucesso`);
-              return true;
-            }
-            return false;
-          };
-          
-          // Função para procurar iframe (pode estar em shadow DOM ou aninhado)
-          const findIframe = (container) => {
-            // Procurar diretamente
-            let iframe = container.querySelector("iframe");
-            if (iframe) return iframe;
-            
-            // Procurar em todos os filhos
-            const allElements = container.querySelectorAll("*");
-            for (let el of allElements) {
-              if (el.tagName === "IFRAME") {
-                return el;
-              }
-            }
-            
-            return null;
-          };
-          
-          // Verificar se o iframe já existe
-          const existingIframe = findIframe(element);
-          if (existingIframe && configureIframe(existingIframe)) {
-            // Já configurado
-          } else {
-            // Usar MutationObserver para detectar quando o iframe é criado
-            const observer = new MutationObserver((mutations) => {
-              const iframe = findIframe(element);
-              if (iframe && configureIframe(iframe)) {
-                observer.disconnect();
-                if (checkInterval) clearInterval(checkInterval);
-              }
-            });
-            
-            observer.observe(element, {
-              childList: true,
-              subtree: true,
-              attributes: false,
-            });
-            
-            // Também tentar verificar periodicamente (fallback)
-            let attempts = 0;
-            let checkInterval = setInterval(() => {
-              attempts++;
-              const iframe = findIframe(element);
-              if (iframe && configureIframe(iframe)) {
-                clearInterval(checkInterval);
-                observer.disconnect();
-              } else if (attempts >= 30) {
-                // Parar após 6 segundos (30 * 200ms)
-                clearInterval(checkInterval);
-                observer.disconnect();
-                console.warn(`Iframe ${frameType} não encontrado após ${attempts} tentativas`);
-              }
-            }, 200);
-          }
-          
           console.log(`Frame ${frameType} montado com sucesso`);
         } catch (mountError) {
           mountingRef.current[frameType] = false; // Resetar flag em caso de erro
@@ -525,29 +451,23 @@ const MercadoPagoCheckout = React.forwardRef(
 
       // Aguardar um pouco para garantir que o DOM está estável e visível
       const timeout1 = setTimeout(() => {
-        // Verificar se os elementos estão visíveis antes de montar
-        const cardNumberEl = cardNumberFrameRef.current;
-        if (cardNumberEl) {
-          const rect = cardNumberEl.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) {
-            mountAllFrames();
-          } else {
-            // Se não estiver visível, tentar novamente
-            setTimeout(() => mountAllFrames(), 500);
-          }
-        } else {
-          mountAllFrames();
-        }
-      }, 500);
+        mountAllFrames();
+      }, 800);
 
       // Tentar novamente após mais tempo se necessário
       const timeout2 = setTimeout(() => {
         mountAllFrames();
-      }, 1200);
+      }, 1500);
+
+      // Última tentativa
+      const timeout3 = setTimeout(() => {
+        mountAllFrames();
+      }, 2500);
 
       return () => {
         clearTimeout(timeout1);
         clearTimeout(timeout2);
+        clearTimeout(timeout3);
       };
     }, [mp, publicKey, isVisible, mountAllFrames]);
 
