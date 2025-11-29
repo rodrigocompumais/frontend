@@ -16,10 +16,20 @@ import PersonIcon from "@material-ui/icons/Person";
 import InputMask from "react-input-mask";
 
 const useStyles = makeStyles((theme) => ({
+  "@global": {
+    "#cardNumber iframe, #expirationDate iframe, #securityCode iframe, #cardholderName iframe": {
+      pointerEvents: "auto !important",
+      zIndex: "9999 !important",
+      position: "relative !important",
+      cursor: "text !important",
+    },
+  },
   root: {
     display: "flex",
     flexDirection: "column",
     gap: theme.spacing(2),
+    position: "relative",
+    zIndex: 1,
   },
   sectionTitle: {
     fontFamily: "'Space Grotesk', sans-serif",
@@ -92,6 +102,8 @@ const useStyles = makeStyles((theme) => ({
     transition: "all 0.3s ease",
     position: "relative",
     display: "block",
+    overflow: "visible",
+    zIndex: 1,
     "&:focus-within": {
       borderColor: "#00D9FF",
       borderWidth: 2,
@@ -102,12 +114,20 @@ const useStyles = makeStyles((theme) => ({
       width: "100% !important",
       height: "100% !important",
       minHeight: "32px !important",
-      position: "relative",
-      zIndex: 1,
-      pointerEvents: "auto",
+      position: "relative !important",
+      zIndex: "999 !important",
+      pointerEvents: "auto !important",
+      display: "block !important",
+      cursor: "text !important",
     },
     "& *": {
-      pointerEvents: "auto",
+      pointerEvents: "auto !important",
+      zIndex: "999 !important",
+    },
+    "& input": {
+      pointerEvents: "auto !important",
+      cursor: "text !important",
+      zIndex: "999 !important",
     },
   },
 }));
@@ -140,6 +160,13 @@ const MercadoPagoCheckout = React.forwardRef(
       expirationDate: null,
       securityCode: null,
       cardholderName: null,
+    });
+
+    const mountingRef = useRef({
+      cardNumber: false,
+      expirationDate: false,
+      securityCode: false,
+      cardholderName: false,
     });
 
     // Callback refs para montar frames quando elementos são adicionados ao DOM
@@ -176,6 +203,14 @@ const MercadoPagoCheckout = React.forwardRef(
       if (framesRef.current[frameType]) {
         return;
       }
+
+      // Verificar se já está sendo montado (evitar montagem duplicada)
+      if (mountingRef.current[frameType]) {
+        return;
+      }
+
+      // Marcar como montando
+      mountingRef.current[frameType] = true;
 
       // Verificar se o elemento está vazio (sem filhos)
       // O Mercado Pago precisa de um elemento vazio para montar o iframe
@@ -226,87 +261,100 @@ const MercadoPagoCheckout = React.forwardRef(
           frame.mount(element);
           framesRef.current[frameType] = frame;
           
-          console.log(`Frame ${frameType} montado com sucesso`);
-        } catch (mountError) {
-          console.error(`Erro ao montar frame ${frameType}:`, mountError);
-          // Se o erro for "Container not found", tentar novamente após um delay
-          if (mountError.message && mountError.message.includes("Container not found")) {
-            setTimeout(() => {
-              if (document.contains(element)) {
-                try {
-                  const retryFrame = mp.fields.create(frameType, config[frameType]);
-                  retryFrame.mount(element);
-                  framesRef.current[frameType] = retryFrame;
-                  console.log(`Frame ${frameType} montado com sucesso na segunda tentativa`);
-                } catch (retryError) {
-                  console.error(`Erro na segunda tentativa de montar ${frameType}:`, retryError);
-                }
-              }
-            }, 500);
-          }
-          throw mountError;
-        }
-
-        // Adicionar listeners baseado no tipo
-        if (frameType === "cardNumber") {
-          frame.on("validityChange", (event) => {
-            if (event.isValid) {
-              setCardNumber(event.value);
-              if (event.issuer) {
-                setIssuerId(event.issuer.id);
-              }
-              if (event.payment_method_id) {
-                setPaymentMethodId(event.payment_method_id);
-              }
-            }
-          });
-          frame.on("binChange", async (event) => {
-            if (event.bin && planValue) {
-              try {
-                const installmentsOptions = await mp.getInstallments({
-                  amount: planValue,
-                  bin: event.bin,
-                });
-                if (
-                  installmentsOptions &&
-                  installmentsOptions.length > 0 &&
-                  installmentsOptions[0].installments
-                ) {
-                  const maxInstallments = Math.min(
-                    12,
-                    installmentsOptions[0].installments.length
-                  );
-                  if (installments > maxInstallments) {
-                    setInstallments(maxInstallments);
+          // Adicionar listeners baseado no tipo APÓS montar com sucesso
+          try {
+            if (frameType === "cardNumber") {
+              frame.on("validityChange", (event) => {
+                if (event && event.isValid) {
+                  setCardNumber(event.value || "");
+                  if (event.issuer) {
+                    setIssuerId(event.issuer.id);
+                  }
+                  if (event.payment_method_id) {
+                    setPaymentMethodId(event.payment_method_id);
                   }
                 }
-              } catch (err) {
-                console.error("Erro ao obter parcelas:", err);
-              }
+              });
+              frame.on("binChange", async (event) => {
+                if (event && event.bin && planValue) {
+                  try {
+                    const installmentsOptions = await mp.getInstallments({
+                      amount: planValue,
+                      bin: event.bin,
+                    });
+                    if (
+                      installmentsOptions &&
+                      installmentsOptions.length > 0 &&
+                      installmentsOptions[0].installments
+                    ) {
+                      const maxInstallments = Math.min(
+                        12,
+                        installmentsOptions[0].installments.length
+                      );
+                      if (installments > maxInstallments) {
+                        setInstallments(maxInstallments);
+                      }
+                    }
+                  } catch (err) {
+                    console.error("Erro ao obter parcelas:", err);
+                  }
+                }
+              });
+            } else if (frameType === "expirationDate") {
+              frame.on("validityChange", (event) => {
+                if (event && event.isValid) {
+                  setExpirationDate(event.value || "");
+                }
+              });
+            } else if (frameType === "securityCode") {
+              frame.on("validityChange", (event) => {
+                if (event && event.isValid) {
+                  setSecurityCode(event.value || "");
+                }
+              });
+            } else if (frameType === "cardholderName") {
+              frame.on("validityChange", (event) => {
+                if (event && event.isValid) {
+                  setCardholderName(event.value || "");
+                }
+              });
             }
-          });
-        } else if (frameType === "expirationDate") {
-          frame.on("validityChange", (event) => {
-            if (event.isValid) {
-              setExpirationDate(event.value);
+          } catch (listenerError) {
+            console.warn(`Erro ao adicionar listeners para ${frameType}:`, listenerError);
+            // Continuar mesmo se houver erro nos listeners
+          }
+          
+          mountingRef.current[frameType] = false; // Marcar como montado
+          
+          // Aguardar um pouco e verificar se o iframe foi criado
+          setTimeout(() => {
+            const iframe = element.querySelector("iframe");
+            if (iframe) {
+              // Garantir que o iframe seja clicável
+              iframe.style.pointerEvents = "auto";
+              iframe.style.zIndex = "9999";
+              iframe.style.position = "relative";
+              iframe.style.cursor = "text";
+              console.log(`Iframe ${frameType} configurado com sucesso`);
+            } else {
+              console.warn(`Iframe ${frameType} não encontrado após montagem`);
             }
-          });
-        } else if (frameType === "securityCode") {
-          frame.on("validityChange", (event) => {
-            if (event.isValid) {
-              setSecurityCode(event.value);
-            }
-          });
-        } else if (frameType === "cardholderName") {
-          frame.on("validityChange", (event) => {
-            if (event.isValid) {
-              setCardholderName(event.value);
-            }
-          });
+          }, 100);
+          
+          console.log(`Frame ${frameType} montado com sucesso`);
+        } catch (mountError) {
+          mountingRef.current[frameType] = false; // Resetar flag em caso de erro
+          console.error(`Erro ao montar frame ${frameType}:`, mountError);
+          
+          // Não tentar novamente automaticamente - deixar o useEffect tentar
+          // O erro será tratado pelo retry do useEffect
+          return;
         }
       } catch (err) {
+        mountingRef.current[frameType] = false; // Resetar flag em caso de erro
         console.error(`Erro ao montar frame ${frameType}:`, err);
-        setError(`Erro ao inicializar campo ${frameType}: ${err.message}`);
+        // Não definir erro global para não bloquear outros campos
+        // setError(`Erro ao inicializar campo ${frameType}: ${err.message}`);
       }
     }, [mp, planValue, installments]);
 
@@ -408,52 +456,31 @@ const MercadoPagoCheckout = React.forwardRef(
         return;
       }
 
-      // Função para tentar montar frames
-      const tryMountFrames = () => {
-        if (mountAllFrames()) {
-          return true;
-        }
-        return false;
-      };
-
-      // Tentar montar imediatamente se elementos já existirem
-      if (tryMountFrames()) {
-        return;
-      }
-
-      // Se não conseguir, usar MutationObserver para detectar quando elementos são adicionados
-      const observer = new MutationObserver(() => {
-        if (tryMountFrames()) {
-          observer.disconnect();
-        }
-      });
-
-      // Observar o body para detectar quando elementos são adicionados
-      if (document.body) {
-        observer.observe(document.body, {
-          childList: true,
-          subtree: true,
-        });
-      }
-
-      // Também tentar após delays
-      let timeout2;
+      // Aguardar um pouco para garantir que o DOM está estável e visível
       const timeout1 = setTimeout(() => {
-        if (tryMountFrames()) {
-          observer.disconnect();
+        // Verificar se os elementos estão visíveis antes de montar
+        const cardNumberEl = cardNumberFrameRef.current;
+        if (cardNumberEl) {
+          const rect = cardNumberEl.getBoundingClientRect();
+          if (rect.width > 0 && rect.height > 0) {
+            mountAllFrames();
+          } else {
+            // Se não estiver visível, tentar novamente
+            setTimeout(() => mountAllFrames(), 500);
+          }
         } else {
-          timeout2 = setTimeout(() => {
-            if (tryMountFrames()) {
-              observer.disconnect();
-            }
-          }, 500);
+          mountAllFrames();
         }
       }, 500);
 
+      // Tentar novamente após mais tempo se necessário
+      const timeout2 = setTimeout(() => {
+        mountAllFrames();
+      }, 1200);
+
       return () => {
-        observer.disconnect();
         clearTimeout(timeout1);
-        if (timeout2) clearTimeout(timeout2);
+        clearTimeout(timeout2);
       };
     }, [mp, publicKey, isVisible, mountAllFrames]);
 
@@ -585,7 +612,6 @@ const MercadoPagoCheckout = React.forwardRef(
             ref={setCardNumberRef}
             className={classes.mpFrame}
             id="cardNumber"
-            key={`cardNumber-${isVisible}`}
             style={{ position: "relative", minHeight: 48 }}
           />
         </Box>
@@ -606,7 +632,6 @@ const MercadoPagoCheckout = React.forwardRef(
             ref={setCardholderNameRef}
             className={classes.mpFrame}
             id="cardholderName"
-            key={`cardholderName-${isVisible}`}
             style={{ position: "relative", minHeight: 48 }}
           />
         </Box>
@@ -628,7 +653,6 @@ const MercadoPagoCheckout = React.forwardRef(
               ref={setExpirationDateRef}
               className={classes.mpFrame}
               id="expirationDate"
-              key={`expirationDate-${isVisible}`}
               style={{ position: "relative", minHeight: 48 }}
             />
           </Box>
@@ -648,7 +672,6 @@ const MercadoPagoCheckout = React.forwardRef(
               ref={setSecurityCodeRef}
               className={classes.mpFrame}
               id="securityCode"
-              key={`securityCode-${isVisible}`}
               style={{ position: "relative", minHeight: 48 }}
             />
           </Box>
