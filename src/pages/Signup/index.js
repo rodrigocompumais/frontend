@@ -979,6 +979,7 @@ const SignUp = () => {
                               planName={
                                 plans.find((p) => p.id === selectedPlanId)?.name || ""
                               }
+                              isVisible={currentStep === 2}
                               onTokenGenerated={handleTokenGenerated}
                               onError={(err) => {
                                 toast.error(err.message || "Erro ao processar pagamento");
