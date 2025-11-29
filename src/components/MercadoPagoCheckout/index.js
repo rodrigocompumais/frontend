@@ -234,16 +234,26 @@ const MercadoPagoCheckout = React.forwardRef(
           return;
         }
 
-        // Verificar se o elemento tem dimensões válidas
+        // Verificar se o elemento tem dimensões válidas e está visível
         const rect = element.getBoundingClientRect();
-        if (rect.width === 0 && rect.height === 0) {
-          console.warn(`Elemento ${frameType} não tem dimensões válidas, aguardando...`);
+        const isVisible = rect.width > 0 && rect.height > 0 && 
+                          rect.top >= 0 && 
+                          rect.left >= 0 &&
+                          rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+                          rect.right <= (window.innerWidth || document.documentElement.clientWidth);
+        
+        if (!isVisible) {
+          console.warn(`Elemento ${frameType} não está visível (width: ${rect.width}, height: ${rect.height}), aguardando...`);
           // Tentar novamente após um delay
           setTimeout(() => {
-            if (document.contains(element) && element.getBoundingClientRect().width > 0) {
-              mountFrameToElement(element, frameType);
+            if (document.contains(element)) {
+              const newRect = element.getBoundingClientRect();
+              if (newRect.width > 0 && newRect.height > 0) {
+                mountFrameToElement(element, frameType);
+              }
             }
-          }, 200);
+          }, 300);
+          mountingRef.current[frameType] = false; // Resetar flag
           return;
         }
 
@@ -326,20 +336,77 @@ const MercadoPagoCheckout = React.forwardRef(
           
           mountingRef.current[frameType] = false; // Marcar como montado
           
-          // Aguardar um pouco e verificar se o iframe foi criado
-          setTimeout(() => {
-            const iframe = element.querySelector("iframe");
+          // Função para configurar o iframe quando ele for criado
+          const configureIframe = (iframe) => {
             if (iframe) {
-              // Garantir que o iframe seja clicável
               iframe.style.pointerEvents = "auto";
               iframe.style.zIndex = "9999";
               iframe.style.position = "relative";
               iframe.style.cursor = "text";
+              iframe.style.width = "100%";
+              iframe.style.height = "100%";
+              iframe.style.minHeight = "32px";
+              iframe.style.border = "none";
+              iframe.style.background = "transparent";
               console.log(`Iframe ${frameType} configurado com sucesso`);
-            } else {
-              console.warn(`Iframe ${frameType} não encontrado após montagem`);
+              return true;
             }
-          }, 100);
+            return false;
+          };
+          
+          // Função para procurar iframe (pode estar em shadow DOM ou aninhado)
+          const findIframe = (container) => {
+            // Procurar diretamente
+            let iframe = container.querySelector("iframe");
+            if (iframe) return iframe;
+            
+            // Procurar em todos os filhos
+            const allElements = container.querySelectorAll("*");
+            for (let el of allElements) {
+              if (el.tagName === "IFRAME") {
+                return el;
+              }
+            }
+            
+            return null;
+          };
+          
+          // Verificar se o iframe já existe
+          const existingIframe = findIframe(element);
+          if (existingIframe && configureIframe(existingIframe)) {
+            // Já configurado
+          } else {
+            // Usar MutationObserver para detectar quando o iframe é criado
+            const observer = new MutationObserver((mutations) => {
+              const iframe = findIframe(element);
+              if (iframe && configureIframe(iframe)) {
+                observer.disconnect();
+                if (checkInterval) clearInterval(checkInterval);
+              }
+            });
+            
+            observer.observe(element, {
+              childList: true,
+              subtree: true,
+              attributes: false,
+            });
+            
+            // Também tentar verificar periodicamente (fallback)
+            let attempts = 0;
+            let checkInterval = setInterval(() => {
+              attempts++;
+              const iframe = findIframe(element);
+              if (iframe && configureIframe(iframe)) {
+                clearInterval(checkInterval);
+                observer.disconnect();
+              } else if (attempts >= 30) {
+                // Parar após 6 segundos (30 * 200ms)
+                clearInterval(checkInterval);
+                observer.disconnect();
+                console.warn(`Iframe ${frameType} não encontrado após ${attempts} tentativas`);
+              }
+            }, 200);
+          }
           
           console.log(`Frame ${frameType} montado com sucesso`);
         } catch (mountError) {
