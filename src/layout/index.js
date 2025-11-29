@@ -39,6 +39,7 @@ import ChatPopover from "../pages/Chat/ChatPopover";
 import AiChatFloating from "../components/AiChatFloating";
 
 import { useDate } from "../hooks/useDate";
+import TrialIndicator from "../components/TrialIndicator";
 
 import ColorModeContext from "../layout/themeContext";
 import Brightness4Icon from '@material-ui/icons/Brightness4';
@@ -375,6 +376,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
           <MainListItems drawerClose={drawerClose} collapsed={!drawerOpen} />
         </List>
         <Divider />
+        <TrialIndicator collapsed={!drawerOpen} />
       </Drawer>
       <UserModal
         open={userModalOpen}

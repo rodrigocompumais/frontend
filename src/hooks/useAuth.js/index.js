@@ -165,16 +165,19 @@ const useAuth = () => {
       var before = moment(moment().format()).isBefore(dueDate);
       var dias = moment.duration(diff).asDays();
 
+      // Permitir login mesmo com assinatura vencida
+      // O sistema de rotas vai redirecionar para a página correta
+      localStorage.setItem("token", JSON.stringify(data.token));
+      localStorage.setItem("companyId", companyId);
+      localStorage.setItem("userId", id);
+      localStorage.setItem("companyDueDate", vencimento);
+      api.defaults.headers.Authorization = `Bearer ${data.token}`;
+      setUser(data.user);
+      setIsAuth(true);
+      
       if (before === true) {
-        localStorage.setItem("token", JSON.stringify(data.token));
-        localStorage.setItem("companyId", companyId);
-        localStorage.setItem("userId", id);
-        localStorage.setItem("companyDueDate", vencimento);
-        api.defaults.headers.Authorization = `Bearer ${data.token}`;
-        setUser(data.user);
-        setIsAuth(true);
         toast.success(i18n.t("auth.toasts.success"));
-        if (Math.round(dias) < 5) {
+        if (Math.round(dias) < 5 && Math.round(dias) > 0) {
           toast.warn(
             `Sua assinatura vence em ${Math.round(dias)} ${
               Math.round(dias) === 1 ? "dia" : "dias"
@@ -182,12 +185,12 @@ const useAuth = () => {
           );
         }
         history.push("/tickets");
-        setLoading(false);
       } else {
-        toastError(`Opss! Sua assinatura venceu ${vencimento}.
-Entre em contato com o Suporte para mais informações! `);
-        setLoading(false);
+        // Assinatura vencida - redirecionar para página de vencimento
+        toast.warn("Seu período de teste expirou. Renove sua assinatura para continuar.");
+        history.push("/subscription-expired");
       }
+      setLoading(false);
 
       //quebra linha
     } catch (err) {

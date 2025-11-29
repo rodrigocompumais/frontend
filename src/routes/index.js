@@ -41,6 +41,7 @@ import CampaignsPhrase from "../pages/CampaignsPhrase";
 import FlowBuilder from "../pages/FlowBuilder";
 import FlowBuilderConfig from "../pages/FlowBuilderConfig";
 import Landing from "../pages/Landing";
+import SubscriptionExpired from "../pages/SubscriptionExpired";
 
 const Routes = () => {
   const [showCampaigns, setShowCampaigns] = useState(false);
@@ -62,6 +63,7 @@ const Routes = () => {
             <Route exact path="/signup" component={Signup} />
             <Route exact path="/forgetpsw" component={ForgetPassword} />
             {/* <Route exact path="/create-company" component={Companies} /> */}
+            <Route exact path="/subscription-expired" component={SubscriptionExpired} isPrivate allowExpired />
             <WhatsAppsProvider>
               <LoggedInLayout>
                 <Route exact path="/dashboard" component={Dashboard} isPrivate />
