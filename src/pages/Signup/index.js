@@ -456,6 +456,7 @@ const SignUp = () => {
 
   const params = qs.parse(window.location.search);
   const companyId = params.companyId || null;
+  const planIdFromUrl = params.planId ? parseInt(params.planId, 10) : null;
 
   const initialState = {
     name: "",
@@ -484,10 +485,23 @@ const SignUp = () => {
       try {
         const list = await listPlans();
         setPlans(list);
-        // Selecionar o plano do meio como padrão
+        // Selecionar plano da URL se existir, senão selecionar o do meio
         if (list.length > 0) {
-          const middleIndex = Math.floor(list.length / 2);
-          setSelectedPlanId(list[middleIndex].id);
+          if (planIdFromUrl) {
+            // Verificar se o planId da URL existe na lista
+            const planExists = list.find((p) => p.id === planIdFromUrl);
+            if (planExists) {
+              setSelectedPlanId(planIdFromUrl);
+            } else {
+              // Se não existir, selecionar o plano do meio
+              const middleIndex = Math.floor(list.length / 2);
+              setSelectedPlanId(list[middleIndex].id);
+            }
+          } else {
+            // Selecionar o plano do meio como padrão
+            const middleIndex = Math.floor(list.length / 2);
+            setSelectedPlanId(list[middleIndex].id);
+          }
         }
       } catch (err) {
         console.error("Erro ao carregar planos:", err);
@@ -496,7 +510,7 @@ const SignUp = () => {
       }
     }
     fetchData();
-  }, [listPlans]);
+  }, [listPlans, planIdFromUrl]);
 
   // Buscar public key do Mercado Pago
   useEffect(() => {

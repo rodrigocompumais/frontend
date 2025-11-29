@@ -33,9 +33,11 @@ import EmojiObjectsIcon from "@material-ui/icons/EmojiObjects";
 import BusinessIcon from "@material-ui/icons/Business";
 import VerifiedUserIcon from "@material-ui/icons/VerifiedUser";
 import SpeedIcon from "@material-ui/icons/Speed";
+import CreditCardIcon from "@material-ui/icons/CreditCard";
+import ArrowForwardIcon from "@material-ui/icons/ArrowForward";
 import ScrollReveal from "scrollreveal";
 
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink, useHistory } from "react-router-dom";
 import ParticlesBackground from "../../components/ParticlesBackground";
 import ImageCarousel from "../../components/ImageCarousel";
 import api from "../../services/api";
@@ -541,6 +543,7 @@ const Landing = () => {
   const classes = useStyles();
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down("sm"));
+  const history = useHistory();
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
 
@@ -580,17 +583,10 @@ const Landing = () => {
     };
   }, []);
 
-  // Função para redirecionar para WhatsApp com mensagem pré-definida
+  // Função para redirecionar para página de cadastro com plano selecionado
   const handleAcquirePlan = (plan) => {
-    const features = [];
-    if (plan.users) features.push(`${plan.users} usuário(s)`);
-    if (plan.connections) features.push(`${plan.connections} conexão(ões) WhatsApp`);
-    if (plan.queues) features.push(`${plan.queues} fila(s)`);
-
-    const message = encodeURIComponent(
-      `Olá! Tenho interesse no plano *${plan.name}* - R$ ${plan.value?.toFixed(2)}/mês.\n\nRecursos: ${features.join(", ")}.\n\nGostaria de mais informações!`
-    );
-    window.open(`https://wa.me/553433511861?text=${message}`, "_blank");
+    // Redireciona para a página de signup com o planId como query parameter
+    history.push(`/signup?planId=${plan.id}`);
   };
 
   // Formatar valor para moeda brasileira
@@ -905,7 +901,7 @@ const Landing = () => {
                           variant="contained"
                           className={classes.planCta}
                           onClick={() => handleAcquirePlan(plan)}
-                          startIcon={<WhatsAppIcon />}
+                          endIcon={<ArrowForwardIcon />}
                           fullWidth
                         >
                           ADQUIRIR AGORA
