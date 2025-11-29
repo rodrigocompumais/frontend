@@ -159,8 +159,6 @@ const MercadoPagoCheckout = React.forwardRef(
 
     // Criar frames do Mercado Pago quando SDK estiver pronto e elementos existirem
     useEffect(() => {
-      if (!mp || !publicKey) return;
-
       // Se não estiver visível, desmontar frames existentes
       if (!isVisible) {
         if (framesRef.current.cardNumber) {
@@ -187,6 +185,12 @@ const MercadoPagoCheckout = React.forwardRef(
             framesRef.current.cardholderName = null;
           } catch (e) {}
         }
+        return;
+      }
+
+      // Só tentar montar se estiver visível E tiver mp e publicKey
+      if (!mp || !publicKey) {
+        // Não logar para não poluir o console, mas manter a verificação
         return;
       }
 
@@ -414,23 +418,52 @@ const MercadoPagoCheckout = React.forwardRef(
         }
       };
 
+      // Usar MutationObserver para detectar quando os elementos são adicionados ao DOM
+      const observer = new MutationObserver(() => {
+        if (checkAndMountFrames()) {
+          observer.disconnect();
+        }
+      });
+
+      // Observar mudanças no DOM
+      if (cardNumberFrameRef.current?.parentElement) {
+        observer.observe(cardNumberFrameRef.current.parentElement, {
+          childList: true,
+          subtree: true,
+        });
+      }
+
       // Não tentar montar imediatamente - aguardar um pouco para garantir que o DOM está pronto
+      // Quando isVisible muda para true, aguardar um pouco mais para garantir que o componente está totalmente renderizado
       const mountFrames = setTimeout(() => {
         if (checkAndMountFrames()) {
+          observer.disconnect();
           return;
         }
         // Se não conseguir, tentar novamente
         setTimeout(() => {
-          checkAndMountFrames();
+          if (checkAndMountFrames()) {
+            observer.disconnect();
+            return;
+          }
+          // Mais uma tentativa
+          setTimeout(() => {
+            if (checkAndMountFrames()) {
+              observer.disconnect();
+            }
+          }, 300);
         }, 300);
-      }, 300);
+      }, isVisible ? 500 : 300); // Delay maior quando se torna visível
 
       // Se ainda não conseguir, tentar novamente após mais tempo
       const retryMount = setTimeout(() => {
-        checkAndMountFrames();
-      }, 1000);
+        if (checkAndMountFrames()) {
+          observer.disconnect();
+        }
+      }, 1500);
 
       return () => {
+        observer.disconnect();
         clearTimeout(mountFrames);
         clearTimeout(retryMount);
         // Limpar frames ao desmontar
@@ -539,12 +572,22 @@ const MercadoPagoCheckout = React.forwardRef(
       }),
     }));
 
+    // Se não tiver publicKey mas estiver visível, mostrar mensagem de carregamento
+    // Se não estiver visível, não renderizar nada (evita erros)
     if (!publicKey) {
-      return (
-        <Alert severity="error" className={classes.errorAlert}>
-          Chave pública do Mercado Pago não configurada
-        </Alert>
-      );
+      if (isVisible) {
+        return (
+          <Box className={classes.root}>
+            <Typography className={classes.sectionTitle}>
+              Dados de Pagamento
+            </Typography>
+            <Alert severity="info" className={classes.errorAlert}>
+              Carregando dados de pagamento...
+            </Alert>
+          </Box>
+        );
+      }
+      return null; // Não renderizar se não estiver visível
     }
 
     return (

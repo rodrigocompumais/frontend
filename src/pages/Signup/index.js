@@ -539,6 +539,8 @@ const SignUp = () => {
         }
       }
     }
+    // Buscar public key assim que tiver um plano selecionado, mesmo que ainda não esteja no step 2
+    // Isso garante que a public key esteja pronta quando o usuário avançar para o step 2
     if (selectedPlanId && plans.length > 0) {
       fetchPublicKey();
     }
