@@ -247,7 +247,21 @@ const MercadoPagoCheckout = React.forwardRef(
 
         // Criar e montar o frame
         try {
+          // Verificar se mp.fields existe
+          if (!mp.fields || typeof mp.fields.create !== "function") {
+            console.error(`mp.fields.create não está disponível para ${frameType}`);
+            mountingRef.current[frameType] = false;
+            return false;
+          }
+
           frame = mp.fields.create(frameType, config[frameType]);
+          
+          // Verificar se o frame foi criado
+          if (!frame) {
+            console.error(`Frame ${frameType} não foi criado`);
+            mountingRef.current[frameType] = false;
+            return false;
+          }
           
           // Verificar novamente se o elemento ainda existe antes de montar
           if (!document.contains(element)) {
@@ -262,12 +276,22 @@ const MercadoPagoCheckout = React.forwardRef(
             element.innerHTML = "";
           }
 
+          // Verificar dimensões do elemento antes de montar
+          const finalRect = element.getBoundingClientRect();
+          if (finalRect.width === 0 || finalRect.height === 0) {
+            console.warn(`Elemento ${frameType} não tem dimensões válidas antes de montar`);
+            mountingRef.current[frameType] = false;
+            return false;
+          }
+
           // Montar o frame
           frame.mount(element);
           framesRef.current[frameType] = frame;
           
-          // Adicionar listeners baseado no tipo APÓS montar com sucesso
-          try {
+          // Aguardar um pouco antes de adicionar listeners para garantir que o frame está totalmente inicializado
+          setTimeout(() => {
+            // Adicionar listeners baseado no tipo APÓS montar com sucesso
+            try {
             if (frameType === "cardNumber") {
               frame.on("validityChange", (event) => {
                 if (event && event.isValid) {
@@ -324,10 +348,11 @@ const MercadoPagoCheckout = React.forwardRef(
                 }
               });
             }
-          } catch (listenerError) {
-            console.warn(`Erro ao adicionar listeners para ${frameType}:`, listenerError);
-            // Continuar mesmo se houver erro nos listeners
-          }
+            } catch (listenerError) {
+              console.warn(`Erro ao adicionar listeners para ${frameType}:`, listenerError);
+              // Continuar mesmo se houver erro nos listeners
+            }
+          }, 100); // Delay de 100ms para garantir que o frame está totalmente inicializado
           
           mountingRef.current[frameType] = false; // Marcar como montado
           console.log(`Frame ${frameType} montado com sucesso`);
@@ -351,15 +376,56 @@ const MercadoPagoCheckout = React.forwardRef(
     // Inicializar Mercado Pago SDK
     useEffect(() => {
       if (window.MercadoPago && publicKey) {
+        // Verificar se a chave pública é válida
+        if (!publicKey || publicKey.trim() === "") {
+          console.error("Public Key do Mercado Pago está vazia ou inválida");
+          setError("Chave pública do Mercado Pago não configurada");
+          return;
+        }
+
+        // Verificar formato da chave
+        const isTestKey = publicKey.startsWith("TEST-");
+        const isProdKey = publicKey.startsWith("APP_USR-");
+        
+        if (!isTestKey && !isProdKey) {
+          console.error("Public Key do Mercado Pago está em formato incorreto:", publicKey.substring(0, 30) + "...");
+          console.error("A chave deve começar com 'TEST-' (teste) ou 'APP_USR-' (produção)");
+          setError("Chave pública do Mercado Pago em formato incorreto");
+          return;
+        } else {
+          console.log(`✓ Mercado Pago inicializando com chave ${isTestKey ? "TEST" : "PRODUCTION"}`);
+          console.log(`✓ Public Key: ${publicKey.substring(0, 20)}...`);
+        }
+
         try {
           const mercadoPago = new window.MercadoPago(publicKey, {
             locale: "pt-BR",
           });
+          
+          // Verificar se o SDK foi inicializado corretamente
+          if (!mercadoPago || !mercadoPago.fields) {
+            console.error("SDK do Mercado Pago não foi inicializado corretamente");
+            setError("Erro ao inicializar sistema de pagamento");
+            return;
+          }
+          
           setMp(mercadoPago);
+          console.log("✓ Mercado Pago SDK inicializado com sucesso");
+          console.log("✓ SDK versão:", mercadoPago.version || "desconhecida");
         } catch (err) {
-          console.error("Erro ao inicializar Mercado Pago:", err);
-          setError("Erro ao inicializar sistema de pagamento");
+          console.error("✗ Erro ao inicializar Mercado Pago:", err);
+          console.error("✗ Detalhes do erro:", {
+            message: err.message,
+            stack: err.stack,
+            publicKey: publicKey.substring(0, 20) + "..."
+          });
+          setError("Erro ao inicializar sistema de pagamento. Verifique a chave pública.");
         }
+      } else if (!window.MercadoPago) {
+        console.error("SDK do Mercado Pago não está carregado. Verifique se o script está incluído no index.html");
+        setError("SDK do Mercado Pago não está disponível");
+      } else if (!publicKey) {
+        console.warn("Public Key do Mercado Pago não foi fornecida");
       }
     }, [publicKey]);
 
