@@ -41,10 +41,7 @@ import { openApi } from "../../services/api";
 import toastError from "../../errors/toastError";
 import { i18n } from "../../translate/i18n";
 import moment from "moment";
-import MercadoPagoCheckout from "../../components/MercadoPagoCheckout";
-import ArrowBackIcon from "@material-ui/icons/ArrowBack";
 import ArrowForwardIcon from "@material-ui/icons/ArrowForward";
-import CreditCardIcon from "@material-ui/icons/CreditCard";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -471,11 +468,7 @@ const SignUp = () => {
   const [selectedPlanId, setSelectedPlanId] = useState(null);
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
-  const [currentStep, setCurrentStep] = useState(1); // 1 = dados, 2 = pagamento
-  const [publicKey, setPublicKey] = useState(null);
-  const [paymentToken, setPaymentToken] = useState(null);
-  const [isPaymentFormValid, setIsPaymentFormValid] = useState(false);
-  const checkoutRef = React.useRef(null);
+  const [currentStep] = useState(1); // Apenas step 1 (dados da empresa)
 
   const { list: listPlans } = usePlans();
 
@@ -522,205 +515,52 @@ const SignUp = () => {
     };
   }, [listPlans, planIdFromUrl]); // listPlans agora é estável com useCallback
 
-  // Buscar public key do Mercado Pago
-  useEffect(() => {
-    // A public key deve vir de uma variável de ambiente ou endpoint específico
-    // Por enquanto, vamos buscar do backend
-    async function fetchPublicKey() {
-      try {
-        if (selectedPlanId) {
-          const selectedPlan = plans.find((p) => p.id === selectedPlanId);
-          if (selectedPlan) {
-            // Criar payment intent para obter public key
-            const response = await openApi.post("/mercadopago/create-payment-intent", {
-              transactionAmount: selectedPlan.value,
-              description: `Plano ${selectedPlan.name}`,
-            });
-            if (response.data.publicKey) {
-              setPublicKey(response.data.publicKey);
-            }
-          }
-        }
-      } catch (err) {
-        console.error("Erro ao obter public key:", err);
-        // Fallback: tentar usar variável de ambiente se disponível
-        if (process.env.REACT_APP_MERCADOPAGO_PUBLIC_KEY) {
-          setPublicKey(process.env.REACT_APP_MERCADOPAGO_PUBLIC_KEY);
-        }
-      }
+
+  const handleSignUp = async (values) => {
+    if (!selectedPlanId) {
+      toast.error("Por favor, selecione um plano.");
+      return;
     }
-    // Buscar public key assim que tiver um plano selecionado, mesmo que ainda não esteja no step 2
-    // Isso garante que a public key esteja pronta quando o usuário avançar para o step 2
-    if (selectedPlanId && plans.length > 0) {
-      fetchPublicKey();
+
+    const selectedPlan = plans.find((p) => p.id === selectedPlanId);
+    if (!selectedPlan) {
+      toast.error("Plano não encontrado");
+      return;
     }
-  }, [selectedPlanId, plans]);
 
-  const handleSignUp = async (values, withPayment = false) => {
-    if (withPayment && currentStep === 2) {
-      // Cadastro com pagamento
-      const selectedPlan = plans.find((p) => p.id === selectedPlanId);
-      if (!selectedPlan) {
-        toast.error("Plano não encontrado");
-        return;
-      }
-
-      if (!selectedPlanId) {
-        toast.error("Por favor, selecione um plano.");
-        return;
-      }
-
-      // Usar paymentToken do estado ou do parâmetro (se passado diretamente)
-      const tokenToUse = paymentToken;
-      
-      if (!tokenToUse) {
-        toast.error("Token do cartão não encontrado. Por favor, preencha os dados de pagamento novamente.");
-        return;
-      }
-
-      try {
-        // Validar campos obrigatórios do paymentToken
-        if (!tokenToUse.token || tokenToUse.token.trim() === "") {
-          toast.error("Token do cartão inválido. Por favor, preencha os dados novamente.");
-          setPaymentToken(null); // Limpar token inválido
-          return;
-        }
-
-        if (!tokenToUse.paymentMethodId || tokenToUse.paymentMethodId.trim() === "") {
-          toast.error("Bandeira do cartão não identificada. Por favor, verifique o número do cartão.");
-          setPaymentToken(null); // Limpar token inválido
-          return;
-        }
-
-        if (!tokenToUse.identificationNumber || tokenToUse.identificationNumber.trim() === "") {
-          toast.error("Número de identificação (CPF) é obrigatório. Por favor, preencha os dados de pagamento.");
-          return;
-        }
-
-        const signupData = {
-          companyData: {
-            name: values.name,
-            email: values.email,
-            phone: values.phone,
-            password: values.password,
-            planId: selectedPlanId,
-            campaignsEnabled: true,
-            recurrence: "MENSAL",
-          },
-          paymentData: {
-            transactionAmount: selectedPlan.value,
-            paymentMethodId: tokenToUse.paymentMethodId,
-            token: tokenToUse.token,
-            installments: tokenToUse.installments || 1,
-            identificationType: tokenToUse.identificationType || "CPF",
-            identificationNumber: tokenToUse.identificationNumber,
-            payer: {
-              email: values.email,
-              firstName: values.name.split(" ")[0] || values.name,
-              lastName: values.name.split(" ").slice(1).join(" ") || values.name,
-            },
-            issuerId: tokenToUse.issuerId || "",
-          },
-        };
-
-        console.log("Enviando dados para cadastro com pagamento:", signupData);
-        
-        const response = await openApi.post(
-          "/companies/cadastro-with-payment",
-          signupData
-        );
-
-        console.log("Resposta do backend:", response.data);
-
-        if (response.data && response.data.success) {
-          toast.success(
-            "Conta criada e pagamento aprovado! Você já pode fazer login."
-          );
-          setTimeout(() => {
-            history.push("/login");
-          }, 1500);
-        } else {
-          toast.warn(
-            "Conta criada, mas pagamento pendente. Você receberá um email quando o pagamento for confirmado."
-          );
-          setTimeout(() => {
-            history.push("/login");
-          }, 1500);
-        }
-      } catch (err) {
-        console.error("Erro completo:", err);
-        console.error("Erro response:", err.response);
-        console.error("Erro data:", err.response?.data);
-        
-        // Extrair mensagem de erro do backend
-        let errorMessage = "Erro ao criar conta. Por favor, tente novamente.";
-        
-        if (err.response?.data?.error) {
-          errorMessage = err.response.data.error;
-        } else if (err.response?.data?.message) {
-          errorMessage = err.response.data.message;
-        } else if (err.message) {
-          errorMessage = err.message;
-        }
-        
-        toast.error(errorMessage);
-        
-        // Limpar token em caso de erro para forçar nova geração na próxima tentativa
-        setPaymentToken(null);
-        
-        // Não redirecionar em caso de erro, deixar o usuário tentar novamente
-      }
-    } else {
-      // Cadastro sem pagamento (teste grátis)
-      const signupData = {
-        ...values,
+    try {
+      // Criar preferência de pagamento
+      const response = await openApi.post("/companies/create-payment-preference", {
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+        password: values.password,
         planId: selectedPlanId,
         recurrence: "MENSAL",
-        dueDate: dueDate,
-        status: "t",
-        campaignsEnabled: true,
-      };
+      });
 
-      try {
-        await openApi.post("/companies/cadastro", signupData);
-        toast.success("Conta criada com sucesso! Você tem 7 dias de teste grátis.");
-        history.push("/login");
-      } catch (err) {
-        console.log(err);
-        toastError(err);
+      if (response.data && response.data.initPoint) {
+        // Redirecionar para o checkout do Mercado Pago
+        window.location.href = response.data.initPoint;
+      } else {
+        toast.error("Erro ao criar preferência de pagamento. Por favor, tente novamente.");
       }
-    }
-  };
-
-  const handleNextStep = async (values) => {
-    if (currentStep === 1) {
-      // Validar dados antes de avançar
-      if (!selectedPlanId) {
-        toast.error("Selecione um plano para continuar");
-        return;
+    } catch (err) {
+      console.error("Erro ao criar preferência de pagamento:", err);
+      let errorMessage = "Erro ao processar pagamento. Por favor, tente novamente.";
+      
+      if (err.response?.data?.error) {
+        errorMessage = err.response.data.error;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err.message) {
+        errorMessage = err.message;
       }
-      setCurrentStep(2);
+      
+      toast.error(errorMessage);
     }
   };
 
-  const handleBackStep = () => {
-    if (currentStep === 2) {
-      setCurrentStep(1);
-    }
-  };
-
-  const handleTokenGenerated = (tokenData) => {
-    setPaymentToken(tokenData);
-    // Token gerado, agora podemos processar o cadastro
-    // Mas não vamos chamar handleSignUp aqui, vamos esperar o submit do formulário
-  };
-
-  // Resetar validação quando mudar de step
-  useEffect(() => {
-    if (currentStep !== 2) {
-      setIsPaymentFormValid(false);
-    }
-  }, [currentStep]);
 
   const formatCurrency = (value) => {
     if (!value && value !== 0) return "Consulte";
@@ -779,125 +619,15 @@ const SignUp = () => {
                 {currentStep === 1 ? "Criar conta" : "Dados de Pagamento"}
               </Typography>
 
-              {/* Steps Indicator */}
-              <Box className={classes.stepsContainer}>
-                <Box
-                  className={`${classes.step} ${
-                    currentStep === 1 ? classes.stepActive : ""
-                  }`}
-                >
-                  <Box
-                    className={`${classes.stepNumber} ${
-                      currentStep === 1 ? classes.stepNumberActive : ""
-                    }`}
-                  >
-                    1
-                  </Box>
-                  <Typography
-                    className={`${classes.stepLabel} ${
-                      currentStep === 1 ? classes.stepLabelActive : ""
-                    }`}
-                  >
-                    Dados da Empresa
-                  </Typography>
-                </Box>
-                <Box className={classes.stepDivider} />
-                <Box
-                  className={`${classes.step} ${
-                    currentStep === 2 ? classes.stepActive : ""
-                  }`}
-                >
-                  <Box
-                    className={`${classes.stepNumber} ${
-                      currentStep === 2 ? classes.stepNumberActive : ""
-                    }`}
-                  >
-                    2
-                  </Box>
-                  <Typography
-                    className={`${classes.stepLabel} ${
-                      currentStep === 2 ? classes.stepLabelActive : ""
-                    }`}
-                  >
-                    Pagamento
-                  </Typography>
-                </Box>
-              </Box>
+              {/* Steps Indicator - Removido pois agora temos apenas um step */}
 
               <Formik
                 initialValues={user}
                 enableReinitialize={true}
                 validationSchema={UserSchema}
                 onSubmit={async (values, actions) => {
-                  if (currentStep === 1) {
-                    handleNextStep(values);
-                    actions.setSubmitting(false);
-                  } else if (currentStep === 2) {
-                    // Gerar token do cartão antes de processar
-                    try {
-                      let tokenToUse = paymentToken;
-                      
-                      // Se não tiver token, gerar um novo
-                      if (!tokenToUse && checkoutRef.current) {
-                        // Validar se o formulário está válido antes de gerar token
-                        if (!isPaymentFormValid) {
-                          toast.error("Por favor, preencha todos os dados do cartão corretamente");
-                          actions.setSubmitting(false);
-                          return;
-                        }
-
-                        // Gerar token primeiro
-                        const tokenData = await checkoutRef.current.generateToken();
-                        
-                        // Validar se o token foi gerado corretamente
-                        if (!tokenData || !tokenData.token) {
-                          toast.error("Erro ao gerar token do cartão. Por favor, verifique os dados e tente novamente.");
-                          actions.setSubmitting(false);
-                          return;
-                        }
-
-                        // Validar se paymentMethodId está presente
-                        if (!tokenData.paymentMethodId || tokenData.paymentMethodId.trim() === "") {
-                          toast.error("Não foi possível identificar a bandeira do cartão. Por favor, verifique o número do cartão.");
-                          actions.setSubmitting(false);
-                          return;
-                        }
-
-                        // Armazenar o token
-                        setPaymentToken(tokenData);
-                        tokenToUse = tokenData;
-                      }
-
-                      // Se ainda não tiver token, mostrar erro
-                      if (!tokenToUse) {
-                        toast.error("Por favor, preencha os dados de pagamento");
-                        actions.setSubmitting(false);
-                        return;
-                      }
-
-                      // Validar token antes de processar
-                      if (!tokenToUse.token || !tokenToUse.paymentMethodId) {
-                        toast.error("Dados do cartão incompletos. Por favor, preencha novamente.");
-                        // Limpar token inválido
-                        setPaymentToken(null);
-                        actions.setSubmitting(false);
-                        return;
-                      }
-
-                      // Processar cadastro com pagamento
-                      await handleSignUp(values, true);
-                      actions.setSubmitting(false);
-                    } catch (err) {
-                      console.error("Erro ao processar pagamento:", err);
-                      const errorMessage = err.response?.data?.error || err.response?.data?.message || err.message || "Erro ao processar pagamento";
-                      toast.error(errorMessage);
-                      // Limpar token em caso de erro para forçar nova geração
-                      if (err.response?.status === 400) {
-                        setPaymentToken(null);
-                      }
-                      actions.setSubmitting(false);
-                    }
-                  }
+                  await handleSignUp(values);
+                  actions.setSubmitting(false);
                 }}
               >
                 {({ touched, errors, isSubmitting }) => (
@@ -998,7 +728,7 @@ const SignUp = () => {
                       }}
                     />
 
-                    {currentStep === 1 ? (
+                    {(
                       <>
                         {/* Seleção de Plano */}
                         <Box className={classes.plansSection}>
@@ -1072,66 +802,6 @@ const SignUp = () => {
                             "Continuar para pagamento"
                           )}
                         </Button>
-                      </>
-                    ) : (
-                      <>
-                        {/* Step 2: Pagamento */}
-                        <Box className={classes.paymentStepContainer}>
-                          {publicKey && selectedPlanId ? (
-                            <MercadoPagoCheckout
-                              ref={checkoutRef}
-                              publicKey={publicKey}
-                              planValue={
-                                plans.find((p) => p.id === selectedPlanId)?.value || 0
-                              }
-                              planName={
-                                plans.find((p) => p.id === selectedPlanId)?.name || ""
-                              }
-                              isVisible={currentStep === 2}
-                              onTokenGenerated={handleTokenGenerated}
-                              onValidationChange={(isValid) => {
-                                setIsPaymentFormValid(isValid);
-                              }}
-                              onError={(err) => {
-                                toast.error(err.message || "Erro ao processar pagamento");
-                              }}
-                            />
-                          ) : (
-                            <Box className={classes.loadingPlans}>
-                              <CircularProgress
-                                size={30}
-                                style={{ color: "#00D9FF" }}
-                              />
-                            </Box>
-                          )}
-
-                          <Box className={classes.navigationButtons}>
-                            <Button
-                              onClick={handleBackStep}
-                              className={classes.backButton}
-                              startIcon={<ArrowBackIcon />}
-                              fullWidth
-                            >
-                              Voltar
-                            </Button>
-                            <Button
-                              type="submit"
-                              fullWidth
-                              className={classes.submitButton}
-                              disabled={isSubmitting || !isPaymentFormValid}
-                              endIcon={<CreditCardIcon />}
-                            >
-                              {isSubmitting ? (
-                                <CircularProgress
-                                  size={24}
-                                  style={{ color: "#0A0A0F" }}
-                                />
-                              ) : (
-                                "Finalizar cadastro e pagar"
-                              )}
-                            </Button>
-                          </Box>
-                        </Box>
                       </>
                     )}
 
