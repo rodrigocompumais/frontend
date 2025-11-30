@@ -559,31 +559,41 @@ const SignUp = () => {
   const handleSignUp = async (values, withPayment = false) => {
     if (withPayment && currentStep === 2) {
       // Cadastro com pagamento
-      if (!paymentToken) {
-        toast.error("Por favor, preencha os dados de pagamento");
-        return;
-      }
-
       const selectedPlan = plans.find((p) => p.id === selectedPlanId);
       if (!selectedPlan) {
         toast.error("Plano não encontrado");
         return;
       }
 
+      if (!selectedPlanId) {
+        toast.error("Por favor, selecione um plano.");
+        return;
+      }
+
+      // Usar paymentToken do estado ou do parâmetro (se passado diretamente)
+      const tokenToUse = paymentToken;
+      
+      if (!tokenToUse) {
+        toast.error("Token do cartão não encontrado. Por favor, preencha os dados de pagamento novamente.");
+        return;
+      }
+
       try {
         // Validar campos obrigatórios do paymentToken
-        if (!paymentToken || !paymentToken.token) {
-          toast.error("Erro ao processar dados do cartão. Por favor, tente novamente.");
+        if (!tokenToUse.token || tokenToUse.token.trim() === "") {
+          toast.error("Token do cartão inválido. Por favor, preencha os dados novamente.");
+          setPaymentToken(null); // Limpar token inválido
           return;
         }
 
-        if (!paymentToken.identificationNumber) {
+        if (!tokenToUse.paymentMethodId || tokenToUse.paymentMethodId.trim() === "") {
+          toast.error("Bandeira do cartão não identificada. Por favor, verifique o número do cartão.");
+          setPaymentToken(null); // Limpar token inválido
+          return;
+        }
+
+        if (!tokenToUse.identificationNumber || tokenToUse.identificationNumber.trim() === "") {
           toast.error("Número de identificação (CPF) é obrigatório. Por favor, preencha os dados de pagamento.");
-          return;
-        }
-
-        if (!selectedPlanId) {
-          toast.error("Por favor, selecione um plano.");
           return;
         }
 
@@ -599,17 +609,17 @@ const SignUp = () => {
           },
           paymentData: {
             transactionAmount: selectedPlan.value,
-            paymentMethodId: paymentToken.paymentMethodId || "visa",
-            token: paymentToken.token,
-            installments: paymentToken.installments || 1,
-            identificationType: paymentToken.identificationType || "CPF",
-            identificationNumber: paymentToken.identificationNumber,
+            paymentMethodId: tokenToUse.paymentMethodId,
+            token: tokenToUse.token,
+            installments: tokenToUse.installments || 1,
+            identificationType: tokenToUse.identificationType || "CPF",
+            identificationNumber: tokenToUse.identificationNumber,
             payer: {
               email: values.email,
               firstName: values.name.split(" ")[0] || values.name,
               lastName: values.name.split(" ").slice(1).join(" ") || values.name,
             },
-            issuerId: paymentToken.issuerId || "",
+            issuerId: tokenToUse.issuerId || "",
           },
         };
 
@@ -642,11 +652,21 @@ const SignUp = () => {
         console.error("Erro response:", err.response);
         console.error("Erro data:", err.response?.data);
         
-        const errorMessage = err.response?.data?.message || 
-                            err.message || 
-                            "Erro ao criar conta. Por favor, tente novamente.";
+        // Extrair mensagem de erro do backend
+        let errorMessage = "Erro ao criar conta. Por favor, tente novamente.";
+        
+        if (err.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err.message) {
+          errorMessage = err.message;
+        }
         
         toast.error(errorMessage);
+        
+        // Limpar token em caso de erro para forçar nova geração na próxima tentativa
+        setPaymentToken(null);
         
         // Não redirecionar em caso de erro, deixar o usuário tentar novamente
       }
@@ -815,28 +835,66 @@ const SignUp = () => {
                   } else if (currentStep === 2) {
                     // Gerar token do cartão antes de processar
                     try {
-                      if (!paymentToken && checkoutRef.current) {
+                      let tokenToUse = paymentToken;
+                      
+                      // Se não tiver token, gerar um novo
+                      if (!tokenToUse && checkoutRef.current) {
+                        // Validar se o formulário está válido antes de gerar token
+                        if (!isPaymentFormValid) {
+                          toast.error("Por favor, preencha todos os dados do cartão corretamente");
+                          actions.setSubmitting(false);
+                          return;
+                        }
+
                         // Gerar token primeiro
                         const tokenData = await checkoutRef.current.generateToken();
-                        // O onTokenGenerated será chamado automaticamente, mas vamos usar o tokenData diretamente
+                        
+                        // Validar se o token foi gerado corretamente
+                        if (!tokenData || !tokenData.token) {
+                          toast.error("Erro ao gerar token do cartão. Por favor, verifique os dados e tente novamente.");
+                          actions.setSubmitting(false);
+                          return;
+                        }
+
+                        // Validar se paymentMethodId está presente
+                        if (!tokenData.paymentMethodId || tokenData.paymentMethodId.trim() === "") {
+                          toast.error("Não foi possível identificar a bandeira do cartão. Por favor, verifique o número do cartão.");
+                          actions.setSubmitting(false);
+                          return;
+                        }
+
+                        // Armazenar o token
                         setPaymentToken(tokenData);
-                        // Aguardar um pouco para garantir que o estado foi atualizado
-                        await new Promise(resolve => setTimeout(resolve, 100));
-                        // Agora processar o cadastro
-                        await handleSignUp(values, true);
-                        actions.setSubmitting(false);
-                      } else if (paymentToken) {
-                        // Token já gerado, processar pagamento diretamente
-                        await handleSignUp(values, true);
-                        actions.setSubmitting(false);
-                      } else {
+                        tokenToUse = tokenData;
+                      }
+
+                      // Se ainda não tiver token, mostrar erro
+                      if (!tokenToUse) {
                         toast.error("Por favor, preencha os dados de pagamento");
                         actions.setSubmitting(false);
+                        return;
                       }
+
+                      // Validar token antes de processar
+                      if (!tokenToUse.token || !tokenToUse.paymentMethodId) {
+                        toast.error("Dados do cartão incompletos. Por favor, preencha novamente.");
+                        // Limpar token inválido
+                        setPaymentToken(null);
+                        actions.setSubmitting(false);
+                        return;
+                      }
+
+                      // Processar cadastro com pagamento
+                      await handleSignUp(values, true);
+                      actions.setSubmitting(false);
                     } catch (err) {
                       console.error("Erro ao processar pagamento:", err);
-                      const errorMessage = err.response?.data?.message || err.message || "Erro ao processar pagamento";
+                      const errorMessage = err.response?.data?.error || err.response?.data?.message || err.message || "Erro ao processar pagamento";
                       toast.error(errorMessage);
+                      // Limpar token em caso de erro para forçar nova geração
+                      if (err.response?.status === 400) {
+                        setPaymentToken(null);
+                      }
                       actions.setSubmitting(false);
                     }
                   }

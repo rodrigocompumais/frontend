@@ -157,14 +157,37 @@ const MercadoPagoCheckout = React.forwardRef(
 
         const tokenData = response.data;
 
+        // Validar se o token foi criado corretamente
+        if (!tokenData || !tokenData.id) {
+          throw new Error("Token do cartão não foi gerado corretamente. Por favor, tente novamente.");
+        }
+
+        // Validar se paymentMethodId foi detectado
+        let finalPaymentMethodId = paymentMethodId;
+        if (!finalPaymentMethodId || finalPaymentMethodId.trim() === "") {
+          // Tentar detectar do token se disponível
+          const detectedMethod = tokenData.payment_method_id || tokenData.card?.payment_method?.id;
+          if (detectedMethod) {
+            finalPaymentMethodId = detectedMethod;
+            setPaymentMethodId(detectedMethod);
+          } else {
+            throw new Error("Não foi possível identificar a bandeira do cartão. Por favor, verifique o número do cartão.");
+          }
+        }
+
         const result = {
           token: tokenData.id,
           installments,
           identificationType,
           identificationNumber: identificationNumber.replace(/\D/g, ""),
-          issuerId,
-          paymentMethodId,
+          issuerId: issuerId || tokenData.issuer_id || "",
+          paymentMethodId: finalPaymentMethodId,
         };
+
+        // Validar resultado antes de retornar
+        if (!result.paymentMethodId || result.paymentMethodId.trim() === "") {
+          throw new Error("Bandeira do cartão não identificada. Por favor, verifique o número do cartão e tente novamente.");
+        }
 
         if (onTokenGenerated) {
           onTokenGenerated(result);
