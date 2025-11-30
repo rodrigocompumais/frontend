@@ -1,24 +1,25 @@
+import { useCallback } from "react";
 import api, { openApi } from "../../services/api";
 
 const usePlans = () => {
 
-    const getPlanList = async (params) => {
+    const getPlanList = useCallback(async (params) => {
         const { data } = await openApi.request({
             url: '/plans/list',
             method: 'GET',
             params
         });
         return data;
-    }
+    }, []);
 
-    const list = async (params) => {
+    const list = useCallback(async (params) => {
         const { data } = await api.request({
             url: '/plans/all',
             method: 'GET',
             params
         });
         return data;
-    }
+    }, []);
 
     const finder = async (id) => {
         const { data } = await api.request({

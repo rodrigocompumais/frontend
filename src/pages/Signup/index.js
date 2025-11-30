@@ -482,9 +482,11 @@ const SignUp = () => {
   const dueDate = moment().add(7, "day").format();
 
   useEffect(() => {
+    let isMounted = true;
     async function fetchData() {
       try {
         const list = await listPlans();
+        if (!isMounted) return;
         setPlans(list);
         // Selecionar plano da URL se existir, senão selecionar o do meio
         if (list.length > 0) {
@@ -505,13 +507,20 @@ const SignUp = () => {
           }
         }
       } catch (err) {
+        if (!isMounted) return;
         console.error("Erro ao carregar planos:", err);
+        toast.error("Erro ao carregar planos. Por favor, recarregue a página.");
       } finally {
-        setLoadingPlans(false);
+        if (isMounted) {
+          setLoadingPlans(false);
+        }
       }
     }
     fetchData();
-  }, [listPlans, planIdFromUrl]);
+    return () => {
+      isMounted = false;
+    };
+  }, [listPlans, planIdFromUrl]); // listPlans agora é estável com useCallback
 
   // Buscar public key do Mercado Pago
   useEffect(() => {
@@ -562,9 +571,19 @@ const SignUp = () => {
       }
 
       try {
-        // Usar o token que já foi gerado
+        // Validar campos obrigatórios do paymentToken
         if (!paymentToken || !paymentToken.token) {
           toast.error("Erro ao processar dados do cartão. Por favor, tente novamente.");
+          return;
+        }
+
+        if (!paymentToken.identificationNumber) {
+          toast.error("Número de identificação (CPF) é obrigatório. Por favor, preencha os dados de pagamento.");
+          return;
+        }
+
+        if (!selectedPlanId) {
+          toast.error("Por favor, selecione um plano.");
           return;
         }
 
@@ -587,8 +606,8 @@ const SignUp = () => {
             identificationNumber: paymentToken.identificationNumber,
             payer: {
               email: values.email,
-              firstName: values.name.split(" ")[0],
-              lastName: values.name.split(" ").slice(1).join(" ") || "",
+              firstName: values.name.split(" ")[0] || values.name,
+              lastName: values.name.split(" ").slice(1).join(" ") || values.name,
             },
             issuerId: paymentToken.issuerId || "",
           },
