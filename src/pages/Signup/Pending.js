@@ -7,54 +7,95 @@ import { openApi } from "../../services/api";
 import { toast } from "react-toastify";
 
 const useStyles = makeStyles((theme) => ({
+  root: {
+    minHeight: "100vh",
+    display: "flex",
+    background: "linear-gradient(180deg, #0A0A0F 0%, #111827 50%, #0A0A0F 100%)",
+    position: "relative",
+    overflow: "hidden",
+  },
   container: {
     minHeight: "100vh",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
     padding: theme.spacing(3),
   },
   content: {
-    background: "rgba(255, 255, 255, 0.95)",
-    borderRadius: 16,
-    padding: theme.spacing(4),
+    background: "linear-gradient(145deg, rgba(17, 24, 39, 0.95), rgba(10, 10, 15, 0.98))",
+    borderRadius: 24,
+    padding: theme.spacing(5),
     textAlign: "center",
-    maxWidth: 500,
-    boxShadow: "0 8px 32px rgba(0, 0, 0, 0.1)",
+    maxWidth: 600,
+    border: "1px solid rgba(0, 217, 255, 0.15)",
+    backdropFilter: "blur(20px)",
+    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
+    position: "relative",
+    zIndex: 1,
   },
   icon: {
-    fontSize: 80,
-    color: "#ff9800",
-    marginBottom: theme.spacing(2),
+    fontSize: 100,
+    color: "#F59E0B",
+    marginBottom: theme.spacing(3),
+    filter: "drop-shadow(0 0 20px rgba(245, 158, 11, 0.5))",
+    animation: "$pulse 2s infinite",
+  },
+  "@keyframes pulse": {
+    "0%, 100%": {
+      opacity: 1,
+      transform: "scale(1)",
+    },
+    "50%": {
+      opacity: 0.8,
+      transform: "scale(1.05)",
+    },
   },
   title: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontWeight: 700,
-    fontSize: "2rem",
-    color: "#1a202c",
+    fontSize: "2.5rem",
+    color: "#F9FAFB",
     marginBottom: theme.spacing(2),
+    background: "linear-gradient(135deg, #FFFFFF 0%, #F59E0B 100%)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    [theme.breakpoints.down("sm")]: {
+      fontSize: "2rem",
+    },
   },
   message: {
+    fontFamily: "'Inter', sans-serif",
     fontSize: "1.1rem",
-    color: "#4a5568",
-    marginBottom: theme.spacing(3),
-    lineHeight: 1.6,
+    color: "rgba(226, 232, 240, 0.85)",
+    marginBottom: theme.spacing(4),
+    lineHeight: 1.7,
   },
   button: {
-    background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-    color: "#fff",
+    background: "linear-gradient(135deg, #00D9FF, #22C55E)",
+    color: "#0A0A0F",
     padding: theme.spacing(1.5, 4),
     borderRadius: 12,
     textTransform: "none",
     fontSize: "1rem",
     fontWeight: 600,
+    boxShadow: "0 4px 15px rgba(0, 217, 255, 0.3)",
     "&:hover": {
-      background: "linear-gradient(135deg, #5568d3 0%, #653a91 100%)",
+      background: "linear-gradient(135deg, #00E5FF, #2DD881)",
+      boxShadow: "0 6px 20px rgba(0, 217, 255, 0.4)",
+      transform: "translateY(-2px)",
     },
+    transition: "all 0.3s ease",
   },
   loading: {
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    color: "#00D9FF",
+  },
+  statusText: {
+    fontFamily: "'Inter', sans-serif",
+    fontSize: "0.9rem",
+    color: "rgba(148, 163, 184, 0.7)",
+    marginTop: theme.spacing(2),
+    fontStyle: "italic",
   },
 }));
 
@@ -141,8 +182,8 @@ const SignupPending = () => {
   }, [preferenceId, checkCount, isChecking, maxChecks, history]);
 
   return (
-    <Box className={classes.container}>
-      <Container>
+    <Box className={classes.root}>
+      <Container className={classes.container}>
         <Box className={classes.content}>
           <CircularProgress className={classes.loading} size={60} />
           <HourglassEmptyIcon className={classes.icon} />
@@ -155,10 +196,16 @@ const SignupPending = () => {
             que o pagamento for confirmado. Você receberá um email quando tudo
             estiver pronto.
           </Typography>
+          {isChecking && checkCount > 0 && (
+            <Typography className={classes.statusText}>
+              Verificando status... ({checkCount}/{maxChecks})
+            </Typography>
+          )}
           <Button
             className={classes.button}
             variant="contained"
             onClick={() => history.push("/login")}
+            style={{ marginTop: 16 }}
           >
             Ir para Login
           </Button>
