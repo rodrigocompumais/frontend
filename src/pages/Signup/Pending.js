@@ -1,8 +1,10 @@
-import React from "react";
-import { useHistory } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useHistory, useLocation } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import { Box, Typography, Button, Container, CircularProgress } from "@material-ui/core";
 import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
+import { openApi } from "../../services/api";
+import { toast } from "react-toastify";
 
 const useStyles = makeStyles((theme) => ({
   container: {
@@ -59,6 +61,84 @@ const useStyles = makeStyles((theme) => ({
 const SignupPending = () => {
   const classes = useStyles();
   const history = useHistory();
+  const location = useLocation();
+  const [isChecking, setIsChecking] = useState(true);
+  const [checkCount, setCheckCount] = useState(0);
+  const maxChecks = 60; // Verificar por até 5 minutos (60 * 5 segundos)
+
+  // Extrair preference_id da URL ou sessionStorage
+  const searchParams = new URLSearchParams(location.search);
+  const preferenceIdFromUrl = searchParams.get("preference_id");
+  const preferenceIdFromStorage = sessionStorage.getItem("mp_preference_id");
+  const preferenceId = preferenceIdFromUrl || preferenceIdFromStorage;
+
+  useEffect(() => {
+    if (!preferenceId) {
+      setIsChecking(false);
+      return;
+    }
+
+    const checkPaymentStatus = async () => {
+      try {
+        const response = await openApi.get(
+          `/mercadopago/preference-status/${preferenceId}`
+        );
+
+        const { status, payment } = response.data;
+
+        if (status === "approved") {
+          // Pagamento aprovado, redirecionar para success
+          toast.success("Pagamento confirmado! Redirecionando...");
+          setTimeout(() => {
+            history.push(`/signup/success?preference_id=${preferenceId}`);
+          }, 1500);
+          return;
+        } else if (status === "rejected" || status === "cancelled") {
+          // Pagamento rejeitado, redirecionar para failure
+          toast.error("Pagamento não foi aprovado.");
+          setTimeout(() => {
+            history.push(`/signup/failure?preference_id=${preferenceId}`);
+          }, 1500);
+          return;
+        }
+
+        // Se ainda está pendente, continuar verificando
+        setCheckCount((prev) => {
+          if (prev >= maxChecks) {
+            setIsChecking(false);
+            toast.info("Aguardando confirmação do pagamento. Você receberá um email quando for confirmado.");
+            return prev;
+          }
+          return prev + 1;
+        });
+      } catch (error) {
+        console.error("Erro ao verificar status do pagamento:", error);
+        // Continuar tentando mesmo em caso de erro
+        setCheckCount((prev) => {
+          if (prev >= maxChecks) {
+            setIsChecking(false);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }
+    };
+
+    // Verificar imediatamente
+    checkPaymentStatus();
+
+    // Verificar a cada 5 segundos
+    const interval = setInterval(() => {
+      if (checkCount < maxChecks && isChecking) {
+        checkPaymentStatus();
+      } else {
+        clearInterval(interval);
+        setIsChecking(false);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [preferenceId, checkCount, isChecking, maxChecks, history]);
 
   return (
     <Box className={classes.container}>

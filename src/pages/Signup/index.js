@@ -540,6 +540,10 @@ const SignUp = () => {
       });
 
       if (response.data && response.data.initPoint) {
+        // Salvar preference_id no sessionStorage para uso nas páginas de callback
+        if (response.data.preferenceId) {
+          sessionStorage.setItem("mp_preference_id", response.data.preferenceId);
+        }
         // Redirecionar para o checkout do Mercado Pago
         window.location.href = response.data.initPoint;
       } else {

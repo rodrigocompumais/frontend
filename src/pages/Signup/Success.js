@@ -1,8 +1,10 @@
-import React from "react";
-import { useHistory } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useHistory, useLocation } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
-import { Box, Typography, Button, Container } from "@material-ui/core";
+import { Box, Typography, Button, Container, CircularProgress } from "@material-ui/core";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
+import { openApi } from "../../services/api";
+import { toast } from "react-toastify";
 
 const useStyles = makeStyles((theme) => ({
   container: {
@@ -56,6 +58,71 @@ const useStyles = makeStyles((theme) => ({
 const SignupSuccess = () => {
   const classes = useStyles();
   const history = useHistory();
+  const location = useLocation();
+  const [isVerifying, setIsVerifying] = useState(true);
+  const [paymentStatus, setPaymentStatus] = useState(null);
+
+  // Extrair preference_id da URL ou sessionStorage
+  const searchParams = new URLSearchParams(location.search);
+  const preferenceIdFromUrl = searchParams.get("preference_id");
+  const preferenceIdFromStorage = sessionStorage.getItem("mp_preference_id");
+  const preferenceId = preferenceIdFromUrl || preferenceIdFromStorage;
+
+  useEffect(() => {
+    if (!preferenceId) {
+      setIsVerifying(false);
+      return;
+    }
+
+    const verifyPaymentStatus = async () => {
+      try {
+        const response = await openApi.get(
+          `/mercadopago/preference-status/${preferenceId}`
+        );
+
+        const { status } = response.data;
+        setPaymentStatus(status);
+        setIsVerifying(false);
+
+        if (status === "pending") {
+          // Se ainda está pendente, redirecionar para página de pending
+          toast.info("Pagamento ainda está sendo processado...");
+          setTimeout(() => {
+            history.push(`/signup/pending?preference_id=${preferenceId}`);
+          }, 2000);
+        } else if (status === "rejected" || status === "cancelled") {
+          // Se foi rejeitado, redirecionar para failure
+          toast.error("Pagamento não foi aprovado.");
+          setTimeout(() => {
+            history.push(`/signup/failure?preference_id=${preferenceId}`);
+          }, 2000);
+        }
+      } catch (error) {
+        console.error("Erro ao verificar status do pagamento:", error);
+        setIsVerifying(false);
+      }
+    };
+
+    verifyPaymentStatus();
+  }, [preferenceId, history]);
+
+  if (isVerifying) {
+    return (
+      <Box className={classes.container}>
+        <Container>
+          <Box className={classes.content}>
+            <CircularProgress size={60} style={{ marginBottom: 16 }} />
+            <Typography className={classes.title}>
+              Verificando Pagamento...
+            </Typography>
+            <Typography className={classes.message}>
+              Aguarde enquanto verificamos o status do seu pagamento.
+            </Typography>
+          </Box>
+        </Container>
+      </Box>
+    );
+  }
 
   return (
     <Box className={classes.container}>
