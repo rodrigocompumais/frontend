@@ -780,13 +780,12 @@ const SignUp = () => {
                       }}
                     />
 
-                    {!isFreeFlow && (
-                      <>
-                        {/* Seleção de Plano - Oculto no fluxo gratuito */}
-                        <Box className={classes.plansSection}>
-                          <Typography className={classes.plansSectionTitle}>
-                            Selecione seu plano
-                          </Typography>
+                    <>
+                      {/* Seleção de Plano */}
+                      <Box className={classes.plansSection}>
+                        <Typography className={classes.plansSectionTitle}>
+                          {isFreeFlow ? "Selecione o plano que deseja usar após o período de teste" : "Selecione seu plano"}
+                        </Typography>
 
                           {loadingPlans ? (
                             <Box className={classes.loadingPlans}>
@@ -844,8 +843,8 @@ const SignUp = () => {
                         {(() => {
                           const selectedPlan = plans.find((p) => p.id === selectedPlanId);
                           const isFreePlan = selectedPlan && (selectedPlan.value === 0 || selectedPlan.value === null);
-                          // Se for fluxo gratuito ou plano gratuito, mostrar "Registrar", senão "Continuar para pagamento"
-                          const buttonText = (isFreeFlow || isFreePlan) ? "Registrar" : "Continuar para pagamento";
+                          // Se for fluxo gratuito, sempre mostrar "Registrar", senão verificar se é plano gratuito
+                          const buttonText = isFreeFlow ? "Registrar" : (isFreePlan ? "Registrar" : "Continuar para pagamento");
                           
                           return (
                             <Button
@@ -863,8 +862,7 @@ const SignUp = () => {
                             </Button>
                           );
                         })()}
-                      </>
-                    )}
+                    </>
 
                     <Typography className={classes.loginLink}>
                       Já tem uma conta?{" "}
