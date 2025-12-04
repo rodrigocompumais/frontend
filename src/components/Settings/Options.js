@@ -285,7 +285,7 @@ export default function Options(props) {
       value,
     });
     toast.success(i18n.t("settings.options.toasts.success"));
-    setCheckMsgIsGroupType(false);
+    setCheckMsgIsGroup(false);
     /*     if (typeof scheduleTypeChanged === "function") {
           scheduleTypeChanged(value);
         } */
@@ -477,7 +477,7 @@ export default function Options(props) {
               <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.active")}</MenuItem>
             </Select>
             <FormHelperText>
-              {loadingScheduleType && i18n.t("settings.options.updating")}
+              {loadingCheckMsgIsGroup && i18n.t("settings.options.updating")}
             </FormHelperText>
           </FormControl>
         </Grid>

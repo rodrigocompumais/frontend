@@ -481,7 +481,7 @@ const SignUp = () => {
         const list = await listPlans();
         if (!isMounted) return;
         setPlans(list);
-        // Selecionar plano da URL se existir, senão selecionar o do meio
+        // Selecionar plano da URL se existir, senão procurar plano gratuito, senão o primeiro
         if (list.length > 0) {
           if (planIdFromUrl) {
             // Verificar se o planId da URL existe na lista
@@ -489,14 +489,24 @@ const SignUp = () => {
             if (planExists) {
               setSelectedPlanId(planIdFromUrl);
             } else {
-              // Se não existir, selecionar o plano do meio
-              const middleIndex = Math.floor(list.length / 2);
-              setSelectedPlanId(list[middleIndex].id);
+              // Se não existir, procurar plano gratuito primeiro
+              const freePlan = list.find((p) => p.value === 0 || p.value === null);
+              if (freePlan) {
+                setSelectedPlanId(freePlan.id);
+              } else {
+                // Se não houver plano gratuito, selecionar o primeiro
+                setSelectedPlanId(list[0].id);
+              }
             }
           } else {
-            // Selecionar o plano do meio como padrão
-            const middleIndex = Math.floor(list.length / 2);
-            setSelectedPlanId(list[middleIndex].id);
+            // Procurar plano gratuito primeiro (valor 0 ou null)
+            const freePlan = list.find((p) => p.value === 0 || p.value === null);
+            if (freePlan) {
+              setSelectedPlanId(freePlan.id);
+            } else {
+              // Se não houver plano gratuito, selecionar o primeiro da lista
+              setSelectedPlanId(list[0].id);
+            }
           }
         }
       } catch (err) {
@@ -528,30 +538,56 @@ const SignUp = () => {
       return;
     }
 
-    try {
-      // Criar preferência de pagamento
-      const response = await openApi.post("/companies/create-payment-preference", {
-        name: values.name,
-        email: values.email,
-        phone: values.phone,
-        password: values.password,
-        planId: selectedPlanId,
-        recurrence: "MENSAL",
-      });
+    // Verificar se o plano é gratuito (valor 0 ou null)
+    const isFreePlan = selectedPlan.value === 0 || selectedPlan.value === null;
 
-      if (response.data && response.data.initPoint) {
-        // Salvar preference_id no sessionStorage para uso nas páginas de callback
-        if (response.data.preferenceId) {
-          sessionStorage.setItem("mp_preference_id", response.data.preferenceId);
+    try {
+      if (isFreePlan) {
+        // Criar conta gratuita diretamente
+        const response = await openApi.post("/companies/create-free-account", {
+          name: values.name,
+          email: values.email,
+          phone: values.phone,
+          password: values.password,
+          planId: selectedPlanId,
+        });
+
+        if (response.data && response.data.success) {
+          toast.success(response.data.message || "Conta criada com sucesso!");
+          // Redirecionar para login após 2 segundos
+          setTimeout(() => {
+            history.push("/login");
+          }, 2000);
+        } else {
+          toast.error("Erro ao criar conta. Por favor, tente novamente.");
         }
-        // Redirecionar para o checkout do Mercado Pago
-        window.location.href = response.data.initPoint;
       } else {
-        toast.error("Erro ao criar preferência de pagamento. Por favor, tente novamente.");
+        // Criar preferência de pagamento para planos pagos
+        const response = await openApi.post("/companies/create-payment-preference", {
+          name: values.name,
+          email: values.email,
+          phone: values.phone,
+          password: values.password,
+          planId: selectedPlanId,
+          recurrence: "MENSAL",
+        });
+
+        if (response.data && response.data.initPoint) {
+          // Salvar preference_id no sessionStorage para uso nas páginas de callback
+          if (response.data.preferenceId) {
+            sessionStorage.setItem("mp_preference_id", response.data.preferenceId);
+          }
+          // Redirecionar para o checkout do Mercado Pago
+          window.location.href = response.data.initPoint;
+        } else {
+          toast.error("Erro ao criar preferência de pagamento. Por favor, tente novamente.");
+        }
       }
     } catch (err) {
-      console.error("Erro ao criar preferência de pagamento:", err);
-      let errorMessage = "Erro ao processar pagamento. Por favor, tente novamente.";
+      console.error("Erro ao processar cadastro:", err);
+      let errorMessage = isFreePlan 
+        ? "Erro ao criar conta. Por favor, tente novamente."
+        : "Erro ao processar pagamento. Por favor, tente novamente.";
       
       if (err.response?.data?.error) {
         errorMessage = err.response.data.error;
@@ -793,19 +829,27 @@ const SignUp = () => {
                           )}
                         </Box>
 
-                        <Button
-                          type="submit"
-                          fullWidth
-                          className={classes.submitButton}
-                          disabled={isSubmitting || !selectedPlanId}
-                          endIcon={<ArrowForwardIcon />}
-                        >
-                          {isSubmitting ? (
-                            <CircularProgress size={24} style={{ color: "#0A0A0F" }} />
-                          ) : (
-                            "Continuar para pagamento"
-                          )}
-                        </Button>
+                        {(() => {
+                          const selectedPlan = plans.find((p) => p.id === selectedPlanId);
+                          const isFreePlan = selectedPlan && (selectedPlan.value === 0 || selectedPlan.value === null);
+                          const buttonText = isFreePlan ? "Criar conta grátis" : "Continuar para pagamento";
+                          
+                          return (
+                            <Button
+                              type="submit"
+                              fullWidth
+                              className={classes.submitButton}
+                              disabled={isSubmitting || !selectedPlanId}
+                              endIcon={<ArrowForwardIcon />}
+                            >
+                              {isSubmitting ? (
+                                <CircularProgress size={24} style={{ color: "#0A0A0F" }} />
+                              ) : (
+                                buttonText
+                              )}
+                            </Button>
+                          );
+                        })()}
                       </>
                     )}
 

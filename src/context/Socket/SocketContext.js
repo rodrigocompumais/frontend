@@ -112,24 +112,58 @@ const SocketManager = {
       this.currentUserId = userId;
       
       if (!token) {
+        console.error("❌ [Socket] Token não encontrado no localStorage");
         return new DummySocket();
       }
       
-      this.currentSocket = openSocket(process.env.REACT_APP_BACKEND_URL, {
+      const backendUrl = process.env.REACT_APP_BACKEND_URL;
+      console.log("🔌 [Socket] Tentando conectar ao backend:", {
+        backendUrl: backendUrl,
+        companyId: companyId,
+        userId: userId,
+        hasToken: !!token,
+        tokenLength: token ? token.length : 0,
+        currentOrigin: window.location.origin
+      });
+      
+      this.currentSocket = openSocket(backendUrl, {
         transports: ["polling"],
         pingTimeout: 18000,
         pingInterval: 18000,
         query: { token },
       });
       
+      this.currentSocket.on("connect", (...params) => {
+        console.log("✅ [Socket] Conectado com sucesso:", {
+          socketId: this.currentSocket.id,
+          params: params,
+          backendUrl: backendUrl
+        });
+      });
+      
+      this.currentSocket.on("connect_error", (error) => {
+        console.error("❌ [Socket] Erro ao conectar:", {
+          error: error.message,
+          type: error.type,
+          description: error.description,
+          backendUrl: backendUrl,
+          currentOrigin: window.location.origin
+        });
+      });
+      
       this.currentSocket.on("disconnect", (reason) => {
-        console.warn(`socket disconnected because: ${reason}`);
+        console.warn(`⚠️ [Socket] Desconectado:`, {
+          reason: reason,
+          socketId: this.currentSocket?.id,
+          backendUrl: backendUrl
+        });
+        
         if (reason.startsWith("io ")) {
-          console.warn("tryng to reconnect", this.currentSocket);
+          console.warn("🔄 [Socket] Tentando reconectar...", this.currentSocket);
           
           const { exp } = jwt.decode(token);
           if ( Date.now()-180 >= exp*1000) {
-            console.warn("Expired token, reloading app");
+            console.warn("⏰ [Socket] Token expirado, recarregando app");
             window.location.reload();
             return;
           }
@@ -138,12 +172,12 @@ const SocketManager = {
         }        
       });
       
-      this.currentSocket.on("connect", (...params) => {
-        console.warn("socket connected", params);
-      })
-      
       this.currentSocket.onAny((event, ...args) => {
-        console.debug("Event: ", { socket: this.currentSocket, event, args });
+        console.debug("📨 [Socket] Evento recebido:", { 
+          event: event, 
+          args: args,
+          socketId: this.currentSocket?.id 
+        });
       });
       
       this.onReady(() => {
