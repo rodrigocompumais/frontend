@@ -454,6 +454,7 @@ const SignUp = () => {
   const params = qs.parse(window.location.search);
   const companyId = params.companyId || null;
   const planIdFromUrl = params.planId ? parseInt(params.planId, 10) : null;
+  const isFreeFlow = params.free === "true"; // Detecta se veio do botão "Começar gratuitamente"
 
   const initialState = {
     name: "",
@@ -481,9 +482,17 @@ const SignUp = () => {
         const list = await listPlans();
         if (!isMounted) return;
         setPlans(list);
-        // Selecionar plano da URL se existir, senão procurar plano gratuito, senão o primeiro
+        // Se veio do botão "Começar gratuitamente", forçar seleção do plano gratuito
         if (list.length > 0) {
-          if (planIdFromUrl) {
+          if (isFreeFlow) {
+            // Fluxo gratuito: procurar e selecionar apenas plano gratuito
+            const freePlan = list.find((p) => p.value === 0 || p.value === null);
+            if (freePlan) {
+              setSelectedPlanId(freePlan.id);
+            } else {
+              toast.error("Nenhum plano gratuito disponível. Entre em contato para mais informações.");
+            }
+          } else if (planIdFromUrl) {
             // Verificar se o planId da URL existe na lista
             const planExists = list.find((p) => p.id === planIdFromUrl);
             if (planExists) {
@@ -523,7 +532,7 @@ const SignUp = () => {
     return () => {
       isMounted = false;
     };
-  }, [listPlans, planIdFromUrl]); // listPlans agora é estável com useCallback
+  }, [listPlans, planIdFromUrl, isFreeFlow]); // listPlans agora é estável com useCallback
 
 
   const handleSignUp = async (values) => {
@@ -538,11 +547,12 @@ const SignUp = () => {
       return;
     }
 
-    // Verificar se o plano é gratuito (valor 0 ou null)
+    // Verificar se o plano é gratuito (valor 0 ou null) ou se veio do fluxo gratuito
     const isFreePlan = selectedPlan.value === 0 || selectedPlan.value === null;
+    const shouldCreateFreeAccount = isFreeFlow || isFreePlan;
 
     try {
-      if (isFreePlan) {
+      if (shouldCreateFreeAccount) {
         // Criar conta gratuita diretamente
         const response = await openApi.post("/companies/create-free-account", {
           name: values.name,
@@ -585,7 +595,7 @@ const SignUp = () => {
       }
     } catch (err) {
       console.error("Erro ao processar cadastro:", err);
-      let errorMessage = isFreePlan 
+      let errorMessage = shouldCreateFreeAccount 
         ? "Erro ao criar conta. Por favor, tente novamente."
         : "Erro ao processar pagamento. Por favor, tente novamente.";
       
@@ -625,12 +635,14 @@ const SignUp = () => {
           <Grid container className={classes.gridContainer}>
             {/* Coluna Esquerda - Benefícios */}
             <Grid item xs={12} md={5} className={classes.benefitsColumn}>
-              <Box className={classes.trialBadge}>
-                <StarIcon style={{ fontSize: 18, color: "#22C55E" }} />
-                <Typography className={classes.trialBadgeText}>
-                  7 dias grátis
-                </Typography>
-              </Box>
+              {isFreeFlow && (
+                <Box className={classes.trialBadge}>
+                  <StarIcon style={{ fontSize: 18, color: "#22C55E" }} />
+                  <Typography className={classes.trialBadgeText}>
+                    7 dias grátis
+                  </Typography>
+                </Box>
+              )}
 
               <Typography className={classes.benefitsTitle}>
                 Comece a transformar seu atendimento hoje
@@ -768,9 +780,9 @@ const SignUp = () => {
                       }}
                     />
 
-                    {(
+                    {!isFreeFlow && (
                       <>
-                        {/* Seleção de Plano */}
+                        {/* Seleção de Plano - Oculto no fluxo gratuito */}
                         <Box className={classes.plansSection}>
                           <Typography className={classes.plansSectionTitle}>
                             Selecione seu plano
@@ -832,7 +844,8 @@ const SignUp = () => {
                         {(() => {
                           const selectedPlan = plans.find((p) => p.id === selectedPlanId);
                           const isFreePlan = selectedPlan && (selectedPlan.value === 0 || selectedPlan.value === null);
-                          const buttonText = isFreePlan ? "Criar conta grátis" : "Continuar para pagamento";
+                          // Se for fluxo gratuito ou plano gratuito, mostrar "Registrar", senão "Continuar para pagamento"
+                          const buttonText = (isFreeFlow || isFreePlan) ? "Registrar" : "Continuar para pagamento";
                           
                           return (
                             <Button

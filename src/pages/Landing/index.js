@@ -654,7 +654,7 @@ const Landing = () => {
               <Box className={classes.heroActions}>
                 <Button
                   component={RouterLink}
-                  to="/signup"
+                  to="/signup?free=true"
                   className={classes.primaryCta}
                 >
                   Começar gratuitamente
@@ -1055,7 +1055,7 @@ const Landing = () => {
             </Typography>
             <Button
               component={RouterLink}
-              to="/signup"
+              to="/signup?free=true"
               className={classes.ctaButton}
             >
               Criar minha conta grátis
