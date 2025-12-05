@@ -513,6 +513,10 @@ const messages = {
           temperature: "Temperatura",
           apikey: "API Key",
           max_messages: "Máximo de mensagens no Histórico",
+          canSendInternalMessages: "Permitir envio de mensagens internas",
+          canTransferToAgent: "Permitir transferência para atendente online",
+          transferQueueId: "Fila de destino para transferência",
+          selectQueue: "Selecione uma fila",
         },
         formErrors: {
           name: {

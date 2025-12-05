@@ -14,7 +14,7 @@ import DialogContent from "@material-ui/core/DialogContent";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import { i18n } from "../../translate/i18n";
-import { MenuItem, FormControl, InputLabel, Select, Menu, Grid } from "@material-ui/core";
+import { MenuItem, FormControl, InputLabel, Select, Menu, Grid, FormControlLabel, Checkbox } from "@material-ui/core";
 import { Visibility, VisibilityOff } from "@material-ui/icons";
 import { InputAdornment, IconButton } from "@material-ui/core";
 import QueueSelectSingle from "../../components/QueueSelectSingle";
@@ -81,6 +81,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const [selectedModel, setSelectedModel] = useState("gpt-3.5-turbo-1106");
     const [selectedProvider, setSelectedProvider] = useState("openai");
     const [showApiKey, setShowApiKey] = useState(false);
+    const [queues, setQueues] = useState([]);
 
     const handleToggleApiKey = () => {
         setShowApiKey(!showApiKey);
@@ -95,10 +96,25 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         temperature: 1,
         apiKey: "",
         queueId: '',
-        maxMessages: 10
+        maxMessages: 10,
+        canSendInternalMessages: false,
+        canTransferToAgent: false,
+        transferQueueId: ''
     };
 
     const [prompt, setPrompt] = useState(initialState);
+
+    useEffect(() => {
+        const fetchQueues = async () => {
+            try {
+                const { data } = await api.get("/queue");
+                setQueues(data);
+            } catch (err) {
+                toastError(err);
+            }
+        };
+        fetchQueues();
+    }, []);
 
     useEffect(() => {
         const fetchPrompt = async () => {
@@ -278,6 +294,53 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                     multiline={true}
                                 />
                                 <QueueSelectSingle touched={touched} errors={errors}/>
+                                
+                                <FormControlLabel
+                                    control={
+                                        <Field
+                                            as={Checkbox}
+                                            name="canSendInternalMessages"
+                                            color="primary"
+                                        />
+                                    }
+                                    label={i18n.t("promptModal.form.canSendInternalMessages")}
+                                />
+                                
+                                <FormControlLabel
+                                    control={
+                                        <Field
+                                            as={Checkbox}
+                                            name="canTransferToAgent"
+                                            color="primary"
+                                        />
+                                    }
+                                    label={i18n.t("promptModal.form.canTransferToAgent")}
+                                />
+                                
+                                {values.canTransferToAgent && (
+                                    <FormControl fullWidth margin="dense" variant="outlined">
+                                        <InputLabel id="transfer-queue-select-label">
+                                            {i18n.t("promptModal.form.transferQueueId")}
+                                        </InputLabel>
+                                        <Field
+                                            as={Select}
+                                            labelId="transfer-queue-select-label"
+                                            name="transferQueueId"
+                                            label={i18n.t("promptModal.form.transferQueueId")}
+                                            error={touched.transferQueueId && Boolean(errors.transferQueueId)}
+                                        >
+                                            <MenuItem value="">
+                                                <em>{i18n.t("promptModal.form.selectQueue")}</em>
+                                            </MenuItem>
+                                            {queues.map(queue => (
+                                                <MenuItem key={queue.id} value={queue.id}>
+                                                    {queue.name}
+                                                </MenuItem>
+                                            ))}
+                                        </Field>
+                                    </FormControl>
+                                )}
+                                
                                 <div className={classes.multFieldLine}>
                                     <FormControl fullWidth margin="dense" variant="outlined">
                                     <InputLabel>{i18n.t("promptModal.form.model")}</InputLabel>

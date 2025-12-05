@@ -505,6 +505,10 @@ const messages = {
           temperature: "Temperatura",
           apikey: "API Key",
           max_messages: "Máximo de mensajes en el Historial",
+          canSendInternalMessages: "Permitir envío de mensajes internos",
+          canTransferToAgent: "Permitir transferencia a agente en línea",
+          transferQueueId: "Cola de destino para transferencia",
+          selectQueue: "Seleccione una cola",
         },
         formErrors: {
           name: {
