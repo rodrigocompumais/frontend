@@ -1488,6 +1488,9 @@ const messages = {
 						download: "Download",
 					},
 				},
+				audio: {
+					transcribe: "Transcribe",
+				},
 				lostCall: "Missed voice/video call at",
 				deletedMessage: "This message was deleted by the contact",
 				edited: "Edited",

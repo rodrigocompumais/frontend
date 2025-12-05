@@ -35,6 +35,7 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
 import ChatAIButton from "../ChatAIButton";
 import ChatAIModal from "../ChatAIModal";
+import AudioTranscriptionModal from "../AudioTranscriptionModal";
 import { toast } from "react-toastify";
 
 const useStyles = makeStyles((theme) => ({
@@ -360,6 +361,12 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
   const [aiAudioSummary, setAiAudioSummary] = useState("");
   const [aiAudioCount, setAiAudioCount] = useState(0);
 
+  // Estados para transcrição de áudio
+  const [transcriptionModalOpen, setTranscriptionModalOpen] = useState(false);
+  const [transcriptionLoading, setTranscriptionLoading] = useState(false);
+  const [transcription, setTranscription] = useState("");
+  const [transcriptionError, setTranscriptionError] = useState(null);
+
   const socketManager = useContext(SocketContext);
 
   useEffect(() => {
@@ -514,9 +521,21 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
       return <ModalImageCors imageUrl={message.mediaUrl} />;
     } else if (message.mediaType === "audio") {
       return (
-        <audio controls>
-          <source src={message.mediaUrl} type="audio/ogg"></source>
-        </audio>
+        <div>
+          <audio controls style={{ width: "100%", marginBottom: 8 }}>
+            <source src={message.mediaUrl} type="audio/ogg"></source>
+          </audio>
+          <Button
+            size="small"
+            variant="outlined"
+            color="primary"
+            onClick={() => handleTranscribeAudio(message.id)}
+            disabled={transcriptionLoading}
+            style={{ marginTop: 4 }}
+          >
+            {i18n.t("messagesList.audio.transcribe")}
+          </Button>
+        </div>
       );
     } else if (message.mediaType === "video") {
       return (
@@ -951,6 +970,30 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
     toast.success("Sugestão copiada para área de transferência!");
   };
 
+  const handleTranscribeAudio = async (messageId) => {
+    setTranscriptionModalOpen(true);
+    setTranscriptionLoading(true);
+    setTranscription("");
+    setTranscriptionError(null);
+    
+    try {
+      const { data } = await api.post(`/chat-ai/transcribe/${messageId}`);
+      setTranscription(data.transcription || "");
+    } catch (err) {
+      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
+        setTranscriptionError("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
+        toast.error("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
+      } else {
+        const errorMessage = err.response?.data?.error || err.response?.data?.message || "Erro ao transcrever áudio";
+        setTranscriptionError(errorMessage);
+        toastError(err);
+        toast.error("Erro ao transcrever áudio");
+      }
+    } finally {
+      setTranscriptionLoading(false);
+    }
+  };
+
   // Expor handlers para o componente pai
   useEffect(() => {
     if (onAiHandlersReady && ticketId) {
@@ -994,6 +1037,17 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
         audioCount={aiAudioCount}
         onSendQuestion={handleSendQuestion}
         onSelectSuggestion={handleSelectSuggestion}
+      />
+      <AudioTranscriptionModal
+        open={transcriptionModalOpen}
+        onClose={() => {
+          setTranscriptionModalOpen(false);
+          setTranscription("");
+          setTranscriptionError(null);
+        }}
+        loading={transcriptionLoading}
+        transcription={transcription}
+        error={transcriptionError}
       />
     </div>
   );

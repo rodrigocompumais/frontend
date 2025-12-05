@@ -573,24 +573,24 @@ const SignUp = () => {
         }
       } else {
         // Criar preferência de pagamento para planos pagos
-        const response = await openApi.post("/companies/create-payment-preference", {
-          name: values.name,
-          email: values.email,
-          phone: values.phone,
-          password: values.password,
-          planId: selectedPlanId,
-          recurrence: "MENSAL",
-        });
+      const response = await openApi.post("/companies/create-payment-preference", {
+        name: values.name,
+        email: values.email,
+        phone: values.phone,
+        password: values.password,
+        planId: selectedPlanId,
+        recurrence: "MENSAL",
+      });
 
-        if (response.data && response.data.initPoint) {
-          // Salvar preference_id no sessionStorage para uso nas páginas de callback
-          if (response.data.preferenceId) {
-            sessionStorage.setItem("mp_preference_id", response.data.preferenceId);
-          }
-          // Redirecionar para o checkout do Mercado Pago
-          window.location.href = response.data.initPoint;
-        } else {
-          toast.error("Erro ao criar preferência de pagamento. Por favor, tente novamente.");
+      if (response.data && response.data.initPoint) {
+        // Salvar preference_id no sessionStorage para uso nas páginas de callback
+        if (response.data.preferenceId) {
+          sessionStorage.setItem("mp_preference_id", response.data.preferenceId);
+        }
+        // Redirecionar para o checkout do Mercado Pago
+        window.location.href = response.data.initPoint;
+      } else {
+        toast.error("Erro ao criar preferência de pagamento. Por favor, tente novamente.");
         }
       }
     } catch (err) {
@@ -636,12 +636,12 @@ const SignUp = () => {
             {/* Coluna Esquerda - Benefícios */}
             <Grid item xs={12} md={5} className={classes.benefitsColumn}>
               {isFreeFlow && (
-                <Box className={classes.trialBadge}>
-                  <StarIcon style={{ fontSize: 18, color: "#22C55E" }} />
-                  <Typography className={classes.trialBadgeText}>
-                    7 dias grátis
-                  </Typography>
-                </Box>
+              <Box className={classes.trialBadge}>
+                <StarIcon style={{ fontSize: 18, color: "#22C55E" }} />
+                <Typography className={classes.trialBadgeText}>
+                  7 dias grátis
+                </Typography>
+              </Box>
               )}
 
               <Typography className={classes.benefitsTitle}>
@@ -780,12 +780,12 @@ const SignUp = () => {
                       }}
                     />
 
-                    <>
-                      {/* Seleção de Plano */}
-                      <Box className={classes.plansSection}>
-                        <Typography className={classes.plansSectionTitle}>
+                      <>
+                        {/* Seleção de Plano */}
+                        <Box className={classes.plansSection}>
+                          <Typography className={classes.plansSectionTitle}>
                           {isFreeFlow ? "Selecione o plano que deseja usar após o período de teste" : "Selecione seu plano"}
-                        </Typography>
+                          </Typography>
 
                           {loadingPlans ? (
                             <Box className={classes.loadingPlans}>
@@ -847,22 +847,22 @@ const SignUp = () => {
                           const buttonText = isFreeFlow ? "Registrar" : (isFreePlan ? "Registrar" : "Continuar para pagamento");
                           
                           return (
-                            <Button
-                              type="submit"
-                              fullWidth
-                              className={classes.submitButton}
-                              disabled={isSubmitting || !selectedPlanId}
-                              endIcon={<ArrowForwardIcon />}
-                            >
-                              {isSubmitting ? (
-                                <CircularProgress size={24} style={{ color: "#0A0A0F" }} />
-                              ) : (
+                        <Button
+                          type="submit"
+                          fullWidth
+                          className={classes.submitButton}
+                          disabled={isSubmitting || !selectedPlanId}
+                          endIcon={<ArrowForwardIcon />}
+                        >
+                          {isSubmitting ? (
+                            <CircularProgress size={24} style={{ color: "#0A0A0F" }} />
+                          ) : (
                                 buttonText
-                              )}
-                            </Button>
+                          )}
+                        </Button>
                           );
                         })()}
-                    </>
+                      </>
 
                     <Typography className={classes.loginLink}>
                       Já tem uma conta?{" "}

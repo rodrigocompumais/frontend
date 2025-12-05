@@ -1599,6 +1599,9 @@ const messages = {
             download: "Baixar",
           },
         },
+        audio: {
+          transcribe: "Transcrever",
+        },
         lostCall: "Chamada de voz/vídeo perdida às",
         deletedMessage: "Essa mensagem foi apagada pelo contato",
         edited: "Editada",
