@@ -1,4 +1,4 @@
-import React, {
+﻿import React, {
   useState,
   useEffect,
   useReducer,
@@ -74,6 +74,10 @@ import FlowBuilderSingleBlockModal from "../../components/FlowBuilderSingleBlock
 import FlowBuilderTypebotModal from "../../components/FlowBuilderAddTypebotModal";
 import FlowBuilderOpenAIModal from "../../components/FlowBuilderAddOpenAIModal";
 import FlowBuilderAddQuestionModal from "../../components/FlowBuilderAddQuestionModal";
+
+import FlowBuilderToolbar from "../../components/FlowBuilder/FlowBuilderToolbar";
+import FlowBuilderSidebar from "../../components/FlowBuilder/FlowBuilderSidebar";
+
 
 import {
   AccessTime,
@@ -174,7 +178,11 @@ const FlowBuilderConfig = () => {
   const [modalAddOpenAI, setModalAddOpenAI] = useState(null);
   const [modalAddQuestion, setModalAddQuestion] = useState(null);
 
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
   const connectionLineStyle = { stroke: "#2b2b2b", strokeWidth: "6px" };
+  const reactFlowInstance = useReactFlow();
+
 
   const addNode = (type, data) => {
 
@@ -500,12 +508,15 @@ const FlowBuilderConfig = () => {
   };
 
   const clickNode = (event, node) => {
+    setDataNode(node);
+    setSidebarOpen(true);
     setNodes((old) =>
       old.map((item) => {
         if (item.id === node.id) {
           return {
             ...item,
-            style: { backgroundColor: "#0000FF", padding: 1, borderRadius: 8 },
+            style: { backgroundColor: "#0000FF", padding: 1, borderRadius: 8 }
+
           };
         }
         return {
@@ -563,7 +574,7 @@ const FlowBuilderConfig = () => {
           }}
         />
       ),
-      name: "Conteúdo",
+      name: "ConteÃºdo",
       type: "content",
     },
     {
@@ -847,6 +858,42 @@ const FlowBuilderConfig = () => {
           variant="outlined"
           onScroll={handleScroll}
         >
+          {/* Nova Toolbar */}
+          <FlowBuilderToolbar
+            onSave={() => saveFlow()}
+            onUndo={() => {}}
+            onRedo={() => {}}
+            onZoomIn={() => reactFlowInstance?.zoomIn()}
+            onZoomOut={() => reactFlowInstance?.zoomOut()}
+            onFitView={() => reactFlowInstance?.fitView()}
+            onDelete={() => {}}
+            onDuplicate={() => {}}
+            onExport={() => {}}
+            onImport={() => {}}
+            onTest={() => {}}
+            canUndo={false}
+            canRedo={false}
+            isTestMode={false}
+          />
+
+
+          {/* Nova Toolbar */}
+          <FlowBuilderToolbar
+            onSave={() => saveFlow()}
+            onUndo={() => {}}
+            onRedo={() => {}}
+            onZoomIn={() => reactFlowInstance?.zoomIn()}
+            onZoomOut={() => reactFlowInstance?.zoomOut()}
+            onFitView={() => reactFlowInstance?.fitView()}
+            onDelete={() => {}}
+            onDuplicate={() => {}}
+            onExport={() => {}}
+            onImport={() => {}}
+            onTest={() => {}}
+            canUndo={false}
+            canRedo={false}
+            isTestMode={false}
+          />
           <Stack>
             <SpeedDial
               ariaLabel="SpeedDial basic example"
@@ -884,7 +931,7 @@ const FlowBuilderConfig = () => {
             <Typography
               style={{ color: "#010101", textShadow: "#010101 1px 0 10px" }}
             >
-              Não se esqueça de salvar seu fluxo!
+              NÃ£o se esqueÃ§a de salvar seu fluxo!
             </Typography>
           </Stack>
           <Stack direction={"row"} justifyContent={"end"}>
@@ -936,8 +983,22 @@ const FlowBuilderConfig = () => {
               <MiniMap />
               <Background variant="dots" gap={12} size={-1} />
             </ReactFlow>
+            {/* Nova Sidebar para propriedades */}
+            <FlowBuilderSidebar
+              open={sidebarOpen}
+              onClose={() => setSidebarOpen(false)}
+              selectedNode={dataNode}
+              onUpdateNode={updateNode}
+            />
 
-            <Stack
+            {/* Nova Sidebar para propriedades */}
+            <FlowBuilderSidebar
+              open={sidebarOpen}
+              onClose={() => setSidebarOpen(false)}
+              selectedNode={dataNode}
+              onUpdateNode={updateNode}
+            />
+<Stack
               style={{
                 backgroundColor: "#FAFAFA",
                 height: "20px",
@@ -1043,7 +1104,7 @@ const FlowBuilderConfig = () => {
                         marginRight: "4px"
                       }}
                     />
-                    Condição
+                    CondiÃ§Ã£o
                   </Button>
                   <Button
                     onClick={() => setModalAddMenu("create")}
@@ -1157,7 +1218,7 @@ const FlowBuilderConfig = () => {
                         marginRight: "4px"
                       }}
                     />
-                    Conteúdo
+                    ConteÃºdo
                   </Button>
                 </Stack> */}
           </Stack>
