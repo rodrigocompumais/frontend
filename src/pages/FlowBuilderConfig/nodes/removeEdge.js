@@ -1,12 +1,20 @@
-import React, { useContext } from "react";
+﻿import React from "react";
 import {
   getBezierPath,
-  getEdgeCenter,
   getMarkerEnd
 } from "reactflow";
 
 import "./css/buttonedge.css";
 import { Delete } from "@mui/icons-material";
+
+// FunÃ§Ã£o auxiliar para calcular o centro da edge (getEdgeCenter nÃ£o existe no reactflow v11)
+const getEdgeCenter = ({ sourceX, sourceY, targetX, targetY }) => {
+  const xOffset = Math.abs(targetX - sourceX) / 2;
+  const yOffset = Math.abs(targetY - sourceY) / 2;
+  const centerX = sourceX < targetX ? sourceX + xOffset : sourceX - xOffset;
+  const centerY = sourceY < targetY ? sourceY + yOffset : sourceY - yOffset;
+  return [centerX, centerY];
+};
 
 const onEdgeClick = (evt, id) => {
   evt.stopPropagation();
