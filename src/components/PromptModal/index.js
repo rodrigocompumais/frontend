@@ -216,8 +216,10 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                     fullWidth
                                 />
                                 <FormControl fullWidth margin="dense" variant="outlined">
-                                    <InputLabel>Provider</InputLabel>
+                                    <InputLabel id="provider-select-label">Provider</InputLabel>
                                     <Select
+                                        labelId="provider-select-label"
+                                        id="provider-select"
                                         value={selectedProvider}
                                         onChange={handleChangeProvider}
                                         label="Provider"
