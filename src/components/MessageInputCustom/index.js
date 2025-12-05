@@ -21,6 +21,8 @@ import MicIcon from "@material-ui/icons/Mic";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
 import LockIcon from "@material-ui/icons/Lock";
+import LockOpenIcon from "@material-ui/icons/LockOpen";
+import EditIcon from "@material-ui/icons/Edit";
 import { FormControlLabel, Switch } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 import { isString, isEmpty, isObject, has } from "lodash";
@@ -206,8 +208,10 @@ const SignSwitch = (props) => {
   if (isWidthUp("md", width)) {
     return (
       <FormControlLabel
-        style={{ marginRight: 7, color: "gray" }}
-        label={i18n.t("messagesInput.signMessage")}
+        style={{ marginRight: 7, color: "gray", display: "flex", alignItems: "center" }}
+        label={
+          <EditIcon style={{ fontSize: 18, marginRight: 4 }} />
+        }
         labelPlacement="start"
         control={
           <Switch
@@ -330,6 +334,7 @@ const CustomInput = (props) => {
     handleInputPaste,
     disableOption,
     handleQuickAnswersClick,
+    isInternalMessage,
   } = props;
   const classes = useStyles();
   const [quickMessages, setQuickMessages] = useState([]);
@@ -394,6 +399,9 @@ const CustomInput = (props) => {
   };
 
   const renderPlaceholder = () => {
+    if (isInternalMessage) {
+      return "Digite sua mensagem interna...";
+    }
     if (ticketStatus === "open") {
       return i18n.t("messagesInput.placeholderOpen");
     }
@@ -842,12 +850,14 @@ const MessageInputCustom = (props) => {
                 />
               }
               label={
-                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                  <LockIcon style={{ fontSize: 16 }} />
-                  <span>Mensagem interna</span>
-                </span>
+                isInternalMessage ? (
+                  <LockIcon style={{ fontSize: 18, marginRight: 4 }} />
+                ) : (
+                  <LockOpenIcon style={{ fontSize: 18, marginRight: 4 }} />
+                )
               }
-              style={{ marginLeft: 8, marginRight: 8, fontSize: '0.75rem' }}
+              labelPlacement="start"
+              style={{ marginLeft: 8, marginRight: 8, display: "flex", alignItems: "center" }}
             />
 
             <CustomInput
@@ -861,6 +871,7 @@ const MessageInputCustom = (props) => {
               handleInputPaste={handleInputPaste}
               disableOption={disableOption}
               handleQuickAnswersClick={handleQuickAnswersClick}
+              isInternalMessage={isInternalMessage}
             />
 
             {ticketId && (
