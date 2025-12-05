@@ -56,20 +56,30 @@ const useStyles = makeStyles(theme => ({
     },
 }));
 
-const PromptSchema = Yup.object().shape({
-    name: Yup.string().min(5, i18n.t("promptModal.formErrors.name.short")).max(100, i18n.t("promptModal.formErrors.name.long")).required(i18n.t("promptModal.formErrors.name.required")),
-    prompt: Yup.string().min(50, i18n.t("promptModal.formErrors.prompt.short")).required(i18n.t("promptModal.formErrors.prompt.required")),
-    model: Yup.string().required(i18n.t("promptModal.formErrors.modal.required")),
-    maxTokens: Yup.number().required(i18n.t("promptModal.formErrors.maxTokens.required")),
-    temperature: Yup.number().required(i18n.t("promptModal.formErrors.temperature.required")),
-    apiKey: Yup.string().required(i18n.t("promptModal.formErrors.apikey.required")),
-    queueId: Yup.number().required(i18n.t("promptModal.formErrors.queueId.required")),
-    maxMessages: Yup.number().required(i18n.t("promptModal.formErrors.maxMessages.required"))
-});
+// Schema será criado dinamicamente baseado no provider
+const getPromptSchema = (provider) => {
+    const baseSchema = {
+        name: Yup.string().min(5, i18n.t("promptModal.formErrors.name.short")).max(100, i18n.t("promptModal.formErrors.name.long")).required(i18n.t("promptModal.formErrors.name.required")),
+        prompt: Yup.string().min(50, i18n.t("promptModal.formErrors.prompt.short")).required(i18n.t("promptModal.formErrors.prompt.required")),
+        model: Yup.string().required(i18n.t("promptModal.formErrors.modal.required")),
+        maxTokens: Yup.number().required(i18n.t("promptModal.formErrors.maxTokens.required")),
+        temperature: Yup.number().required(i18n.t("promptModal.formErrors.temperature.required")),
+        queueId: Yup.number().required(i18n.t("promptModal.formErrors.queueId.required")),
+        maxMessages: Yup.number().required(i18n.t("promptModal.formErrors.maxMessages.required"))
+    };
+
+    // Se for OpenAI, apiKey é obrigatória
+    if (provider === "openai") {
+        baseSchema.apiKey = Yup.string().required(i18n.t("promptModal.formErrors.apikey.required"));
+    }
+
+    return Yup.object().shape(baseSchema);
+};
 
 const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const classes = useStyles();
     const [selectedModel, setSelectedModel] = useState("gpt-3.5-turbo-1106");
+    const [selectedProvider, setSelectedProvider] = useState("openai");
     const [showApiKey, setShowApiKey] = useState(false);
 
     const handleToggleApiKey = () => {
@@ -80,6 +90,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         name: "",
         prompt: "",
         model: "gpt-3.5-turbo-1106",
+        provider: "openai",
         maxTokens: 100,
         temperature: 1,
         apiKey: "",
@@ -93,6 +104,8 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         const fetchPrompt = async () => {
             if (!promptId) {
                 setPrompt(initialState);
+                setSelectedProvider("openai");
+                setSelectedModel("gpt-3.5-turbo-1106");
                 return;
             }
             try {
@@ -101,7 +114,8 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                     return { ...prevState, ...data };
                 });
                 
-                setSelectedModel(data.model);
+                setSelectedModel(data.model || "gpt-3.5-turbo-1106");
+                setSelectedProvider(data.provider || "openai");
             } catch (err) { 
                 toastError(err);
             }
@@ -113,6 +127,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const handleClose = () => {
         setPrompt(initialState);
         setSelectedModel("gpt-3.5-turbo-1106");
+        setSelectedProvider("openai");
         onClose();
     };
 
@@ -120,8 +135,29 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         setSelectedModel(e.target.value);
     };
 
+    const handleChangeProvider = (e) => {
+        const newProvider = e.target.value;
+        setSelectedProvider(newProvider);
+        // Se mudar para Gemini, resetar modelo para o padrão do Gemini
+        if (newProvider === "gemini") {
+            setSelectedModel("gemini-2.5-flash");
+        } else {
+            setSelectedModel("gpt-3.5-turbo-1106");
+        }
+    };
+
     const handleSavePrompt = async values => {
-        const promptData = { ...values, model: selectedModel };
+        const promptData = { 
+            ...values, 
+            model: selectedModel,
+            provider: selectedProvider
+        };
+        
+        // Se for Gemini, não enviar apiKey (será usado das Settings)
+        if (selectedProvider === "gemini") {
+            promptData.apiKey = "";
+        }
+        
         console.log(promptData);
         if (!values.queueId) {
             toastError(i18n.t("promptModal.setor"));
@@ -158,7 +194,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                 <Formik
                     initialValues={prompt}
                     enableReinitialize={true}
-                    validationSchema={PromptSchema}
+                    validationSchema={getPromptSchema(selectedProvider)}
                     onSubmit={(values, actions) => {
                         setTimeout(() => {
                             handleSavePrompt(values);
@@ -180,27 +216,53 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                     fullWidth
                                 />
                                 <FormControl fullWidth margin="dense" variant="outlined">
-                                    <Field
-                                        as={TextField}
-                                        label={i18n.t("promptModal.form.apikey")}
-                                        name="apiKey"
-                                        type={showApiKey ? 'text' : 'password'}
-                                        error={touched.apiKey && Boolean(errors.apiKey)}
-                                        helperText={touched.apiKey && errors.apiKey}
-                                        variant="outlined"
-                                        margin="dense"
-                                        fullWidth
-                                        InputProps={{
-                                            endAdornment: (
-                                                <InputAdornment position="end">
-                                                    <IconButton onClick={handleToggleApiKey}>
-                                                        {showApiKey ? <VisibilityOff /> : <Visibility />}
-                                                    </IconButton>
-                                                </InputAdornment>
-                                            ),
-                                        }}
-                                    />
+                                    <InputLabel>Provider</InputLabel>
+                                    <Select
+                                        value={selectedProvider}
+                                        onChange={handleChangeProvider}
+                                        label="Provider"
+                                    >
+                                        <MenuItem value="openai">OpenAI</MenuItem>
+                                        <MenuItem value="gemini">Gemini</MenuItem>
+                                    </Select>
                                 </FormControl>
+                                {selectedProvider === "openai" && (
+                                    <FormControl fullWidth margin="dense" variant="outlined">
+                                        <Field
+                                            as={TextField}
+                                            label={i18n.t("promptModal.form.apikey")}
+                                            name="apiKey"
+                                            type={showApiKey ? 'text' : 'password'}
+                                            error={touched.apiKey && Boolean(errors.apiKey)}
+                                            helperText={touched.apiKey && errors.apiKey}
+                                            variant="outlined"
+                                            margin="dense"
+                                            fullWidth
+                                            InputProps={{
+                                                endAdornment: (
+                                                    <InputAdornment position="end">
+                                                        <IconButton onClick={handleToggleApiKey}>
+                                                            {showApiKey ? <VisibilityOff /> : <Visibility />}
+                                                        </IconButton>
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                        />
+                                    </FormControl>
+                                )}
+                                {selectedProvider === "gemini" && (
+                                    <FormControl fullWidth margin="dense" variant="outlined">
+                                        <TextField
+                                            label="API Key do Gemini"
+                                            value="Usará a API Key configurada em Configurações → Integrações"
+                                            variant="outlined"
+                                            margin="dense"
+                                            fullWidth
+                                            disabled
+                                            helperText="A API Key do Gemini será obtida das configurações da empresa"
+                                        />
+                                    </FormControl>
+                                )}
                                 <Field
                                     as={TextField}
                                     label={i18n.t("promptModal.form.prompt")}
@@ -225,12 +287,20 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                             onChange={handleChangeModel}
                                             multiple={false}
                                         >
-                                            <MenuItem key={"gpt-3.5"} value={"gpt-3.5-turbo-1106"}>
-                                                GPT 3.5 turbo
-                                            </MenuItem>
-                                            <MenuItem key={"gpt-4"} value={"gpt-4o-mini"}>
-                                                GPT 4.0
-                                            </MenuItem>
+                                            {selectedProvider === "openai" ? (
+                                                <>
+                                                    <MenuItem key={"gpt-3.5"} value={"gpt-3.5-turbo-1106"}>
+                                                        GPT 3.5 turbo
+                                                    </MenuItem>
+                                                    <MenuItem key={"gpt-4"} value={"gpt-4o-mini"}>
+                                                        GPT 4.0
+                                                    </MenuItem>
+                                                </>
+                                            ) : (
+                                                <MenuItem key={"gemini-2.5-flash"} value={"gemini-2.5-flash"}>
+                                                    Gemini 2.5 Flash
+                                                </MenuItem>
+                                            )}
                                         </Select>
                                     </FormControl>
                                     <Field

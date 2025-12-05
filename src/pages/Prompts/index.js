@@ -238,6 +238,9 @@ const Prompts = () => {
                 {i18n.t("prompts.table.name")}
               </TableCell>
               <TableCell align="left">
+                Provider
+              </TableCell>
+              <TableCell align="left">
                 {i18n.t("prompts.table.queue")}
               </TableCell>
               <TableCell align="left">
@@ -253,6 +256,18 @@ const Prompts = () => {
               {prompts.map((prompt) => (
                 <TableRow key={prompt.id}>
                   <TableCell align="left">{prompt.name}</TableCell>
+                  <TableCell align="left">
+                    <span style={{
+                      padding: "4px 8px",
+                      borderRadius: "4px",
+                      fontSize: "0.75rem",
+                      fontWeight: 500,
+                      backgroundColor: prompt.provider === "gemini" ? "#E8F5E9" : "#E3F2FD",
+                      color: prompt.provider === "gemini" ? "#2E7D32" : "#1976D2"
+                    }}>
+                      {prompt.provider === "gemini" ? "Gemini" : "OpenAI"}
+                    </span>
+                  </TableCell>
                   <TableCell align="left">{prompt.queue?.name}</TableCell>
                   <TableCell align="left">{prompt.maxTokens}</TableCell>
                   <TableCell align="center">
@@ -275,7 +290,7 @@ const Prompts = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={4} />}
+              {loading && <TableRowSkeleton columns={5} />}
             </>
           </TableBody>
         </Table>
