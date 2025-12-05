@@ -840,8 +840,12 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
       setAiAnalysis(data.analysis || "");
       setAiKeyPoints(data.keyPoints || []);
     } catch (err) {
-      toastError(err);
-      toast.error("Erro ao analisar conversa");
+      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
+        toast.error("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
+      } else {
+        toastError(err);
+        toast.error("Erro ao analisar conversa");
+      }
     } finally {
       setAiLoading(false);
     }
@@ -861,8 +865,12 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
       setAiAudioSummary(data.summary || "");
       setAiAudioCount(data.audioCount || 0);
     } catch (err) {
-      toastError(err);
-      toast.error("Erro ao resumir áudios");
+      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
+        toast.error("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
+      } else {
+        toastError(err);
+        toast.error("Erro ao resumir áudios");
+      }
     } finally {
       setAiLoading(false);
     }
@@ -882,8 +890,12 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
       setAiSuggestions(data.suggestions || []);
       setAiKeyPoints(data.keyPoints || []);
     } catch (err) {
-      toastError(err);
-      toast.error("Erro ao sugerir resposta");
+      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
+        toast.error("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
+      } else {
+        toastError(err);
+        toast.error("Erro ao sugerir resposta");
+      }
     } finally {
       setAiLoading(false);
     }
@@ -899,8 +911,12 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
       setAiAnalysis(data.analysis || "");
       setAiKeyPoints(data.keyPoints || []);
     } catch (err) {
-      toastError(err);
-      toast.error("Erro ao processar pergunta");
+      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
+        toast.error("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
+      } else {
+        toastError(err);
+        toast.error("Erro ao processar pergunta");
+      }
     } finally {
       setAiLoading(false);
     }

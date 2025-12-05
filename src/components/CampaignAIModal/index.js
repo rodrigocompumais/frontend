@@ -205,7 +205,9 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
       setStep(3);
       toast.success(`${data.variations?.length || 0} variações geradas com sucesso!`);
     } catch (err) {
-      if (err.response?.data?.message) {
+      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
+        toast.error("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
+      } else if (err.response?.data?.message) {
         toast.error(err.response.data.message);
       } else {
         toastError(err);
