@@ -78,6 +78,7 @@ const useAuth = () => {
 
           localStorage.removeItem("token");
           localStorage.removeItem("companyId");
+          localStorage.removeItem("ai_chat_messages");
           api.defaults.headers.Authorization = undefined;
           setIsAuth(false);
 
@@ -93,6 +94,7 @@ const useAuth = () => {
       ) {
         localStorage.removeItem("token");
         localStorage.removeItem("companyId");
+        localStorage.removeItem("ai_chat_messages");
         api.defaults.headers.Authorization = undefined;
         setIsAuth(false);
       }
@@ -210,6 +212,8 @@ const useAuth = () => {
       localStorage.removeItem("companyId");
       localStorage.removeItem("userId");
       localStorage.removeItem("cshow");
+      // Limpar histórico de conversas com IA
+      localStorage.removeItem("ai_chat_messages");
       api.defaults.headers.Authorization = undefined;
       setLoading(false);
       history.push("/login");
