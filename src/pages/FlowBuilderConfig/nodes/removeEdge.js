@@ -3,7 +3,7 @@ import {
   getBezierPath,
   getEdgeCenter,
   getMarkerEnd
-} from "react-flow-renderer";
+} from "reactflow";
 
 import "./css/buttonedge.css";
 import { Delete } from "@mui/icons-material";

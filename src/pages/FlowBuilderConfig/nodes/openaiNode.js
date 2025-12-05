@@ -7,7 +7,7 @@ import {
 import React, { memo } from "react";
 import TextField from "@mui/material/TextField";
 import { useNodeStorage } from "../../../stores/useNodeStorage";
-import { Handle } from "react-flow-renderer";
+import { Handle } from "reactflow";
 import { Typography, Box } from "@material-ui/core";
 import { SiOpenai } from "react-icons/si";
 

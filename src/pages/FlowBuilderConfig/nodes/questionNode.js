@@ -11,7 +11,7 @@ import {
 } from "@mui/icons-material";
 import React, { memo } from "react";
 
-import { Handle } from "react-flow-renderer";
+import { Handle } from "reactflow";
 import { useNodeStorage } from "../../../stores/useNodeStorage";
 import { Typography } from "@mui/material";
 import BallotIcon from '@mui/icons-material/Ballot';

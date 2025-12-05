@@ -8,7 +8,7 @@ import {
 } from "@mui/icons-material";
 import React, { memo } from "react";
 
-import { Handle } from "react-flow-renderer";
+import { Handle } from "reactflow";
 import { useNodeStorage } from "../../../stores/useNodeStorage";
 
 export default memo(({ data, isConnectable, id }) => {

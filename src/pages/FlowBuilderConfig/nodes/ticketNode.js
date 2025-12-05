@@ -5,7 +5,7 @@ import {
 import React, { memo } from "react";
 import TextField from '@mui/material/TextField';
 import { useNodeStorage } from "../../../stores/useNodeStorage";
-import { Handle } from "react-flow-renderer";
+import { Handle } from "reactflow";
 import { Typography } from "@material-ui/core";
 
 export default memo(({ data, isConnectable, id }) => {

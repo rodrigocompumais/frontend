@@ -1,7 +1,7 @@
 import { ArrowForwardIos, Message, RocketLaunch } from "@mui/icons-material";
 import React, { memo } from "react";
 
-import { Handle } from "react-flow-renderer";
+import { Handle } from "reactflow";
 
 export default memo(({ data, isConnectable }) => {
   return (
