@@ -207,6 +207,25 @@ const useStyles = makeStyles((theme) => ({
     padding: "3px 80px 6px 6px",
   },
 
+  messageInternal: {
+    backgroundColor: "#fff3cd",
+    borderLeft: "3px solid #ffc107",
+    borderStyle: "dashed",
+    borderWidth: "1px",
+    borderColor: "#ffc107",
+  },
+
+  internalBadge: {
+    display: "inline-block",
+    backgroundColor: "#ffc107",
+    color: "#000",
+    fontSize: "0.7rem",
+    padding: "2px 6px",
+    borderRadius: "4px",
+    marginRight: "8px",
+    fontWeight: "bold",
+  },
+
   messageMedia: {
     objectFit: "cover",
     width: 250,
@@ -798,6 +817,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
                   className={clsx(classes.textContentItem, {
                     [classes.textContentItemDeleted]: message.isDeleted,
 					[classes.textContentItemEdited]: message.isEdited,
+                    [classes.messageInternal]: message.isInternal,
                   })}
                 >
                   {message.isDeleted && (
@@ -807,12 +827,15 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
                       className={classes.deletedIcon}
                     />
                   )}
+                  {message.isInternal && (
+                    <span className={classes.internalBadge}>🔒 INTERNA</span>
+                  )}
                   {message.quotedMsg && renderQuotedMessage(message)}
                   <MarkdownWrapper>{message.mediaType === "locationMessage" ? null : message.body}</MarkdownWrapper>
                   <span className={classes.timestamp}>
 				    {message.isEdited && <span>{i18n.t("messagesList.edited")}</span>}
                     {format(parseISO(message.createdAt), "HH:mm")}
-                    {renderMessageAck(message)}
+                    {!message.isInternal && renderMessageAck(message)}
                   </span>
                 </div>
               </div>

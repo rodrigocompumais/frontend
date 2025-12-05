@@ -20,6 +20,7 @@ import ClearIcon from "@material-ui/icons/Clear";
 import MicIcon from "@material-ui/icons/Mic";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
+import LockIcon from "@material-ui/icons/Lock";
 import { FormControlLabel, Switch } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 import { isString, isEmpty, isObject, has } from "lodash";
@@ -478,6 +479,7 @@ const MessageInputCustom = (props) => {
   const [improveModalOpen, setImproveModalOpen] = useState(false);
   const [improveLoading, setImproveLoading] = useState(false);
   const [improvedText, setImprovedText] = useState("");
+  const [isInternalMessage, setIsInternalMessage] = useState(false);
   const inputRef = useRef();
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
@@ -595,13 +597,17 @@ const MessageInputCustom = (props) => {
       read: 1,
       fromMe: true,
       mediaUrl: "",
-      body: signMessage
-        ? `*${user?.name}:*\n${inputMessage.trim()}`
-        : inputMessage.trim(),
+      body: isInternalMessage
+        ? inputMessage.trim()
+        : (signMessage
+          ? `*${user?.name}:*\n${inputMessage.trim()}`
+          : inputMessage.trim()),
       quotedMsg: replyingMessage,
+      isInternal: isInternalMessage,
     };
     try {
       await api.post(`/messages/${ticketId}`, message);
+      setIsInternalMessage(false); // Reset após enviar
     } catch (err) {
       toastError(err);
     }
@@ -824,6 +830,24 @@ const MessageInputCustom = (props) => {
               width={props.width}
               setSignMessage={setSignMessage}
               signMessage={signMessage}
+            />
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={isInternalMessage}
+                  onChange={(e) => setIsInternalMessage(e.target.checked)}
+                  size="small"
+                  color="primary"
+                />
+              }
+              label={
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  <LockIcon style={{ fontSize: 16 }} />
+                  <span>Mensagem interna</span>
+                </span>
+              }
+              style={{ marginLeft: 8, marginRight: 8, fontSize: '0.75rem' }}
             />
 
             <CustomInput
