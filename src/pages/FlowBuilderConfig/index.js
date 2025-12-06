@@ -110,7 +110,7 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: 0,
     position: "relative",
-    backgroundColor: theme.palette.mode === "dark" 
+    backgroundColor: theme.palette.type === "dark" 
       ? theme.palette.background.default 
       : "#F8F9FA",
     display: "flex",
