@@ -58,7 +58,9 @@ import ReactFlow, {
   Background,
   useNodesState,
   useEdgesState,
-  addEdge, useReactFlow,
+  addEdge,
+  useReactFlow,
+  ReactFlowProvider,
 } from "reactflow";
 
 import FlowBuilderAddTextModal from "../../components/FlowBuilderAddTextModal";
@@ -154,6 +156,208 @@ const initialNodes = [
 
 const initialEdges = [];
 
+// Componente interno que usa useReactFlow dentro do provider
+const FlowBuilderContent = ({
+  nodes,
+  setNodes,
+  edges,
+  setEdges,
+  onNodesChange,
+  onEdgesChange,
+  onConnect,
+  doubleClick,
+  clickNode,
+  clickEdge,
+  nodeTypes,
+  edgeTypes,
+  sidebarOpen,
+  setSidebarOpen,
+  dataNode,
+  updateNode,
+  clickActions,
+  actions,
+  saveFlow,
+}) => {
+  const reactFlowInstance = useReactFlow();
+
+  return (
+    <>
+      {/* Toolbar Principal */}
+      <FlowBuilderToolbar
+        onSave={saveFlow}
+        onUndo={() => {}}
+        onRedo={() => {}}
+        onZoomIn={() => reactFlowInstance?.zoomIn()}
+        onZoomOut={() => reactFlowInstance?.zoomOut()}
+        onFitView={() => reactFlowInstance?.fitView()}
+        onDelete={() => {}}
+        onDuplicate={() => {}}
+        onExport={() => {}}
+        onImport={() => {}}
+        onTest={() => {}}
+        canUndo={false}
+        canRedo={false}
+        isTestMode={false}
+      />
+
+      {/* SpeedDial para adicionar nós */}
+      <Box
+        sx={{
+          position: "absolute",
+          bottom: 24,
+          left: 24,
+          zIndex: 1000,
+        }}
+      >
+        <SpeedDial
+          ariaLabel="Adicionar nós ao fluxo"
+          sx={{
+            "& .MuiSpeedDial-fab": {
+              backgroundColor: "#1976d2",
+              width: 56,
+              height: 56,
+              "&:hover": {
+                backgroundColor: "#1565c0",
+              },
+              boxShadow: "0 4px 12px rgba(25, 118, 210, 0.3)",
+            },
+          }}
+          icon={<SpeedDialIcon />}
+          direction={"up"}
+        >
+          {actions.map((action) => (
+            <SpeedDialAction
+              key={action.name}
+              icon={action.icon}
+              tooltipTitle={action.name}
+              tooltipOpen
+              tooltipPlacement={"right"}
+              onClick={() => {
+                clickActions(action.type);
+              }}
+              sx={{
+                "& .MuiSpeedDialAction-fab": {
+                  backgroundColor: "#ffffff",
+                  color: "#1976d2",
+                  width: 48,
+                  height: 48,
+                  "&:hover": {
+                    backgroundColor: "#f5f5f5",
+                    transform: "scale(1.1)",
+                  },
+                  transition: "all 0.2s ease-in-out",
+                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                },
+              }}
+            />
+          ))}
+        </SpeedDial>
+      </Box>
+
+      <Stack
+        direction={"row"}
+        sx={{
+          width: "100%",
+          height: "calc(100vh - 200px)",
+          position: "relative",
+          display: "flex",
+          overflow: "hidden",
+        }}
+      >
+        <Box
+          sx={{
+            flex: 1,
+            position: "relative",
+            backgroundColor: "#F8F9FA",
+          }}
+        >
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            deleteKeyCode={["Backspace", "Delete"]}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeDoubleClick={doubleClick}
+            onNodeClick={clickNode}
+            onEdgeClick={clickEdge}
+            onConnect={onConnect}
+            nodeTypes={nodeTypes}
+            fitView
+            connectionLineStyle={{
+              stroke: "#1976d2",
+              strokeWidth: 2,
+              strokeDasharray: "5,5",
+            }}
+            style={{
+              backgroundColor: "#F8F9FA",
+              width: "100%",
+              height: "100%",
+            }}
+            edgeTypes={edgeTypes}
+            variant={"cross"}
+            defaultEdgeOptions={{
+              style: { 
+                stroke: "#1976d2", 
+                strokeWidth: 2,
+              },
+              animated: true,
+              type: "smoothstep",
+            }}
+          >
+            <Controls 
+              style={{
+                backgroundColor: "#ffffff",
+                border: "1px solid #e0e0e0",
+                borderRadius: "8px",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+              }}
+            />
+            <MiniMap 
+              style={{
+                backgroundColor: "#ffffff",
+                border: "1px solid #e0e0e0",
+                borderRadius: "8px",
+              }}
+              nodeColor={(node) => {
+                const colors = {
+                  start: "#3ABA38",
+                  message: "#6865A5",
+                  menu: "#683AC8",
+                  interval: "#F7953B",
+                  img: "#6865A5",
+                  audio: "#6865A5",
+                  video: "#6865A5",
+                  randomizer: "#1FBADC",
+                  singleBlock: "#EC5858",
+                  ticket: "#F7953B",
+                  typebot: "#3aba38",
+                  openai: "#F7953B",
+                  question: "#F7953B",
+                };
+                return colors[node.type] || "#666";
+              }}
+            />
+            <Background 
+              variant="dots" 
+              gap={16} 
+              size={1}
+              color="#e0e0e0"
+            />
+          </ReactFlow>
+        </Box>
+
+        {/* Sidebar para propriedades */}
+        <FlowBuilderSidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          selectedNode={dataNode}
+          onUpdateNode={updateNode}
+        />
+      </Stack>
+    </>
+  );
+};
+
 const FlowBuilderConfig = () => {
   const classes = useStyles();
   const history = useHistory();
@@ -180,9 +384,7 @@ const FlowBuilderConfig = () => {
   const [modalAddOpenAI, setModalAddOpenAI] = useState(null);
   const [modalAddQuestion, setModalAddQuestion] = useState(null);
 
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  const reactFlowInstance = useReactFlow();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
 
   const addNode = (type, data) => {
@@ -859,178 +1061,31 @@ const FlowBuilderConfig = () => {
           variant="outlined"
           onScroll={handleScroll}
         >
-          {/* Toolbar Principal */}
-          <FlowBuilderToolbar
-            onSave={() => saveFlow()}
-            onUndo={() => {}}
-            onRedo={() => {}}
-            onZoomIn={() => reactFlowInstance?.zoomIn()}
-            onZoomOut={() => reactFlowInstance?.zoomOut()}
-            onFitView={() => reactFlowInstance?.fitView()}
-            onDelete={() => {}}
-            onDuplicate={() => {}}
-            onExport={() => {}}
-            onImport={() => {}}
-            onTest={() => {}}
-            canUndo={false}
-            canRedo={false}
-            isTestMode={false}
-          />
-
-          {/* SpeedDial para adicionar nós */}
-          <Box
-            sx={{
-              position: "absolute",
-              bottom: 24,
-              left: 24,
-              zIndex: 1000,
-            }}
-          >
-            <SpeedDial
-              ariaLabel="Adicionar nós ao fluxo"
-              sx={{
-                "& .MuiSpeedDial-fab": {
-                  backgroundColor: "#1976d2",
-                  width: 56,
-                  height: 56,
-                  "&:hover": {
-                    backgroundColor: "#1565c0",
-                  },
-                  boxShadow: "0 4px 12px rgba(25, 118, 210, 0.3)",
-                },
-              }}
-              icon={<SpeedDialIcon />}
-              direction={"up"}
-            >
-              {actions.map((action) => (
-                <SpeedDialAction
-                  key={action.name}
-                  icon={action.icon}
-                  tooltipTitle={action.name}
-                  tooltipOpen
-                  tooltipPlacement={"right"}
-                  onClick={() => {
-                    clickActions(action.type);
-                  }}
-                  sx={{
-                    "& .MuiSpeedDialAction-fab": {
-                      backgroundColor: "#ffffff",
-                      color: "#1976d2",
-                      width: 48,
-                      height: 48,
-                      "&:hover": {
-                        backgroundColor: "#f5f5f5",
-                        transform: "scale(1.1)",
-                      },
-                      transition: "all 0.2s ease-in-out",
-                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-                    },
-                  }}
-                />
-              ))}
-            </SpeedDial>
-          </Box>
-
-          <Stack
-            direction={"row"}
-            sx={{
-              width: "100%",
-              height: "calc(100vh - 200px)",
-              position: "relative",
-              display: "flex",
-              overflow: "hidden",
-            }}
-          >
-            <Box
-              sx={{
-                flex: 1,
-                position: "relative",
-                backgroundColor: "#F8F9FA",
-              }}
-            >
-              <ReactFlow
-                nodes={nodes}
-                edges={edges}
-                deleteKeyCode={["Backspace", "Delete"]}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                onNodeDoubleClick={doubleClick}
-                onNodeClick={clickNode}
-                onEdgeClick={clickEdge}
-                onConnect={onConnect}
-                nodeTypes={nodeTypes}
-                fitView
-                connectionLineStyle={{
-                  stroke: "#1976d2",
-                  strokeWidth: 2,
-                  strokeDasharray: "5,5",
-                }}
-                style={{
-                  backgroundColor: "#F8F9FA",
-                  width: "100%",
-                  height: "100%",
-                }}
-                edgeTypes={edgeTypes}
-                variant={"cross"}
-                defaultEdgeOptions={{
-                  style: { 
-                    stroke: "#1976d2", 
-                    strokeWidth: 2,
-                  },
-                  animated: true,
-                  type: "smoothstep",
-                }}
-              >
-                <Controls 
-                  style={{
-                    backgroundColor: "#ffffff",
-                    border: "1px solid #e0e0e0",
-                    borderRadius: "8px",
-                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-                  }}
-                />
-                <MiniMap 
-                  style={{
-                    backgroundColor: "#ffffff",
-                    border: "1px solid #e0e0e0",
-                    borderRadius: "8px",
-                  }}
-                  nodeColor={(node) => {
-                    const colors = {
-                      start: "#3ABA38",
-                      message: "#6865A5",
-                      menu: "#683AC8",
-                      interval: "#F7953B",
-                      img: "#6865A5",
-                      audio: "#6865A5",
-                      video: "#6865A5",
-                      randomizer: "#1FBADC",
-                      singleBlock: "#EC5858",
-                      ticket: "#F7953B",
-                      typebot: "#3aba38",
-                      openai: "#F7953B",
-                      question: "#F7953B",
-                    };
-                    return colors[node.type] || "#666";
-                  }}
-                />
-                <Background 
-                  variant="dots" 
-                  gap={16} 
-                  size={1}
-                  color="#e0e0e0"
-                />
-              </ReactFlow>
-            </Box>
-
-            {/* Sidebar para propriedades */}
-            <FlowBuilderSidebar
-              open={sidebarOpen}
-              onClose={() => setSidebarOpen(false)}
-              selectedNode={dataNode}
-              onUpdateNode={updateNode}
+          {/* Envolver com ReactFlowProvider */}
+          <ReactFlowProvider>
+            <FlowBuilderContent
+              nodes={nodes}
+              edges={edges}
+              setNodes={setNodes}
+              setEdges={setEdges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              doubleClick={doubleClick}
+              clickNode={clickNode}
+              clickEdge={clickEdge}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              sidebarOpen={sidebarOpen}
+              setSidebarOpen={setSidebarOpen}
+              dataNode={dataNode}
+              updateNode={updateNode}
+              clickActions={clickActions}
+              actions={actions}
+              saveFlow={saveFlow}
             />
-            {/* <Stack
+          </ReactFlowProvider>
+          {/* <Stack
                   style={{
                     backgroundColor: "#1B1B1B",
                     height: "70%",
@@ -1242,7 +1297,6 @@ const FlowBuilderConfig = () => {
                     ConteÃºdo
                   </Button>
                 </Stack> */}
-          </Stack>
         </Paper>
       )}
       {loading && (
