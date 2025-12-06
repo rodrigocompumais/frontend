@@ -21,7 +21,21 @@ import MainContainer from "../../components/MainContainer";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import NewTicketModal from "../../components/NewTicketModal";
-import { AddCircle, DevicesFold, MoreVert } from "@mui/icons-material";
+import {
+  AddCircle,
+  DevicesFold,
+  MoreVert,
+  Edit,
+  ContentCopy,
+  Delete,
+  PlayArrow,
+  Pause,
+  AccountTree,
+  ViewModule,
+  ViewList,
+  FilterList,
+  Sort,
+} from "@mui/icons-material";
 
 import {
   Button,
@@ -30,6 +44,18 @@ import {
   Menu,
   MenuItem,
   Stack,
+  Card,
+  CardContent,
+  CardActions,
+  Chip,
+  IconButton,
+  Tooltip,
+  Typography,
+  Box,
+  Divider,
+  ToggleButton,
+  ToggleButtonGroup,
+  Badge,
 } from "@mui/material";
 
 import FlowBuilderModal from "../../components/FlowBuilderModal";
@@ -82,9 +108,111 @@ const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
     borderRadius: 12,
-    padding: theme.spacing(1),
+    padding: theme.spacing(2),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
+    backgroundColor: "#F8F9FA",
+  },
+  automationCard: {
+    height: "100%",
+    borderRadius: 16,
+    border: "1px solid #E0E0E0",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    cursor: "pointer",
+    position: "relative",
+    overflow: "hidden",
+    backgroundColor: "#FFFFFF",
+    "&:hover": {
+      transform: "translateY(-4px)",
+      boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
+      borderColor: "#1976d2",
+    },
+  },
+  cardHeader: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: theme.spacing(1.5),
+  },
+  cardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "#E3F2FD",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#1976d2",
+  },
+  cardTitle: {
+    fontWeight: 600,
+    fontSize: "1.1rem",
+    color: "#212121",
+    marginBottom: theme.spacing(0.5),
+  },
+  cardMeta: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    marginTop: theme.spacing(1),
+    fontSize: "0.875rem",
+    color: "#757575",
+  },
+  statusChip: {
+    fontWeight: 600,
+    fontSize: "0.75rem",
+    height: 24,
+  },
+  cardActions: {
+    padding: theme.spacing(1.5),
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderTop: "1px solid #F0F0F0",
+    marginTop: theme.spacing(1.5),
+  },
+  actionButton: {
+    padding: theme.spacing(0.75),
+    borderRadius: 8,
+    "&:hover": {
+      backgroundColor: "#F5F5F5",
+    },
+  },
+  filtersContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    padding: theme.spacing(1.5),
+    backgroundColor: "#FFFFFF",
+    borderRadius: 12,
+    border: "1px solid #E0E0E0",
+  },
+  viewToggle: {
+    border: "1px solid #E0E0E0",
+    borderRadius: 8,
+    "& .MuiToggleButton-root": {
+      border: "none",
+      padding: theme.spacing(0.75, 1.5),
+      "&.Mui-selected": {
+        backgroundColor: "#1976d2",
+        color: "#FFFFFF",
+        "&:hover": {
+          backgroundColor: "#1565c0",
+        },
+      },
+    },
+  },
+  emptyState: {
+    textAlign: "center",
+    padding: theme.spacing(8),
+    color: "#757575",
+  },
+  statsBadge: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    zIndex: 1,
   },
 }));
 
@@ -108,6 +236,8 @@ const FlowBuilder = () => {
 
   const [hasMore, setHasMore] = useState(false);
   const [reloadData, setReloadData] = useState(false);
+  const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
+  const [sortBy, setSortBy] = useState("name"); // 'name', 'date', 'status'
   const { user, socket } = useContext(AuthContext);
 
   useEffect(() => {
@@ -225,6 +355,7 @@ const FlowBuilder = () => {
   const open = Boolean(anchorEl);
 
   const handleClick = (event) => {
+    event.stopPropagation();
     setAnchorEl(event.currentTarget);
   };
 
@@ -234,6 +365,56 @@ const FlowBuilder = () => {
 
   const exportLink = () => {
     history.push(`/flowbuilder/${deletingContact.id}`);
+  };
+
+  // Filtrar e ordenar automações
+  const filteredAndSortedWebhooks = webhooks
+    .filter((webhook) => {
+      if (!searchParam) return true;
+      return webhook.name?.toLowerCase().includes(searchParam);
+    })
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return (a.name || "").localeCompare(b.name || "");
+        case "date":
+          return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        case "status":
+          return (b.active ? 1 : 0) - (a.active ? 1 : 0);
+        default:
+          return 0;
+      }
+    });
+
+  const handleViewModeChange = (event, newViewMode) => {
+    if (newViewMode !== null) {
+      setViewMode(newViewMode);
+    }
+  };
+
+  const getNodeCount = (flow) => {
+    try {
+      if (flow.flow && flow.flow.nodes) {
+        return flow.flow.nodes.length;
+      }
+    } catch (e) {
+      // Ignore
+    }
+    return 0;
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "Data não disponível";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("pt-BR", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      });
+    } catch (e) {
+      return "Data inválida";
+    }
   };
 
   return (
@@ -322,169 +503,335 @@ const FlowBuilder = () => {
         variant="outlined"
         onScroll={handleScroll}
       >
-        <Stack>
-          <Grid container style={{ padding: "8px" }}>
-            <Grid item xs={4}>
-              {i18n.t("contacts.table.name")}
-            </Grid>
-            <Grid item xs={4} align="center">
+        {/* Filtros e Controles */}
+        <Box className={classes.filtersContainer}>
+          <Stack direction="row" spacing={2} alignItems="center" flex={1}>
+            <FilterList color="action" />
+            <Typography variant="body2" color="textSecondary">
+              Ordenar por:
+            </Typography>
+            <Button
+              size="small"
+              variant={sortBy === "name" ? "contained" : "outlined"}
+              onClick={() => setSortBy("name")}
+              startIcon={<Sort />}
+            >
+              Nome
+            </Button>
+            <Button
+              size="small"
+              variant={sortBy === "date" ? "contained" : "outlined"}
+              onClick={() => setSortBy("date")}
+              startIcon={<Sort />}
+            >
+              Data
+            </Button>
+            <Button
+              size="small"
+              variant={sortBy === "status" ? "contained" : "outlined"}
+              onClick={() => setSortBy("status")}
+              startIcon={<Sort />}
+            >
               Status
-            </Grid>
-            <Grid item xs={4} align="end">
-              {i18n.t("contacts.table.actions")}
-            </Grid>
-          </Grid>
-          <>
-            {webhooks.map((contact) => (
-              <Grid
-                container
-                key={contact.id}
-                sx={{
-                  padding: "8px",
-                  borderRadius: 2,
-                  marginTop: 0.5,
-                }}
-              >
-                <Grid
-                  item
-                  xs={4}
-                  onClick={() => history.push(`/flowbuilder/${contact.id}`)}
+            </Button>
+          </Stack>
+          <ToggleButtonGroup
+            value={viewMode}
+            exclusive
+            onChange={handleViewModeChange}
+            className={classes.viewToggle}
+            size="small"
+          >
+            <ToggleButton value="grid">
+              <ViewModule fontSize="small" />
+            </ToggleButton>
+            <ToggleButton value="list">
+              <ViewList fontSize="small" />
+            </ToggleButton>
+          </ToggleButtonGroup>
+        </Box>
+
+        {/* Lista de Automações */}
+        {loading ? (
+          <Stack
+            justifyContent="center"
+            alignItems="center"
+            minHeight="50vh"
+          >
+            <CircularProgress />
+          </Stack>
+        ) : filteredAndSortedWebhooks.length === 0 ? (
+          <Box className={classes.emptyState}>
+            <AccountTree sx={{ fontSize: 64, color: "#BDBDBD", mb: 2 }} />
+            <Typography variant="h6" color="textSecondary" gutterBottom>
+              {searchParam
+                ? "Nenhuma automação encontrada"
+                : "Nenhuma automação criada ainda"}
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              {searchParam
+                ? "Tente ajustar os filtros de busca"
+                : "Comece criando sua primeira automação"}
+            </Typography>
+          </Box>
+        ) : viewMode === "grid" ? (
+          <Grid container spacing={2}>
+            {filteredAndSortedWebhooks.map((automation) => (
+              <Grid item xs={12} sm={6} md={4} lg={3} key={automation.id}>
+                <Card
+                  className={classes.automationCard}
+                  onClick={() => history.push(`/flowbuilder/${automation.id}`)}
                 >
-                  <Stack
-                    justifyContent={"center"}
-                    height={"100%"}
-                    style={{ color: "#252525" }}
-                  >
-                    <Stack direction={"row"}>
-                      <DevicesFold />
-                      <Stack justifyContent={"center"} marginLeft={1}>
-                        {contact.name}
-                      </Stack>
+                  <CardContent>
+                    <Box className={classes.cardHeader}>
+                      <Box className={classes.cardIcon}>
+                        <AccountTree />
+                      </Box>
+                      <Chip
+                        label={automation.active ? "Ativo" : "Inativo"}
+                        size="small"
+                        className={classes.statusChip}
+                        color={automation.active ? "success" : "default"}
+                        sx={{
+                          backgroundColor: automation.active
+                            ? "#E8F5E9"
+                            : "#F5F5F5",
+                          color: automation.active ? "#2E7D32" : "#757575",
+                        }}
+                      />
+                    </Box>
+                    <Typography className={classes.cardTitle}>
+                      {automation.name || "Sem nome"}
+                    </Typography>
+                    <Box className={classes.cardMeta}>
+                      <AccountTree fontSize="small" />
+                      <Typography variant="body2" color="textSecondary">
+                        {getNodeCount(automation)} nós
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        • {formatDate(automation.createdAt)}
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                  <Divider />
+                  <CardActions className={classes.cardActions}>
+                    <Stack direction="row" spacing={0.5}>
+                      <Tooltip title="Editar automação">
+                        <IconButton
+                          size="small"
+                          className={classes.actionButton}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            history.push(`/flowbuilder/${automation.id}`);
+                          }}
+                        >
+                          <Edit fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Duplicar">
+                        <IconButton
+                          size="small"
+                          className={classes.actionButton}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingContact(automation);
+                            setConfirmDuplicateOpen(true);
+                          }}
+                        >
+                          <ContentCopy fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Excluir">
+                        <IconButton
+                          size="small"
+                          className={classes.actionButton}
+                          color="error"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingContact(automation);
+                            setConfirmOpen(true);
+                          }}
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </Stack>
-                  </Stack>
-                </Grid>
-                <Grid
-                  item
-                  xs={4}
-                  align="center"
-                  style={{ color: "#252525" }}
-                  onClick={() => history.push(`/flowbuilder/${contact.id}`)}
-                >
-                  <Stack justifyContent={"center"} height={"100%"}>
-                    {contact.active ? "Ativo" : "Desativado"}
-                  </Stack>
-                </Grid>
-                <Grid item xs={4} align="end">
-                  <Button
-                    id="basic-button"
-                    aria-controls={open ? "basic-menu" : undefined}
-                    aria-haspopup="true"
-                    aria-expanded={open ? "true" : undefined}
-                    onClick={(e) => {
-                      handleClick(e);
-                      setDeletingContact(contact);
-                    }}
-                    sx={{ borderRadius: "36px", minWidth: "24px" }}
-                  >
-                    <MoreVert
-                      sx={{ color: "#252525", width: "21px", height: "21px" }}
-                    />
-                  </Button>
-                  {/* <IconButton
-                    size="small"
-                    onClick={() => hadleEditContact(contact.id, contact.name)}
-                  >
-                    <EditIcon style={{ color: "#ededed" }} />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={e => {
-                      setConfirmDuplicateOpen(true);
-                      setDeletingContact(contact);
-                    }}
-                  >
-                    <ContentCopy style={{ color: "#ededed" }} />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => history.push(`/flowbuilder/${contact.id}`)}
-                  >
-                    <Stack sx={{ width: 24 }}>
-                      <Build sx={{ width: 20, color: "#ededed" }} />
-                    </Stack>
-                  </IconButton>
-                  <Can
-                    role={user.profile}
-                    perform="contacts-page:deleteContact"
-                    yes={() => (
+                    <Tooltip title={automation.active ? "Desativar" : "Ativar"}>
                       <IconButton
                         size="small"
-                        onClick={e => {
-                          setConfirmOpen(true);
-                          setDeletingContact(contact);
+                        className={classes.actionButton}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // TODO: Implementar toggle de status
                         }}
                       >
-                        <DeleteOutlineIcon style={{ color: "#ededed" }} />
+                        {automation.active ? (
+                          <Pause fontSize="small" />
+                        ) : (
+                          <PlayArrow fontSize="small" />
+                        )}
                       </IconButton>
-                    )}
-                  /> */}
-                </Grid>
+                    </Tooltip>
+                  </CardActions>
+                </Card>
               </Grid>
             ))}
-            <Menu
-              id="basic-menu"
-              anchorEl={anchorEl}
-              open={open}
-              sx={{ borderRadius: "40px" }}
-              onClose={handleClose}
-              MenuListProps={{
-                "aria-labelledby": "basic-button",
-              }}
-            >
-              <MenuItem
-                onClick={() => {
-                  handleClose();
-                  hadleEditContact();
+          </Grid>
+        ) : (
+          <Stack spacing={1}>
+            {filteredAndSortedWebhooks.map((automation) => (
+              <Card
+                key={automation.id}
+                className={classes.automationCard}
+                sx={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  padding: 2,
                 }}
+                onClick={() => history.push(`/flowbuilder/${automation.id}`)}
               >
-                Editar nome
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  handleClose();
-                  exportLink();
-                }}
-              >
-                Editar fluxo
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  handleClose();
-                  setConfirmDuplicateOpen(true);
-                }}
-              >
-                Duplicar
-              </MenuItem>
-              <MenuItem
-                onClick={() => {
-                  handleClose();
-                  setConfirmOpen(true);
-                }}
-              >
-                Excluir
-              </MenuItem>
-            </Menu>
-            {loading && (
-              <Stack
-                justifyContent={"center"}
-                alignItems={"center"}
-                minHeight={"50vh"}
-              >
-                <CircularProgress />
-              </Stack>
-            )}
-          </>
-        </Stack>
+                <Box className={classes.cardIcon} sx={{ mr: 2 }}>
+                  <AccountTree />
+                </Box>
+                <Box sx={{ flex: 1 }}>
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    spacing={1}
+                    mb={0.5}
+                  >
+                    <Typography className={classes.cardTitle}>
+                      {automation.name || "Sem nome"}
+                    </Typography>
+                    <Chip
+                      label={automation.active ? "Ativo" : "Inativo"}
+                      size="small"
+                      className={classes.statusChip}
+                      color={automation.active ? "success" : "default"}
+                      sx={{
+                        backgroundColor: automation.active
+                          ? "#E8F5E9"
+                          : "#F5F5F5",
+                        color: automation.active ? "#2E7D32" : "#757575",
+                      }}
+                    />
+                  </Stack>
+                  <Box className={classes.cardMeta}>
+                    <Typography variant="body2" color="textSecondary">
+                      {getNodeCount(automation)} nós
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      • {formatDate(automation.createdAt)}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Stack direction="row" spacing={0.5}>
+                  <Tooltip title="Editar automação">
+                    <IconButton
+                      size="small"
+                      className={classes.actionButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        history.push(`/flowbuilder/${automation.id}`);
+                      }}
+                    >
+                      <Edit fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Duplicar">
+                    <IconButton
+                      size="small"
+                      className={classes.actionButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingContact(automation);
+                        setConfirmDuplicateOpen(true);
+                      }}
+                    >
+                      <ContentCopy fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Excluir">
+                    <IconButton
+                      size="small"
+                      className={classes.actionButton}
+                      color="error"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeletingContact(automation);
+                        setConfirmOpen(true);
+                      }}
+                    >
+                      <Delete fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title={automation.active ? "Desativar" : "Ativar"}>
+                    <IconButton
+                      size="small"
+                      className={classes.actionButton}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // TODO: Implementar toggle de status
+                      }}
+                    >
+                      {automation.active ? (
+                        <Pause fontSize="small" />
+                      ) : (
+                        <PlayArrow fontSize="small" />
+                      )}
+                    </IconButton>
+                  </Tooltip>
+                </Stack>
+              </Card>
+            ))}
+          </Stack>
+        )}
+
+        {/* Menu de contexto (mantido para compatibilidade) */}
+        <Menu
+          id="basic-menu"
+          anchorEl={anchorEl}
+          open={open}
+          sx={{ borderRadius: "40px" }}
+          onClose={handleClose}
+          MenuListProps={{
+            "aria-labelledby": "basic-button",
+          }}
+        >
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              hadleEditContact();
+            }}
+          >
+            Editar nome
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              exportLink();
+            }}
+          >
+            Editar automação
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              setConfirmDuplicateOpen(true);
+            }}
+          >
+            Duplicar
+          </MenuItem>
+          <MenuItem
+            onClick={() => {
+              handleClose();
+              setConfirmOpen(true);
+            }}
+          >
+            Excluir
+          </MenuItem>
+        </Menu>
       </Paper>
     </MainContainer>
   );
