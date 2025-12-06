@@ -110,7 +110,9 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: 0,
     position: "relative",
-    backgroundColor: "#F8F9FA",
+    backgroundColor: (theme) => theme.palette.mode === "dark" 
+      ? theme.palette.background.default 
+      : "#F8F9FA",
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
@@ -463,6 +465,7 @@ const FlowBuilderContent = ({
 
 const FlowBuilderConfig = () => {
   const classes = useStyles();
+  const theme = useTheme();
   const history = useHistory();
   const { id } = useParams();
 
@@ -851,7 +854,7 @@ const FlowBuilderConfig = () => {
         y: finalY,
       },
       selected: false,
-      style: { backgroundColor: "#13111C", padding: 0, borderRadius: 8 },
+      style: { backgroundColor: theme.palette.mode === "dark" ? theme.palette.background.paper : "#FFFFFF", padding: 0, borderRadius: 8 },
     };
 
     setNodes((old) => [...old, nodeNew]);
@@ -1287,13 +1290,13 @@ const FlowBuilderConfig = () => {
         if (item.id === node.id) {
           return {
             ...item,
-            style: { backgroundColor: "#0000FF", padding: 1, borderRadius: 8 }
+            style: { backgroundColor: theme.palette.primary.main, padding: 1, borderRadius: 8 }
 
           };
         }
         return {
           ...item,
-          style: { backgroundColor: "#13111C", padding: 0, borderRadius: 8 },
+          style: { backgroundColor: theme.palette.mode === "dark" ? theme.palette.background.paper : "#FFFFFF", padding: 0, borderRadius: 8 },
         };
       })
     );
@@ -1304,7 +1307,7 @@ const FlowBuilderConfig = () => {
       old.map((item) => {
         return {
           ...item,
-          style: { backgroundColor: "#13111C", padding: 0, borderRadius: 8 },
+          style: { backgroundColor: theme.palette.mode === "dark" ? theme.palette.background.paper : "#FFFFFF", padding: 0, borderRadius: 8 },
         };
       })
     );
@@ -1534,7 +1537,7 @@ const FlowBuilderConfig = () => {
           y: finalY,
         },
         selected: false,
-        style: { backgroundColor: "#555555", padding: 0, borderRadius: 8 },
+        style: { backgroundColor: theme.palette.mode === "dark" ? theme.palette.background.paper : "#FFFFFF", padding: 0, borderRadius: 8 },
       };
       setNodes((old) => [...old, nodeNew]);
       storageItems.setNodesStorage("");
