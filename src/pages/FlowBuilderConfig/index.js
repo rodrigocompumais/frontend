@@ -680,15 +680,6 @@ const FlowBuilderConfig = () => {
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  const onConnect = useCallback(
-    (params) => {
-      setEdges((eds) => addEdge(params, eds));
-      // Salvar no histórico após conectar
-      saveToHistory();
-    },
-    [setEdges]
-  );
-
   // Função para salvar estado no histórico
   const saveToHistory = useCallback(() => {
     setFlowHistory((prev) => {
@@ -700,6 +691,29 @@ const FlowBuilderConfig = () => {
       return finalHistory;
     });
   }, [nodes, edges, historyIndex]);
+
+  const onConnect = useCallback(
+    (params) => {
+      setEdges((eds) => {
+        const newEdges = addEdge(params, eds);
+        // Salvar no histórico após o estado atualizar
+        setTimeout(() => {
+          setFlowHistory((prev) => {
+            const newHistory = prev.slice(0, historyIndex + 1);
+            newHistory.push({ 
+              nodes: JSON.parse(JSON.stringify(nodes)), 
+              edges: JSON.parse(JSON.stringify(newEdges)) 
+            });
+            const finalHistory = newHistory.length > 50 ? newHistory.slice(-50) : newHistory;
+            setHistoryIndex(finalHistory.length - 1);
+            return finalHistory;
+          });
+        }, 0);
+        return newEdges;
+      });
+    },
+    [setEdges, nodes, historyIndex]
+  );
 
   // Função para desfazer (Undo)
   const handleUndo = useCallback(() => {
@@ -788,12 +802,12 @@ const FlowBuilderConfig = () => {
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `fluxo-${id || "novo"}-${Date.now()}.json`;
+    link.download = `automacao-${id || "novo"}-${Date.now()}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.success("Fluxo exportado com sucesso");
+    toast.success("Automação exportada com sucesso");
   }, [nodes, edges, id]);
 
   // Função para importar fluxo
@@ -813,12 +827,12 @@ const FlowBuilderConfig = () => {
             setNodes(flowData.nodes);
             setEdges(flowData.edges);
             saveToHistory();
-            toast.success("Fluxo importado com sucesso");
+            toast.success("Automação importada com sucesso");
           } else {
             toast.error("Arquivo inválido: formato não reconhecido");
           }
         } catch (error) {
-          toast.error("Erro ao importar fluxo: arquivo inválido");
+          toast.error("Erro ao importar automação: arquivo inválido");
         }
       };
       reader.readAsText(file);
@@ -837,14 +851,22 @@ const FlowBuilderConfig = () => {
         connections: edges,
       });
 
+      // Obter o ID do fluxo (pode ser retornado na resposta ou usar o id existente)
+      const flowId = flowResponse?.data?.flow?.id || flowResponse?.data?.id || id;
+      
       // Buscar informações do fluxo para obter o nome
       let flowData = null;
-      if (id) {
-        const flowInfo = await api.get(`/flowbuilder/flow/${id}`);
-        flowData = flowInfo.data.flow;
+      if (flowId) {
+        try {
+          const flowInfo = await api.get(`/flowbuilder/flow/${flowId}`);
+          flowData = flowInfo.data.flow;
+        } catch (err) {
+          // Se não conseguir buscar, continua com o nome padrão
+          console.warn("Não foi possível buscar informações do fluxo:", err);
+        }
       }
 
-      const flowNameToUse = flowData?.name || flowName || `Automação ${id || "Nova"}`;
+      const flowNameToUse = flowData?.name || flowName || `Automação ${flowId || "Nova"}`;
 
       // Verificar se já existe integração para este fluxo
       let integrationExists = false;
@@ -852,8 +874,10 @@ const FlowBuilderConfig = () => {
       
       try {
         const integrations = await api.get("/queueIntegration");
+        // Buscar por nome ou por projectName
         const existingIntegration = integrations.data.find(
-          (int) => int.type === "flowbuilder" && int.projectName === flowNameToUse
+          (int) => int.type === "flowbuilder" && 
+            (int.projectName === flowNameToUse || int.name === flowNameToUse)
         );
         if (existingIntegration) {
           integrationExists = true;
@@ -861,6 +885,7 @@ const FlowBuilderConfig = () => {
         }
       } catch (err) {
         // Se não conseguir buscar, continua criando nova
+        console.warn("Não foi possível buscar integrações existentes:", err);
       }
 
       // Criar ou atualizar integração automaticamente
@@ -871,7 +896,7 @@ const FlowBuilderConfig = () => {
           name: flowNameToUse,
           projectName: flowNameToUse,
         });
-        toast.success("Fluxo e integração atualizados com sucesso");
+        toast.success("Automação e integração atualizados com sucesso");
       } else {
         // Criar nova integração
         await api.post("/queueIntegration", {
@@ -879,10 +904,11 @@ const FlowBuilderConfig = () => {
           name: flowNameToUse,
           projectName: flowNameToUse,
         });
-        toast.success("Fluxo salvo e integração criada automaticamente");
+        toast.success("Automação salva e integração criada automaticamente");
       }
     } catch (err) {
       toastError(err);
+      console.error("Erro ao salvar automação:", err);
     }
   };
 
@@ -914,7 +940,7 @@ const FlowBuilderConfig = () => {
     // Validar se há nó inicial
     const startNode = nodes.find((node) => node.type === "start");
     if (!startNode) {
-      toast.error("Adicione um nó de início ao fluxo antes de testar");
+      toast.error("Adicione um nó de início à automação antes de testar");
       return;
     }
 
@@ -970,7 +996,7 @@ const FlowBuilderConfig = () => {
         // Fim do fluxo
         testTimeoutRef.current = setTimeout(() => {
           handleStopTest();
-          toast.success("Teste concluído: fluxo executado com sucesso!");
+          toast.success("Teste concluído: automação executada com sucesso!");
         }, 1000);
         return;
       }
@@ -1413,7 +1439,7 @@ const FlowBuilderConfig = () => {
       />
 
       <MainHeader>
-        <Title>Desenhe seu fluxo</Title>
+        <Title>Desenhe sua automação</Title>
       </MainHeader>
       {!loading && (
         <Paper

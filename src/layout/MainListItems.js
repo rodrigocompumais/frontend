@@ -419,7 +419,7 @@ const MainListItems = (props) => {
                     </ListItem>
                   </List>
                 </Collapse>
-                {/* Flow builder */}
+                {/* Automação */}
                 <ListItem
                     button
                     onClick={() => setOpenFlowsSubmenu((prev) => !prev)}
@@ -430,7 +430,7 @@ const MainListItems = (props) => {
                   <ListItemText
                       primary={i18n.t("mainDrawer.listItems.flows")}
                   />
-                  {openCampaignSubmenu ? (
+                  {openFlowsSubmenu ? (
                       <ExpandLessIcon />
                   ) : (
                       <ExpandMoreIcon />
@@ -445,23 +445,13 @@ const MainListItems = (props) => {
                 >
                   <List component="div" disablePadding>
                     <ListItem
-                        onClick={() => history.push("/phrase-lists")}
-                        button
-                    >
-                      <ListItemIcon>
-                        <EventAvailableIcon />
-                      </ListItemIcon>
-                      <ListItemText primary="Campanha" />
-                    </ListItem>
-
-                    <ListItem
                         onClick={() => history.push("/flowbuilders")}
                         button
                     >
                       <ListItemIcon>
                         <ShapeLine />
                       </ListItemIcon>
-                      <ListItemText primary="Conversa" />
+                      <ListItemText primary="Automação" />
                     </ListItem>
                   </List>
                 </Collapse>

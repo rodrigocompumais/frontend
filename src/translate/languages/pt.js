@@ -872,7 +872,7 @@ const messages = {
           messagesAPI: "API",
           schedules: "Agendamentos",
           campaigns: "Campanhas",
-          flows: "Fluxos",
+          flows: "Automação",
           annoucements: "Informativos",
           chats: "Chat Interno",
           financeiro: "Financeiro",

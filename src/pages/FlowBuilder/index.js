@@ -188,7 +188,7 @@ const FlowBuilder = () => {
         setDeletingContact(null);
         setReloadData((old) => !old);
       });
-      toast.success("Fluxo excluído com sucesso");
+      toast.success("Automação excluída com sucesso");
     } catch (err) {
       toastError(err);
     }
@@ -202,7 +202,7 @@ const FlowBuilder = () => {
           setDeletingContact(null);
           setReloadData((old) => !old);
         });
-      toast.success("Fluxo duplicado com sucesso");
+      toast.success("Automação duplicada com sucesso");
     } catch (err) {
       toastError(err);
     }
@@ -270,13 +270,13 @@ const FlowBuilder = () => {
         }
       >
         {deletingContact
-          ? `Tem certeza que deseja deletar este fluxo? Todas as integrações relacionados serão perdidos.`
+          ? `Tem certeza que deseja deletar esta automação? Todas as integrações relacionadas serão perdidas.`
           : `${i18n.t("contacts.confirmationModal.importMessage")}`}
       </ConfirmationModal>
       <ConfirmationModal
         title={
           deletingContact
-            ? `Deseja duplicar o fluxo ${deletingContact.name}?`
+            ? `Deseja duplicar a automação ${deletingContact.name}?`
             : `${i18n.t("contacts.confirmationModal.importTitlte")}`
         }
         open={confirmDuplicateOpen}
@@ -290,7 +290,7 @@ const FlowBuilder = () => {
           : `${i18n.t("contacts.confirmationModal.importMessage")}`}
       </ConfirmationModal>
       <MainHeader>
-        <Title>Fluxos de conversa</Title>
+        <Title>Automações</Title>
         <MainHeaderButtonsWrapper>
           <TextField
             placeholder={i18n.t("contacts.searchPlaceholder")}
@@ -312,7 +312,7 @@ const FlowBuilder = () => {
           >
             <Stack direction={"row"} gap={1}>
               <AddCircle />
-              {"Adicionar Fluxo"}
+              {"Adicionar Automação"}
             </Stack>
           </Button>
         </MainHeaderButtonsWrapper>
