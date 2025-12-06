@@ -4,6 +4,7 @@
   useReducer,
   useContext,
   useCallback,
+  useRef,
 } from "react";
 import { SiOpenai } from "react-icons/si";
 import typebotIcon from "../../assets/typebot-ico.png";
@@ -177,6 +178,16 @@ const FlowBuilderContent = ({
   clickActions,
   actions,
   saveFlow,
+  isTestMode,
+  onTest,
+  onUndo,
+  onRedo,
+  onDelete,
+  onDuplicate,
+  onExport,
+  onImport,
+  canUndo,
+  canRedo,
 }) => {
   const reactFlowInstance = useReactFlow();
 
@@ -185,19 +196,19 @@ const FlowBuilderContent = ({
       {/* Toolbar Principal */}
       <FlowBuilderToolbar
         onSave={saveFlow}
-        onUndo={() => {}}
-        onRedo={() => {}}
+        onUndo={onUndo}
+        onRedo={onRedo}
         onZoomIn={() => reactFlowInstance?.zoomIn()}
         onZoomOut={() => reactFlowInstance?.zoomOut()}
         onFitView={() => reactFlowInstance?.fitView()}
-        onDelete={() => {}}
-        onDuplicate={() => {}}
-        onExport={() => {}}
-        onImport={() => {}}
-        onTest={() => {}}
-        canUndo={false}
-        canRedo={false}
-        isTestMode={false}
+        onDelete={onDelete}
+        onDuplicate={onDuplicate}
+        onExport={onExport}
+        onImport={onImport}
+        onTest={onTest}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        isTestMode={isTestMode}
       />
 
       {/* SpeedDial para adicionar nós */}
@@ -384,8 +395,23 @@ const FlowBuilderConfig = () => {
   const [modalAddOpenAI, setModalAddOpenAI] = useState(null);
   const [modalAddQuestion, setModalAddQuestion] = useState(null);
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isTestMode, setIsTestMode] = useState(false);
+  const [currentTestNodeId, setCurrentTestNodeId] = useState(null);
+  const testTimeoutRef = useRef(null);
+  
+  // Histórico para Undo/Redo
+  const [flowHistory, setFlowHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
+
+  // Inicializar histórico com estado inicial
+  useEffect(() => {
+    if (nodes.length > 0 || edges.length > 0) {
+      setFlowHistory([{ nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) }]);
+      setHistoryIndex(0);
+    }
+  }, []); // Apenas na montagem inicial
 
   const addNode = (type, data) => {
 
@@ -655,21 +681,344 @@ const FlowBuilderConfig = () => {
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
   const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
+    (params) => {
+      setEdges((eds) => addEdge(params, eds));
+      // Salvar no histórico após conectar
+      saveToHistory();
+    },
     [setEdges]
   );
 
+  // Função para salvar estado no histórico
+  const saveToHistory = useCallback(() => {
+    setFlowHistory((prev) => {
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push({ nodes: JSON.parse(JSON.stringify(nodes)), edges: JSON.parse(JSON.stringify(edges)) });
+      // Limitar histórico a 50 estados
+      const finalHistory = newHistory.length > 50 ? newHistory.slice(-50) : newHistory;
+      setHistoryIndex(finalHistory.length - 1);
+      return finalHistory;
+    });
+  }, [nodes, edges, historyIndex]);
+
+  // Função para desfazer (Undo)
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const prevState = flowHistory[historyIndex - 1];
+      setNodes(prevState.nodes);
+      setEdges(prevState.edges);
+      setHistoryIndex(historyIndex - 1);
+    }
+  }, [flowHistory, historyIndex, setNodes, setEdges]);
+
+  // Função para refazer (Redo)
+  const handleRedo = useCallback(() => {
+    if (historyIndex < flowHistory.length - 1) {
+      const nextState = flowHistory[historyIndex + 1];
+      setNodes(nextState.nodes);
+      setEdges(nextState.edges);
+      setHistoryIndex(historyIndex + 1);
+    }
+  }, [flowHistory, historyIndex, setNodes, setEdges]);
+
+  // Função para duplicar nó selecionado
+  const handleDuplicateNode = useCallback(() => {
+    if (!dataNode) {
+      toast.warning("Selecione um nó para duplicar");
+      return;
+    }
+
+    const nodeDuplicate = nodes.find((item) => item.id === dataNode.id);
+    if (!nodeDuplicate) return;
+
+    const maioresX = nodes.map((node) => node.position.x);
+    const maiorX = Math.max(...maioresX);
+    const finalY = nodes[nodes.length - 1].position.y;
+
+    const nodeNew = {
+      ...nodeDuplicate,
+      id: geraStringAleatoria(30),
+      position: {
+        x: maiorX + 240,
+        y: finalY,
+      },
+      selected: false,
+      style: { backgroundColor: "#13111C", padding: 0, borderRadius: 8 },
+    };
+
+    setNodes((old) => [...old, nodeNew]);
+    saveToHistory();
+    toast.success("Nó duplicado com sucesso");
+  }, [dataNode, nodes, setNodes, saveToHistory]);
+
+  // Função para excluir nó selecionado
+  const handleDeleteNode = useCallback(() => {
+    if (!dataNode) {
+      toast.warning("Selecione um nó para excluir");
+      return;
+    }
+
+    if (dataNode.type === "start") {
+      toast.error("Não é possível excluir o nó de início");
+      return;
+    }
+
+    setNodes((old) => old.filter((item) => item.id !== dataNode.id));
+    setEdges((old) => {
+      const newData = old.filter((item) => item.source !== dataNode.id);
+      return newData.filter((item) => item.target !== dataNode.id);
+    });
+    setDataNode(null);
+    setSidebarOpen(false);
+    saveToHistory();
+    toast.success("Nó excluído com sucesso");
+  }, [dataNode, setNodes, setEdges, saveToHistory]);
+
+  // Função para exportar fluxo
+  const handleExportFlow = useCallback(() => {
+    const flowData = {
+      nodes,
+      edges,
+      version: "1.0",
+      exportedAt: new Date().toISOString(),
+    };
+
+    const dataStr = JSON.stringify(flowData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(dataBlob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `fluxo-${id || "novo"}-${Date.now()}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success("Fluxo exportado com sucesso");
+  }, [nodes, edges, id]);
+
+  // Função para importar fluxo
+  const handleImportFlow = useCallback(() => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json";
+    input.onchange = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        try {
+          const flowData = JSON.parse(event.target.result);
+          if (flowData.nodes && flowData.edges) {
+            setNodes(flowData.nodes);
+            setEdges(flowData.edges);
+            saveToHistory();
+            toast.success("Fluxo importado com sucesso");
+          } else {
+            toast.error("Arquivo inválido: formato não reconhecido");
+          }
+        } catch (error) {
+          toast.error("Erro ao importar fluxo: arquivo inválido");
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }, [setNodes, setEdges, saveToHistory]);
+
+  const [flowName, setFlowName] = useState("");
+
   const saveFlow = async () => {
-    await api
-      .post("/flowbuilder/flow", {
+    try {
+      // Salvar o fluxo
+      const flowResponse = await api.post("/flowbuilder/flow", {
         idFlow: id,
         nodes: nodes,
         connections: edges,
-      })
-      .then((res) => {
-        toast.success("Fluxo salvo com sucesso");
       });
+
+      // Buscar informações do fluxo para obter o nome
+      let flowData = null;
+      if (id) {
+        const flowInfo = await api.get(`/flowbuilder/flow/${id}`);
+        flowData = flowInfo.data.flow;
+      }
+
+      const flowNameToUse = flowData?.name || flowName || `Automação ${id || "Nova"}`;
+
+      // Verificar se já existe integração para este fluxo
+      let integrationExists = false;
+      let existingIntegrationId = null;
+      
+      try {
+        const integrations = await api.get("/queueIntegration");
+        const existingIntegration = integrations.data.find(
+          (int) => int.type === "flowbuilder" && int.projectName === flowNameToUse
+        );
+        if (existingIntegration) {
+          integrationExists = true;
+          existingIntegrationId = existingIntegration.id;
+        }
+      } catch (err) {
+        // Se não conseguir buscar, continua criando nova
+      }
+
+      // Criar ou atualizar integração automaticamente
+      if (integrationExists && existingIntegrationId) {
+        // Atualizar integração existente
+        await api.put(`/queueIntegration/${existingIntegrationId}`, {
+          type: "flowbuilder",
+          name: flowNameToUse,
+          projectName: flowNameToUse,
+        });
+        toast.success("Fluxo e integração atualizados com sucesso");
+      } else {
+        // Criar nova integração
+        await api.post("/queueIntegration", {
+          type: "flowbuilder",
+          name: flowNameToUse,
+          projectName: flowNameToUse,
+        });
+        toast.success("Fluxo salvo e integração criada automaticamente");
+      }
+    } catch (err) {
+      toastError(err);
+    }
   };
+
+  // Função para parar o teste
+  const handleStopTest = useCallback(() => {
+    if (testTimeoutRef.current) {
+      clearTimeout(testTimeoutRef.current);
+      testTimeoutRef.current = null;
+    }
+    setIsTestMode(false);
+    setCurrentTestNodeId(null);
+    // Restaurar estilos dos nós
+    setNodes((old) =>
+      old.map((node) => ({
+        ...node,
+        style: { ...node.style, border: "none", boxShadow: "none", opacity: 1 },
+      }))
+    );
+  }, [setNodes]);
+
+  // Função para iniciar o teste do fluxo
+  const handleStartTest = useCallback(() => {
+    if (isTestMode) {
+      // Parar teste
+      handleStopTest();
+      return;
+    }
+
+    // Validar se há nó inicial
+    const startNode = nodes.find((node) => node.type === "start");
+    if (!startNode) {
+      toast.error("Adicione um nó de início ao fluxo antes de testar");
+      return;
+    }
+
+    setIsTestMode(true);
+    setCurrentTestNodeId(startNode.id);
+
+    // Destacar nó inicial
+    setNodes((old) =>
+      old.map((node) => {
+        if (node.id === startNode.id) {
+          return {
+            ...node,
+            style: {
+              ...node.style,
+              border: "3px solid #4caf50",
+              boxShadow: "0 0 20px rgba(76, 175, 80, 0.5)",
+            },
+          };
+        }
+        return {
+          ...node,
+          style: { ...node.style, border: "none", boxShadow: "none" },
+        };
+      })
+    );
+
+    // Simular execução do fluxo
+    let currentNodeId = startNode.id;
+    let step = 0;
+    const maxSteps = 50; // Limite de segurança
+
+    const executeStep = () => {
+      // Verificar se o teste ainda está ativo
+      if (!isTestMode) {
+        return;
+      }
+
+      if (step >= maxSteps) {
+        handleStopTest();
+        toast.warning("Teste interrompido: limite de passos atingido");
+        return;
+      }
+
+      const currentNode = nodes.find((n) => n.id === currentNodeId);
+      if (!currentNode) {
+        handleStopTest();
+        return;
+      }
+
+      // Encontrar próxima conexão
+      const nextEdge = edges.find((edge) => edge.source === currentNodeId);
+      if (!nextEdge) {
+        // Fim do fluxo
+        testTimeoutRef.current = setTimeout(() => {
+          handleStopTest();
+          toast.success("Teste concluído: fluxo executado com sucesso!");
+        }, 1000);
+        return;
+      }
+
+      // Atualizar para próximo nó
+      const nextNodeId = nextEdge.target;
+      setCurrentTestNodeId(nextNodeId);
+
+      // Atualizar estilos
+      setNodes((old) =>
+        old.map((node) => {
+          if (node.id === currentNodeId) {
+            return {
+              ...node,
+              style: {
+                ...node.style,
+                border: "2px solid #9e9e9e",
+                boxShadow: "none",
+                opacity: 0.7,
+              },
+            };
+          }
+          if (node.id === nextNodeId) {
+            return {
+              ...node,
+              style: {
+                ...node.style,
+                border: "3px solid #4caf50",
+                boxShadow: "0 0 20px rgba(76, 175, 80, 0.5)",
+                opacity: 1,
+              },
+            };
+          }
+          return node;
+        })
+      );
+
+      currentNodeId = nextNodeId;
+      step++;
+
+      // Aguardar antes do próximo passo (simular delay)
+      const delay = currentNode.type === "interval" ? (currentNode.data?.sec || 1) * 1000 : 1500;
+      testTimeoutRef.current = setTimeout(executeStep, delay);
+    };
+
+    // Iniciar execução após um pequeno delay
+    testTimeoutRef.current = setTimeout(executeStep, 500);
+  }, [isTestMode, nodes, edges, handleStopTest, setNodes]);
 
   const doubleClick = (event, node) => {
     console.log("NODE", node);
@@ -755,6 +1104,8 @@ const FlowBuilderConfig = () => {
     setModalAddMenu(null);
     setModalAddOpenAI(null);
     setModalAddTypebot(null);
+    // Salvar no histórico após atualizar nó
+    saveToHistory();
   };
 
   const actions = [
@@ -926,6 +1277,15 @@ const FlowBuilderConfig = () => {
     return () => clearTimeout(delayDebounceFn);
   }, [id]);
 
+  // Cleanup do teste quando componente desmontar
+  useEffect(() => {
+    return () => {
+      if (testTimeoutRef.current) {
+        clearTimeout(testTimeoutRef.current);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     if (storageItems.action === "delete") {
       setNodes((old) => old.filter((item) => item.id !== storageItems.node));
@@ -1083,6 +1443,16 @@ const FlowBuilderConfig = () => {
               clickActions={clickActions}
               actions={actions}
               saveFlow={saveFlow}
+              isTestMode={isTestMode}
+              onTest={handleStartTest}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              onDelete={handleDeleteNode}
+              onDuplicate={handleDuplicateNode}
+              onExport={handleExportFlow}
+              onImport={handleImportFlow}
+              canUndo={historyIndex > 0}
+              canRedo={historyIndex < flowHistory.length - 1}
             />
           </ReactFlowProvider>
           {/* <Stack
