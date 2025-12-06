@@ -105,23 +105,26 @@ import {
 import { useNodeStorage } from "../../stores/useNodeStorage";
 import { ConfirmationNumber } from "@material-ui/icons";
 
-const useStyles = makeStyles((theme) => ({
-  mainPaper: {
-    flex: 1,
-    padding: 0,
-    position: "relative",
-    backgroundColor: theme.palette.type === "dark" 
-      ? theme.palette.background.default 
-      : "#F8F9FA",
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    height: "calc(100vh - 64px)",
-  },
-  speeddial: {
-    backgroundColor: "red",
-  },
-}));
+const useStyles = makeStyles((theme) => {
+  const isDark = theme.palette?.mode === "dark" || theme.palette?.type === "dark";
+  return {
+    mainPaper: {
+      flex: 1,
+      padding: 0,
+      position: "relative",
+      backgroundColor: isDark
+        ? theme.palette.background?.default || "#121212"
+        : "#F8F9FA",
+      display: "flex",
+      flexDirection: "column",
+      overflow: "hidden",
+      height: "calc(100vh - 64px)",
+    },
+    speeddial: {
+      backgroundColor: "red",
+    },
+  };
+});
 
 function geraStringAleatoria(tamanho) {
   var stringAleatoria = "";
@@ -262,13 +265,13 @@ const FlowBuilderContent = ({
               },
               "&::-webkit-scrollbar-thumb": {
                 backgroundColor: (theme) =>
-                  theme.palette.mode === "dark"
+                  (theme?.palette?.mode === "dark" || theme?.palette?.type === "dark")
                     ? "rgba(255, 255, 255, 0.2)"
                     : "rgba(0, 0, 0, 0.2)",
                 borderRadius: "4px",
                 "&:hover": {
                   backgroundColor: (theme) =>
-                    theme.palette.mode === "dark"
+                    (theme?.palette?.mode === "dark" || theme?.palette?.type === "dark")
                       ? "rgba(255, 255, 255, 0.3)"
                       : "rgba(0, 0, 0, 0.3)",
                 },
@@ -280,8 +283,8 @@ const FlowBuilderContent = ({
             sx={{
               padding: 2,
               backgroundColor: (theme) => 
-                theme.palette.mode === "dark" 
-                  ? theme.palette.background.default 
+                (theme?.palette?.mode === "dark" || theme?.palette?.type === "dark")
+                  ? (theme?.palette?.background?.default || "#121212")
                   : "#F5F5F5",
               borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
             }}
@@ -312,7 +315,7 @@ const FlowBuilderContent = ({
                       padding: 1.5,
                       "&:hover": {
                         backgroundColor: (theme) =>
-                          theme.palette.mode === "dark"
+                          (theme?.palette?.mode === "dark" || theme?.palette?.type === "dark")
                             ? "rgba(255, 255, 255, 0.08)"
                             : "rgba(0, 0, 0, 0.04)",
                         transform: "translateX(4px)",
@@ -335,7 +338,7 @@ const FlowBuilderContent = ({
                             openai: "#F7953B",
                             question: "#F7953B",
                           };
-                          return colors[action.type] || theme.palette.primary.main;
+                          return colors[action.type] || theme?.palette?.primary?.main || "#1976d2";
                         },
                       }}
                     >
@@ -359,8 +362,8 @@ const FlowBuilderContent = ({
             flex: 1,
             position: "relative",
             backgroundColor: (theme) => 
-              theme.palette.mode === "dark" 
-                ? theme.palette.background.default 
+              (theme?.palette?.mode === "dark" || theme?.palette?.type === "dark")
+                ? (theme?.palette?.background?.default || "#121212")
                 : "#F8F9FA",
           }}
         >
@@ -377,7 +380,7 @@ const FlowBuilderContent = ({
             nodeTypes={nodeTypes}
             fitView
             connectionLineStyle={{
-              stroke: theme.palette.primary.main,
+              stroke: theme?.palette?.primary?.main || "#1976d2",
               strokeWidth: 2,
               strokeDasharray: "5,5",
             }}
@@ -390,7 +393,7 @@ const FlowBuilderContent = ({
             variant={"cross"}
             defaultEdgeOptions={{
               style: { 
-                stroke: theme.palette.primary.main, 
+                stroke: theme?.palette?.primary?.main || "#1976d2", 
                 strokeWidth: 2,
               },
               animated: true,
@@ -434,8 +437,8 @@ const FlowBuilderContent = ({
               variant="dots" 
               gap={16} 
               size={1}
-              color={theme.palette.mode === "dark" 
-                ? theme.palette.divider 
+              color={(theme?.palette?.mode === "dark" || theme?.palette?.type === "dark")
+                ? (theme?.palette?.divider || "#424242")
                 : "#e0e0e0"}
             />
           </ReactFlow>
@@ -854,7 +857,7 @@ const FlowBuilderConfig = () => {
         y: finalY,
       },
       selected: false,
-      style: { backgroundColor: theme.palette.mode === "dark" ? theme.palette.background.paper : "#FFFFFF", padding: 0, borderRadius: 8 },
+      style: { backgroundColor: (theme?.palette?.mode === "dark" || theme?.palette?.type === "dark") ? (theme?.palette?.background?.paper || "#1e1e1e") : "#FFFFFF", padding: 0, borderRadius: 8 },
     };
 
     setNodes((old) => [...old, nodeNew]);
@@ -1290,13 +1293,13 @@ const FlowBuilderConfig = () => {
         if (item.id === node.id) {
           return {
             ...item,
-            style: { backgroundColor: theme.palette.primary.main, padding: 1, borderRadius: 8 }
+            style: { backgroundColor: theme?.palette?.primary?.main || "#1976d2", padding: 1, borderRadius: 8 }
 
           };
         }
         return {
           ...item,
-          style: { backgroundColor: theme.palette.mode === "dark" ? theme.palette.background.paper : "#FFFFFF", padding: 0, borderRadius: 8 },
+          style: { backgroundColor: (theme?.palette?.mode === "dark" || theme?.palette?.type === "dark") ? (theme?.palette?.background?.paper || "#1e1e1e") : "#FFFFFF", padding: 0, borderRadius: 8 },
         };
       })
     );
@@ -1307,7 +1310,7 @@ const FlowBuilderConfig = () => {
       old.map((item) => {
         return {
           ...item,
-          style: { backgroundColor: theme.palette.mode === "dark" ? theme.palette.background.paper : "#FFFFFF", padding: 0, borderRadius: 8 },
+          style: { backgroundColor: (theme?.palette?.mode === "dark" || theme?.palette?.type === "dark") ? (theme?.palette?.background?.paper || "#1e1e1e") : "#FFFFFF", padding: 0, borderRadius: 8 },
         };
       })
     );
@@ -1537,7 +1540,7 @@ const FlowBuilderConfig = () => {
           y: finalY,
         },
         selected: false,
-        style: { backgroundColor: theme.palette.mode === "dark" ? theme.palette.background.paper : "#FFFFFF", padding: 0, borderRadius: 8 },
+        style: { backgroundColor: (theme?.palette?.mode === "dark" || theme?.palette?.type === "dark") ? (theme?.palette?.background?.paper || "#1e1e1e") : "#FFFFFF", padding: 0, borderRadius: 8 },
       };
       setNodes((old) => [...old, nodeNew]);
       storageItems.setNodesStorage("");
