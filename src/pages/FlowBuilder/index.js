@@ -517,86 +517,87 @@ const FlowBuilder = () => {
         variant="outlined"
         onScroll={handleScroll}
       >
-        {/* Filtros e Controles */}
-        <Box className={classes.filtersContainer}>
-          <Stack direction="row" spacing={2} alignItems="center" flex={1}>
-            <FilterList color="action" />
-            <Typography variant="body2" color="textSecondary">
-              Ordenar por:
-            </Typography>
-            <Button
+        <Stack spacing={2}>
+          {/* Filtros e Controles */}
+          <Box className={classes.filtersContainer}>
+            <Stack direction="row" spacing={2} alignItems="center" flex={1}>
+              <FilterList color="action" />
+              <Typography variant="body2" color="textSecondary">
+                Ordenar por:
+              </Typography>
+              <Button
+                size="small"
+                variant={sortBy === "name" ? "contained" : "outlined"}
+                onClick={() => setSortBy("name")}
+                startIcon={<Sort />}
+              >
+                Nome
+              </Button>
+              <Button
+                size="small"
+                variant={sortBy === "date" ? "contained" : "outlined"}
+                onClick={() => setSortBy("date")}
+                startIcon={<Sort />}
+              >
+                Data
+              </Button>
+              <Button
+                size="small"
+                variant={sortBy === "status" ? "contained" : "outlined"}
+                onClick={() => setSortBy("status")}
+                startIcon={<Sort />}
+              >
+                Status
+              </Button>
+            </Stack>
+            <ToggleButtonGroup
+              value={viewMode}
+              exclusive
+              onChange={handleViewModeChange}
+              className={classes.viewToggle}
               size="small"
-              variant={sortBy === "name" ? "contained" : "outlined"}
-              onClick={() => setSortBy("name")}
-              startIcon={<Sort />}
             >
-              Nome
-            </Button>
-            <Button
-              size="small"
-              variant={sortBy === "date" ? "contained" : "outlined"}
-              onClick={() => setSortBy("date")}
-              startIcon={<Sort />}
-            >
-              Data
-            </Button>
-            <Button
-              size="small"
-              variant={sortBy === "status" ? "contained" : "outlined"}
-              onClick={() => setSortBy("status")}
-              startIcon={<Sort />}
-            >
-              Status
-            </Button>
-          </Stack>
-          <ToggleButtonGroup
-            value={viewMode}
-            exclusive
-            onChange={handleViewModeChange}
-            className={classes.viewToggle}
-            size="small"
-          >
-            <ToggleButton value="grid">
-              <ViewModule fontSize="small" />
-            </ToggleButton>
-            <ToggleButton value="list">
-              <ViewList fontSize="small" />
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
-
-        {/* Lista de Automações */}
-        {loading ? (
-          <Stack
-            justifyContent="center"
-            alignItems="center"
-            minHeight="50vh"
-          >
-            <CircularProgress />
-          </Stack>
-        ) : filteredAndSortedWebhooks.length === 0 ? (
-          <Box className={classes.emptyState}>
-            <AccountTree sx={{ fontSize: 64, color: theme.palette.text.disabled, mb: 2 }} />
-            <Typography variant="h6" color="textSecondary" gutterBottom>
-              {searchParam
-                ? "Nenhuma automação encontrada"
-                : "Nenhuma automação criada ainda"}
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              {searchParam
-                ? "Tente ajustar os filtros de busca"
-                : "Comece criando sua primeira automação"}
-            </Typography>
+              <ToggleButton value="grid">
+                <ViewModule fontSize="small" />
+              </ToggleButton>
+              <ToggleButton value="list">
+                <ViewList fontSize="small" />
+              </ToggleButton>
+            </ToggleButtonGroup>
           </Box>
-        ) : viewMode === "grid" ? (
-          <Grid container spacing={2}>
-            {filteredAndSortedWebhooks.map((automation) => (
-              <Grid item xs={12} sm={6} md={4} lg={3} key={automation.id}>
-                <Card
-                  className={classes.automationCard}
-                  onClick={() => history.push(`/flowbuilder/${automation.id}`)}
-                >
-                  <CardContent>
+
+          {/* Lista de Automações */}
+          {loading ? (
+            <Stack
+              justifyContent="center"
+              alignItems="center"
+              minHeight="50vh"
+            >
+              <CircularProgress />
+            </Stack>
+          ) : filteredAndSortedWebhooks.length === 0 ? (
+            <Box className={classes.emptyState}>
+              <AccountTree sx={{ fontSize: 64, color: theme.palette.text.disabled, mb: 2 }} />
+              <Typography variant="h6" color="textSecondary" gutterBottom>
+                {searchParam
+                  ? "Nenhuma automação encontrada"
+                  : "Nenhuma automação criada ainda"}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                {searchParam
+                  ? "Tente ajustar os filtros de busca"
+                  : "Comece criando sua primeira automação"}
+              </Typography>
+            </Box>
+          ) : viewMode === "grid" ? (
+            <Grid container spacing={2}>
+              {filteredAndSortedWebhooks.map((automation) => (
+                <Grid item xs={12} sm={6} md={4} lg={3} key={automation.id}>
+                  <Card
+                    className={classes.automationCard}
+                    onClick={() => history.push(`/flowbuilder/${automation.id}`)}
+                  >
+                    <CardContent>
                     <Box className={classes.cardHeader}>
                       <Box className={classes.cardIcon}>
                         <AccountTree />
@@ -816,7 +817,8 @@ const FlowBuilder = () => {
               </Card>
             ))}
           </Stack>
-        )}
+          )}
+        </Stack>
 
         {/* Menu de contexto (mantido para compatibilidade) */}
         <Menu
