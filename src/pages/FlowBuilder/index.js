@@ -56,6 +56,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Badge,
+  useTheme,
 } from "@mui/material";
 
 import FlowBuilderModal from "../../components/FlowBuilderModal";
@@ -111,21 +112,27 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
-    backgroundColor: "#F8F9FA",
+    backgroundColor: theme.palette.mode === "dark" 
+      ? theme.palette.background.default 
+      : "#F8F9FA",
   },
   automationCard: {
     height: "100%",
     borderRadius: 16,
-    border: "1px solid #E0E0E0",
+    border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.divider : "#E0E0E0"}`,
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     cursor: "pointer",
     position: "relative",
     overflow: "hidden",
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.palette.mode === "dark" 
+      ? theme.palette.background.paper 
+      : "#FFFFFF",
     "&:hover": {
       transform: "translateY(-4px)",
-      boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
-      borderColor: "#1976d2",
+      boxShadow: theme.palette.mode === "dark"
+        ? "0 8px 24px rgba(0, 0, 0, 0.4)"
+        : "0 8px 24px rgba(0, 0, 0, 0.12)",
+      borderColor: theme.palette.primary.main,
     },
   },
   cardHeader: {
@@ -138,16 +145,18 @@ const useStyles = makeStyles((theme) => ({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: "#E3F2FD",
+    backgroundColor: theme.palette.mode === "dark"
+      ? theme.palette.primary.dark
+      : "#E3F2FD",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#1976d2",
+    color: theme.palette.primary.main,
   },
   cardTitle: {
     fontWeight: 600,
     fontSize: "1.1rem",
-    color: "#212121",
+    color: theme.palette.text.primary,
     marginBottom: theme.spacing(0.5),
   },
   cardMeta: {
@@ -156,7 +165,7 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing(1),
     marginTop: theme.spacing(1),
     fontSize: "0.875rem",
-    color: "#757575",
+    color: theme.palette.text.secondary,
   },
   statusChip: {
     fontWeight: 600,
@@ -168,14 +177,16 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    borderTop: "1px solid #F0F0F0",
+    borderTop: `1px solid ${theme.palette.mode === "dark" ? theme.palette.divider : "#F0F0F0"}`,
     marginTop: theme.spacing(1.5),
   },
   actionButton: {
     padding: theme.spacing(0.75),
     borderRadius: 8,
     "&:hover": {
-      backgroundColor: "#F5F5F5",
+      backgroundColor: theme.palette.mode === "dark"
+        ? "rgba(255, 255, 255, 0.08)"
+        : "#F5F5F5",
     },
   },
   filtersContainer: {
@@ -184,21 +195,23 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing(2),
     marginBottom: theme.spacing(2),
     padding: theme.spacing(1.5),
-    backgroundColor: "#FFFFFF",
+    backgroundColor: theme.palette.mode === "dark"
+      ? theme.palette.background.paper
+      : "#FFFFFF",
     borderRadius: 12,
-    border: "1px solid #E0E0E0",
+    border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.divider : "#E0E0E0"}`,
   },
   viewToggle: {
-    border: "1px solid #E0E0E0",
+    border: `1px solid ${theme.palette.mode === "dark" ? theme.palette.divider : "#E0E0E0"}`,
     borderRadius: 8,
     "& .MuiToggleButton-root": {
       border: "none",
       padding: theme.spacing(0.75, 1.5),
       "&.Mui-selected": {
-        backgroundColor: "#1976d2",
-        color: "#FFFFFF",
+        backgroundColor: theme.palette.primary.main,
+        color: theme.palette.primary.contrastText,
         "&:hover": {
-          backgroundColor: "#1565c0",
+          backgroundColor: theme.palette.primary.dark,
         },
       },
     },
@@ -206,7 +219,7 @@ const useStyles = makeStyles((theme) => ({
   emptyState: {
     textAlign: "center",
     padding: theme.spacing(8),
-    color: "#757575",
+    color: theme.palette.text.secondary,
   },
   statsBadge: {
     position: "absolute",
@@ -218,6 +231,7 @@ const useStyles = makeStyles((theme) => ({
 
 const FlowBuilder = () => {
   const classes = useStyles();
+  const theme = useTheme();
   const history = useHistory();
 
   const [loading, setLoading] = useState(false);
@@ -481,7 +495,7 @@ const FlowBuilder = () => {
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon style={{ color: "gray" }} />
+                  <SearchIcon sx={{ color: theme.palette.text.secondary }} />
                 </InputAdornment>
               ),
             }}
@@ -562,7 +576,7 @@ const FlowBuilder = () => {
           </Stack>
         ) : filteredAndSortedWebhooks.length === 0 ? (
           <Box className={classes.emptyState}>
-            <AccountTree sx={{ fontSize: 64, color: "#BDBDBD", mb: 2 }} />
+            <AccountTree sx={{ fontSize: 64, color: theme.palette.text.disabled, mb: 2 }} />
             <Typography variant="h6" color="textSecondary" gutterBottom>
               {searchParam
                 ? "Nenhuma automação encontrada"
@@ -594,9 +608,17 @@ const FlowBuilder = () => {
                         color={automation.active ? "success" : "default"}
                         sx={{
                           backgroundColor: automation.active
-                            ? "#E8F5E9"
+                            ? theme.palette.mode === "dark"
+                              ? theme.palette.success.dark
+                              : "#E8F5E9"
+                            : theme.palette.mode === "dark"
+                            ? theme.palette.grey[800]
                             : "#F5F5F5",
-                          color: automation.active ? "#2E7D32" : "#757575",
+                          color: automation.active
+                            ? theme.palette.mode === "dark"
+                              ? theme.palette.success.light
+                              : "#2E7D32"
+                            : theme.palette.text.secondary,
                         }}
                       />
                     </Box>
@@ -711,9 +733,17 @@ const FlowBuilder = () => {
                       color={automation.active ? "success" : "default"}
                       sx={{
                         backgroundColor: automation.active
-                          ? "#E8F5E9"
+                          ? theme.palette.mode === "dark"
+                            ? theme.palette.success.dark
+                            : "#E8F5E9"
+                          : theme.palette.mode === "dark"
+                          ? theme.palette.grey[800]
                           : "#F5F5F5",
-                        color: automation.active ? "#2E7D32" : "#757575",
+                        color: automation.active
+                          ? theme.palette.mode === "dark"
+                            ? theme.palette.success.light
+                            : "#2E7D32"
+                          : theme.palette.text.secondary,
                       }}
                     />
                   </Stack>

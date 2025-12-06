@@ -6,6 +6,7 @@ import {
   Divider,
   Button,
   Stack,
+  useTheme,
 } from "@mui/material";
 import {
   Save,
@@ -25,13 +26,17 @@ import { makeStyles } from "@material-ui/core/styles";
 
 const useStyles = makeStyles((theme) => ({
   toolbar: {
-    backgroundColor: "#ffffff",
-    borderBottom: "1px solid #e0e0e0",
+    backgroundColor: theme.palette.mode === "dark" 
+      ? theme.palette.background.paper 
+      : "#ffffff",
+    borderBottom: `1px solid ${theme.palette.divider}`,
     padding: theme.spacing(1, 2),
     display: "flex",
     alignItems: "center",
     gap: theme.spacing(1),
-    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+    boxShadow: theme.palette.mode === "dark"
+      ? "0 2px 4px rgba(0,0,0,0.3)"
+      : "0 2px 4px rgba(0,0,0,0.05)",
     zIndex: 1000,
   },
   buttonGroup: {

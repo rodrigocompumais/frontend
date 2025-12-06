@@ -375,7 +375,7 @@ const FlowBuilderContent = ({
             nodeTypes={nodeTypes}
             fitView
             connectionLineStyle={{
-              stroke: "#1976d2",
+              stroke: theme.palette.primary.main,
               strokeWidth: 2,
               strokeDasharray: "5,5",
             }}
@@ -388,7 +388,7 @@ const FlowBuilderContent = ({
             variant={"cross"}
             defaultEdgeOptions={{
               style: { 
-                stroke: "#1976d2", 
+                stroke: theme.palette.primary.main, 
                 strokeWidth: 2,
               },
               animated: true,
@@ -492,6 +492,7 @@ const FlowBuilderConfig = () => {
   const [currentTestNodeId, setCurrentTestNodeId] = useState(null);
   const testTimeoutRef = useRef(null);
   const reactFlowInstanceRef = useRef(null);
+  const isTestModeRef = useRef(false);
   
   // Histórico para Undo/Redo
   const [flowHistory, setFlowHistory] = useState([]);
@@ -1011,6 +1012,7 @@ const FlowBuilderConfig = () => {
       clearTimeout(testTimeoutRef.current);
       testTimeoutRef.current = null;
     }
+    isTestModeRef.current = false;
     setIsTestMode(false);
     setCurrentTestNodeId(null);
     // Restaurar estilos dos nós
@@ -1024,7 +1026,7 @@ const FlowBuilderConfig = () => {
 
   // Função para iniciar o teste do fluxo
   const handleStartTest = useCallback(() => {
-    if (isTestMode) {
+    if (isTestModeRef.current) {
       // Parar teste
       handleStopTest();
       return;
@@ -1043,6 +1045,8 @@ const FlowBuilderConfig = () => {
       return;
     }
 
+    // Ativar modo de teste
+    isTestModeRef.current = true;
     setIsTestMode(true);
     setCurrentTestNodeId(startNode.id);
 
@@ -1077,6 +1081,10 @@ const FlowBuilderConfig = () => {
 
     toast.info("Teste iniciado. Acompanhe a execução do fluxo...");
 
+    // Capturar referências atuais para usar no closure
+    const currentNodes = [...nodes];
+    const currentEdges = [...edges];
+    
     // Simular execução do fluxo
     let currentNodeId = startNode.id;
     let step = 0;
@@ -1085,8 +1093,8 @@ const FlowBuilderConfig = () => {
 
     const executeStep = () => {
       // Verificar se o teste ainda está ativo usando ref
-      const currentTestMode = isTestMode;
-      if (!currentTestMode) {
+      if (!isTestModeRef.current) {
+        console.log("Teste parado pelo usuário");
         return;
       }
 
@@ -1096,118 +1104,131 @@ const FlowBuilderConfig = () => {
         return;
       }
 
-      const currentNode = nodes.find((n) => n.id === currentNodeId);
-      if (!currentNode) {
-        handleStopTest();
-        toast.error("Nó não encontrado durante o teste");
-        return;
-      }
-
-      // Mostrar informações do nó atual
-      const nodeTypeLabels = {
-        start: "Início",
-        message: "Mensagem",
-        menu: "Menu",
-        interval: "Intervalo",
-        img: "Imagem",
-        audio: "Áudio",
-        video: "Vídeo",
-        randomizer: "Randomizador",
-        singleBlock: "Conteúdo",
-        ticket: "Ticket",
-        typebot: "TypeBot",
-        openai: "OpenAI",
-        question: "Pergunta",
-      };
-      
-      const nodeLabel = nodeTypeLabels[currentNode.type] || currentNode.type;
-      const nodeName = currentNode.data?.label || currentNode.data?.message || nodeLabel;
-      toast.info(`Executando: ${nodeName}`, { autoClose: 1000 });
-
-      // Encontrar próxima conexão
-      const nextEdges = edges.filter((edge) => edge.source === currentNodeId);
-      
-      if (nextEdges.length === 0) {
-        // Fim do fluxo
-        testTimeoutRef.current = setTimeout(() => {
+      // Buscar nó atual usando setNodes para garantir estado atualizado
+      setNodes((currentNodesState) => {
+        const currentNode = currentNodesState.find((n) => n.id === currentNodeId);
+        if (!currentNode) {
           handleStopTest();
-          toast.success(`Teste concluído! ${visitedNodes.size} nós executados.`);
-        }, 1000);
-        return;
-      }
+          toast.error("Nó não encontrado durante o teste");
+          return currentNodesState;
+        }
 
-      // Pegar primeira conexão (para menus/randomizers, poderia escolher aleatoriamente)
-      const nextEdge = nextEdges[0];
-      const nextNodeId = nextEdge.target;
-      
-      // Verificar se já visitou este nó (loop detection)
-      if (visitedNodes.has(nextNodeId) && visitedNodes.size > 1) {
-        toast.warning("Loop detectado no fluxo. Teste interrompido.");
-        handleStopTest();
-        return;
-      }
-      
-      visitedNodes.add(nextNodeId);
-      setCurrentTestNodeId(nextNodeId);
-
-      // Centralizar no próximo nó
-      const nextNode = nodes.find((n) => n.id === nextNodeId);
-      if (nextNode && reactFlowInstanceRef.current) {
-        reactFlowInstanceRef.current.fitView({ 
-          padding: 0.3, 
-          duration: 500,
-          nodes: [nextNode]
-        });
-      }
-
-      // Atualizar estilos
-      setNodes((old) =>
-        old.map((node) => {
-          if (node.id === currentNodeId) {
-            return {
-              ...node,
-              style: {
-                ...node.style,
-                border: "2px solid #9e9e9e",
-                boxShadow: "none",
-                opacity: 0.7,
-              },
-            };
-          }
-          if (node.id === nextNodeId) {
-            return {
-              ...node,
-              style: {
-                ...node.style,
-                border: "3px solid #4caf50",
-                boxShadow: "0 0 20px rgba(76, 175, 80, 0.5)",
-                opacity: 1,
-              },
-            };
-          }
-          return {
-            ...node,
-            style: { ...node.style, opacity: 0.5 },
-          };
-        })
-      );
-
-      currentNodeId = nextNodeId;
-      step++;
-
-      // Aguardar antes do próximo passo (simular delay)
-      const delay = currentNode.type === "interval" 
-        ? (currentNode.data?.sec || 1) * 1000 
-        : currentNode.type === "message" || currentNode.type === "menu"
-        ? 2000
-        : 1500;
+        // Mostrar informações do nó atual
+        const nodeTypeLabels = {
+          start: "Início",
+          message: "Mensagem",
+          menu: "Menu",
+          interval: "Intervalo",
+          img: "Imagem",
+          audio: "Áudio",
+          video: "Vídeo",
+          randomizer: "Randomizador",
+          singleBlock: "Conteúdo",
+          ticket: "Ticket",
+          typebot: "TypeBot",
+          openai: "OpenAI",
+          question: "Pergunta",
+        };
         
-      testTimeoutRef.current = setTimeout(executeStep, delay);
+        const nodeLabel = nodeTypeLabels[currentNode.type] || currentNode.type;
+        const nodeName = currentNode.data?.label || currentNode.data?.message || nodeLabel;
+        toast.info(`Executando: ${nodeName}`, { autoClose: 1500 });
+
+        // Encontrar próxima conexão usando edges atualizados
+        setEdges((currentEdgesState) => {
+          const nextEdges = currentEdgesState.filter((edge) => edge.source === currentNodeId);
+          
+          if (nextEdges.length === 0) {
+            // Fim do fluxo
+            testTimeoutRef.current = setTimeout(() => {
+              handleStopTest();
+              toast.success(`Teste concluído! ${visitedNodes.size} nós executados.`);
+            }, 1000);
+            return currentEdgesState;
+          }
+
+          // Pegar primeira conexão
+          const nextEdge = nextEdges[0];
+          const nextNodeId = nextEdge.target;
+          
+          // Verificar se já visitou este nó (loop detection)
+          if (visitedNodes.has(nextNodeId) && visitedNodes.size > 1) {
+            toast.warning("Loop detectado no fluxo. Teste interrompido.");
+            handleStopTest();
+            return currentEdgesState;
+          }
+          
+          visitedNodes.add(nextNodeId);
+          setCurrentTestNodeId(nextNodeId);
+
+          // Buscar próximo nó
+          const nextNode = currentNodesState.find((n) => n.id === nextNodeId);
+          
+          // Centralizar no próximo nó
+          if (nextNode && reactFlowInstanceRef.current) {
+            reactFlowInstanceRef.current.fitView({ 
+              padding: 0.3, 
+              duration: 500,
+              nodes: [nextNode]
+            });
+          }
+
+          // Atualizar estilos dos nós
+          const updatedNodes = currentNodesState.map((node) => {
+            if (node.id === currentNodeId) {
+              return {
+                ...node,
+                style: {
+                  ...node.style,
+                  border: "2px solid #9e9e9e",
+                  boxShadow: "none",
+                  opacity: 0.7,
+                },
+              };
+            }
+            if (node.id === nextNodeId) {
+              return {
+                ...node,
+                style: {
+                  ...node.style,
+                  border: "3px solid #4caf50",
+                  boxShadow: "0 0 20px rgba(76, 175, 80, 0.5)",
+                  opacity: 1,
+                },
+              };
+            }
+            return {
+              ...node,
+              style: { ...node.style, opacity: 0.5 },
+            };
+          });
+
+          // Atualizar nodes
+          setNodes(updatedNodes);
+
+          // Atualizar variáveis para próximo passo
+          currentNodeId = nextNodeId;
+          step++;
+
+          // Aguardar antes do próximo passo (simular delay)
+          const delay = currentNode.type === "interval" 
+            ? (currentNode.data?.sec || 1) * 1000 
+            : currentNode.type === "message" || currentNode.type === "menu"
+            ? 2000
+            : 1500;
+            
+          testTimeoutRef.current = setTimeout(executeStep, delay);
+          
+          return currentEdgesState;
+        });
+
+        return currentNodesState;
+      });
     };
 
     // Iniciar execução após um pequeno delay
     testTimeoutRef.current = setTimeout(executeStep, 800);
-  }, [isTestMode, nodes, edges, handleStopTest, setNodes, reactFlowInstanceRef]);
+  }, [nodes, edges, handleStopTest, setNodes, setEdges, reactFlowInstanceRef]);
 
   const doubleClick = (event, node) => {
     console.log("NODE", node);
