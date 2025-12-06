@@ -422,7 +422,7 @@ const MainListItems = (props) => {
                 {/* Automação */}
                 <ListItem
                     button
-                    onClick={() => setOpenFlowsSubmenu((prev) => !prev)}
+                    onClick={() => history.push("/flowbuilders")}
                 >
                   <ListItemIcon>
                     <AccountTree />
@@ -430,31 +430,7 @@ const MainListItems = (props) => {
                   <ListItemText
                       primary={i18n.t("mainDrawer.listItems.flows")}
                   />
-                  {openFlowsSubmenu ? (
-                      <ExpandLessIcon />
-                  ) : (
-                      <ExpandMoreIcon />
-                  )}
                 </ListItem>
-
-                <Collapse
-                    style={{ paddingLeft: 15 }}
-                    in={openFlowsSubmenu}
-                    timeout="auto"
-                    unmountOnExit
-                >
-                  <List component="div" disablePadding>
-                    <ListItem
-                        onClick={() => history.push("/flowbuilders")}
-                        button
-                    >
-                      <ListItemIcon>
-                        <ShapeLine />
-                      </ListItemIcon>
-                      <ListItemText primary="Automação" />
-                    </ListItem>
-                  </List>
-                </Collapse>
               </>
             )}
 

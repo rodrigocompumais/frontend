@@ -46,6 +46,7 @@ import {
   SpeedDialIcon,
   Stack,
   Typography,
+  useTheme,
 } from "@mui/material";
 import { useParams } from "react-router-dom/cjs/react-router-dom.min";
 import { Box, CircularProgress } from "@material-ui/core";
@@ -188,8 +189,17 @@ const FlowBuilderContent = ({
   onImport,
   canUndo,
   canRedo,
+  reactFlowInstanceRef,
 }) => {
   const reactFlowInstance = useReactFlow();
+  const theme = useTheme();
+  
+  // Expor instância para o componente pai
+  React.useEffect(() => {
+    if (reactFlowInstanceRef) {
+      reactFlowInstanceRef.current = reactFlowInstance;
+    }
+  }, [reactFlowInstance, reactFlowInstanceRef]);
 
   return (
     <>
@@ -214,8 +224,8 @@ const FlowBuilderContent = ({
       {/* SpeedDial para adicionar nós */}
       <Box
         sx={{
-          position: "absolute",
-          bottom: 24,
+          position: "fixed",
+          bottom: 80,
           left: 24,
           zIndex: 1000,
         }}
@@ -279,7 +289,10 @@ const FlowBuilderContent = ({
           sx={{
             flex: 1,
             position: "relative",
-            backgroundColor: "#F8F9FA",
+            backgroundColor: (theme) => 
+              theme.palette.mode === "dark" 
+                ? theme.palette.background.default 
+                : "#F8F9FA",
           }}
         >
           <ReactFlow
@@ -300,7 +313,7 @@ const FlowBuilderContent = ({
               strokeDasharray: "5,5",
             }}
             style={{
-              backgroundColor: "#F8F9FA",
+              backgroundColor: "transparent",
               width: "100%",
               height: "100%",
             }}
@@ -317,16 +330,16 @@ const FlowBuilderContent = ({
           >
             <Controls 
               style={{
-                backgroundColor: "#ffffff",
-                border: "1px solid #e0e0e0",
+                backgroundColor: theme.palette.background.paper,
+                border: `1px solid ${theme.palette.divider}`,
                 borderRadius: "8px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
               }}
             />
             <MiniMap 
               style={{
-                backgroundColor: "#ffffff",
-                border: "1px solid #e0e0e0",
+                backgroundColor: theme.palette.background.paper,
+                border: `1px solid ${theme.palette.divider}`,
                 borderRadius: "8px",
               }}
               nodeColor={(node) => {
@@ -352,7 +365,9 @@ const FlowBuilderContent = ({
               variant="dots" 
               gap={16} 
               size={1}
-              color="#e0e0e0"
+              color={theme.palette.mode === "dark" 
+                ? theme.palette.divider 
+                : "#e0e0e0"}
             />
           </ReactFlow>
         </Box>
@@ -360,9 +375,19 @@ const FlowBuilderContent = ({
         {/* Sidebar para propriedades */}
         <FlowBuilderSidebar
           open={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
+          onClose={() => {
+            setSidebarOpen(false);
+            // Ajustar visualização quando sidebar fecha
+            setTimeout(() => {
+              if (reactFlowInstanceRef.current) {
+                reactFlowInstanceRef.current.fitView({ padding: 0.2, duration: 300 });
+              }
+            }, 300);
+          }}
           selectedNode={dataNode}
           onUpdateNode={updateNode}
+          onDelete={onDelete}
+          onDuplicate={onDuplicate}
         />
       </Stack>
     </>
@@ -399,6 +424,7 @@ const FlowBuilderConfig = () => {
   const [isTestMode, setIsTestMode] = useState(false);
   const [currentTestNodeId, setCurrentTestNodeId] = useState(null);
   const testTimeoutRef = useRef(null);
+  const reactFlowInstanceRef = useRef(null);
   
   // Histórico para Undo/Redo
   const [flowHistory, setFlowHistory] = useState([]);
@@ -944,8 +970,23 @@ const FlowBuilderConfig = () => {
       return;
     }
 
+    // Validar se há conexões
+    if (edges.length === 0) {
+      toast.warning("Adicione conexões entre os nós para testar o fluxo");
+      return;
+    }
+
     setIsTestMode(true);
     setCurrentTestNodeId(startNode.id);
+
+    // Centralizar no nó inicial
+    if (reactFlowInstanceRef.current) {
+      reactFlowInstanceRef.current.fitView({ 
+        padding: 0.3, 
+        duration: 500,
+        nodes: [startNode]
+      });
+    }
 
     // Destacar nó inicial
     setNodes((old) =>
@@ -962,19 +1003,23 @@ const FlowBuilderConfig = () => {
         }
         return {
           ...node,
-          style: { ...node.style, border: "none", boxShadow: "none" },
+          style: { ...node.style, border: "none", boxShadow: "none", opacity: 0.5 },
         };
       })
     );
+
+    toast.info("Teste iniciado. Acompanhe a execução do fluxo...");
 
     // Simular execução do fluxo
     let currentNodeId = startNode.id;
     let step = 0;
     const maxSteps = 50; // Limite de segurança
+    const visitedNodes = new Set([startNode.id]);
 
     const executeStep = () => {
-      // Verificar se o teste ainda está ativo
-      if (!isTestMode) {
+      // Verificar se o teste ainda está ativo usando ref
+      const currentTestMode = isTestMode;
+      if (!currentTestMode) {
         return;
       }
 
@@ -987,23 +1032,66 @@ const FlowBuilderConfig = () => {
       const currentNode = nodes.find((n) => n.id === currentNodeId);
       if (!currentNode) {
         handleStopTest();
+        toast.error("Nó não encontrado durante o teste");
         return;
       }
 
+      // Mostrar informações do nó atual
+      const nodeTypeLabels = {
+        start: "Início",
+        message: "Mensagem",
+        menu: "Menu",
+        interval: "Intervalo",
+        img: "Imagem",
+        audio: "Áudio",
+        video: "Vídeo",
+        randomizer: "Randomizador",
+        singleBlock: "Conteúdo",
+        ticket: "Ticket",
+        typebot: "TypeBot",
+        openai: "OpenAI",
+        question: "Pergunta",
+      };
+      
+      const nodeLabel = nodeTypeLabels[currentNode.type] || currentNode.type;
+      const nodeName = currentNode.data?.label || currentNode.data?.message || nodeLabel;
+      toast.info(`Executando: ${nodeName}`, { autoClose: 1000 });
+
       // Encontrar próxima conexão
-      const nextEdge = edges.find((edge) => edge.source === currentNodeId);
-      if (!nextEdge) {
+      const nextEdges = edges.filter((edge) => edge.source === currentNodeId);
+      
+      if (nextEdges.length === 0) {
         // Fim do fluxo
         testTimeoutRef.current = setTimeout(() => {
           handleStopTest();
-          toast.success("Teste concluído: automação executada com sucesso!");
+          toast.success(`Teste concluído! ${visitedNodes.size} nós executados.`);
         }, 1000);
         return;
       }
 
-      // Atualizar para próximo nó
+      // Pegar primeira conexão (para menus/randomizers, poderia escolher aleatoriamente)
+      const nextEdge = nextEdges[0];
       const nextNodeId = nextEdge.target;
+      
+      // Verificar se já visitou este nó (loop detection)
+      if (visitedNodes.has(nextNodeId) && visitedNodes.size > 1) {
+        toast.warning("Loop detectado no fluxo. Teste interrompido.");
+        handleStopTest();
+        return;
+      }
+      
+      visitedNodes.add(nextNodeId);
       setCurrentTestNodeId(nextNodeId);
+
+      // Centralizar no próximo nó
+      const nextNode = nodes.find((n) => n.id === nextNodeId);
+      if (nextNode && reactFlowInstanceRef.current) {
+        reactFlowInstanceRef.current.fitView({ 
+          padding: 0.3, 
+          duration: 500,
+          nodes: [nextNode]
+        });
+      }
 
       // Atualizar estilos
       setNodes((old) =>
@@ -1030,7 +1118,10 @@ const FlowBuilderConfig = () => {
               },
             };
           }
-          return node;
+          return {
+            ...node,
+            style: { ...node.style, opacity: 0.5 },
+          };
         })
       );
 
@@ -1038,13 +1129,18 @@ const FlowBuilderConfig = () => {
       step++;
 
       // Aguardar antes do próximo passo (simular delay)
-      const delay = currentNode.type === "interval" ? (currentNode.data?.sec || 1) * 1000 : 1500;
+      const delay = currentNode.type === "interval" 
+        ? (currentNode.data?.sec || 1) * 1000 
+        : currentNode.type === "message" || currentNode.type === "menu"
+        ? 2000
+        : 1500;
+        
       testTimeoutRef.current = setTimeout(executeStep, delay);
     };
 
     // Iniciar execução após um pequeno delay
-    testTimeoutRef.current = setTimeout(executeStep, 500);
-  }, [isTestMode, nodes, edges, handleStopTest, setNodes]);
+    testTimeoutRef.current = setTimeout(executeStep, 800);
+  }, [isTestMode, nodes, edges, handleStopTest, setNodes, reactFlowInstanceRef]);
 
   const doubleClick = (event, node) => {
     console.log("NODE", node);
@@ -1088,6 +1184,16 @@ const FlowBuilderConfig = () => {
   const clickNode = (event, node) => {
     setDataNode(node);
     setSidebarOpen(true);
+    // Ajustar visualização quando sidebar abre
+    setTimeout(() => {
+      if (reactFlowInstanceRef.current) {
+        reactFlowInstanceRef.current.fitView({ 
+          padding: 0.2, 
+          duration: 300,
+          nodes: [node]
+        });
+      }
+    }, 100);
     setNodes((old) =>
       old.map((item) => {
         if (item.id === node.id) {

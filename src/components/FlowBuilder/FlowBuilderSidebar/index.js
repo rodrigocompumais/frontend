@@ -19,6 +19,7 @@ import {
   Settings,
 } from "@mui/icons-material";
 import { makeStyles } from "@material-ui/core/styles";
+import { toast } from "react-toastify";
 
 const useStyles = makeStyles((theme) => ({
   drawer: {
@@ -67,7 +68,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const FlowBuilderSidebar = ({ open, onClose, selectedNode, onUpdateNode }) => {
+const FlowBuilderSidebar = ({ 
+  open, 
+  onClose, 
+  selectedNode, 
+  onUpdateNode,
+  onDelete,
+  onDuplicate,
+}) => {
   const classes = useStyles();
   const [nodeData, setNodeData] = useState(null);
 
@@ -90,16 +98,22 @@ const FlowBuilderSidebar = ({ open, onClose, selectedNode, onUpdateNode }) => {
         ...selectedNode,
         data: nodeData,
       });
+      toast.success("Alterações salvas com sucesso");
     }
   };
 
   const handleDelete = () => {
-    // Implementar lógica de exclusão
-    onClose();
+    if (onDelete && selectedNode) {
+      onDelete();
+      onClose();
+    }
   };
 
   const handleDuplicate = () => {
-    // Implementar lógica de duplicação
+    if (onDuplicate && selectedNode) {
+      onDuplicate();
+      onClose();
+    }
   };
 
   if (!selectedNode) {
