@@ -78,7 +78,7 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
       setLoading(false);
     }, 500);
     return () => clearTimeout(delayDebounceFn);
-  }, [])
+  }, [companyId, user.queues, whatsappId])
 
   useEffect(() => {
     if (isMounted.current) {

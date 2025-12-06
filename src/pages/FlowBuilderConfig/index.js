@@ -41,15 +41,21 @@ import MainContainer from "../../components/MainContainer";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import {
-  SpeedDial,
-  SpeedDialAction,
-  SpeedDialIcon,
   Stack,
   Typography,
   useTheme,
+  Drawer,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Tooltip,
+  Box,
+  CircularProgress,
 } from "@mui/material";
 import { useParams } from "react-router-dom/cjs/react-router-dom.min";
-import { Box, CircularProgress } from "@material-ui/core";
 import BallotIcon from "@mui/icons-material/Ballot";
 
 import "reactflow/dist/style.css";
@@ -221,60 +227,6 @@ const FlowBuilderContent = ({
         isTestMode={isTestMode}
       />
 
-      {/* SpeedDial para adicionar nós */}
-      <Box
-        sx={{
-          position: "fixed",
-          bottom: 80,
-          left: 24,
-          zIndex: 1000,
-        }}
-      >
-        <SpeedDial
-          ariaLabel="Adicionar nós ao fluxo"
-          sx={{
-            "& .MuiSpeedDial-fab": {
-              backgroundColor: "#1976d2",
-              width: 56,
-              height: 56,
-              "&:hover": {
-                backgroundColor: "#1565c0",
-              },
-              boxShadow: "0 4px 12px rgba(25, 118, 210, 0.3)",
-            },
-          }}
-          icon={<SpeedDialIcon />}
-          direction={"up"}
-        >
-          {actions.map((action) => (
-            <SpeedDialAction
-              key={action.name}
-              icon={action.icon}
-              tooltipTitle={action.name}
-              tooltipOpen
-              tooltipPlacement={"right"}
-              onClick={() => {
-                clickActions(action.type);
-              }}
-              sx={{
-                "& .MuiSpeedDialAction-fab": {
-                  backgroundColor: "#ffffff",
-                  color: "#1976d2",
-                  width: 48,
-                  height: 48,
-                  "&:hover": {
-                    backgroundColor: "#f5f5f5",
-                    transform: "scale(1.1)",
-                  },
-                  transition: "all 0.2s ease-in-out",
-                  boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
-                },
-              }}
-            />
-          ))}
-        </SpeedDial>
-      </Box>
-
       <Stack
         direction={"row"}
         sx={{
@@ -285,6 +237,121 @@ const FlowBuilderContent = ({
           overflow: "hidden",
         }}
       >
+        {/* Barra lateral esquerda fixa para adicionar componentes */}
+        <Drawer
+          variant="permanent"
+          anchor="left"
+          sx={{
+            width: 280,
+            flexShrink: 0,
+            "& .MuiDrawer-paper": {
+              width: 280,
+              boxSizing: "border-box",
+              backgroundColor: (theme) => theme.palette.background.paper,
+              borderRight: (theme) => `1px solid ${theme.palette.divider}`,
+              position: "relative",
+              height: "100%",
+              overflowY: "auto",
+              "&::-webkit-scrollbar": {
+                width: "8px",
+              },
+              "&::-webkit-scrollbar-track": {
+                backgroundColor: "transparent",
+              },
+              "&::-webkit-scrollbar-thumb": {
+                backgroundColor: (theme) =>
+                  theme.palette.mode === "dark"
+                    ? "rgba(255, 255, 255, 0.2)"
+                    : "rgba(0, 0, 0, 0.2)",
+                borderRadius: "4px",
+                "&:hover": {
+                  backgroundColor: (theme) =>
+                    theme.palette.mode === "dark"
+                      ? "rgba(255, 255, 255, 0.3)"
+                      : "rgba(0, 0, 0, 0.3)",
+                },
+              },
+            },
+          }}
+        >
+          <Box
+            sx={{
+              padding: 2,
+              backgroundColor: (theme) => 
+                theme.palette.mode === "dark" 
+                  ? theme.palette.background.default 
+                  : "#F5F5F5",
+              borderBottom: (theme) => `1px solid ${theme.palette.divider}`,
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                fontWeight: 600,
+                fontSize: "0.875rem",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                color: (theme) => theme.palette.text.secondary,
+              }}
+            >
+              Adicionar Componentes
+            </Typography>
+          </Box>
+          <List sx={{ padding: 1 }}>
+            {actions.map((action) => (
+              <Tooltip key={action.name} title={action.name} placement="right">
+                <ListItem disablePadding sx={{ mb: 0.5 }}>
+                  <ListItemButton
+                    onClick={() => {
+                      clickActions(action.type);
+                    }}
+                    sx={{
+                      borderRadius: 2,
+                      padding: 1.5,
+                      "&:hover": {
+                        backgroundColor: (theme) =>
+                          theme.palette.mode === "dark"
+                            ? "rgba(255, 255, 255, 0.08)"
+                            : "rgba(0, 0, 0, 0.04)",
+                        transform: "translateX(4px)",
+                      },
+                      transition: "all 0.2s ease-in-out",
+                    }}
+                  >
+                    <ListItemIcon
+                      sx={{
+                        minWidth: 40,
+                        color: (theme) => {
+                          const colors = {
+                            start: "#3ABA38",
+                            content: "#EC5858",
+                            menu: "#683AC8",
+                            random: "#1FBADC",
+                            interval: "#F7953B",
+                            ticket: "#F7953B",
+                            typebot: "#3aba38",
+                            openai: "#F7953B",
+                            question: "#F7953B",
+                          };
+                          return colors[action.type] || theme.palette.primary.main;
+                        },
+                      }}
+                    >
+                      {action.icon}
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={action.name}
+                      primaryTypographyProps={{
+                        fontSize: "0.875rem",
+                        fontWeight: 500,
+                      }}
+                    />
+                  </ListItemButton>
+                </ListItem>
+              </Tooltip>
+            ))}
+          </List>
+        </Drawer>
         <Box
           sx={{
             flex: 1,
