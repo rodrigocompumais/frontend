@@ -98,11 +98,13 @@ import { ConfirmationNumber } from "@material-ui/icons";
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
-    padding: theme.spacing(1),
+    padding: 0,
     position: "relative",
     backgroundColor: "#F8F9FA",
-    overflowY: "scroll",
-    ...theme.scrollbarStyles,
+    display: "flex",
+    flexDirection: "column",
+    overflow: "hidden",
+    height: "calc(100vh - 64px)",
   },
   speeddial: {
     backgroundColor: "red",
@@ -180,7 +182,6 @@ const FlowBuilderConfig = () => {
 
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const connectionLineStyle = { stroke: "#2b2b2b", strokeWidth: "6px" };
   const reactFlowInstance = useReactFlow();
 
 
@@ -858,7 +859,7 @@ const FlowBuilderConfig = () => {
           variant="outlined"
           onScroll={handleScroll}
         >
-          {/* Nova Toolbar */}
+          {/* Toolbar Principal */}
           <FlowBuilderToolbar
             onSave={() => saveFlow()}
             onUndo={() => {}}
@@ -876,34 +877,30 @@ const FlowBuilderConfig = () => {
             isTestMode={false}
           />
 
-
-          {/* Nova Toolbar */}
-          <FlowBuilderToolbar
-            onSave={() => saveFlow()}
-            onUndo={() => {}}
-            onRedo={() => {}}
-            onZoomIn={() => reactFlowInstance?.zoomIn()}
-            onZoomOut={() => reactFlowInstance?.zoomOut()}
-            onFitView={() => reactFlowInstance?.fitView()}
-            onDelete={() => {}}
-            onDuplicate={() => {}}
-            onExport={() => {}}
-            onImport={() => {}}
-            onTest={() => {}}
-            canUndo={false}
-            canRedo={false}
-            isTestMode={false}
-          />
-          <Stack>
+          {/* SpeedDial para adicionar nós */}
+          <Box
+            sx={{
+              position: "absolute",
+              bottom: 24,
+              left: 24,
+              zIndex: 1000,
+            }}
+          >
             <SpeedDial
-              ariaLabel="SpeedDial basic example"
+              ariaLabel="Adicionar nós ao fluxo"
               sx={{
-                position: "absolute",
-                top: 16,
-                left: 16,
+                "& .MuiSpeedDial-fab": {
+                  backgroundColor: "#1976d2",
+                  width: 56,
+                  height: 56,
+                  "&:hover": {
+                    backgroundColor: "#1565c0",
+                  },
+                  boxShadow: "0 4px 12px rgba(25, 118, 210, 0.3)",
+                },
               }}
               icon={<SpeedDialIcon />}
-              direction={"down"}
+              direction={"up"}
             >
               {actions.map((action) => (
                 <SpeedDialAction
@@ -913,101 +910,125 @@ const FlowBuilderConfig = () => {
                   tooltipOpen
                   tooltipPlacement={"right"}
                   onClick={() => {
-                    console.log(action.type);
                     clickActions(action.type);
+                  }}
+                  sx={{
+                    "& .MuiSpeedDialAction-fab": {
+                      backgroundColor: "#ffffff",
+                      color: "#1976d2",
+                      width: 48,
+                      height: 48,
+                      "&:hover": {
+                        backgroundColor: "#f5f5f5",
+                        transform: "scale(1.1)",
+                      },
+                      transition: "all 0.2s ease-in-out",
+                      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+                    },
                   }}
                 />
               ))}
             </SpeedDial>
-          </Stack>
-          <Stack
-            sx={{
-              position: "absolute",
-              justifyContent: "center",
-              flexDirection: "row",
-              width: "100%",
-            }}
-          >
-            <Typography
-              style={{ color: "#010101", textShadow: "#010101 1px 0 10px" }}
-            >
-              NÃ£o se esqueÃ§a de salvar seu fluxo!
-            </Typography>
-          </Stack>
-          <Stack direction={"row"} justifyContent={"end"}>
-            <Button
-              sx={{ textTransform: "none" }}
-              variant="contained"
-              color="primary"
-              onClick={() => saveFlow()}
-            >
-              Salvar
-            </Button>
-          </Stack>
+          </Box>
 
           <Stack
             direction={"row"}
-            style={{
+            sx={{
               width: "100%",
-              height: "90%",
+              height: "calc(100vh - 200px)",
               position: "relative",
               display: "flex",
+              overflow: "hidden",
             }}
           >
-            <ReactFlow
-              nodes={nodes}
-              edges={edges}
-              deleteKeyCode={["Backspace", "Delete"]}
-              onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onNodeDoubleClick={doubleClick}
-              onNodeClick={clickNode}
-              onEdgeClick={clickEdge}
-              onConnect={onConnect}
-              nodeTypes={nodeTypes}
-              fitView
-              connectionLineStyle={connectionLineStyle}
-              style={{
-                //backgroundImage: `url(${imgBackground})`,
-                //backgroundSize: "cover"
+            <Box
+              sx={{
+                flex: 1,
+                position: "relative",
                 backgroundColor: "#F8F9FA",
               }}
-              edgeTypes={edgeTypes}
-              variant={"cross"}
-              defaultEdgeOptions={{
-                style: { color: "#ff0000", strokeWidth: "6px" },
-                animated: false,
-              }}
             >
-              <Controls />
-              <MiniMap />
-              <Background variant="dots" gap={12} size={-1} />
-            </ReactFlow>
-            {/* Nova Sidebar para propriedades */}
-            <FlowBuilderSidebar
-              open={sidebarOpen}
-              onClose={() => setSidebarOpen(false)}
-              selectedNode={dataNode}
-              onUpdateNode={updateNode}
-            />
+              <ReactFlow
+                nodes={nodes}
+                edges={edges}
+                deleteKeyCode={["Backspace", "Delete"]}
+                onNodesChange={onNodesChange}
+                onEdgesChange={onEdgesChange}
+                onNodeDoubleClick={doubleClick}
+                onNodeClick={clickNode}
+                onEdgeClick={clickEdge}
+                onConnect={onConnect}
+                nodeTypes={nodeTypes}
+                fitView
+                connectionLineStyle={{
+                  stroke: "#1976d2",
+                  strokeWidth: 2,
+                  strokeDasharray: "5,5",
+                }}
+                style={{
+                  backgroundColor: "#F8F9FA",
+                  width: "100%",
+                  height: "100%",
+                }}
+                edgeTypes={edgeTypes}
+                variant={"cross"}
+                defaultEdgeOptions={{
+                  style: { 
+                    stroke: "#1976d2", 
+                    strokeWidth: 2,
+                  },
+                  animated: true,
+                  type: "smoothstep",
+                }}
+              >
+                <Controls 
+                  style={{
+                    backgroundColor: "#ffffff",
+                    border: "1px solid #e0e0e0",
+                    borderRadius: "8px",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  }}
+                />
+                <MiniMap 
+                  style={{
+                    backgroundColor: "#ffffff",
+                    border: "1px solid #e0e0e0",
+                    borderRadius: "8px",
+                  }}
+                  nodeColor={(node) => {
+                    const colors = {
+                      start: "#3ABA38",
+                      message: "#6865A5",
+                      menu: "#683AC8",
+                      interval: "#F7953B",
+                      img: "#6865A5",
+                      audio: "#6865A5",
+                      video: "#6865A5",
+                      randomizer: "#1FBADC",
+                      singleBlock: "#EC5858",
+                      ticket: "#F7953B",
+                      typebot: "#3aba38",
+                      openai: "#F7953B",
+                      question: "#F7953B",
+                    };
+                    return colors[node.type] || "#666";
+                  }}
+                />
+                <Background 
+                  variant="dots" 
+                  gap={16} 
+                  size={1}
+                  color="#e0e0e0"
+                />
+              </ReactFlow>
+            </Box>
 
-            {/* Nova Sidebar para propriedades */}
+            {/* Sidebar para propriedades */}
             <FlowBuilderSidebar
               open={sidebarOpen}
               onClose={() => setSidebarOpen(false)}
               selectedNode={dataNode}
               onUpdateNode={updateNode}
-            />
-<Stack
-              style={{
-                backgroundColor: "#FAFAFA",
-                height: "20px",
-                width: "58px",
-                position: "absolute",
-                bottom: 0,
-                right: 0,
-                zIndex: 1111,
-              }}
             />
             {/* <Stack
                   style={{
