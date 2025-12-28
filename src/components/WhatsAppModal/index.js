@@ -60,6 +60,17 @@ const SessionSchema = Yup.object().shape({
     .min(2, i18n.t("whatsappModal.formErrors.name.short"))
     .max(50, i18n.t("whatsappModal.formErrors.name.long"))
     .required(i18n.t("whatsappModal.formErrors.name.required")),
+  provider: Yup.string(),
+  gupshupApiKey: Yup.string().when("provider", {
+    is: (val) => val === "gupshup",
+    then: Yup.string().required("API Key é obrigatória para Gupshup"),
+    otherwise: Yup.string().nullable()
+  }),
+  gupshupAppName: Yup.string().when("provider", {
+    is: (val) => val === "gupshup",
+    then: Yup.string().required("App Name é obrigatório para Gupshup"),
+    otherwise: Yup.string().nullable()
+  }),
 });
 
 const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
@@ -73,7 +84,9 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
     ratingMessage: "",
     isDefault: false,
     token: "",
-    provider: "beta",
+    provider: "baileys",
+    gupshupApiKey: "",
+    gupshupAppName: "",
     //timeSendQueue: 0,
     //sendIdQueue: 0,
     expiresInactiveMessage: "",
@@ -107,6 +120,11 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
           const whatsQueueIds = data.queues?.map((queue) => queue.id);
           setSelectedQueueIds(whatsQueueIds);
           setSelectedQueueId(data.transferQueueId);
+          
+          // Garantir que provider tenha valor padrão se não existir
+          if (!data.provider) {
+            setWhatsApp(prev => ({ ...prev, provider: "baileys" }));
+          }
         } catch (err) {
           toastError(err);
         }
@@ -142,12 +160,20 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 
   const handleSaveWhatsApp = async (values) => {
     const whatsappData = {
-      ...values, queueIds: selectedQueueIds, transferQueueId: selectedQueueId,
+      ...values, 
+      queueIds: selectedQueueIds, 
+      transferQueueId: selectedQueueId,
       promptId: selectedPrompt ? selectedPrompt : null,
       integrationId: selectedIntegration
     };
     delete whatsappData["queues"];
     delete whatsappData["session"];
+    
+    // Se não for Gupshup, remover campos Gupshup
+    if (whatsappData.provider !== "gupshup") {
+      delete whatsappData["gupshupApiKey"];
+      delete whatsappData["gupshupAppName"];
+    }
 
     try {
       if (whatsAppId) {
@@ -208,7 +234,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
             }, 400);
           }}
         >
-          {({ values, touched, errors, isSubmitting }) => (
+          {({ values, touched, errors, isSubmitting, setFieldValue }) => (
             <Form>
               <DialogContent dividers>
                 <div className={classes.multFieldLine}>
@@ -328,6 +354,72 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                     margin="dense"
                   />
                 </div>
+                <FormControl
+                  margin="dense"
+                  variant="outlined"
+                  fullWidth
+                >
+                  <InputLabel>
+                    Provider
+                  </InputLabel>
+                  <Select
+                    labelId="dialog-select-provider-label"
+                    id="dialog-select-provider"
+                    name="provider"
+                    value={values.provider || "baileys"}
+                    onChange={(e) => {
+                      setFieldValue("provider", e.target.value);
+                    }}
+                    label="Provider"
+                    fullWidth
+                    MenuProps={{
+                      anchorOrigin: {
+                        vertical: "bottom",
+                        horizontal: "left",
+                      },
+                      transformOrigin: {
+                        vertical: "top",
+                        horizontal: "left",
+                      },
+                      getContentAnchorEl: null,
+                    }}
+                  >
+                    <MenuItem value="baileys">Baileys</MenuItem>
+                    <MenuItem value="gupshup">Gupshup (API Oficial)</MenuItem>
+                  </Select>
+                </FormControl>
+                {values.provider === "gupshup" && (
+                  <>
+                    <div>
+                      <Field
+                        as={TextField}
+                        label="Gupshup API Key"
+                        type="text"
+                        fullWidth
+                        name="gupshupApiKey"
+                        variant="outlined"
+                        margin="dense"
+                        required
+                        error={touched.gupshupApiKey && Boolean(errors.gupshupApiKey)}
+                        helperText={touched.gupshupApiKey && errors.gupshupApiKey}
+                      />
+                    </div>
+                    <div>
+                      <Field
+                        as={TextField}
+                        label="Gupshup App Name"
+                        type="text"
+                        fullWidth
+                        name="gupshupAppName"
+                        variant="outlined"
+                        margin="dense"
+                        required
+                        error={touched.gupshupAppName && Boolean(errors.gupshupAppName)}
+                        helperText={touched.gupshupAppName && errors.gupshupAppName}
+                      />
+                    </div>
+                  </>
+                )}
                 <QueueSelect
                   selectedQueueIds={selectedQueueIds}
                   onChange={(selectedIds) => handleChangeQueue(selectedIds)}
