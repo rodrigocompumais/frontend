@@ -6,7 +6,7 @@ import {
 import React, { memo } from "react";
 import { useNodeStorage } from "../../../stores/useNodeStorage";
 import { Handle } from "reactflow";
-import { SiGoogle } from "react-icons/si";
+import { SiGooglemeticon } from "react-icons/si";
 
 export default memo(({ data, isConnectable, id }) => {
     const storageItems = useNodeStorage();
@@ -80,9 +80,10 @@ export default memo(({ data, isConnectable, id }) => {
                     display: "flex",
                 }}
             >
-                <SiGoogle
-                    fontSize="16px"
-                    style={{
+                <SiGooglemeticon
+                    sx={{
+                        width: "16px",
+                        height: "16px",
                         marginRight: "4px",
                         marginTop: "4px",
                         color: "#4285F4"

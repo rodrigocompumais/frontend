@@ -37,7 +37,6 @@ import {
   Sort,
   LibraryBooks,
 } from "@mui/icons-material";
-import { SiOpenai } from "react-icons/si";
 
 import {
   Button,
