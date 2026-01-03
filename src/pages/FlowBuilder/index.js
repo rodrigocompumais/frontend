@@ -35,7 +35,6 @@ import {
   ViewList,
   FilterList,
   Sort,
-  LibraryBooks,
 } from "@mui/icons-material";
 
 import {
@@ -61,8 +60,6 @@ import {
 } from "@mui/material";
 
 import FlowBuilderModal from "../../components/FlowBuilderModal";
-import FlowBuilderAIModal from "../../components/FlowBuilderAIModal";
-import { flowPresets } from "./presets";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTS") {
@@ -250,8 +247,6 @@ const FlowBuilder = () => {
   const [deletingContact, setDeletingContact] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmDuplicateOpen, setConfirmDuplicateOpen] = useState(false);
-  const [templatesModalOpen, setTemplatesModalOpen] = useState(false);
-  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   const [hasMore, setHasMore] = useState(false);
   const [reloadData, setReloadData] = useState(false);
@@ -354,80 +349,6 @@ const FlowBuilder = () => {
       toast.success("Automação duplicada com sucesso");
     } catch (err) {
       toastError(err);
-    }
-  };
-
-  const handleCreateFromPreset = async (preset) => {
-    setLoading(true);
-    try {
-      // 1. Create the flow with the preset name
-      const { data: flowData } = await api.post("/flowbuilder", {
-        name: preset.name,
-      });
-
-      if (flowData && flowData.id) {
-        // 2. Update the flow with the preset structure (nodes and edges)
-        // Usar o endpoint correto de salvar fluxo (/flowbuilder/flow) que espera 'connections' em vez de 'edges'
-        await api.post(`/flowbuilder/flow`, {
-          idFlow: flowData.id,
-          nodes: preset.flow.nodes,
-          connections: preset.flow.edges
-        });
-
-        // 3. Refresh list and close modal
-        setTemplatesModalOpen(false);
-        setReloadData((old) => !old);
-        toast.success("Fluxo criado a partir do modelo com sucesso!");
-        history.push(`/flowbuilder/${flowData.id}`);
-      }
-    } catch (err) {
-      toastError(err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleGenerateFlow = async (prompt) => {
-    setLoading(true);
-    try {
-      // 1. Create a new flow entry
-      const { data: newFlowData } = await api.post("/flowbuilder", {
-        name: "Fluxo Gerado por IA",
-      });
-
-      if (!newFlowData || !newFlowData.id) {
-        toast.error("Falha ao criar novo fluxo para IA.");
-        setLoading(false);
-        return;
-      }
-
-      // 2. Call AI to generate nodes and edges
-      const { data: generatedFlowContent } = await api.post("/flowbuilder/generate", {
-        prompt
-      });
-
-      if (generatedFlowContent && generatedFlowContent.nodes && generatedFlowContent.edges) {
-        // 3. Update the newly created flow with AI-generated content
-        await api.post("/flowbuilder/flow", {
-          idFlow: newFlowData.id,
-          name: "Fluxo Gerado por IA",
-          flow: {
-            nodes: generatedFlowContent.nodes,
-            connections: generatedFlowContent.edges.map(edge => ({ ...edge, sourceHandle: edge.sourceHandle || null }))
-          }
-        });
-
-        setAiModalOpen(false);
-        setReloadData((old) => !old);
-        toast.success("Fluxo gerado por IA com sucesso!");
-        history.push(`/flowbuilder/${newFlowData.id}`);
-      } else {
-        toast.error("IA não retornou um fluxo válido.");
-      }
-    } catch (err) {
-      toastError(err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -562,48 +483,6 @@ const FlowBuilder = () => {
           ? `Tem certeza que deseja duplicar este fluxo?`
           : `${i18n.t("contacts.confirmationModal.importMessage")}`}
       </ConfirmationModal>
-
-      {/* Modal de Templates */}
-      <ConfirmationModal
-        title="Escolha um Modelo"
-        open={templatesModalOpen}
-        onClose={() => setTemplatesModalOpen(false)}
-        maxWidth="lg"
-        scroll="paper"
-      >
-        <Grid container spacing={2}>
-          {flowPresets.map((preset) => (
-            <Grid item xs={12} md={6} lg={4} key={preset.id}>
-              <Card
-                className={classes.automationCard}
-                onClick={() => handleCreateFromPreset(preset)}
-                sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}
-              >
-                <CardContent>
-                  <Box className={classes.cardHeader}>
-                    <Box className={classes.cardIcon}>
-                      <LibraryBooks />
-                    </Box>
-                  </Box>
-                  <Typography className={classes.cardTitle} gutterBottom>
-                    {preset.name}
-                  </Typography>
-                  <Typography variant="body2" color="textSecondary">
-                    {preset.description}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-      </ConfirmationModal>
-
-      <FlowBuilderAIModal
-        open={aiModalOpen}
-        onClose={() => setAiModalOpen(false)}
-        onGenerate={handleGenerateFlow}
-      />
-
       <MainHeader>
         <Title>Automações</Title>
         <MainHeaderButtonsWrapper>
@@ -620,25 +499,6 @@ const FlowBuilder = () => {
               ),
             }}
           />
-          <Button
-            variant="contained"
-            onClick={() => setTemplatesModalOpen(true)}
-            color="primary"
-            sx={{ mr: 1 }}
-          >
-            <Stack direction={"row"} gap={1}>
-              <LibraryBooks />
-              {"Modelos"}
-            </Stack>
-          </Button>
-          <Button
-            variant="contained"
-            style={{ backgroundColor: "#4285F4", color: "white", marginRight: 10 }}
-            onClick={() => setAiModalOpen(true)}
-            startIcon={<SiOpenai />}
-          >
-            Criar com IA
-          </Button>
           <Button
             variant="contained"
             onClick={handleOpenContactModal}

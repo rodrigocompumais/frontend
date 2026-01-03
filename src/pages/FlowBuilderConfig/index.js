@@ -20,8 +20,6 @@ import Button from "@material-ui/core/Button";
 import audioNode from "./nodes/audioNode";
 import typebotNode from "./nodes/typebotNode";
 import openaiNode from "./nodes/openaiNode";
-import geminiNode from "./nodes/geminiNode";
-import summaryNode from "./nodes/summaryNode";
 import messageNode from "./nodes/messageNode.js";
 import startNode from "./nodes/startNode";
 import menuNode from "./nodes/menuNode";
@@ -85,7 +83,6 @@ import FlowBuilderAddVideoModal from "../../components/FlowBuilderAddVideoModal"
 import FlowBuilderSingleBlockModal from "../../components/FlowBuilderSingleBlockModal";
 import FlowBuilderTypebotModal from "../../components/FlowBuilderAddTypebotModal";
 import FlowBuilderOpenAIModal from "../../components/FlowBuilderAddOpenAIModal";
-import FlowBuilderGeminiModal from "../../components/FlowBuilderAddGeminiModal";
 import FlowBuilderAddQuestionModal from "../../components/FlowBuilderAddQuestionModal";
 
 import FlowBuilderToolbar from "../../components/FlowBuilder/FlowBuilderToolbar";
@@ -154,8 +151,6 @@ const nodeTypes = {
   ticket: ticketNode,
   typebot: typebotNode,
   openai: openaiNode,
-  gemini: geminiNode,
-  summary: summaryNode,
   question: questionNode,
 };
 
@@ -341,8 +336,6 @@ const FlowBuilderContent = ({
                             ticket: "#F7953B",
                             typebot: "#3aba38",
                             openai: "#F7953B",
-                            gemini: "#4285F4", // Added Gemini color
-                            summary: "#683AC8", // Added Summary color
                             question: "#F7953B",
                           };
                           return colors[action.type] || theme?.palette?.primary?.main || "#1976d2";
@@ -382,7 +375,6 @@ const FlowBuilderContent = ({
             onEdgesChange={onEdgesChange}
             onNodeDoubleClick={doubleClick}
             onNodeClick={clickNode}
-            onPaneClick={() => setSidebarOpen(false)}
             onEdgeClick={clickEdge}
             onConnect={onConnect}
             nodeTypes={nodeTypes}
@@ -436,8 +428,6 @@ const FlowBuilderContent = ({
                   ticket: "#F7953B",
                   typebot: "#3aba38",
                   openai: "#F7953B",
-                  gemini: "#4285F4", // Added Gemini color
-                  summary: "#683AC8", // Added Summary color
                   question: "#F7953B",
                 };
                 return colors[node.type] || "#666";
@@ -500,13 +490,8 @@ const FlowBuilderConfig = () => {
   const [modalAddSingleBlock, setModalAddSingleBlock] = useState(null);
   const [modalAddTicket, setModalAddTicket] = useState(null);
   const [modalAddTypebot, setModalAddTypebot] = useState(null);
-  const [modalAddOpenAI, setModalAddOpenAI] = useState(null); // Keeping this for now, as the new modalOpenAI seems to be for a different purpose or a refactor.
-  const [modalAddQuestion, setModalAddQuestion] = useState(null); // Keeping this for now.
-
-  const [modalOpenAI, setModalOpenAI] = useState(false);
-  const [modalGemini, setModalGemini] = useState(false);
-  const [modalQuestion, setModalQuestion] = useState(false);
-  const [modalLink, setModalLink] = useState(null); // Added modalLink state
+  const [modalAddOpenAI, setModalAddOpenAI] = useState(null);
+  const [modalAddQuestion, setModalAddQuestion] = useState(null);
 
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isTestMode, setIsTestMode] = useState(false);
@@ -713,34 +698,6 @@ const FlowBuilderConfig = () => {
       });
     }
 
-    if (type === "gemini") {
-      return setNodes((old) => {
-        return [
-          ...old,
-          {
-            id: geraStringAleatoria(30),
-            position: { x: posX, y: posY },
-            data: { ...data },
-            type: "gemini",
-          },
-        ];
-      });
-    }
-
-    if (type === "summary") {
-      return setNodes((old) => {
-        return [
-          ...old,
-          {
-            id: geraStringAleatoria(30),
-            position: { x: posX, y: posY },
-            data: { ...data },
-            type: "summary",
-          },
-        ];
-      });
-    }
-
     if (type === "question") {
       return setNodes((old) => {
         return [
@@ -802,14 +759,6 @@ const FlowBuilderConfig = () => {
 
   const openaiAdd = (data) => {
     addNode("openai", data);
-  };
-
-  const geminiAdd = (data) => {
-    addNode("gemini", data);
-  };
-
-  const summaryAdd = (data) => {
-    addNode("summary", data);
   };
 
   const questionAdd = (data) => {
@@ -1072,7 +1021,7 @@ const FlowBuilderConfig = () => {
     isTestModeRef.current = false;
     setIsTestMode(false);
     setCurrentTestNodeId(null);
-    // Restaurar estilos dos nó
+    // Restaurar estilos dos nós
     setNodes((old) =>
       old.map((node) => ({
         ...node,
@@ -1184,8 +1133,6 @@ const FlowBuilderConfig = () => {
           ticket: "Ticket",
           typebot: "TypeBot",
           openai: "OpenAI",
-          gemini: "Gemini", // Added Gemini label
-          summary: "Resumo", // Added Summary label
           question: "Pergunta",
         };
 
@@ -1321,16 +1268,7 @@ const FlowBuilderConfig = () => {
       setModalAddTypebot("edit");
     }
     if (node.type === "openai") {
-      setModalOpenAI(true); // Changed to use new state
-      setModalLink(node);
-    }
-    if (node.type === "gemini") {
-      setModalGemini(true); // Added for Gemini
-      setModalLink(node);
-    }
-    if (node.type === "summary") {
-      // Assuming a modal for summary node if needed, otherwise just set dataNode
-      setModalLink(node);
+      setModalAddOpenAI("edit");
     }
     if (node.type === "question") {
       setModalAddQuestion("edit");
@@ -1390,27 +1328,10 @@ const FlowBuilderConfig = () => {
     setModalAddText(null);
     setModalAddInterval(null);
     setModalAddMenu(null);
-    setModalAddOpenAI(null); // Keeping this for now
-    setModalOpenAI(false); // New state
-    setModalGemini(false); // Added for Gemini
+    setModalAddOpenAI(null);
     setModalAddTypebot(null);
-    setModalLink(null); // Clear modalLink
     // Salvar no histórico após atualizar nó
     saveToHistory();
-  };
-
-  const handleSaveNode = (data) => {
-    addNode(data.type, data);
-    setModalOpenAI(false);
-    setModalGemini(false);
-    setModalLink(null);
-  };
-
-  const handleUpdateNode = (data) => {
-    updateNode(data);
-    setModalOpenAI(false);
-    setModalGemini(false);
-    setModalLink(null);
   };
 
   const actions = [
@@ -1509,28 +1430,6 @@ const FlowBuilderConfig = () => {
     },
     {
       icon: (
-        <SiOpenai // Using OpenAI icon for consistency, or import another one
-          sx={{
-            color: "#4285F4", // Google's blue color
-          }}
-        />
-      ),
-      name: "Gemini",
-      type: "gemini",
-    },
-    {
-      icon: (
-        <LibraryBooks
-          sx={{
-            color: "#683AC8",
-          }}
-        />
-      ),
-      name: "Resumo",
-      type: "summary",
-    },
-    {
-      icon: (
         <BallotIcon
           sx={{
             color: "#F7953B",
@@ -1567,15 +1466,7 @@ const FlowBuilderConfig = () => {
         setModalAddTypebot("create");
         break;
       case "openai":
-        setModalOpenAI(true); // Changed to use new state
-        setModalLink(null); // Ensure no data is passed for creation
-        break
-      case "gemini":
-        setModalGemini(true); // Added for Gemini
-        setModalLink(null); // Ensure no data is passed for creation
-        break
-      case "summary":
-        summaryAdd({}); // Assuming summary node doesn't need a modal for creation, or use a specific modal if available
+        setModalAddOpenAI("create");
         break
       case "question":
         setModalAddQuestion("create");
@@ -1724,18 +1615,11 @@ const FlowBuilderConfig = () => {
       />
 
       <FlowBuilderOpenAIModal
-        open={modalOpenAI}
-        onSave={handleSaveNode}
-        data={modalLink}
-        onUpdate={handleUpdateNode}
-        close={() => setModalOpenAI(false)}
-      />
-      <FlowBuilderGeminiModal
-        open={modalGemini}
-        onSave={handleSaveNode}
-        data={modalLink}
-        onUpdate={handleUpdateNode}
-        close={() => setModalGemini(false)}
+        open={modalAddOpenAI}
+        onSave={openaiAdd}
+        data={dataNode}
+        onUpdate={updateNode}
+        close={setModalAddOpenAI}
       />
 
       <FlowBuilderTypebotModal
