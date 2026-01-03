@@ -1,4 +1,3 @@
-
 export const flowPresets = [
     {
         id: 1,
@@ -8,7 +7,7 @@ export const flowPresets = [
             nodes: [
                 { id: "1", type: "start", position: { x: 250, y: 100 }, data: { label: "Inicio do fluxo" } },
                 { id: "2", type: "message", position: { x: 250, y: 300 }, data: { label: "Olá! Seja bem-vindo à nossa empresa. Como podemos ajudar hoje?" } },
-                { id: "3", type: "menu", position: { x: 250, y: 500 }, data: { message: "Por favor, escolha uma opção:", arrayOption: [{ value: 1, label: "Falar com Suporte" }, { value: 2, label: "Vendas" }, { value: 3, label: "Financeiro" }] } },
+                { id: "3", type: "menu", position: { x: 250, y: 500 }, data: { message: "Por favor, escolha uma opção:", arrayOption: [{ number: 1, value: "Falar com Suporte" }, { number: 2, value: "Vendas" }, { number: 3, value: "Financeiro" }] } },
                 { id: "4", type: "message", position: { x: 50, y: 800 }, data: { label: "Você selecionou Suporte. Um atendente irá ajudá-lo em breve." } },
                 { id: "5", type: "message", position: { x: 250, y: 800 }, data: { label: "Você selecionou Vendas. Confira nossas promoções!" } },
                 { id: "6", type: "message", position: { x: 450, y: 800 }, data: { label: "Você selecionou Financeiro. Digite seu CPF para continuarmos." } }
@@ -16,9 +15,9 @@ export const flowPresets = [
             edges: [
                 { id: "e1-2", source: "1", target: "2", type: "smoothstep" },
                 { id: "e2-3", source: "2", target: "3", type: "smoothstep" },
-                { id: "e3-4", source: "3", target: "4", sourceHandle: "b-0", type: "buttonedge" },
-                { id: "e3-5", source: "3", target: "5", sourceHandle: "b-1", type: "buttonedge" },
-                { id: "e3-6", source: "3", target: "6", sourceHandle: "b-2", type: "buttonedge" }
+                { id: "e3-4", source: "3", target: "4", sourceHandle: "a1", type: "buttonedge" },
+                { id: "e3-5", source: "3", target: "5", sourceHandle: "a2", type: "buttonedge" },
+                { id: "e3-6", source: "3", target: "6", sourceHandle: "a3", type: "buttonedge" }
             ]
         }
     },
@@ -29,16 +28,16 @@ export const flowPresets = [
         flow: {
             nodes: [
                 { id: "1", type: "start", position: { x: 250, y: 100 }, data: { label: "Inicio do fluxo" } },
-                { id: "2", type: "menu", position: { x: 250, y: 300 }, data: { message: "Qual o motivo do seu contato?", arrayOption: [{ value: 1, label: "Problema Técnico" }, { value: 2, label: "Dúvida Financeira" }, { value: 3, label: "Outros Assuntos" }] } },
+                { id: "2", type: "menu", position: { x: 250, y: 300 }, data: { message: "Qual o motivo do seu contato?", arrayOption: [{ number: 1, value: "Problema Técnico" }, { number: 2, value: "Dúvida Financeira" }, { number: 3, value: "Outros Assuntos" }] } },
                 { id: "3", type: "ticket", position: { x: 50, y: 600 }, data: { queue: 1, label: "Fila Técnica" } },
                 { id: "4", type: "ticket", position: { x: 250, y: 600 }, data: { queue: 2, label: "Fila Financeira" } },
                 { id: "5", type: "ticket", position: { x: 450, y: 600 }, data: { queue: 3, label: "Fila Geral" } }
             ],
             edges: [
                 { id: "e1-2", source: "1", target: "2", type: "smoothstep" },
-                { id: "e2-3", source: "2", target: "3", sourceHandle: "b-0", type: "buttonedge" },
-                { id: "e2-4", source: "2", target: "4", sourceHandle: "b-1", type: "buttonedge" },
-                { id: "e2-5", source: "2", target: "5", sourceHandle: "b-2", type: "buttonedge" }
+                { id: "e2-3", source: "2", target: "3", sourceHandle: "a1", type: "buttonedge" },
+                { id: "e2-4", source: "2", target: "4", sourceHandle: "a2", type: "buttonedge" },
+                { id: "e2-5", source: "2", target: "5", sourceHandle: "a3", type: "buttonedge" }
             ]
         }
     },
@@ -67,16 +66,16 @@ export const flowPresets = [
         flow: {
             nodes: [
                 { id: "1", type: "start", position: { x: 250, y: 100 }, data: { label: "Inicio do fluxo" } },
-                { id: "2", type: "message", position: { x: 250, y: 300 }, data: { label: "Espero que hayamos resolvido seu problema! Poderia avaliar nosso atendimento?" } },
-                { id: "3", type: "menu", position: { x: 250, y: 500 }, data: { message: "De 0 a 10, qual a chance de nos indicar?", arrayOption: [{ value: 1, label: "0-6 (Não recomendo)" }, { value: 2, label: "7-8 (Neutro)" }, { value: 3, label: "9-10 (Recomendo)" }] } },
+                { id: "2", type: "message", position: { x: 250, y: 300 }, data: { label: "Espero que tenhamos resolvido seu problema! Poderia avaliar nosso atendimento?" } },
+                { id: "3", type: "menu", position: { x: 250, y: 500 }, data: { message: "De 0 a 10, qual a chance de nos indicar?", arrayOption: [{ number: 1, value: "0-6 (Não recomendo)" }, { number: 2, value: "7-8 (Neutro)" }, { number: 3, value: "9-10 (Recomendo)" }] } },
                 { id: "4", type: "message", position: { x: 250, y: 800 }, data: { label: "Obrigado pelo seu feedback! Isso nos ajuda a melhorar." } }
             ],
             edges: [
                 { id: "e1-2", source: "1", target: "2", type: "smoothstep" },
                 { id: "e2-3", source: "2", target: "3", type: "smoothstep" },
-                { id: "e3-4a", source: "3", target: "4", sourceHandle: "b-0", type: "buttonedge" },
-                { id: "e3-4b", source: "3", target: "4", sourceHandle: "b-1", type: "buttonedge" },
-                { id: "e3-4c", source: "3", target: "4", sourceHandle: "b-2", type: "buttonedge" }
+                { id: "e3-4a", source: "3", target: "4", sourceHandle: "a1", type: "buttonedge" },
+                { id: "e3-4b", source: "3", target: "4", sourceHandle: "a2", type: "buttonedge" },
+                { id: "e3-4c", source: "3", target: "4", sourceHandle: "a3", type: "buttonedge" }
             ]
         }
     },
@@ -108,15 +107,15 @@ export const flowPresets = [
             nodes: [
                 { id: "1", type: "start", position: { x: 250, y: 100 }, data: { label: "Inicio do fluxo" } },
                 { id: "2", type: "message", position: { x: 250, y: 300 }, data: { label: "Gostaria de agendar uma consulta conosco?" } },
-                { id: "3", type: "menu", position: { x: 250, y: 500 }, data: { message: "Escolha uma opção:", arrayOption: [{ value: 1, label: "Ver horários disponíveis" }, { value: 2, label: "Falar com secretária" }] } },
+                { id: "3", type: "menu", position: { x: 250, y: 500 }, data: { message: "Escolha uma opção:", arrayOption: [{ number: 1, value: "Ver horários disponíveis" }, { number: 2, value: "Falar com secretária" }] } },
                 { id: "4", type: "message", position: { x: 100, y: 800 }, data: { label: "Acesse nosso link de agendamento: https://agenda.exemplo.com" } },
                 { id: "5", type: "ticket", position: { x: 400, y: 800 }, data: { queue: 1, label: "Secretaria" } }
             ],
             edges: [
                 { id: "e1-2", source: "1", target: "2", type: "smoothstep" },
                 { id: "e2-3", source: "2", target: "3", type: "smoothstep" },
-                { id: "e3-4", source: "3", target: "4", sourceHandle: "b-0", type: "buttonedge" },
-                { id: "e3-5", source: "3", target: "5", sourceHandle: "b-1", type: "buttonedge" }
+                { id: "e3-4", source: "3", target: "4", sourceHandle: "a1", type: "buttonedge" },
+                { id: "e3-5", source: "3", target: "5", sourceHandle: "a2", type: "buttonedge" }
             ]
         }
     },
@@ -127,7 +126,7 @@ export const flowPresets = [
         flow: {
             nodes: [
                 { id: "1", type: "start", position: { x: 250, y: 100 }, data: { label: "Inicio do fluxo" } },
-                { id: "2", type: "menu", position: { x: 250, y: 300 }, data: { message: "Sobre o que você tem dúvida?", arrayOption: [{ value: 1, label: "Preços" }, { value: 2, label: "Prazo de Entrega" }, { value: 3, label: "Formas de Pagamento" }] } },
+                { id: "2", type: "menu", position: { x: 250, y: 300 }, data: { message: "Sobre o que você tem dúvida?", arrayOption: [{ number: 1, value: "Preços" }, { number: 2, value: "Prazo de Entrega" }, { number: 3, value: "Formas de Pagamento" }] } },
                 { id: "3", type: "message", position: { x: 0, y: 600 }, data: { label: "Nossos planos começam a partir de R$ 99,00/mês." } },
                 { id: "4", type: "message", position: { x: 250, y: 600 }, data: { label: "O prazo de entrega padrão é de 3 a 5 dias úteis." } },
                 { id: "5", type: "message", position: { x: 500, y: 600 }, data: { label: "Aceitamos cartão, boleto e PIX." } },
@@ -135,9 +134,9 @@ export const flowPresets = [
             ],
             edges: [
                 { id: "e1-2", source: "1", target: "2", type: "smoothstep" },
-                { id: "e2-3", source: "2", target: "3", sourceHandle: "b-0", type: "buttonedge" },
-                { id: "e2-4", source: "2", target: "4", sourceHandle: "b-1", type: "buttonedge" },
-                { id: "e2-5", source: "2", target: "5", sourceHandle: "b-2", type: "buttonedge" },
+                { id: "e2-3", source: "2", target: "3", sourceHandle: "a1", type: "buttonedge" },
+                { id: "e2-4", source: "2", target: "4", sourceHandle: "a2", type: "buttonedge" },
+                { id: "e2-5", source: "2", target: "5", sourceHandle: "a3", type: "buttonedge" },
                 { id: "e3-6", source: "3", target: "6", type: "smoothstep" },
                 { id: "e4-6", source: "4", target: "6", type: "smoothstep" },
                 { id: "e5-6", source: "5", target: "6", type: "smoothstep" }
@@ -189,14 +188,14 @@ export const flowPresets = [
         flow: {
             nodes: [
                 { id: "1", type: "start", position: { x: 250, y: 100 }, data: { label: "Inicio do fluxo" } },
-                { id: "2", type: "menu", position: { x: 250, y: 300 }, data: { message: "Você prefere falar com IA ou Fluxo?", arrayOption: [{ value: 1, label: "OpenAI ChatGPT" }, { value: 2, label: "Typebot" }] } },
+                { id: "2", type: "menu", position: { x: 250, y: 300 }, data: { message: "Você prefere falar com IA ou Fluxo?", arrayOption: [{ number: 1, value: "OpenAI ChatGPT" }, { number: 2, value: "Typebot" }] } },
                 { id: "3", type: "openai", position: { x: 100, y: 600 }, data: { name: "Assistente IA", prompt: "Aja como um atendente virtual." } },
                 { id: "4", type: "typebot", position: { x: 400, y: 600 }, data: { url: "https://typebot.io/meu-bot", typebotId: "meu-bot" } }
             ],
             edges: [
                 { id: "e1-2", source: "1", target: "2", type: "smoothstep" },
-                { id: "e2-3", source: "2", target: "3", sourceHandle: "b-0", type: "buttonedge" },
-                { id: "e2-4", source: "2", target: "4", sourceHandle: "b-1", type: "buttonedge" }
+                { id: "e2-3", source: "2", target: "3", sourceHandle: "a1", type: "buttonedge" },
+                { id: "e2-4", source: "2", target: "4", sourceHandle: "a2", type: "buttonedge" }
             ]
         }
     }

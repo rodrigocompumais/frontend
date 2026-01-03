@@ -204,7 +204,7 @@ const FlowBuilderContent = ({
 }) => {
   const reactFlowInstance = useReactFlow();
   const theme = useTheme();
-  
+
   // Expor instância para o componente pai
   React.useEffect(() => {
     if (reactFlowInstanceRef) {
@@ -282,7 +282,7 @@ const FlowBuilderContent = ({
           <Box
             sx={{
               padding: 2,
-              backgroundColor: (theme) => 
+              backgroundColor: (theme) =>
                 (theme?.palette?.mode === "dark" || theme?.palette?.type === "dark")
                   ? (theme?.palette?.background?.default || "#121212")
                   : "#F5F5F5",
@@ -361,7 +361,7 @@ const FlowBuilderContent = ({
           sx={{
             flex: 1,
             position: "relative",
-            backgroundColor: (theme) => 
+            backgroundColor: (theme) =>
               (theme?.palette?.mode === "dark" || theme?.palette?.type === "dark")
                 ? (theme?.palette?.background?.default || "#121212")
                 : "#F8F9FA",
@@ -375,6 +375,7 @@ const FlowBuilderContent = ({
             onEdgesChange={onEdgesChange}
             onNodeDoubleClick={doubleClick}
             onNodeClick={clickNode}
+            onPaneClick={() => setSidebarOpen(false)}
             onEdgeClick={clickEdge}
             onConnect={onConnect}
             nodeTypes={nodeTypes}
@@ -392,15 +393,15 @@ const FlowBuilderContent = ({
             edgeTypes={edgeTypes}
             variant={"cross"}
             defaultEdgeOptions={{
-              style: { 
-                stroke: theme?.palette?.primary?.main || "#1976d2", 
+              style: {
+                stroke: theme?.palette?.primary?.main || "#1976d2",
                 strokeWidth: 2,
               },
               animated: true,
               type: "smoothstep",
             }}
           >
-            <Controls 
+            <Controls
               style={{
                 backgroundColor: theme.palette.background.paper,
                 border: `1px solid ${theme.palette.divider}`,
@@ -408,7 +409,7 @@ const FlowBuilderContent = ({
                 boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
               }}
             />
-            <MiniMap 
+            <MiniMap
               style={{
                 backgroundColor: theme.palette.background.paper,
                 border: `1px solid ${theme.palette.divider}`,
@@ -433,9 +434,9 @@ const FlowBuilderContent = ({
                 return colors[node.type] || "#666";
               }}
             />
-            <Background 
-              variant="dots" 
-              gap={16} 
+            <Background
+              variant="dots"
+              gap={16}
               size={1}
               color={(theme?.palette?.mode === "dark" || theme?.palette?.type === "dark")
                 ? (theme?.palette?.divider || "#424242")
@@ -493,13 +494,13 @@ const FlowBuilderConfig = () => {
   const [modalAddOpenAI, setModalAddOpenAI] = useState(null);
   const [modalAddQuestion, setModalAddQuestion] = useState(null);
 
-    const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isTestMode, setIsTestMode] = useState(false);
   const [currentTestNodeId, setCurrentTestNodeId] = useState(null);
   const testTimeoutRef = useRef(null);
   const reactFlowInstanceRef = useRef(null);
   const isTestModeRef = useRef(false);
-  
+
   // Histórico para Undo/Redo
   const [flowHistory, setFlowHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -800,9 +801,9 @@ const FlowBuilderConfig = () => {
         setTimeout(() => {
           setFlowHistory((prev) => {
             const newHistory = prev.slice(0, historyIndex + 1);
-            newHistory.push({ 
-              nodes: JSON.parse(JSON.stringify(nodes)), 
-              edges: JSON.parse(JSON.stringify(newEdges)) 
+            newHistory.push({
+              nodes: JSON.parse(JSON.stringify(nodes)),
+              edges: JSON.parse(JSON.stringify(newEdges))
             });
             const finalHistory = newHistory.length > 50 ? newHistory.slice(-50) : newHistory;
             setHistoryIndex(finalHistory.length - 1);
@@ -953,7 +954,7 @@ const FlowBuilderConfig = () => {
 
       // Obter o ID do fluxo (pode ser retornado na resposta ou usar o id existente)
       const flowId = flowResponse?.data?.flow?.id || flowResponse?.data?.id || id;
-      
+
       // Buscar informações do fluxo para obter o nome
       let flowData = null;
       if (flowId) {
@@ -971,12 +972,12 @@ const FlowBuilderConfig = () => {
       // Verificar se já existe integração para este fluxo
       let integrationExists = false;
       let existingIntegrationId = null;
-      
+
       try {
         const integrations = await api.get("/queueIntegration");
         // Buscar por nome ou por projectName
         const existingIntegration = integrations.data.find(
-          (int) => int.type === "flowbuilder" && 
+          (int) => int.type === "flowbuilder" &&
             (int.projectName === flowNameToUse || int.name === flowNameToUse)
         );
         if (existingIntegration) {
@@ -1058,8 +1059,8 @@ const FlowBuilderConfig = () => {
 
     // Centralizar no nó inicial
     if (reactFlowInstanceRef.current) {
-      reactFlowInstanceRef.current.fitView({ 
-        padding: 0.3, 
+      reactFlowInstanceRef.current.fitView({
+        padding: 0.3,
         duration: 500,
         nodes: [startNode]
       });
@@ -1090,7 +1091,7 @@ const FlowBuilderConfig = () => {
     // Capturar referências atuais para usar no closure
     const currentNodes = [...nodes];
     const currentEdges = [...edges];
-    
+
     // Simular execução do fluxo
     let currentNodeId = startNode.id;
     let step = 0;
@@ -1135,7 +1136,7 @@ const FlowBuilderConfig = () => {
           openai: "OpenAI",
           question: "Pergunta",
         };
-        
+
         const nodeLabel = nodeTypeLabels[currentNode.type] || currentNode.type;
         const nodeName = currentNode.data?.label || currentNode.data?.message || nodeLabel;
         toast.info(`Executando: ${nodeName}`, { autoClose: 1500 });
@@ -1143,7 +1144,7 @@ const FlowBuilderConfig = () => {
         // Encontrar próxima conexão usando edges atualizados
         setEdges((currentEdgesState) => {
           const nextEdges = currentEdgesState.filter((edge) => edge.source === currentNodeId);
-          
+
           if (nextEdges.length === 0) {
             // Fim do fluxo
             testTimeoutRef.current = setTimeout(() => {
@@ -1156,24 +1157,24 @@ const FlowBuilderConfig = () => {
           // Pegar primeira conexão
           const nextEdge = nextEdges[0];
           const nextNodeId = nextEdge.target;
-          
+
           // Verificar se já visitou este nó (loop detection)
           if (visitedNodes.has(nextNodeId) && visitedNodes.size > 1) {
             toast.warning("Loop detectado no fluxo. Teste interrompido.");
             handleStopTest();
             return currentEdgesState;
           }
-          
+
           visitedNodes.add(nextNodeId);
           setCurrentTestNodeId(nextNodeId);
 
           // Buscar próximo nó
           const nextNode = currentNodesState.find((n) => n.id === nextNodeId);
-          
+
           // Centralizar no próximo nó
           if (nextNode && reactFlowInstanceRef.current) {
-            reactFlowInstanceRef.current.fitView({ 
-              padding: 0.3, 
+            reactFlowInstanceRef.current.fitView({
+              padding: 0.3,
               duration: 500,
               nodes: [nextNode]
             });
@@ -1217,14 +1218,14 @@ const FlowBuilderConfig = () => {
           step++;
 
           // Aguardar antes do próximo passo (simular delay)
-          const delay = currentNode.type === "interval" 
-            ? (currentNode.data?.sec || 1) * 1000 
+          const delay = currentNode.type === "interval"
+            ? (currentNode.data?.sec || 1) * 1000
             : currentNode.type === "message" || currentNode.type === "menu"
-            ? 2000
-            : 1500;
-            
+              ? 2000
+              : 1500;
+
           testTimeoutRef.current = setTimeout(executeStep, delay);
-          
+
           return currentEdgesState;
         });
 
@@ -1281,8 +1282,8 @@ const FlowBuilderConfig = () => {
     // Ajustar visualização quando sidebar abre
     setTimeout(() => {
       if (reactFlowInstanceRef.current) {
-        reactFlowInstanceRef.current.fitView({ 
-          padding: 0.2, 
+        reactFlowInstanceRef.current.fitView({
+          padding: 0.2,
           duration: 300,
           nodes: [node]
         });
