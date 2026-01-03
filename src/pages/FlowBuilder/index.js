@@ -35,6 +35,7 @@ import {
   ViewList,
   FilterList,
   Sort,
+  LibraryBooks,
 } from "@mui/icons-material";
 
 import {
