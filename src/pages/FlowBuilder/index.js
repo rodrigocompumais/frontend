@@ -60,6 +60,7 @@ import {
 } from "@mui/material";
 
 import FlowBuilderModal from "../../components/FlowBuilderModal";
+import { flowPresets } from "./presets";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTS") {
@@ -112,8 +113,8 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     overflowY: "scroll",
     ...theme.scrollbarStyles,
-    backgroundColor: theme.palette.mode === "dark" 
-      ? theme.palette.background.default 
+    backgroundColor: theme.palette.mode === "dark"
+      ? theme.palette.background.default
       : "#F8F9FA",
   },
   automationCard: {
@@ -124,8 +125,8 @@ const useStyles = makeStyles((theme) => ({
     cursor: "pointer",
     position: "relative",
     overflow: "hidden",
-    backgroundColor: theme.palette.mode === "dark" 
-      ? theme.palette.background.paper 
+    backgroundColor: theme.palette.mode === "dark"
+      ? theme.palette.background.paper
       : "#FFFFFF",
     "&:hover": {
       transform: "translateY(-4px)",
@@ -247,6 +248,7 @@ const FlowBuilder = () => {
   const [deletingContact, setDeletingContact] = useState(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmDuplicateOpen, setConfirmDuplicateOpen] = useState(false);
+  const [templatesModalOpen, setTemplatesModalOpen] = useState(false);
 
   const [hasMore, setHasMore] = useState(false);
   const [reloadData, setReloadData] = useState(false);
@@ -352,6 +354,33 @@ const FlowBuilder = () => {
     }
   };
 
+  const handleCreateFromPreset = async (preset) => {
+    setLoading(true);
+    try {
+      // 1. Create the flow with the preset name
+      const { data: flowData } = await api.post("/flowbuilder", {
+        name: preset.name,
+      });
+
+      if (flowData && flowData.id) {
+        // 2. Update the flow with the preset structure (nodes and edges)
+        await api.put(`/flowbuilder/${flowData.id}`, {
+          flow: preset.flow
+        });
+
+        // 3. Refresh list and close modal
+        setTemplatesModalOpen(false);
+        setReloadData((old) => !old);
+        toast.success("Fluxo criado a partir do modelo com sucesso!");
+        history.push(`/flowbuilder/${flowData.id}`);
+      }
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const loadMore = () => {
     setPageNumber((prevState) => prevState + 1);
   };
@@ -453,15 +482,14 @@ const FlowBuilder = () => {
       <ConfirmationModal
         title={
           deletingContact
-            ? `${i18n.t("contacts.confirmationModal.deleteTitle")} ${
-                deletingContact.name
-              }?`
+            ? `${i18n.t("contacts.confirmationModal.deleteTitle")} ${deletingContact.name
+            }?`
             : `${i18n.t("contacts.confirmationModal.importTitlte")}`
         }
         open={confirmOpen}
         onClose={setConfirmOpen}
         onConfirm={(e) =>
-          deletingContact ? handleDeleteWebhook(deletingContact.id) : () => {}
+          deletingContact ? handleDeleteWebhook(deletingContact.id) : () => { }
         }
       >
         {deletingContact
@@ -477,12 +505,47 @@ const FlowBuilder = () => {
         open={confirmDuplicateOpen}
         onClose={setConfirmDuplicateOpen}
         onConfirm={(e) =>
-          deletingContact ? handleDuplicateFlow(deletingContact.id) : () => {}
+          deletingContact ? handleDuplicateFlow(deletingContact.id) : () => { }
         }
       >
         {deletingContact
           ? `Tem certeza que deseja duplicar este fluxo?`
           : `${i18n.t("contacts.confirmationModal.importMessage")}`}
+      </ConfirmationModal>
+
+      {/* Modal de Templates */}
+      <ConfirmationModal
+        title="Escolha um Modelo"
+        open={templatesModalOpen}
+        onClose={() => setTemplatesModalOpen(false)}
+        maxWidth="lg"
+        scroll="paper"
+      >
+        <Grid container spacing={2}>
+          {flowPresets.map((preset) => (
+            <Grid item xs={12} md={6} lg={4} key={preset.id}>
+              <Card
+                className={classes.automationCard}
+                onClick={() => handleCreateFromPreset(preset)}
+                sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}
+              >
+                <CardContent>
+                  <Box className={classes.cardHeader}>
+                    <Box className={classes.cardIcon}>
+                      <LibraryBooks />
+                    </Box>
+                  </Box>
+                  <Typography className={classes.cardTitle} gutterBottom>
+                    {preset.name}
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary">
+                    {preset.description}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       </ConfirmationModal>
       <MainHeader>
         <Title>Automações</Title>
@@ -500,6 +563,17 @@ const FlowBuilder = () => {
               ),
             }}
           />
+          <Button
+            variant="contained"
+            onClick={() => setTemplatesModalOpen(true)}
+            color="primary"
+            sx={{ mr: 1 }}
+          >
+            <Stack direction={"row"} gap={1}>
+              <LibraryBooks />
+              {"Modelos"}
+            </Stack>
+          </Button>
           <Button
             variant="contained"
             onClick={handleOpenContactModal}
@@ -598,10 +672,135 @@ const FlowBuilder = () => {
                     onClick={() => history.push(`/flowbuilder/${automation.id}`)}
                   >
                     <CardContent>
-                    <Box className={classes.cardHeader}>
-                      <Box className={classes.cardIcon}>
-                        <AccountTree />
+                      <Box className={classes.cardHeader}>
+                        <Box className={classes.cardIcon}>
+                          <AccountTree />
+                        </Box>
+                        <Chip
+                          label={automation.active ? "Ativo" : "Inativo"}
+                          size="small"
+                          className={classes.statusChip}
+                          color={automation.active ? "success" : "default"}
+                          sx={{
+                            backgroundColor: automation.active
+                              ? theme.palette.mode === "dark"
+                                ? theme.palette.success.dark
+                                : "#E8F5E9"
+                              : theme.palette.mode === "dark"
+                                ? theme.palette.grey[800]
+                                : "#F5F5F5",
+                            color: automation.active
+                              ? theme.palette.mode === "dark"
+                                ? theme.palette.success.light
+                                : "#2E7D32"
+                              : theme.palette.text.secondary,
+                          }}
+                        />
                       </Box>
+                      <Typography className={classes.cardTitle}>
+                        {automation.name || "Sem nome"}
+                      </Typography>
+                      <Box className={classes.cardMeta}>
+                        <AccountTree fontSize="small" />
+                        <Typography variant="body2" color="textSecondary">
+                          {getNodeCount(automation)} nós
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          • {formatDate(automation.createdAt)}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                    <Divider />
+                    <CardActions className={classes.cardActions}>
+                      <Stack direction="row" spacing={0.5}>
+                        <Tooltip title="Editar automação">
+                          <IconButton
+                            size="small"
+                            className={classes.actionButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              history.push(`/flowbuilder/${automation.id}`);
+                            }}
+                          >
+                            <Edit fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Duplicar">
+                          <IconButton
+                            size="small"
+                            className={classes.actionButton}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingContact(automation);
+                              setConfirmDuplicateOpen(true);
+                            }}
+                          >
+                            <ContentCopy fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                        <Tooltip title="Excluir">
+                          <IconButton
+                            size="small"
+                            className={classes.actionButton}
+                            color="error"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeletingContact(automation);
+                              setConfirmOpen(true);
+                            }}
+                          >
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </Stack>
+                      <Tooltip title={automation.active ? "Desativar" : "Ativar"}>
+                        <IconButton
+                          size="small"
+                          className={classes.actionButton}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // TODO: Implementar toggle de status
+                          }}
+                        >
+                          {automation.active ? (
+                            <Pause fontSize="small" />
+                          ) : (
+                            <PlayArrow fontSize="small" />
+                          )}
+                        </IconButton>
+                      </Tooltip>
+                    </CardActions>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          ) : (
+            <Stack spacing={1}>
+              {filteredAndSortedWebhooks.map((automation) => (
+                <Card
+                  key={automation.id}
+                  className={classes.automationCard}
+                  sx={{
+                    display: "flex",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    padding: 2,
+                  }}
+                  onClick={() => history.push(`/flowbuilder/${automation.id}`)}
+                >
+                  <Box className={classes.cardIcon} sx={{ mr: 2 }}>
+                    <AccountTree />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      spacing={1}
+                      mb={0.5}
+                    >
+                      <Typography className={classes.cardTitle}>
+                        {automation.name || "Sem nome"}
+                      </Typography>
                       <Chip
                         label={automation.active ? "Ativo" : "Inativo"}
                         size="small"
@@ -613,8 +812,8 @@ const FlowBuilder = () => {
                               ? theme.palette.success.dark
                               : "#E8F5E9"
                             : theme.palette.mode === "dark"
-                            ? theme.palette.grey[800]
-                            : "#F5F5F5",
+                              ? theme.palette.grey[800]
+                              : "#F5F5F5",
                           color: automation.active
                             ? theme.palette.mode === "dark"
                               ? theme.palette.success.light
@@ -622,12 +821,8 @@ const FlowBuilder = () => {
                             : theme.palette.text.secondary,
                         }}
                       />
-                    </Box>
-                    <Typography className={classes.cardTitle}>
-                      {automation.name || "Sem nome"}
-                    </Typography>
+                    </Stack>
                     <Box className={classes.cardMeta}>
-                      <AccountTree fontSize="small" />
                       <Typography variant="body2" color="textSecondary">
                         {getNodeCount(automation)} nós
                       </Typography>
@@ -635,50 +830,47 @@ const FlowBuilder = () => {
                         • {formatDate(automation.createdAt)}
                       </Typography>
                     </Box>
-                  </CardContent>
-                  <Divider />
-                  <CardActions className={classes.cardActions}>
-                    <Stack direction="row" spacing={0.5}>
-                      <Tooltip title="Editar automação">
-                        <IconButton
-                          size="small"
-                          className={classes.actionButton}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            history.push(`/flowbuilder/${automation.id}`);
-                          }}
-                        >
-                          <Edit fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Duplicar">
-                        <IconButton
-                          size="small"
-                          className={classes.actionButton}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeletingContact(automation);
-                            setConfirmDuplicateOpen(true);
-                          }}
-                        >
-                          <ContentCopy fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton
-                          size="small"
-                          className={classes.actionButton}
-                          color="error"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeletingContact(automation);
-                            setConfirmOpen(true);
-                          }}
-                        >
-                          <Delete fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Stack>
+                  </Box>
+                  <Stack direction="row" spacing={0.5}>
+                    <Tooltip title="Editar automação">
+                      <IconButton
+                        size="small"
+                        className={classes.actionButton}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          history.push(`/flowbuilder/${automation.id}`);
+                        }}
+                      >
+                        <Edit fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Duplicar">
+                      <IconButton
+                        size="small"
+                        className={classes.actionButton}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingContact(automation);
+                          setConfirmDuplicateOpen(true);
+                        }}
+                      >
+                        <ContentCopy fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton
+                        size="small"
+                        className={classes.actionButton}
+                        color="error"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeletingContact(automation);
+                          setConfirmOpen(true);
+                        }}
+                      >
+                        <Delete fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
                     <Tooltip title={automation.active ? "Desativar" : "Ativar"}>
                       <IconButton
                         size="small"
@@ -695,128 +887,10 @@ const FlowBuilder = () => {
                         )}
                       </IconButton>
                     </Tooltip>
-                  </CardActions>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        ) : (
-          <Stack spacing={1}>
-            {filteredAndSortedWebhooks.map((automation) => (
-              <Card
-                key={automation.id}
-                className={classes.automationCard}
-                sx={{
-                  display: "flex",
-                  flexDirection: "row",
-                  alignItems: "center",
-                  padding: 2,
-                }}
-                onClick={() => history.push(`/flowbuilder/${automation.id}`)}
-              >
-                <Box className={classes.cardIcon} sx={{ mr: 2 }}>
-                  <AccountTree />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    spacing={1}
-                    mb={0.5}
-                  >
-                    <Typography className={classes.cardTitle}>
-                      {automation.name || "Sem nome"}
-                    </Typography>
-                    <Chip
-                      label={automation.active ? "Ativo" : "Inativo"}
-                      size="small"
-                      className={classes.statusChip}
-                      color={automation.active ? "success" : "default"}
-                      sx={{
-                        backgroundColor: automation.active
-                          ? theme.palette.mode === "dark"
-                            ? theme.palette.success.dark
-                            : "#E8F5E9"
-                          : theme.palette.mode === "dark"
-                          ? theme.palette.grey[800]
-                          : "#F5F5F5",
-                        color: automation.active
-                          ? theme.palette.mode === "dark"
-                            ? theme.palette.success.light
-                            : "#2E7D32"
-                          : theme.palette.text.secondary,
-                      }}
-                    />
                   </Stack>
-                  <Box className={classes.cardMeta}>
-                    <Typography variant="body2" color="textSecondary">
-                      {getNodeCount(automation)} nós
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      • {formatDate(automation.createdAt)}
-                    </Typography>
-                  </Box>
-                </Box>
-                <Stack direction="row" spacing={0.5}>
-                  <Tooltip title="Editar automação">
-                    <IconButton
-                      size="small"
-                      className={classes.actionButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        history.push(`/flowbuilder/${automation.id}`);
-                      }}
-                    >
-                      <Edit fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Duplicar">
-                    <IconButton
-                      size="small"
-                      className={classes.actionButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeletingContact(automation);
-                        setConfirmDuplicateOpen(true);
-                      }}
-                    >
-                      <ContentCopy fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Excluir">
-                    <IconButton
-                      size="small"
-                      className={classes.actionButton}
-                      color="error"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeletingContact(automation);
-                        setConfirmOpen(true);
-                      }}
-                    >
-                      <Delete fontSize="small" />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title={automation.active ? "Desativar" : "Ativar"}>
-                    <IconButton
-                      size="small"
-                      className={classes.actionButton}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // TODO: Implementar toggle de status
-                      }}
-                    >
-                      {automation.active ? (
-                        <Pause fontSize="small" />
-                      ) : (
-                        <PlayArrow fontSize="small" />
-                      )}
-                    </IconButton>
-                  </Tooltip>
-                </Stack>
-              </Card>
-            ))}
-          </Stack>
+                </Card>
+              ))}
+            </Stack>
           )}
         </Stack>
 
