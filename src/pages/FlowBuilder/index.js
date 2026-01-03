@@ -365,8 +365,11 @@ const FlowBuilder = () => {
 
       if (flowData && flowData.id) {
         // 2. Update the flow with the preset structure (nodes and edges)
-        await api.put(`/flowbuilder/${flowData.id}`, {
-          flow: preset.flow
+        // Usar o endpoint correto de salvar fluxo (/flowbuilder/flow) que espera 'connections' em vez de 'edges'
+        await api.post(`/flowbuilder/flow`, {
+          idFlow: flowData.id,
+          nodes: preset.flow.nodes,
+          connections: preset.flow.edges
         });
 
         // 3. Refresh list and close modal
