@@ -61,6 +61,7 @@ import {
 } from "@mui/material";
 
 import FlowBuilderModal from "../../components/FlowBuilderModal";
+import FlowBuilderAIModal from "../../components/FlowBuilderAIModal";
 import { flowPresets } from "./presets";
 
 const reducer = (state, action) => {
@@ -250,6 +251,7 @@ const FlowBuilder = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmDuplicateOpen, setConfirmDuplicateOpen] = useState(false);
   const [templatesModalOpen, setTemplatesModalOpen] = useState(false);
+  const [aiModalOpen, setAiModalOpen] = useState(false);
 
   const [hasMore, setHasMore] = useState(false);
   const [reloadData, setReloadData] = useState(false);
@@ -377,6 +379,50 @@ const FlowBuilder = () => {
         setReloadData((old) => !old);
         toast.success("Fluxo criado a partir do modelo com sucesso!");
         history.push(`/flowbuilder/${flowData.id}`);
+      }
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGenerateFlow = async (prompt) => {
+    setLoading(true);
+    try {
+      // 1. Create a new flow entry
+      const { data: newFlowData } = await api.post("/flowbuilder", {
+        name: "Fluxo Gerado por IA",
+      });
+
+      if (!newFlowData || !newFlowData.id) {
+        toast.error("Falha ao criar novo fluxo para IA.");
+        setLoading(false);
+        return;
+      }
+
+      // 2. Call AI to generate nodes and edges
+      const { data: generatedFlowContent } = await api.post("/flowbuilder/generate", {
+        prompt
+      });
+
+      if (generatedFlowContent && generatedFlowContent.nodes && generatedFlowContent.edges) {
+        // 3. Update the newly created flow with AI-generated content
+        await api.post("/flowbuilder/flow", {
+          idFlow: newFlowData.id,
+          name: "Fluxo Gerado por IA",
+          flow: {
+            nodes: generatedFlowContent.nodes,
+            connections: generatedFlowContent.edges.map(edge => ({ ...edge, sourceHandle: edge.sourceHandle || null }))
+          }
+        });
+
+        setAiModalOpen(false);
+        setReloadData((old) => !old);
+        toast.success("Fluxo gerado por IA com sucesso!");
+        history.push(`/flowbuilder/${newFlowData.id}`);
+      } else {
+        toast.error("IA não retornou um fluxo válido.");
       }
     } catch (err) {
       toastError(err);
@@ -551,6 +597,13 @@ const FlowBuilder = () => {
           ))}
         </Grid>
       </ConfirmationModal>
+
+      <FlowBuilderAIModal
+        open={aiModalOpen}
+        onClose={() => setAiModalOpen(false)}
+        onGenerate={handleGenerateFlow}
+      />
+
       <MainHeader>
         <Title>Automações</Title>
         <MainHeaderButtonsWrapper>
@@ -577,6 +630,14 @@ const FlowBuilder = () => {
               <LibraryBooks />
               {"Modelos"}
             </Stack>
+          </Button>
+          <Button
+            variant="contained"
+            style={{ backgroundColor: "#4285F4", color: "white", marginRight: 10 }}
+            onClick={() => setAiModalOpen(true)}
+            startIcon={<SiOpenai />}
+          >
+            Criar com IA
           </Button>
           <Button
             variant="contained"
