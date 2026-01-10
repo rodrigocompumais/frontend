@@ -148,7 +148,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
         setIntegrations(dataIntegration.queueIntegrations);
 
         const {data: dataFlowBuilder} = await api.get("/flowbuilder");
-        setFlowBuilders(dataFlowBuilder || []);
+        setFlowBuilders(Array.isArray(dataFlowBuilder?.flows) ? dataFlowBuilder.flows : []);
 
       } catch (err) {
         toastError(err);

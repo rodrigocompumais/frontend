@@ -392,7 +392,9 @@ const messages = {
           expiresInactiveMessage: "Mensagem de encerramento por inatividade",
           greetingMessage: "Mensagem de saudação",
           complationMessage: "Mensagem de conclusão",
-          integration: "Integrações"
+          integration: "Integrações",
+          flowWelcome: "Fluxo de Boas-vindas",
+          flowNotPhrase: "Fluxo Padrão"
         },
         buttons: {
           okAdd: "Adicionar",
