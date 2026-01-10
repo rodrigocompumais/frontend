@@ -9,14 +9,24 @@ import {
   Divider,
   Typography,
   makeStyles,
+  useTheme,
+  Switch,
 } from '@material-ui/core';
 import {
   Person as PersonIcon,
   ExitToApp as ExitIcon,
+  Language as LanguageIcon,
+  Brightness4 as Brightness4Icon,
+  Brightness7 as Brightness7Icon,
+  VolumeUp as VolumeIcon,
+  Cached as CachedIcon,
 } from '@material-ui/icons';
 import { AuthContext } from '../../context/Auth/AuthContext';
 import UserModal from '../UserModal';
 import { i18n } from '../../translate/i18n';
+import NotificationsVolume from '../NotificationsVolume';
+import LanguageControl from '../LanguageControl';
+import ColorModeContext from '../../layout/themeContext';
 
 const useStyles = makeStyles((theme) => ({
   avatar: {
@@ -28,15 +38,24 @@ const useStyles = makeStyles((theme) => ({
   userName: {
     padding: theme.spacing(1.5, 2),
     fontWeight: 600,
-    minWidth: 180,
+    minWidth: 220,
+  },
+  menuItem: {
+    minWidth: 220,
+  },
+  nestedItem: {
+    paddingLeft: theme.spacing(4),
   },
 }));
 
-const UserProfileMenu = () => {
+const UserProfileMenu = ({ volume, setVolume }) => {
   const classes = useStyles();
   const [anchorEl, setAnchorEl] = useState(null);
   const [userModalOpen, setUserModalOpen] = useState(false);
+  const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const { user, handleLogout } = useContext(AuthContext);
+  const theme = useTheme();
+  const { colorMode } = useContext(ColorModeContext);
 
   const handleMenu = (event) => {
     setAnchorEl(event.currentTarget);
@@ -44,6 +63,7 @@ const UserProfileMenu = () => {
 
   const handleClose = () => {
     setAnchorEl(null);
+    setLanguageMenuOpen(false);
   };
 
   const handleOpenProfile = () => {
@@ -54,6 +74,15 @@ const UserProfileMenu = () => {
   const handleLogoutClick = () => {
     handleClose();
     handleLogout();
+  };
+
+  const toggleColorMode = () => {
+    colorMode.toggleColorMode();
+  };
+
+  const handleRefreshPage = () => {
+    window.location.reload(false);
+    handleClose();
   };
 
   return (
@@ -78,13 +107,64 @@ const UserProfileMenu = () => {
           </Typography>
         </MenuItem>
         <Divider />
-        <MenuItem onClick={handleOpenProfile}>
+        
+        <MenuItem onClick={handleOpenProfile} className={classes.menuItem}>
           <ListItemIcon>
             <PersonIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.appBar.user.profile")} />
         </MenuItem>
-        <MenuItem onClick={handleLogoutClick}>
+
+        <Divider />
+
+        {/* Idioma */}
+        <MenuItem 
+          onClick={() => setLanguageMenuOpen(!languageMenuOpen)}
+          className={classes.menuItem}
+        >
+          <ListItemIcon>
+            <LanguageIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Idioma" />
+        </MenuItem>
+        {languageMenuOpen && (
+          <MenuItem className={classes.nestedItem}>
+            <LanguageControl />
+          </MenuItem>
+        )}
+
+        {/* Dark Mode */}
+        <MenuItem onClick={toggleColorMode} className={classes.menuItem}>
+          <ListItemIcon>
+            {theme.mode === 'dark' ? <Brightness7Icon fontSize="small" /> : <Brightness4Icon fontSize="small" />}
+          </ListItemIcon>
+          <ListItemText primary={theme.mode === 'dark' ? 'Modo Claro' : 'Modo Escuro'} />
+        </MenuItem>
+
+        {/* Volume */}
+        <MenuItem className={classes.menuItem}>
+          <ListItemIcon>
+            <VolumeIcon fontSize="small" />
+          </ListItemIcon>
+          <div style={{ flex: 1, marginRight: 8 }}>
+            <NotificationsVolume
+              setVolume={setVolume}
+              volume={volume}
+            />
+          </div>
+        </MenuItem>
+
+        {/* Refresh */}
+        <MenuItem onClick={handleRefreshPage} className={classes.menuItem}>
+          <ListItemIcon>
+            <CachedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Recarregar Página" />
+        </MenuItem>
+
+        <Divider />
+
+        <MenuItem onClick={handleLogoutClick} className={classes.menuItem}>
           <ListItemIcon>
             <ExitIcon fontSize="small" />
           </ListItemIcon>

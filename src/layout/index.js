@@ -4,19 +4,12 @@ import {
   makeStyles,
   AppBar,
   Toolbar,
-  IconButton,
-  Menu,
-  MenuItem,
   useTheme,
 } from "@material-ui/core";
 
-import CachedIcon from "@material-ui/icons/Cached";
-
 import NotificationsPopOver from "../components/NotificationsPopOver";
-import NotificationsVolume from "../components/NotificationsVolume";
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
-import { i18n } from "../translate/i18n";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
 import NavigationMenus from "../components/NavigationMenus";
@@ -28,12 +21,6 @@ import logo from "../assets/logo.png";
 import { SocketContext } from "../context/Socket/SocketContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
 import AiChatFloating from "../components/AiChatFloating";
-
-import ColorModeContext from "../layout/themeContext";
-import Brightness4Icon from '@material-ui/icons/Brightness4';
-import Brightness7Icon from '@material-ui/icons/Brightness7';
-import LanguageControl from "../components/LanguageControl";
-import { LanguageOutlined } from "@material-ui/icons";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -93,13 +80,8 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   const { user } = useContext(AuthContext);
 
   const theme = useTheme();
-  const { colorMode } = useContext(ColorModeContext);
 
   const [volume, setVolume] = useState(localStorage.getItem("volume") || 1);
-
-  // Languages
-  const [anchorElLanguage, setAnchorElLanguage] = useState(null);
-  const [menuLanguageOpen, setMenuLanguageOpen] = useState(false);
 
   const socketManager = useContext(SocketContext);
 
@@ -129,24 +111,6 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       clearInterval(interval);
     };
   }, [socketManager]);
-
-  const handlemenuLanguage = (event) => {
-    setAnchorElLanguage(event.currentTarget);
-    setMenuLanguageOpen(true);
-  };
-
-  const handleCloseMenuLanguage = () => {
-    setAnchorElLanguage(null);
-    setMenuLanguageOpen(false);
-  };
-
-  const handleRefreshPage = () => {
-    window.location.reload(false);
-  };
-
-  const toggleColorMode = () => {
-    colorMode.toggleColorMode();
-  };
 
   if (loading) {
     return <BackdropLoading />;
@@ -180,64 +144,15 @@ const LoggedInLayout = ({ children, themeToggle }) => {
           {/* Botão de ação rápida */}
           <QuickActionButton />
 
-          {/* Ações rápidas existentes */}
-          <div>
-            <IconButton edge="start">
-              <LanguageOutlined
-                aria-label="select language"
-                aria-controls="menu-appbar-language"
-                aria-haspopup="true"
-                onClick={handlemenuLanguage}
-                variant="contained"
-                style={{ color: "white", marginRight: 10 }}
-              />
-            </IconButton>
-            <Menu
-              id="menu-appbar-language"
-              anchorEl={anchorElLanguage}
-              getContentAnchorEl={null}
-              anchorOrigin={{
-                vertical: "bottom",
-                horizontal: "right",
-              }}
-              transformOrigin={{
-                vertical: "top",
-                horizontal: "right",
-              }}
-              open={menuLanguageOpen}
-              onClose={handleCloseMenuLanguage}
-            >
-              <MenuItem>
-                <LanguageControl />
-              </MenuItem>
-            </Menu>
-          </div>
-
-          <IconButton edge="start" onClick={toggleColorMode}>
-            {theme.mode === 'dark' ? <Brightness7Icon style={{ color: "white" }} /> : <Brightness4Icon style={{ color: "white" }} />}
-          </IconButton>
-
-          <NotificationsVolume
-            setVolume={setVolume}
-            volume={volume}
-          />
-
-          <IconButton
-            onClick={handleRefreshPage}
-            aria-label={i18n.t("mainDrawer.appBar.refresh")}
-            color="inherit"
-          >
-            <CachedIcon style={{ color: "white" }} />
-          </IconButton>
-
+          {/* Notificações e popovers */}
           {user.id && <NotificationsPopOver volume={volume} />}
 
           <AnnouncementsPopover />
 
           <ChatPopover />
 
-          {/* Menu de perfil do usuário */}
-          <UserProfileMenu />
+          {/* Menu de perfil do usuário (agora inclui todos os controles) */}
+          <UserProfileMenu volume={volume} setVolume={setVolume} />
         </Toolbar>
       </AppBar>
       
