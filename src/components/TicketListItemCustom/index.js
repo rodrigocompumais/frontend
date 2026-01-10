@@ -38,6 +38,7 @@ import { Tooltip } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { TicketsContext } from "../../context/Tickets/TicketsContext";
 import toastError from "../../errors/toastError";
+import { toast } from "react-toastify";
 import { v4 as uuidv4 } from "uuid";
 import TicketMessagesDialog from "../TicketMessagesDialog";
 import ContactTag from "../ContactTag";
