@@ -16,6 +16,7 @@ import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import UndoRoundedIcon from '@material-ui/icons/UndoRounded';
 import Tooltip from '@material-ui/core/Tooltip';
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
+import CloseIcon from '@material-ui/icons/Close';
 import { TagsDropdown } from "../TagsDropdown";
 
 
@@ -46,6 +47,20 @@ const useStyles = makeStyles(theme => ({
 		"&:disabled": {
 			background: theme.palette.type === "dark" ? "#374151" : "#E5E7EB",
 			color: theme.palette.text.secondary,
+		},
+	},
+	rejectButton: {
+		borderRadius: theme.spacing(2),
+		padding: theme.spacing(1, 2.5),
+		textTransform: "none",
+		fontWeight: 600,
+		borderColor: theme.palette.error.main,
+		color: theme.palette.error.main,
+		marginRight: theme.spacing(1),
+		transition: "all 0.3s ease",
+		"&:hover": {
+			borderColor: theme.palette.error.dark,
+			backgroundColor: theme.palette.error.main + "10",
 		},
 	},
 	resolveButton: {
@@ -207,20 +222,29 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 					/>
 				</>
 			)}
-			{ticket.status === "pending" && (
-				<>
-					<TagsDropdown ticket={ticket} />
-					<ButtonWithSpinner
-						loading={loading}
-						startIcon={<PlayArrowIcon />}
-						onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
-						className={classes.acceptButton}
-						variant="contained"
-					>
-						{i18n.t("messagesList.header.buttons.accept")}
-					</ButtonWithSpinner>
-				</>
-			)}
+		{ticket.status === "pending" && (
+			<>
+				<TagsDropdown ticket={ticket} />
+				<ButtonWithSpinner
+					loading={loading}
+					startIcon={<CloseIcon />}
+					onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
+					className={classes.rejectButton}
+					variant="outlined"
+				>
+					Rejeitar
+				</ButtonWithSpinner>
+				<ButtonWithSpinner
+					loading={loading}
+					startIcon={<PlayArrowIcon />}
+					onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+					className={classes.acceptButton}
+					variant="contained"
+				>
+					{i18n.t("messagesList.header.buttons.accept")}
+				</ButtonWithSpinner>
+			</>
+		)}
 		</div>
 	);
 };

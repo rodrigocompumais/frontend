@@ -103,7 +103,18 @@ const TicketActionButtons = ({ ticket }) => {
 					/>
 				</>
 			)}
-			{ticket.status === "pending" && (
+		{ticket.status === "pending" && (
+			<>
+				<ButtonWithSpinner
+					loading={loading}
+					size="small"
+					variant="outlined"
+					color="secondary"
+					onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
+					style={{ marginRight: 8 }}
+				>
+					Rejeitar
+				</ButtonWithSpinner>
 				<ButtonWithSpinner
 					loading={loading}
 					size="small"
@@ -113,7 +124,8 @@ const TicketActionButtons = ({ ticket }) => {
 				>
 					{i18n.t("messagesList.header.buttons.accept")}
 				</ButtonWithSpinner>
-			)}
+			</>
+		)}
 		</div>
 	);
 };

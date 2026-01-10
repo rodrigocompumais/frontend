@@ -194,12 +194,14 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
   };
 
   const handleChangePrompt = (e) => {
-    setSelectedPrompt(e.target.value);
+    const value = e.target.value === "" ? null : e.target.value;
+    setSelectedPrompt(value);
     setSelectedQueueIds([]);
   };
 
   const handleChangeIntegration = (e) => {
-    setSelectedIntegration(e.target.value);
+    const value = e.target.value === "" ? null : e.target.value;
+    setSelectedIntegration(value);
   }
 
   const handleClose = () => {
@@ -452,6 +454,9 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                       getContentAnchorEl: null,
                     }}
                   >
+                    <MenuItem value="">
+                      <em style={{ color: '#999' }}>Nenhum (Remover Prompt)</em>
+                    </MenuItem>
                     {prompts.map((prompt) => (
                       <MenuItem
                         key={prompt.id}
@@ -490,12 +495,15 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                       getContentAnchorEl: null,
                     }}
                   >
-                    {integrations.map((prompt) => (
+                    <MenuItem value="">
+                      <em style={{ color: '#999' }}>Nenhuma (Remover Integração)</em>
+                    </MenuItem>
+                    {integrations.map((integration) => (
                       <MenuItem
-                        key={prompt.id}
-                        value={prompt.id}
+                        key={integration.id}
+                        value={integration.id}
                       >
-                        {prompt.name}
+                        {integration.name}
                       </MenuItem>
                     ))}
                   </Select>

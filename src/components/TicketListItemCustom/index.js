@@ -168,6 +168,15 @@ const useStyles = makeStyles((theme) => ({
     },
   },
 
+  rejectButton: {
+    backgroundColor: "#ef4444",
+    color: "white",
+    marginRight: "8px",
+    "&:hover": {
+      backgroundColor: "#dc2626",
+    },
+  },
+
   closeButton: {
     backgroundColor: "#ef4444",
     color: "white",
@@ -381,6 +390,23 @@ const TicketListItemCustom = ({ ticket }) => {
     history.push(`/tickets/${ticket.uuid}`);
   };
 
+  const handleRejectTicket = async (id) => {
+    setLoading(true);
+    try {
+      await api.put(`/tickets/${id}`, {
+        status: "closed",
+        userId: user?.id,
+      });
+      toast.success("Ticket rejeitado com sucesso!");
+    } catch (err) {
+      toastError(err);
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
+    }
+  };
+
   const handleSendMessage = async (id) => {
     const msg = `{{ms}} *{{name}}*, meu nome é *${user?.name}* e agora vou prosseguir com seu atendimento!`;
     const message = {
@@ -578,6 +604,17 @@ const TicketListItemCustom = ({ ticket }) => {
           secondary={
             ticket.status === "pending" && (
               <Box className={classes.actionButtons}>
+                <ButtonWithSpinner
+                  className={`${classes.actionButton} ${classes.rejectButton}`}
+                  size="small"
+                  loading={loading}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRejectTicket(ticket.id);
+                  }}
+                >
+                  Rejeitar
+                </ButtonWithSpinner>
                 <ButtonWithSpinner
                   className={`${classes.actionButton} ${classes.acceptButton}`}
                   size="small"

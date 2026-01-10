@@ -91,6 +91,16 @@ const useStyles = makeStyles((theme) => ({
     left: "50%",
   },
 
+  rejectButton: {
+    position: "absolute",
+    left: "5%",
+    backgroundColor: "#f44336",
+    color: "#fff",
+    "&:hover": {
+      backgroundColor: "#d32f2f",
+    },
+  },
+
   ticketQueueColor: {
     flex: "none",
     width: "8px",
@@ -131,6 +141,24 @@ const TicketListItem = ({ ticket }) => {
     }
     history.push(`/tickets/${ticket.uuid}`);
   };
+
+  const handleRejectTicket = async (ticket) => {
+    setLoading(true);
+    try {
+      await api.put(`/tickets/${ticket.id}`, {
+        status: "closed",
+        userId: user?.id,
+      });
+      toast.success("Ticket rejeitado com sucesso!");
+    } catch (err) {
+      toastError(err);
+    } finally {
+      if (isMounted.current) {
+        setLoading(false);
+      }
+    }
+  };
+
   console.log("🚀 Console Log : ticket.lastMessage", ticket.lastMessage);
 
   const handleSelectTicket = (ticket) => {
@@ -226,16 +254,31 @@ const TicketListItem = ({ ticket }) => {
           } */
         />
         {ticket.status === "pending" && (
-          <ButtonWithSpinner
-            color="primary"
-            variant="contained"
-            className={classes.acceptButton}
-            size="small"
-            loading={loading}
-            onClick={(e) => handleAcepptTicket(ticket)}
-          >
-            {i18n.t("ticketsList.buttons.accept")}
-          </ButtonWithSpinner>
+          <>
+            <ButtonWithSpinner
+              color="secondary"
+              variant="outlined"
+              className={classes.rejectButton}
+              size="small"
+              loading={loading}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRejectTicket(ticket);
+              }}
+            >
+              Rejeitar
+            </ButtonWithSpinner>
+            <ButtonWithSpinner
+              color="primary"
+              variant="contained"
+              className={classes.acceptButton}
+              size="small"
+              loading={loading}
+              onClick={(e) => handleAcepptTicket(ticket)}
+            >
+              {i18n.t("ticketsList.buttons.accept")}
+            </ButtonWithSpinner>
+          </>
         )}
       </ListItem>
       <Divider variant="inset" component="li" />
