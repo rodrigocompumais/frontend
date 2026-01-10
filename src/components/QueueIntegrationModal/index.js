@@ -94,10 +94,31 @@ const QueueIntegration = ({ open, onClose, integrationId }) => {
         typebotRestartMessage: "",
         typebotSlug: "",
         typebotUnknownMessage: "",
+        flowbuilderId: "",
 
     };
 
     const [integration, setIntegration] = useState(initialState);
+    const [flowBuilders, setFlowBuilders] = useState([]);
+    const [loadingFlows, setLoadingFlows] = useState(false);
+
+    // Buscar FlowBuilders disponíveis
+    useEffect(() => {
+        if (open) {
+            (async () => {
+                try {
+                    setLoadingFlows(true);
+                    const { data } = await api.get("/flowbuilder");
+                    setFlowBuilders(data.flows || data || []);
+                } catch (err) {
+                    console.error("Erro ao carregar FlowBuilders:", err);
+                    toastError(err);
+                } finally {
+                    setLoadingFlows(false);
+                }
+            })();
+        }
+    }, [open]);
 
     useEffect(() => {
         (async () => {
@@ -149,7 +170,23 @@ const QueueIntegration = ({ open, onClose, integrationId }) => {
 
     const handleSaveDialogflow = async (values) => {
         try {
-            if (values.type === 'n8n' || values.type === 'webhook' || values.type === 'typebot' || values.type === "flowbuilder") values.projectName = values.name
+            // Para flowbuilder, garantir que name e projectName sejam definidos
+            if (values.type === "flowbuilder") {
+                const selectedFlow = flowBuilders.find(f => f.id === values.flowbuilderId);
+                if (selectedFlow) {
+                    values.projectName = selectedFlow.name;
+                    if (!values.name || values.name.trim() === "") {
+                        values.name = `FlowBuilder - ${selectedFlow.name}`;
+                    }
+                    // Armazenar o flowId no jsonContent para referência
+                    values.jsonContent = JSON.stringify({ flowId: selectedFlow.id });
+                }
+            }
+            
+            if (values.type === 'n8n' || values.type === 'webhook' || values.type === 'typebot') {
+                values.projectName = values.name;
+            }
+            
             if (integrationId) {
                 await api.put(`/queueIntegration/${integrationId}`, values);
                 toast.success(i18n.t("queueIntegrationModal.messages.editSuccess"));
@@ -454,20 +491,60 @@ const QueueIntegration = ({ open, onClose, integrationId }) => {
                                         )}
 
                                         {(values.type === "flowbuilder") && (
-                                            <Grid item xs={12} md={6} xl={6} >
-                                                <Field
-                                                    as={TextField}
-                                                    label={i18n.t("queueIntegrationModal.form.name")}
-                                                    autoFocus
-                                                    name="name"
-                                                    fullWidth
-                                                    error={touched.name && Boolean(errors.name)}
-                                                    helpertext={touched.name && errors.name}
-                                                    variant="outlined"
-                                                    margin="dense"
-                                                    className={classes.textField}
-                                                />
-                                            </Grid>
+                                            <>
+                                                <Grid item xs={12} md={12} xl={12} >
+                                                    <FormControl
+                                                        variant="outlined"
+                                                        margin="dense"
+                                                        fullWidth
+                                                        error={touched.flowbuilderId && Boolean(errors.flowbuilderId)}
+                                                    >
+                                                        <InputLabel id="flowbuilder-selection-label">
+                                                            {loadingFlows ? "Carregando FlowBuilders..." : "Selecione o FlowBuilder *"}
+                                                        </InputLabel>
+                                                        <Field
+                                                            as={Select}
+                                                            label={loadingFlows ? "Carregando FlowBuilders..." : "Selecione o FlowBuilder *"}
+                                                            name="flowbuilderId"
+                                                            labelId="flowbuilder-selection-label"
+                                                            id="flowbuilder-selection"
+                                                            disabled={loadingFlows}
+                                                            required
+                                                        >
+                                                            {flowBuilders.length === 0 && !loadingFlows ? (
+                                                                <MenuItem value="" disabled>
+                                                                    Nenhum FlowBuilder disponível. Crie um primeiro!
+                                                                </MenuItem>
+                                                            ) : (
+                                                                flowBuilders.map((flow) => (
+                                                                    <MenuItem key={flow.id} value={flow.id}>
+                                                                        {flow.name}
+                                                                    </MenuItem>
+                                                                ))
+                                                            )}
+                                                        </Field>
+                                                        {touched.flowbuilderId && errors.flowbuilderId && (
+                                                            <div style={{ color: 'red', fontSize: '0.75rem', marginTop: '3px' }}>
+                                                                {errors.flowbuilderId}
+                                                            </div>
+                                                        )}
+                                                    </FormControl>
+                                                </Grid>
+                                                {values.flowbuilderId && (
+                                                    <Grid item xs={12} md={12} xl={12}>
+                                                        <Field
+                                                            as={TextField}
+                                                            label="Nome da Integração"
+                                                            name="name"
+                                                            fullWidth
+                                                            variant="outlined"
+                                                            margin="dense"
+                                                            helperText="Digite um nome para esta integração ou deixe o padrão"
+                                                            value={values.name || `FlowBuilder - ${flowBuilders.find(f => f.id === values.flowbuilderId)?.name || ''}`}
+                                                        />
+                                                    </Grid>
+                                                )}
+                                            </>
                                         )}
                                     </Grid>
                                 </DialogContent>
