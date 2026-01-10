@@ -14,15 +14,32 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 
 const useStyles = makeStyles((theme) => ({
   root: {
+    width: '100%',
+    minHeight: 'calc(100vh - 48px)',
+    backgroundColor: theme.palette.type === 'dark' ? '#0f1419' : '#f5f7fa',
     display: "flex",
-    alignItems: "center",
-    padding: theme.spacing(4),
+    alignItems: "flex-start",
+    padding: theme.spacing(3),
+    [theme.breakpoints.down('sm')]: {
+      padding: theme.spacing(2),
+    },
+  },
+
+  container: {
+    width: '100%',
+    maxWidth: 800,
   },
 
   paper: {
-    padding: theme.spacing(2),
+    padding: theme.spacing(3),
     display: "flex",
     alignItems: "center",
+    marginBottom: theme.spacing(2),
+    borderRadius: 12,
+    boxShadow: theme.palette.type === 'dark'
+      ? '0 4px 20px rgba(0, 0, 0, 0.5)'
+      : '0 2px 12px rgba(0, 0, 0, 0.08)',
+    border: `1px solid ${theme.palette.type === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)'}`,
   },
 
   settingOption: {
@@ -30,6 +47,13 @@ const useStyles = makeStyles((theme) => ({
   },
   margin: {
     margin: theme.spacing(1),
+  },
+  
+  title: {
+    fontSize: '1.75rem',
+    fontWeight: 700,
+    marginBottom: theme.spacing(3),
+    color: theme.palette.text.primary,
   },
 }));
 
@@ -93,8 +117,8 @@ const Settings = () => {
 
   return (
     <div className={classes.root}>
-      <Container className={classes.container} maxWidth="sm">
-        <Typography variant="body2" gutterBottom>
+      <Container className={classes.container} maxWidth={false} disableGutters>
+        <Typography variant="h5" className={classes.title}>
           {i18n.t("settings.title")}
         </Typography>
         <Paper className={classes.paper}>

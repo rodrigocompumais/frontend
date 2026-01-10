@@ -14,16 +14,16 @@ import { i18n } from "../../translate/i18n";
 const useStyles = makeStyles(theme => ({
 	chatContainer: {
 		flex: 1,
-		// backgroundColor: "#eee",
-		padding: theme.spacing(4),
-		height: `calc(100% - 48px)`,
+		width: '100%',
+		height: `calc(100vh - 48px)`,
 		overflowY: "hidden",
+		backgroundColor: theme.palette.background.default,
 	},
 
 	chatPapper: {
-		// backgroundColor: "red",
 		display: "flex",
 		height: "100%",
+		width: '100%',
 	},
 
 	contactsWrapper: {

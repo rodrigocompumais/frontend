@@ -69,17 +69,24 @@ import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   root: {
-    minHeight: "100vh",
+    width: '100%',
+    minHeight: "calc(100vh - 48px)",
     background: theme.palette.type === "dark" 
       ? "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)"
       : "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
     paddingBottom: theme.spacing(4),
   },
   container: {
+    maxWidth: '100%',
+    width: '100%',
     paddingTop: theme.spacing(3),
     paddingBottom: theme.spacing(4),
-    paddingLeft: theme.spacing(2),
-    paddingRight: theme.spacing(2),
+    paddingLeft: theme.spacing(3),
+    paddingRight: theme.spacing(3),
+    [theme.breakpoints.down('sm')]: {
+      paddingLeft: theme.spacing(2),
+      paddingRight: theme.spacing(2),
+    },
   },
   header: {
     display: "flex",
