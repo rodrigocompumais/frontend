@@ -857,6 +857,14 @@ const messages = {
       locationPreview: {
         button: "Visualizar",
       },
+      navigation: {
+        atendimento: "Atendimento",
+        gestao: "Gestão",
+        automacaoIA: "Automação & IA",
+        administracao: "Administração",
+        sistema: "Sistema",
+        quickAction: "Atendimentos",
+      },
       mainDrawer: {
         listItems: {
           dashboard: "Dashboard",
