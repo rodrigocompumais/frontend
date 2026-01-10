@@ -21,6 +21,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  FormHelperText,
 } from "@material-ui/core";
 
 import api from "../../services/api";
@@ -104,6 +105,9 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
   const [prompts, setPrompts] = useState([]);
   const [integrations, setIntegrations] = useState([]);
   const [selectedIntegration, setSelectedIntegration] = useState(null);
+  const [flowBuilders, setFlowBuilders] = useState([]);
+  const [selectedFlowIdWelcome, setSelectedFlowIdWelcome] = useState(null);
+  const [selectedFlowIdNotPhrase, setSelectedFlowIdNotPhrase] = useState(null);
   
     useEffect(() => {
       const fetchSession = async () => {
@@ -113,13 +117,15 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
           
           const { data } = await api.get(`whatsapp/${whatsAppId}?session=0`);
 
-          setWhatsApp(data);
-          setSelectedPrompt( data.promptId );
-          setSelectedIntegration(data.integrationId)
+        setWhatsApp(data);
+        setSelectedPrompt( data.promptId );
+        setSelectedIntegration(data.integrationId);
+        setSelectedFlowIdWelcome(data.flowIdWelcome);
+        setSelectedFlowIdNotPhrase(data.flowIdNotPhrase);
 
-          const whatsQueueIds = data.queues?.map((queue) => queue.id);
-          setSelectedQueueIds(whatsQueueIds);
-          setSelectedQueueId(data.transferQueueId);
+        const whatsQueueIds = data.queues?.map((queue) => queue.id);
+        setSelectedQueueIds(whatsQueueIds);
+        setSelectedQueueId(data.transferQueueId);
           
           // Garantir que provider tenha valor padrão se não existir
           if (!data.provider) {
@@ -140,6 +146,9 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 
         const {data: dataIntegration} = await api.get("/queueIntegration");
         setIntegrations(dataIntegration.queueIntegrations);
+
+        const {data: dataFlowBuilder} = await api.get("/flowbuilder");
+        setFlowBuilders(dataFlowBuilder || []);
 
       } catch (err) {
         toastError(err);
@@ -164,7 +173,9 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
       queueIds: selectedQueueIds, 
       transferQueueId: selectedQueueId,
       promptId: selectedPrompt ? selectedPrompt : null,
-      integrationId: selectedIntegration
+      integrationId: selectedIntegration,
+      flowIdWelcome: selectedFlowIdWelcome || null,
+      flowIdNotPhrase: selectedFlowIdNotPhrase || null
     };
     delete whatsappData["queues"];
     delete whatsappData["session"];
@@ -508,6 +519,99 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                     ))}
                   </Select>
                 </FormControl>
+                
+                {/* FlowBuilder - Fluxo de Boas-vindas */}
+                <FormControl
+                  margin="dense"
+                  variant="outlined"
+                  fullWidth
+                >
+                  <InputLabel>
+                    {i18n.t("whatsappModal.form.flowWelcome") || "Fluxo de Boas-vindas"}
+                  </InputLabel>
+                  <Select
+                    labelId="dialog-select-flow-welcome-label"
+                    id="dialog-select-flow-welcome"
+                    name="flowIdWelcome"
+                    value={selectedFlowIdWelcome || ""}
+                    onChange={(e) => setSelectedFlowIdWelcome(e.target.value === "" ? null : e.target.value)}
+                    label={i18n.t("whatsappModal.form.flowWelcome") || "Fluxo de Boas-vindas"}
+                    fullWidth
+                    MenuProps={{
+                      anchorOrigin: {
+                        vertical: "bottom",
+                        horizontal: "left",
+                      },
+                      transformOrigin: {
+                        vertical: "top",
+                        horizontal: "left",
+                      },
+                      getContentAnchorEl: null,
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em style={{ color: '#999' }}>Nenhum</em>
+                    </MenuItem>
+                    {flowBuilders.map((flow) => (
+                      <MenuItem
+                        key={flow.id}
+                        value={flow.id}
+                      >
+                        {flow.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>
+                    Executado na primeira mensagem do contato
+                  </FormHelperText>
+                </FormControl>
+
+                {/* FlowBuilder - Fluxo Padrão */}
+                <FormControl
+                  margin="dense"
+                  variant="outlined"
+                  fullWidth
+                >
+                  <InputLabel>
+                    {i18n.t("whatsappModal.form.flowNotPhrase") || "Fluxo Padrão"}
+                  </InputLabel>
+                  <Select
+                    labelId="dialog-select-flow-notphrase-label"
+                    id="dialog-select-flow-notphrase"
+                    name="flowIdNotPhrase"
+                    value={selectedFlowIdNotPhrase || ""}
+                    onChange={(e) => setSelectedFlowIdNotPhrase(e.target.value === "" ? null : e.target.value)}
+                    label={i18n.t("whatsappModal.form.flowNotPhrase") || "Fluxo Padrão"}
+                    fullWidth
+                    MenuProps={{
+                      anchorOrigin: {
+                        vertical: "bottom",
+                        horizontal: "left",
+                      },
+                      transformOrigin: {
+                        vertical: "top",
+                        horizontal: "left",
+                      },
+                      getContentAnchorEl: null,
+                    }}
+                  >
+                    <MenuItem value="">
+                      <em style={{ color: '#999' }}>Nenhum</em>
+                    </MenuItem>
+                    {flowBuilders.map((flow) => (
+                      <MenuItem
+                        key={flow.id}
+                        value={flow.id}
+                      >
+                        {flow.name}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                  <FormHelperText>
+                    Executado quando não reconhece comando/frase
+                  </FormHelperText>
+                </FormControl>
+
                 <div>
                   <h3>{i18n.t("whatsappModal.form.queueRedirection")}</h3>
                   <p>{i18n.t("whatsappModal.form.queueRedirectionDesc")}</p>
