@@ -32,7 +32,7 @@ import { Can } from "../../components/Can";
 import AddIcon from "@material-ui/icons/Add";
 import EditIcon from "@material-ui/icons/Edit";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
-import ContentCopyIcon from "@material-ui/icons/ContentCopy";
+import FileCopyIcon from "@material-ui/icons/FileCopy";
 import VisibilityIcon from "@material-ui/icons/Visibility";
 import BarChartIcon from "@material-ui/icons/BarChart";
 import SearchIcon from "@material-ui/icons/Search";
@@ -317,7 +317,7 @@ const Forms = () => {
                           size="small"
                           onClick={() => handleCopyLink(form)}
                         >
-                          <ContentCopyIcon fontSize="small" />
+                          <FileCopyIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title={i18n.t("forms.actions.viewResponses")}>
@@ -341,7 +341,7 @@ const Forms = () => {
                           size="small"
                           onClick={() => handleDuplicateForm(form.id)}
                         >
-                          <ContentCopyIcon fontSize="small" />
+                          <FileCopyIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title={i18n.t("forms.actions.delete")}>
