@@ -21,6 +21,7 @@ import {
   LocalOffer as LocalOfferIcon,
   EventAvailable as EventAvailableIcon,
   AccountTree as AccountTreeIcon,
+  Assignment as AssignmentIcon,
   AllInclusive as AllInclusiveIcon,
   People as PeopleIcon,
   SyncAlt as SyncAltIcon,
@@ -261,6 +262,15 @@ const NavigationMenus = () => {
             <LocalOfferIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.tags")} />
+        </MenuItem>
+        <MenuItem
+          className={classes.menuItem}
+          onClick={() => handleNavigate('/forms', () => setGestaoAnchor(null))}
+        >
+          <ListItemIcon>
+            <AssignmentIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary={i18n.t("mainDrawer.listItems.forms")} />
         </MenuItem>
       </Menu>
 

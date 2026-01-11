@@ -44,6 +44,11 @@ import CampaignsPhrase from "../pages/CampaignsPhrase";
 import FlowBuilder from "../pages/FlowBuilder";
 import FlowBuilderConfig from "../pages/FlowBuilderConfig";
 import Landing from "../pages/Landing";
+import Forms from "../pages/Forms";
+import FormBuilder from "../pages/Forms/FormBuilder";
+import PublicForm from "../pages/Forms/PublicForm";
+import FormResponses from "../pages/Forms/FormResponses";
+import FormAnalytics from "../pages/Forms/FormAnalytics";
 import SubscriptionExpired from "../pages/SubscriptionExpired";
 
 const Routes = () => {
@@ -62,6 +67,7 @@ const Routes = () => {
         <TicketsContextProvider>
           <Switch>
             <Route exact path="/" component={Landing} />
+            <RouterRoute exact path="/f/:slug" component={PublicForm} />
             <Route exact path="/login" component={Login} />
             <Route exact path="/signup" component={Signup} />
             <Route exact path="/signup/success" component={SignupSuccess} />
@@ -193,6 +199,36 @@ const Routes = () => {
                       exact
                       path="/flowbuilder/:id?"
                       component={FlowBuilderConfig}
+                      isPrivate
+                    />
+                    <Route
+                      exact
+                      path="/forms"
+                      component={Forms}
+                      isPrivate
+                    />
+                    <Route
+                      exact
+                      path="/forms/new"
+                      component={FormBuilder}
+                      isPrivate
+                    />
+                    <Route
+                      exact
+                      path="/forms/:id"
+                      component={FormBuilder}
+                      isPrivate
+                    />
+                    <Route
+                      exact
+                      path="/forms/:formId/responses"
+                      component={FormResponses}
+                      isPrivate
+                    />
+                    <Route
+                      exact
+                      path="/forms/:formId/analytics"
+                      component={FormAnalytics}
                       isPrivate
                     />
                   </>

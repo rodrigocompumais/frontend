@@ -889,6 +889,7 @@ const messages = {
           files: "Lista de arquivos",
           prompts: "Agentes de IA",
           queueIntegration: "Integrações",
+          forms: "Formulários",
         },
         appBar: {
           refresh: "Recarregar página",
@@ -1733,6 +1734,41 @@ const messages = {
             "Esta cor já está em uso, escolha outra.",
         ERR_WAPP_GREETING_REQUIRED:
             "A mensagem de saudação é obrigatório quando há mais de uma fila.",
+      },
+      forms: {
+        title: "Formulários",
+        noForms: "Nenhum formulário encontrado",
+        search: {
+          placeholder: "Buscar formulários...",
+        },
+        buttons: {
+          new: "Novo Formulário",
+        },
+        table: {
+          name: "Nome",
+          status: "Status",
+          responses: "Respostas",
+          lastResponse: "Última Resposta",
+          createdAt: "Criado em",
+          actions: "Ações",
+        },
+        actions: {
+          viewPublic: "Visualizar formulário público",
+          copyLink: "Copiar link do formulário",
+          viewResponses: "Ver respostas",
+          edit: "Editar",
+          duplicate: "Duplicar",
+          delete: "Excluir",
+        },
+        toasts: {
+          deleteSuccess: "Formulário excluído com sucesso!",
+          duplicateSuccess: "Formulário duplicado com sucesso!",
+          linkCopied: "Link copiado para a área de transferência!",
+        },
+        confirmationModal: {
+          deleteTitle: "Excluir Formulário",
+          deleteMessage: "Tem certeza que deseja excluir este formulário? Esta ação não pode ser desfeita.",
+        },
       },
     },
   },
