@@ -14,28 +14,39 @@ export default memo(({ data, isConnectable, id }) => {
 
   return (
     <div
-      style={{ backgroundColor: "#555", padding: "8px", borderRadius: "8px" }}
+      style={{
+        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+        padding: "12px",
+        borderRadius: "12px",
+        boxShadow: "0 8px 16px rgba(102, 126, 234, 0.3)",
+        minWidth: "200px",
+        border: "2px solid rgba(255, 255, 255, 0.1)",
+        position: "relative",
+        transition: "all 0.3s ease",
+      }}
     >
       <Handle
         type="target"
         position="left"
         style={{
-          background: "#0000FF",
-          width: "18px",
-          height: "18px",
-          top: "20px",
+          background: "linear-gradient(135deg, #667eea, #764ba2)",
+          width: "20px",
+          height: "20px",
+          border: "3px solid white",
+          top: "22px",
           left: "-12px",
-          cursor: 'pointer'
+          cursor: 'pointer',
+          transition: "transform 0.2s ease",
         }}
         onConnect={params => console.log("handle onConnect", params)}
         isConnectable={isConnectable}
       >
         <ArrowForwardIos
           sx={{
-            color: "#ffff",
+            color: "#fff",
             width: "10px",
             height: "10px",
-            marginLeft: "3.5px",
+            marginLeft: "3px",
             marginBottom: "1px",
             pointerEvents: "none"
           }}
@@ -45,10 +56,14 @@ export default memo(({ data, isConnectable, id }) => {
         style={{
           display: "flex",
           position: "absolute",
-          right: 5,
-          top: 5,
+          right: 8,
+          top: 8,
           cursor: "pointer",
-          gap: 6
+          gap: 8,
+          backgroundColor: "rgba(255, 255, 255, 0.2)",
+          padding: "4px 6px",
+          borderRadius: "6px",
+          backdropFilter: "blur(10px)",
         }}
       >
         <ContentCopy
@@ -56,7 +71,15 @@ export default memo(({ data, isConnectable, id }) => {
             storageItems.setNodesStorage(id);
             storageItems.setAct("duplicate");
           }}
-          sx={{ width: "12px", height: "12px", color: "#ffff" }}
+          sx={{ 
+            width: "14px", 
+            height: "14px", 
+            color: "#fff",
+            transition: "transform 0.2s ease",
+            "&:hover": {
+              transform: "scale(1.2)"
+            }
+          }}
         />
 
         <Delete
@@ -64,28 +87,50 @@ export default memo(({ data, isConnectable, id }) => {
             storageItems.setNodesStorage(id);
             storageItems.setAct("delete");
           }}
-          sx={{ width: "12px", height: "12px", color: "#ffff" }}
+          sx={{ 
+            width: "14px", 
+            height: "14px", 
+            color: "#fff",
+            transition: "transform 0.2s ease",
+            "&:hover": {
+              transform: "scale(1.2)"
+            }
+          }}
         />
       </div>
       <div
         style={{
-          color: "#ededed",
+          color: "#fff",
           fontSize: "16px",
           flexDirection: "row",
-          display: "flex"
+          display: "flex",
+          alignItems: "center",
+          marginBottom: "8px",
+          fontWeight: 600,
         }}
       >
         <Message
           sx={{
-            width: "16px",
-            height: "16px",
-            marginRight: "4px",
-            marginTop: "4px"
+            width: "18px",
+            height: "18px",
+            marginRight: "6px",
+            filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
           }}
         />
-        <div style={{ color: "#ededed", fontSize: "16px" }}>Mensagem</div>
+        <div>Mensagem</div>
       </div>
-      <div style={{ color: "#ededed", fontSize: "12px", width: 180 }}>
+      <div 
+        style={{ 
+          color: "rgba(255, 255, 255, 0.95)", 
+          fontSize: "13px", 
+          width: 180,
+          backgroundColor: "rgba(255, 255, 255, 0.1)",
+          padding: "8px",
+          borderRadius: "8px",
+          backdropFilter: "blur(10px)",
+          lineHeight: "1.4",
+        }}
+      >
         {data.label}
       </div>
       <Handle
@@ -93,21 +138,23 @@ export default memo(({ data, isConnectable, id }) => {
         position="right"
         id="a"
         style={{
-          background: "#0000FF",
-          width: "18px",
-          height: "18px",
+          background: "linear-gradient(135deg, #667eea, #764ba2)",
+          width: "20px",
+          height: "20px",
+          border: "3px solid white",
           top: "70%",
-          right: "-11px",
-          cursor: 'pointer'
+          right: "-12px",
+          cursor: 'pointer',
+          transition: "transform 0.2s ease",
         }}
         isConnectable={isConnectable}
       >
         <ArrowForwardIos
           sx={{
-            color: "#ffff",
+            color: "#fff",
             width: "10px",
             height: "10px",
-            marginLeft: "2.9px",
+            marginLeft: "2.5px",
             marginBottom: "1px",
             pointerEvents: "none"
           }}

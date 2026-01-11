@@ -17,6 +17,10 @@ import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import AttachFileIcon from "@material-ui/icons/AttachFile";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
+import PersonIcon from "@material-ui/icons/Person";
+import PhoneIcon from "@material-ui/icons/Phone";
+import EmailIcon from "@material-ui/icons/Email";
+import AddIcon from "@material-ui/icons/Add";
 
 import { i18n } from "../../translate/i18n";
 import moment from "moment";
@@ -34,6 +38,7 @@ import {
   Tabs,
   Tooltip,
   Typography,
+  Chip,
 } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ConfirmationModal from "../ConfirmationModal";
@@ -73,6 +78,39 @@ const useStyles = makeStyles((theme) => ({
     left: "50%",
     marginTop: -12,
     marginLeft: -12,
+  },
+
+  variablesContainer: {
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(1),
+    padding: theme.spacing(1.5),
+    backgroundColor: theme.palette.type === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)',
+    borderRadius: 8,
+    border: `1px solid ${theme.palette.divider}`,
+  },
+
+  variableButton: {
+    margin: theme.spacing(0.5),
+    textTransform: 'none',
+    fontWeight: 500,
+    borderRadius: 8,
+    padding: '6px 12px',
+    fontSize: '0.875rem',
+    transition: 'all 0.2s ease',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: theme.shadows[4],
+    },
+  },
+
+  variablesTitle: {
+    fontSize: '0.875rem',
+    fontWeight: 600,
+    marginBottom: theme.spacing(1),
+    color: theme.palette.text.secondary,
+    display: 'flex',
+    alignItems: 'center',
+    gap: theme.spacing(0.5),
   },
 }));
 
@@ -122,6 +160,38 @@ const CampaignModal = ({
   const attachmentFile = useRef(null);
   const [tagLists, setTagLists] = useState([]);
   const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [messageFieldRefs, setMessageFieldRefs] = useState({});
+
+  // Função para inserir variável no campo de texto
+  const insertVariable = (fieldName, variable) => {
+    const inputElement = document.getElementById(fieldName);
+    if (inputElement) {
+      const cursorPosition = inputElement.selectionStart || 0;
+      const currentValue = campaign[fieldName] || '';
+      const newValue = 
+        currentValue.substring(0, cursorPosition) + 
+        variable + 
+        currentValue.substring(cursorPosition);
+      
+      setCampaign(prev => ({
+        ...prev,
+        [fieldName]: newValue
+      }));
+
+      // Focar e reposicionar o cursor após a variável inserida
+      setTimeout(() => {
+        inputElement.focus();
+        const newPosition = cursorPosition + variable.length;
+        inputElement.setSelectionRange(newPosition, newPosition);
+      }, 10);
+    }
+  };
+
+  const variables = [
+    { label: 'Nome', value: '{{name}}', icon: <PersonIcon fontSize="small" />, color: 'primary' },
+    { label: 'Telefone', value: '{{number}}', icon: <PhoneIcon fontSize="small" />, color: 'secondary' },
+    { label: 'Email', value: '{{email}}', icon: <EmailIcon fontSize="small" />, color: 'default' },
+  ];
 
   useEffect(() => {
     return () => {
@@ -272,19 +342,51 @@ const CampaignModal = ({
 
   const renderMessageField = (identifier) => {
     return (
-      <Field
-        as={TextField}
-        id={identifier}
-        name={identifier}
-        fullWidth
-        rows={5}
-        label={i18n.t(`campaigns.dialog.form.${identifier}`)}
-        placeholder={i18n.t("campaigns.dialog.form.messagePlaceholder")}
-        multiline={true}
-        variant="outlined"
-        helperText={i18n.t("campaigns.dialog.form.helper")}
-        disabled={!campaignEditable && campaign.status !== "CANCELADA"}
-      />
+      <>
+        <Field
+          as={TextField}
+          id={identifier}
+          name={identifier}
+          fullWidth
+          rows={5}
+          label={i18n.t(`campaigns.dialog.form.${identifier}`)}
+          placeholder={i18n.t("campaigns.dialog.form.messagePlaceholder")}
+          multiline={true}
+          variant="outlined"
+          disabled={!campaignEditable && campaign.status !== "CANCELADA"}
+        />
+        
+        {campaignEditable && (
+          <Box className={classes.variablesContainer}>
+            <Typography className={classes.variablesTitle}>
+              <AddIcon fontSize="small" />
+              Inserir Variáveis:
+            </Typography>
+            <Box display="flex" flexWrap="wrap" gap={1}>
+              {variables.map((variable) => (
+                <Chip
+                  key={variable.value}
+                  icon={variable.icon}
+                  label={variable.label}
+                  onClick={() => insertVariable(identifier, variable.value)}
+                  color={variable.color}
+                  variant="outlined"
+                  clickable
+                  className={classes.variableButton}
+                  size="small"
+                />
+              ))}
+            </Box>
+            <Typography 
+              variant="caption" 
+              color="textSecondary"
+              style={{ marginTop: 8, display: 'block' }}
+            >
+              Clique em uma variável para inseri-la no texto da mensagem
+            </Typography>
+          </Box>
+        )}
+      </>
     );
   };
 

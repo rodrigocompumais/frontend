@@ -87,6 +87,7 @@ import FlowBuilderAddQuestionModal from "../../components/FlowBuilderAddQuestion
 
 import FlowBuilderToolbar from "../../components/FlowBuilder/FlowBuilderToolbar";
 import FlowBuilderSidebar from "../../components/FlowBuilder/FlowBuilderSidebar";
+import FlowBuilderTemplateSelector from "../../components/FlowBuilderTemplateSelector";
 
 
 import {
@@ -496,6 +497,7 @@ const FlowBuilderConfig = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isTestMode, setIsTestMode] = useState(false);
   const [currentTestNodeId, setCurrentTestNodeId] = useState(null);
+  const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
   const testTimeoutRef = useRef(null);
   const reactFlowInstanceRef = useRef(null);
   const isTestModeRef = useRef(false);
@@ -1334,6 +1336,24 @@ const FlowBuilderConfig = () => {
     saveToHistory();
   };
 
+  // Função para carregar template
+  const handleLoadTemplate = (template) => {
+    // Limpar o fluxo atual (exceto nó inicial se existir)
+    setNodes(template.nodes);
+    setEdges(template.edges);
+    
+    // Salvar no histórico
+    setTimeout(() => {
+      saveToHistory();
+      // Ajustar visualização
+      if (reactFlowInstanceRef.current) {
+        reactFlowInstanceRef.current.fitView({ padding: 0.2, duration: 500 });
+      }
+    }, 100);
+    
+    toast.success(`Template "${template.name}" carregado com sucesso!`);
+  };
+
   const actions = [
     {
       icon: (
@@ -1638,8 +1658,30 @@ const FlowBuilderConfig = () => {
         close={setModalAddQuestion}
       />
 
+      {/* Template Selector */}
+      <FlowBuilderTemplateSelector
+        open={templateSelectorOpen}
+        onClose={() => setTemplateSelectorOpen(false)}
+        onSelectTemplate={handleLoadTemplate}
+      />
+
       <MainHeader>
         <Title>Desenhe sua automação</Title>
+        <MainHeaderButtonsWrapper>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={() => setTemplateSelectorOpen(true)}
+            style={{
+              borderRadius: 8,
+              textTransform: 'none',
+              fontWeight: 600,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            }}
+          >
+            📚 Templates
+          </Button>
+        </MainHeaderButtonsWrapper>
       </MainHeader>
       {!loading && (
         <Paper

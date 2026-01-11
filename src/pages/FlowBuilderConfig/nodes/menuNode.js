@@ -3,8 +3,6 @@ import {
   ContentCopy,
   Delete,
   DynamicFeed,
-  ImportExport,
-  Message
 } from "@mui/icons-material";
 import React, { memo } from "react";
 
@@ -17,35 +15,39 @@ export default memo(({ data, isConnectable, id }) => {
   return (
     <div
       style={{
-        backgroundColor: "#FAFBFF",
-        padding: "8px",
-        borderRadius: "8px",
-        maxWidth: "155px",
-        boxShadow: "0px 3px 5px rgba(0,0,0,.05)",
-        border: "1px solid rgba(104, 58, 200, 0.25)",
-        width: 180
+        background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+        padding: "12px",
+        borderRadius: "12px",
+        maxWidth: "210px",
+        boxShadow: "0 8px 16px rgba(240, 147, 251, 0.3)",
+        border: "2px solid rgba(255, 255, 255, 0.1)",
+        minWidth: 200,
+        position: "relative",
+        transition: "all 0.3s ease",
       }}
     >
       <Handle
         type="target"
         position="left"
         style={{
-          background: "#0000FF",
-          width: "18px",
-          height: "18px",
-          top: "20px",
+          background: "linear-gradient(135deg, #f093fb, #f5576c)",
+          width: "20px",
+          height: "20px",
+          border: "3px solid white",
+          top: "22px",
           left: "-12px",
-          cursor: 'pointer'
+          cursor: 'pointer',
+          transition: "transform 0.2s ease",
         }}
         onConnect={params => console.log("handle onConnect", params)}
         isConnectable={isConnectable}
       >
         <ArrowForwardIos
           sx={{
-            color: "#ffff",
+            color: "#fff",
             width: "10px",
             height: "10px",
-            marginLeft: "3.5px",
+            marginLeft: "3px",
             marginBottom: "1px",
             pointerEvents: "none"
           }}
@@ -55,10 +57,14 @@ export default memo(({ data, isConnectable, id }) => {
         style={{
           display: "flex",
           position: "absolute",
-          right: 5,
-          top: 5,
+          right: 8,
+          top: 8,
           cursor: "pointer",
-          gap: 6
+          gap: 8,
+          backgroundColor: "rgba(255, 255, 255, 0.2)",
+          padding: "4px 6px",
+          borderRadius: "6px",
+          backdropFilter: "blur(10px)",
         }}
       >
         <ContentCopy
@@ -66,7 +72,15 @@ export default memo(({ data, isConnectable, id }) => {
             storageItems.setNodesStorage(id);
             storageItems.setAct("duplicate");
           }}
-          sx={{ width: "12px", height: "12px", color: "#683AC8" }}
+          sx={{ 
+            width: "14px", 
+            height: "14px", 
+            color: "#fff",
+            transition: "transform 0.2s ease",
+            "&:hover": {
+              transform: "scale(1.2)"
+            }
+          }}
         />
 
         <Delete
@@ -74,45 +88,61 @@ export default memo(({ data, isConnectable, id }) => {
             storageItems.setNodesStorage(id);
             storageItems.setAct("delete");
           }}
-          sx={{ width: "12px", height: "12px", color: "#683AC8" }}
+          sx={{ 
+            width: "14px", 
+            height: "14px", 
+            color: "#fff",
+            transition: "transform 0.2s ease",
+            "&:hover": {
+              transform: "scale(1.2)"
+            }
+          }}
         />
       </div>
       <div
         style={{
-          color: "#ededed",
+          color: "#fff",
           fontSize: "16px",
           flexDirection: "row",
-          display: "flex"
+          display: "flex",
+          alignItems: "center",
+          marginBottom: "8px",
+          fontWeight: 600,
         }}
       >
         <DynamicFeed
           sx={{
-            width: "16px",
-            height: "16px",
-            marginRight: "4px",
-            marginTop: "4px",
-            color: "#683AC8"
+            width: "18px",
+            height: "18px",
+            marginRight: "6px",
+            filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.2))"
           }}
         />
-        <div style={{ color: "#232323", fontSize: "16px" }}>Menu</div>
+        <div>Menu</div>
       </div>
       <div>
         <div
           style={{
-            color: "#232323",
-            fontSize: "12px",
-            height: "50px",
+            color: "rgba(255, 255, 255, 0.95)",
+            fontSize: "13px",
+            maxHeight: "55px",
             overflow: "hidden",
-            marginBottom: "8px"
+            marginBottom: "12px",
+            backgroundColor: "rgba(255, 255, 255, 0.1)",
+            padding: "8px",
+            borderRadius: "8px",
+            backdropFilter: "blur(10px)",
+            lineHeight: "1.4",
           }}
         >
           {data.message}
         </div>
       </div>
-      {data.arrayOption.map(option => (
+      {data.arrayOption.map((option, index) => (
         <div
+          key={index}
           style={{
-            marginBottom: "9px",
+            marginBottom: "10px",
             justifyContent: "end",
             display: "flex"
           }}
@@ -122,13 +152,18 @@ export default memo(({ data, isConnectable, id }) => {
               whiteSpace: "nowrap",
               overflow: "hidden",
               textOverflow: "ellipsis",
-              fontSize: "10px",
+              fontSize: "12px",
               position: "relative",
               display: "flex",
-              color: "#232323",
+              color: "#fff",
               justifyContent: "center",
               flexDirection: "column",
-              alignSelf: "end"
+              alignSelf: "end",
+              backgroundColor: "rgba(255, 255, 255, 0.15)",
+              padding: "4px 8px",
+              borderRadius: "6px",
+              fontWeight: 500,
+              backdropFilter: "blur(10px)",
             }}
           >
             {`[${option.number}] ${option.value}`}
@@ -138,21 +173,23 @@ export default memo(({ data, isConnectable, id }) => {
             position="right"
             id={"a" + option.number}
             style={{
-              top: 74 + 23 * option.number,
-              background: "#0000FF",
-              width: "18px",
-              height: "18px",
-              right: "-11px",
-              cursor: 'pointer'
+              top: 85 + 25 * option.number,
+              background: "linear-gradient(135deg, #f093fb, #f5576c)",
+              width: "20px",
+              height: "20px",
+              border: "3px solid white",
+              right: "-12px",
+              cursor: 'pointer',
+              transition: "transform 0.2s ease",
             }}
             isConnectable={isConnectable}
           >
             <ArrowForwardIos
               sx={{
-                color: "#ffff",
+                color: "#fff",
                 width: "10px",
                 height: "10px",
-                marginLeft: "2.9px",
+                marginLeft: "2.5px",
                 marginBottom: "1px",
                 pointerEvents: "none"
               }}
