@@ -158,14 +158,6 @@ const Forms = () => {
     toast.success(i18n.t("forms.toasts.linkCopied"));
   };
 
-  const handleViewResponses = (formId) => {
-    history.push(`/forms/${formId}/responses`);
-  };
-
-  const handleViewAnalytics = (formId) => {
-    history.push(`/forms/${formId}/analytics`);
-  };
-
   const handleViewPublic = (form) => {
     window.open(`/f/${form.slug}`, "_blank");
   };
