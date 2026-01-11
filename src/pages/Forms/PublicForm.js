@@ -18,9 +18,8 @@ import {
   Select,
   MenuItem,
   FormHelperText,
-  Alert,
 } from "@material-ui/core";
-import { Rating } from "@material-ui/lab";
+import { Rating, Alert } from "@material-ui/lab";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";

@@ -117,15 +117,15 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
           
           const { data } = await api.get(`whatsapp/${whatsAppId}?session=0`);
 
-        setWhatsApp(data);
-        setSelectedPrompt( data.promptId );
+          setWhatsApp(data);
+          setSelectedPrompt( data.promptId );
         setSelectedIntegration(data.integrationId);
         setSelectedFlowIdWelcome(data.flowIdWelcome);
         setSelectedFlowIdNotPhrase(data.flowIdNotPhrase);
 
-        const whatsQueueIds = data.queues?.map((queue) => queue.id);
-        setSelectedQueueIds(whatsQueueIds);
-        setSelectedQueueId(data.transferQueueId);
+          const whatsQueueIds = data.queues?.map((queue) => queue.id);
+          setSelectedQueueIds(whatsQueueIds);
+          setSelectedQueueId(data.transferQueueId);
           
           // Garantir que provider tenha valor padrão se não existir
           if (!data.provider) {
