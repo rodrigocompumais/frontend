@@ -66,6 +66,10 @@ const useStyles = makeStyles((theme) => ({
     minWidth: 200,
     padding: theme.spacing(1.5, 2),
   },
+  listItemIcon: {
+    minWidth: 40,
+    color: theme.palette.text.secondary,
+  },
   divider: {
     margin: theme.spacing(1, 0),
   },
