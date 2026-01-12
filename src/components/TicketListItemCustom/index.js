@@ -28,6 +28,7 @@ import AndroidIcon from "@material-ui/icons/Android";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import ReplayIcon from "@material-ui/icons/Replay";
 import FolderIcon from "@material-ui/icons/Folder";
+import ContactAvatarModal from "../ContactAvatarModal";
 
 import { i18n } from "../../translate/i18n";
 
@@ -484,6 +485,11 @@ const TicketListItemCustom = ({ ticket }) => {
             <Avatar
               className={classes.avatar}
               src={ticket?.contact?.profilePicUrl}
+              onClick={(e) => {
+                e.stopPropagation();
+                setAvatarModalOpen(true);
+              }}
+              style={{ cursor: "pointer" }}
             />
           </Badge>
         </ListItemAvatar>

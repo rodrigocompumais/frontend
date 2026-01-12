@@ -9,6 +9,8 @@ import {
   Avatar,
 } from "@material-ui/core";
 import SendIcon from "@material-ui/icons/Send";
+import AttachFileIcon from "@material-ui/icons/AttachFile";
+import CloseIcon from "@material-ui/icons/Close";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { useDate } from "../../hooks/useDate";
@@ -185,6 +187,59 @@ const useStyles = makeStyles((theme) => ({
     marginTop: theme.spacing(0.25),
     alignSelf: "flex-end",
   },
+  previewContainer: {
+    display: "flex",
+    gap: theme.spacing(1),
+    padding: theme.spacing(1),
+    marginBottom: theme.spacing(1),
+    flexWrap: "wrap",
+  },
+  previewImage: {
+    position: "relative",
+    width: "100px",
+    height: "100px",
+    borderRadius: theme.spacing(1),
+    overflow: "hidden",
+    border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"}`,
+  },
+  previewImageImg: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  previewRemoveButton: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    color: "#FFFFFF",
+    padding: theme.spacing(0.5),
+    minWidth: "auto",
+    width: "24px",
+    height: "24px",
+    "&:hover": {
+      backgroundColor: "rgba(0, 0, 0, 0.7)",
+    },
+  },
+  fileInput: {
+    display: "none",
+  },
+  attachButton: {
+    padding: theme.spacing(1),
+    color: theme.palette.text.secondary,
+    "&:hover": {
+      backgroundColor: theme.palette.type === "dark" 
+        ? "rgba(255, 255, 255, 0.1)" 
+        : "rgba(0, 0, 0, 0.05)",
+    },
+  },
+  messageImage: {
+    maxWidth: "100%",
+    maxHeight: "300px",
+    borderRadius: theme.spacing(1),
+    marginBottom: theme.spacing(0.5),
+    objectFit: "contain",
+  },
 }));
 
 export default function ChatMessages({
@@ -200,8 +255,10 @@ export default function ChatMessages({
   const { user } = useContext(AuthContext);
   const { datetimeToClient } = useDate();
   const baseRef = useRef();
+  const fileInputRef = useRef();
 
   const [contentMessage, setContentMessage] = useState("");
+  const [selectedImages, setSelectedImages] = useState([]);
 
   const scrollToBottom = () => {
     if (baseRef.current) {
@@ -241,6 +298,60 @@ export default function ChatMessages({
     }
   };
 
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    
+    imageFiles.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setSelectedImages(prev => [...prev, {
+          file,
+          preview: event.target.result
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    
+    // Limpar o input para permitir selecionar o mesmo arquivo novamente
+    e.target.value = '';
+  };
+
+  const removeImage = (index) => {
+    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSend = async () => {
+    if (contentMessage.trim() === "" && selectedImages.length === 0) return;
+
+    try {
+      if (selectedImages.length > 0) {
+        // Enviar cada imagem
+        for (const imageData of selectedImages) {
+          const formData = new FormData();
+          formData.append("media", imageData.file);
+          if (contentMessage.trim()) {
+            formData.append("message", contentMessage);
+          }
+          
+          await handleSendMessage(formData, true);
+        }
+        setSelectedImages([]);
+        setContentMessage("");
+      } else {
+        // Enviar apenas texto
+        await handleSendMessage(contentMessage, false);
+        setContentMessage("");
+      }
+      
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    } catch (err) {
+      console.error("Erro ao enviar mensagem:", err);
+    }
+  };
+
   return (
     <Paper className={classes.mainContainer} elevation={0}>
       <div onScroll={handleScroll} className={classes.messageList}>
@@ -271,9 +382,18 @@ export default function ChatMessages({
                     <Typography className={classes.senderName}>
                       {item.sender.name}
                     </Typography>
-                    <Typography className={classes.messageText}>
-                      {item.message}
-                    </Typography>
+                    {item.mediaPath && (
+                      <img 
+                        src={`${process.env.REACT_APP_BACKEND_URL}/public/${item.mediaPath}`}
+                        alt={item.mediaName || "Imagem"}
+                        className={classes.messageImage}
+                      />
+                    )}
+                    {item.message && (
+                      <Typography className={classes.messageText}>
+                        {item.message}
+                      </Typography>
+                    )}
                     <Typography className={classes.messageTime}>
                       {datetimeToClient(item.createdAt)}
                     </Typography>
@@ -285,20 +405,35 @@ export default function ChatMessages({
         </div>
       </div>
       <div className={classes.inputArea}>
+        {selectedImages.length > 0 && (
+          <div className={classes.previewContainer}>
+            {selectedImages.map((imageData, index) => (
+              <div key={index} className={classes.previewImage}>
+                <img 
+                  src={imageData.preview} 
+                  alt={`Preview ${index}`}
+                  className={classes.previewImageImg}
+                />
+                <IconButton
+                  className={classes.previewRemoveButton}
+                  size="small"
+                  onClick={() => removeImage(index)}
+                >
+                  <CloseIcon fontSize="small" />
+                </IconButton>
+              </div>
+            ))}
+          </div>
+        )}
         <div className={classes.inputContainer}>
           <Input
             multiline
             rowsMax={4}
             value={contentMessage}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && contentMessage.trim() !== "") {
+              if (e.key === "Enter" && !e.shiftKey && (contentMessage.trim() !== "" || selectedImages.length > 0)) {
                 e.preventDefault();
-                handleSendMessage(contentMessage);
-                setContentMessage("");
-                // Scroll to bottom após enviar mensagem
-                setTimeout(() => {
-                  scrollToBottom();
-                }, 100);
+                handleSend();
               }
             }}
             onChange={(e) => setContentMessage(e.target.value)}
@@ -312,19 +447,25 @@ export default function ChatMessages({
               }
             }}
           />
+          <input
+            type="file"
+            ref={fileInputRef}
+            className={classes.fileInput}
+            accept="image/*"
+            onChange={handleFileSelect}
+            multiple
+          />
           <IconButton
-            onClick={() => {
-              if (contentMessage.trim() !== "") {
-                handleSendMessage(contentMessage);
-                setContentMessage("");
-                // Scroll to bottom após enviar mensagem
-                setTimeout(() => {
-                  scrollToBottom();
-                }, 100);
-              }
-            }}
+            onClick={() => fileInputRef.current?.click()}
+            className={classes.attachButton}
+            size="small"
+          >
+            <AttachFileIcon fontSize="small" />
+          </IconButton>
+          <IconButton
+            onClick={handleSend}
             className={classes.buttonSend}
-            disabled={!contentMessage.trim()}
+            disabled={contentMessage.trim() === "" && selectedImages.length === 0}
             size="small"
           >
             <SendIcon fontSize="small" />

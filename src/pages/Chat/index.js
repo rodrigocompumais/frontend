@@ -352,13 +352,19 @@ function Chat(props) {
     } catch (err) {}
   };
 
-  const sendMessage = async (contentMessage) => {
+  const sendMessage = async (contentMessageOrFormData, isFormData = false) => {
     setLoading(true);
     try {
-      await api.post(`/chats/${currentChat.id}/messages`, {
-        message: contentMessage,
-      });
-    } catch (err) {}
+      if (isFormData) {
+        await api.post(`/chats/${currentChat.id}/messages`, contentMessageOrFormData);
+      } else {
+        await api.post(`/chats/${currentChat.id}/messages`, {
+          message: contentMessageOrFormData,
+        });
+      }
+    } catch (err) {
+      console.error("Erro ao enviar mensagem:", err);
+    }
     setLoading(false);
   };
 
