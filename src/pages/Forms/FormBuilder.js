@@ -40,6 +40,7 @@ import AddIcon from "@material-ui/icons/Add";
 import DeleteIcon from "@material-ui/icons/Delete";
 import EditIcon from "@material-ui/icons/Edit";
 import DragIndicatorIcon from "@material-ui/icons/DragIndicator";
+import CloseIcon from "@material-ui/icons/Close";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -118,6 +119,7 @@ const FormBuilder = () => {
   const [tabValue, setTabValue] = useState(0);
   const [fieldModalOpen, setFieldModalOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
+  const [newOption, setNewOption] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -225,6 +227,7 @@ const FormBuilder = () => {
 
   const handleAddField = () => {
     setEditingField(null);
+    setNewOption("");
     setFieldForm({
       label: "",
       fieldType: "text",
@@ -242,6 +245,7 @@ const FormBuilder = () => {
 
   const handleEditField = (field, index) => {
     setEditingField(index);
+    setNewOption("");
     setFieldForm({
       ...field,
       options: field.options || [],
@@ -266,9 +270,24 @@ const FormBuilder = () => {
     setFormData({ ...formData, fields: newFields });
   };
 
-  const handleFieldOptionsChange = (value) => {
-    const options = value.split("\n").filter((opt) => opt.trim() !== "");
-    setFieldForm({ ...fieldForm, options });
+  const handleAddOption = () => {
+    if (newOption.trim()) {
+      const updatedOptions = [...(fieldForm.options || []), newOption.trim()];
+      setFieldForm({ ...fieldForm, options: updatedOptions });
+      setNewOption("");
+    }
+  };
+
+  const handleRemoveOption = (indexToRemove) => {
+    const updatedOptions = fieldForm.options.filter((_, index) => index !== indexToRemove);
+    setFieldForm({ ...fieldForm, options: updatedOptions });
+  };
+
+  const handleKeyPressOption = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddOption();
+    }
   };
 
   return (
@@ -711,16 +730,50 @@ const FormBuilder = () => {
               fieldForm.fieldType === "radio" ||
               fieldForm.fieldType === "checkbox") && (
               <Grid item xs={12}>
-                <TextField
-                  label="Opções (uma por linha)"
-                  fullWidth
-                  multiline
-                  rows={4}
-                  value={fieldForm.options.join("\n")}
-                  onChange={(e) => handleFieldOptionsChange(e.target.value)}
-                  variant="outlined"
-                  helperText="Digite uma opção por linha"
-                />
+                <Typography variant="body2" style={{ marginBottom: 8, fontWeight: 500 }}>
+                  Opções
+                </Typography>
+                {fieldForm.options && fieldForm.options.length > 0 && (
+                  <Box
+                    display="flex"
+                    flexWrap="wrap"
+                    gap={1}
+                    style={{ marginBottom: 12 }}
+                  >
+                    {fieldForm.options.map((option, index) => (
+                      <Chip
+                        key={index}
+                        label={option}
+                        onDelete={() => handleRemoveOption(index)}
+                        deleteIcon={<CloseIcon />}
+                        color="primary"
+                        variant="outlined"
+                      />
+                    ))}
+                  </Box>
+                )}
+                <Box display="flex" gap={1}>
+                  <TextField
+                    label="Adicionar Opção"
+                    fullWidth
+                    value={newOption}
+                    onChange={(e) => setNewOption(e.target.value)}
+                    onKeyPress={handleKeyPressOption}
+                    variant="outlined"
+                    size="small"
+                    placeholder="Digite a opção e clique em Adicionar"
+                  />
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleAddOption}
+                    disabled={!newOption.trim()}
+                    startIcon={<AddIcon />}
+                    style={{ minWidth: 120 }}
+                  >
+                    Adicionar
+                  </Button>
+                </Box>
               </Grid>
             )}
             <Grid item xs={12}>
