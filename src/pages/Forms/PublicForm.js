@@ -161,15 +161,18 @@ const PublicForm = () => {
       setAnswers(initialAnswers);
 
       // Se for formulário de cotação, inicializar quotationItems
-      if (data.settings?.formType === "quotation" && data.settings?.quotationItems) {
-        const initialQuotationItems = data.settings.quotationItems.map((item) => ({
-          productName: item.productName || "",
-          quantity: item.quantity || 1,
-          unitValue: 0,
-          totalValue: 0,
-          observations: "",
-        }));
-        setQuotationItems(initialQuotationItems);
+      if (data.settings?.formType === "quotation") {
+        const items = data.settings?.quotationItems || [];
+        if (items.length > 0) {
+          const initialQuotationItems = items.map((item) => ({
+            productName: item.productName || "",
+            quantity: item.quantity || 1,
+            unitValue: 0,
+            totalValue: 0,
+            observations: "",
+          }));
+          setQuotationItems(initialQuotationItems);
+        }
       }
     } catch (err) {
       toastError(err);
