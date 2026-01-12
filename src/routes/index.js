@@ -27,6 +27,7 @@ import Kanban from "../pages/Kanban";
 import { AuthProvider } from "../context/Auth/AuthContext";
 import { TicketsContextProvider } from "../context/Tickets/TicketsContext";
 import { WhatsAppsProvider } from "../context/WhatsApp/WhatsAppsContext";
+import { TourProvider } from "../context/Tour/TourContext";
 import Route from "./Route";
 import Schedules from "../pages/Schedules";
 import Campaigns from "../pages/Campaigns";
@@ -64,8 +65,9 @@ const Routes = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <TicketsContextProvider>
-          <Switch>
+        <TourProvider>
+          <TicketsContextProvider>
+            <Switch>
             <Route exact path="/" component={Landing} />
             <Route exact path="/f/:slug" component={PublicForm} isPublic={true} />
             <Route exact path="/login" component={Login} />
@@ -238,6 +240,7 @@ const Routes = () => {
           </Switch>
           <ToastContainer autoClose={3000} />
         </TicketsContextProvider>
+        </TourProvider>
       </AuthProvider>
     </BrowserRouter>
   );

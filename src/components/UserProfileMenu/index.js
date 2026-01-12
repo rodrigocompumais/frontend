@@ -20,8 +20,10 @@ import {
   Brightness7 as Brightness7Icon,
   VolumeUp as VolumeIcon,
   Cached as CachedIcon,
+  HelpOutline as HelpOutlineIcon,
 } from '@material-ui/icons';
 import { AuthContext } from '../../context/Auth/AuthContext';
+import { TourContext } from '../../context/Tour/TourContext';
 import UserModal from '../UserModal';
 import { i18n } from '../../translate/i18n';
 import NotificationsVolume from '../NotificationsVolume';
@@ -54,6 +56,7 @@ const UserProfileMenu = ({ volume, setVolume }) => {
   const [userModalOpen, setUserModalOpen] = useState(false);
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const { user, handleLogout } = useContext(AuthContext);
+  const { startTour } = useContext(TourContext);
   const theme = useTheme();
   const { colorMode } = useContext(ColorModeContext);
 
@@ -83,6 +86,15 @@ const UserProfileMenu = ({ volume, setVolume }) => {
   const handleRefreshPage = () => {
     window.location.reload(false);
     handleClose();
+  };
+
+  const handleStartTour = () => {
+    handleClose();
+    // Remover flag de tour completo para permitir reiniciar
+    if (user && user.id) {
+      localStorage.removeItem(`tourCompleted_${user.id}`);
+    }
+    startTour();
   };
 
   return (
@@ -160,6 +172,14 @@ const UserProfileMenu = ({ volume, setVolume }) => {
             <CachedIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary="Recarregar Página" />
+        </MenuItem>
+
+        {/* Tour Guiado */}
+        <MenuItem onClick={handleStartTour} className={classes.menuItem}>
+          <ListItemIcon>
+            <HelpOutlineIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Iniciar Tour Guiado" />
         </MenuItem>
 
         <Divider />

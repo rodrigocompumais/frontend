@@ -16,6 +16,7 @@ import NavigationMenus from "../components/NavigationMenus";
 import QuickActionButton from "../components/QuickActionButton";
 import UserProfileMenu from "../components/UserProfileMenu";
 import MobileNavigationMenu from "../components/MobileNavigationMenu";
+import TourGuide from "../components/TourGuide";
 
 import logo from "../assets/logo.png";
 import { SocketContext } from "../context/Socket/SocketContext";
@@ -133,7 +134,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
           />
 
           {/* Menus de navegação dropdown (desktop) */}
-          <NavigationMenus />
+          <div className="tour-menu-navigation">
+            <NavigationMenus />
+          </div>
 
           {/* Menu mobile (hamburguer) */}
           <MobileNavigationMenu />
@@ -161,6 +164,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       </main>
       
       {isDashboard && <AiChatFloating />}
+      <TourGuide />
     </div>
   );
 };

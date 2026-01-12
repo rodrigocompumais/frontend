@@ -52,7 +52,7 @@ const Chat = () => {
 	const { ticketId } = useParams();
 
 	return (
-		<div className={classes.chatContainer}>
+		<div className={`${classes.chatContainer} tour-tickets-page`}>
 			<div className={classes.chatPapper}>
 				<Grid container spacing={0}>
 					<Grid item xs={4} className={classes.contactsWrapper}>

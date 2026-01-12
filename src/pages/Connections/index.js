@@ -294,7 +294,7 @@ const Connections = () => {
 	};
 
 	return (
-		<MainContainer>
+		<MainContainer className="tour-connections-page">
 			<ConfirmationModal
 				title={confirmModalInfo.title}
 				open={confirmModalOpen}
