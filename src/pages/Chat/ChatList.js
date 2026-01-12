@@ -26,7 +26,7 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     position: "relative",
     flex: 1,
-    height: "calc(100% - 58px)",
+    minHeight: 0,
     overflow: "hidden",
     borderRadius: theme.spacing(2),
     backgroundColor: theme.palette.background.paper,

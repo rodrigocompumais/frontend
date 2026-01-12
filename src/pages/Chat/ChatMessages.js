@@ -21,7 +21,7 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     overflow: "hidden",
     borderRadius: theme.spacing(2),
-    height: "100%",
+    minHeight: 0,
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
   },
@@ -29,12 +29,14 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
     overflowY: "auto",
     overflowX: "hidden",
-    height: "100%",
+    flex: 1,
+    minHeight: 0,
     padding: theme.spacing(2),
     ...theme.scrollbarStyles,
     backgroundColor: theme.palette.type === "dark" ? "#0B1120" : "#F9FAFB",
     display: "flex",
     flexDirection: "column",
+    justifyContent: "flex-end",
   },
   inputArea: {
     position: "relative",
@@ -180,7 +182,7 @@ export default function ChatMessages({
 
   const scrollToBottom = () => {
     if (baseRef.current) {
-      baseRef.current.scrollIntoView({});
+      baseRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
     }
   };
 
