@@ -131,6 +131,7 @@ const FormBuilder = () => {
     successRedirectUrl: "",
     requireAuth: false,
     allowMultipleSubmissions: false,
+    isAnonymous: false,
     createContact: false,
     createTicket: false,
     sendWebhook: false,
@@ -161,6 +162,11 @@ const FormBuilder = () => {
     setLoading(true);
     try {
       const { data } = await api.get(`/forms/${id}`);
+      // Filtrar campos automáticos (nome e telefone) da visualização
+      const customFields = (data.fields || []).filter(
+        (field) => !field.metadata?.isAutoField
+      );
+      
       setFormData({
         name: data.name || "",
         description: data.description || "",
@@ -173,11 +179,12 @@ const FormBuilder = () => {
         successRedirectUrl: data.successRedirectUrl || "",
         requireAuth: data.requireAuth || false,
         allowMultipleSubmissions: data.allowMultipleSubmissions || false,
+        isAnonymous: data.isAnonymous || false,
         createContact: data.createContact || false,
         createTicket: data.createTicket || false,
         sendWebhook: data.sendWebhook || false,
         webhookUrl: data.webhookUrl || "",
-        fields: (data.fields || []).sort((a, b) => a.order - b.order),
+        fields: customFields.sort((a, b) => a.order - b.order),
       });
     } catch (err) {
       toastError(err);
@@ -384,6 +391,22 @@ const FormBuilder = () => {
                     />
                   }
                   label="Permitir Múltiplas Submissões"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={formData.isAnonymous}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          isAnonymous: e.target.checked,
+                        })
+                      }
+                    />
+                  }
+                  label="Formulário Anônimo (não coleta nome e telefone)"
                 />
               </Grid>
             </Grid>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useHistory } from "react-router-dom";
+import { useParams, useHistory, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
   Box,
@@ -105,6 +105,7 @@ const PublicForm = () => {
   const classes = useStyles();
   const { slug } = useParams();
   const history = useHistory();
+  const location = useLocation();
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -122,15 +123,32 @@ const PublicForm = () => {
       const { data } = await api.get(`/public/forms/${slug}`);
       setForm(data);
       
+      // Ler parâmetros da URL (para tracking via WhatsApp)
+      const searchParams = new URLSearchParams(location.search);
+      const urlName = searchParams.get("name") || searchParams.get("nome");
+      const urlPhone = searchParams.get("phone") || searchParams.get("telefone");
+      
       // Initialize answers
       const initialAnswers = {};
       (data.fields || []).forEach((field) => {
+        // Preencher automaticamente se vier da URL
         if (field.fieldType === "checkbox") {
           initialAnswers[field.id] = [];
         } else if (field.fieldType === "rating") {
           initialAnswers[field.id] = 0;
         } else {
-          initialAnswers[field.id] = "";
+          // Preencher campos de nome e telefone se vierem na URL
+          if (urlName && field.metadata?.autoFieldType === "name") {
+            initialAnswers[field.id] = urlName;
+          } else if (urlPhone && field.metadata?.autoFieldType === "phone") {
+            initialAnswers[field.id] = urlPhone;
+          } else if (urlName && field.fieldType === "text" && field.label.toLowerCase().includes("nome")) {
+            initialAnswers[field.id] = urlName;
+          } else if (urlPhone && field.fieldType === "phone") {
+            initialAnswers[field.id] = urlPhone;
+          } else {
+            initialAnswers[field.id] = "";
+          }
         }
       });
       setAnswers(initialAnswers);
