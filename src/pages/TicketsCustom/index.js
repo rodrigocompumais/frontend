@@ -6,7 +6,6 @@ import { makeStyles } from "@material-ui/core/styles";
 
 import TicketsManager from "../../components/TicketsManagerTabs/";
 import Ticket from "../../components/Ticket/";
-import logo from "../../assets/logo.png"; //PLW DESIGN LOGO//
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles(theme => ({
@@ -14,7 +13,8 @@ const useStyles = makeStyles(theme => ({
 		flex: 1,
 		// backgroundColor: "#eee",
 		padding: theme.spacing(1), //Aqui ele ajusta espaço na tela de ticket
-		height: `calc(100% - 48px)`,
+		height: `calc(100vh - 48px)`,
+		minHeight: '100vh',
 		overflowY: "hidden",
 	},
 
@@ -27,6 +27,7 @@ const useStyles = makeStyles(theme => ({
 	contactsWrapper: {
 		display: "flex",
 		height: "100%",
+		minHeight: `calc(100vh - 48px)`,
 		flexDirection: "column",
 		overflowY: "hidden",
 	},
@@ -63,12 +64,7 @@ const TicketsCustom = () => {
 							</>
 						) : (
 							<Paper square variant="outlined" className={classes.welcomeMsg}>
-							{/* PLW DESIGN LOGO */}
-							<div>
-							<center><img style={{ margin: "0 auto", width: "70%" }} src={logo} alt="logologin" /></center>
-							</div>
-							{/* PLW DESIGN LOGO */}
-							{/*<span>{i18n.t("chat.noTicketMessage")}</span>*/}
+							{/* Logo removido conforme solicitado */}
 							</Paper>
 						)}
 					</Grid>

@@ -7,8 +7,6 @@ import { makeStyles } from "@material-ui/core/styles";
 import TicketsManager from "../../components/TicketsManager/";
 import Ticket from "../../components/Ticket/";
 
-import logo from "../../assets/logo.png";
-
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles(theme => ({
@@ -16,6 +14,7 @@ const useStyles = makeStyles(theme => ({
 		flex: 1,
 		width: '100%',
 		height: `calc(100vh - 48px)`,
+		minHeight: '100vh',
 		overflowY: "hidden",
 		backgroundColor: theme.palette.background.default,
 	},
@@ -29,6 +28,7 @@ const useStyles = makeStyles(theme => ({
 	contactsWrapper: {
 		display: "flex",
 		height: "100%",
+		minHeight: `calc(100vh - 48px)`,
 		flexDirection: "column",
 		overflowY: "hidden",
 	},
@@ -65,12 +65,7 @@ const Chat = () => {
 							</>
 						) : (
 							<Paper square variant="outlined" className={classes.welcomeMsg}>
-							
-							<div>
-							<center><img style={{ margin: "0 auto", width: "70%" }} src={logo} alt="logologin" /></center>
-							</div>
-							
-							{/*<span>{i18n.t("chat.noTicketMessage")}</span>*/}
+							{/* Logo removido conforme solicitado */}
 							</Paper>
 						)}
 					</Grid>
