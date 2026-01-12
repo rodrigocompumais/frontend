@@ -33,6 +33,11 @@ import {
   Announcement as AnnouncementIcon,
   HelpOutline as HelpOutlineIcon,
   SettingsOutlined as SettingsOutlinedIcon,
+  HeadsetMic as HeadsetMicIcon,
+  BusinessCenter as BusinessCenterIcon,
+  SmartToy as SmartToyIcon,
+  AdminPanelSettings as AdminPanelSettingsIcon,
+  Settings as SettingsIcon,
 } from '@material-ui/icons';
 import { Badge } from '@material-ui/core';
 import { i18n } from '../../translate/i18n';
@@ -146,6 +151,7 @@ const NavigationMenus = () => {
       <Button
         className={classes.menuButton}
         onClick={(e) => setAtendimentoAnchor(e.currentTarget)}
+        startIcon={<HeadsetMicIcon />}
       >
         {i18n.t("navigation.atendimento")}
       </Button>
@@ -219,6 +225,7 @@ const NavigationMenus = () => {
       <Button
         className={classes.menuButton}
         onClick={(e) => setGestaoAnchor(e.currentTarget)}
+        startIcon={<BusinessCenterIcon />}
       >
         {i18n.t("navigation.gestao")}
       </Button>
@@ -284,6 +291,7 @@ const NavigationMenus = () => {
           <Button
             className={classes.menuButton}
             onClick={(e) => setAutomacaoAnchor(e.currentTarget)}
+            startIcon={<SmartToyIcon />}
           >
             {i18n.t("navigation.automacaoIA")}
           </Button>
@@ -351,6 +359,7 @@ const NavigationMenus = () => {
             <Button
               className={classes.menuButton}
               onClick={(e) => setAdministracaoAnchor(e.currentTarget)}
+              startIcon={<AdminPanelSettingsIcon />}
             >
               {i18n.t("navigation.administracao")}
             </Button>
@@ -455,6 +464,7 @@ const NavigationMenus = () => {
       <Button
         className={classes.menuButton}
         onClick={(e) => setSistemaAnchor(e.currentTarget)}
+        startIcon={<SettingsIcon />}
       >
         {i18n.t("navigation.sistema")}
       </Button>
