@@ -111,7 +111,7 @@ const FormBuilder = () => {
   const classes = useStyles();
   const history = useHistory();
   const { id } = useParams();
-  const isEdit = !!id;
+  const isEdit = id && id !== "new" && !isNaN(Number(id));
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -152,7 +152,7 @@ const FormBuilder = () => {
   });
 
   useEffect(() => {
-    if (isEdit) {
+    if (isEdit && id) {
       loadForm();
     }
   }, [id]);
