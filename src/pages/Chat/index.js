@@ -14,6 +14,7 @@ import {
   Tab,
   Tabs,
   TextField,
+  useTheme,
 } from "@material-ui/core";
 import ChatList from "./ChatList";
 import ChatMessages from "./ChatMessages";
