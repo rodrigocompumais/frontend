@@ -21,6 +21,8 @@ import PersonIcon from "@material-ui/icons/Person";
 import PhoneIcon from "@material-ui/icons/Phone";
 import EmailIcon from "@material-ui/icons/Email";
 import AddIcon from "@material-ui/icons/Add";
+import DescriptionIcon from "@material-ui/icons/Description";
+import DescriptionIcon from "@material-ui/icons/Description";
 
 import { i18n } from "../../translate/i18n";
 import moment from "moment";
@@ -39,6 +41,8 @@ import {
   Tooltip,
   Typography,
   Chip,
+  Menu,
+  Button,
 } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ConfirmationModal from "../ConfirmationModal";
@@ -161,6 +165,8 @@ const CampaignModal = ({
   const [tagLists, setTagLists] = useState([]);
   const [aiModalOpen, setAiModalOpen] = useState(false);
   const [messageFieldRefs, setMessageFieldRefs] = useState({});
+  const [forms, setForms] = useState([]);
+  const [formLinkMenuAnchor, setFormLinkMenuAnchor] = useState({});
 
   // Função para inserir variável no campo de texto
   const insertVariable = (fieldName, variable) => {
@@ -185,6 +191,23 @@ const CampaignModal = ({
         inputElement.setSelectionRange(newPosition, newPosition);
       }, 10);
     }
+  };
+
+  // Função para inserir link de formulário
+  const insertFormLink = (fieldName, form) => {
+    const formLink = `${window.location.origin}/f/${form.slug}`;
+    insertVariable(fieldName, formLink);
+    setFormLinkMenuAnchor(prev => ({ ...prev, [fieldName]: null }));
+  };
+
+  // Função para abrir menu de seleção de formulário
+  const handleFormLinkMenuOpen = (fieldName, event) => {
+    setFormLinkMenuAnchor(prev => ({ ...prev, [fieldName]: event.currentTarget }));
+  };
+
+  // Função para fechar menu de seleção de formulário
+  const handleFormLinkMenuClose = (fieldName) => {
+    setFormLinkMenuAnchor(prev => ({ ...prev, [fieldName]: null }));
   };
 
   const variables = [
@@ -241,6 +264,16 @@ const CampaignModal = ({
         })
         .catch((error) => {
           console.error("Error retrieving tags:", error);
+        });
+
+      // Fetch active forms
+      api.get(`/forms`, { params: { pageNumber: 1 } })
+        .then(({ data }) => {
+          const activeForms = (data.forms || []).filter(form => form.isActive);
+          setForms(activeForms);
+        })
+        .catch((error) => {
+          console.error("Error retrieving forms:", error);
         });
         
       if (!campaignId) return;
@@ -362,7 +395,7 @@ const CampaignModal = ({
               <AddIcon fontSize="small" />
               Inserir Variáveis:
             </Typography>
-            <Box display="flex" flexWrap="wrap" gap={1}>
+            <Box display="flex" flexWrap="wrap" gap={1} alignItems="center">
               {variables.map((variable) => (
                 <Chip
                   key={variable.value}
@@ -376,13 +409,58 @@ const CampaignModal = ({
                   size="small"
                 />
               ))}
+              {forms.length > 0 && (
+                <>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    startIcon={<DescriptionIcon fontSize="small" />}
+                    onClick={(e) => handleFormLinkMenuOpen(identifier, e)}
+                    className={classes.variableButton}
+                    style={{ textTransform: 'none', fontWeight: 500 }}
+                  >
+                    Link de Formulário
+                  </Button>
+                  <Menu
+                    anchorEl={formLinkMenuAnchor[identifier]}
+                    open={Boolean(formLinkMenuAnchor[identifier])}
+                    onClose={() => handleFormLinkMenuClose(identifier)}
+                    PaperProps={{
+                      style: {
+                        maxHeight: 300,
+                        width: '250px',
+                      },
+                    }}
+                  >
+                    {forms.map((form) => (
+                      <MenuItem
+                        key={form.id}
+                        onClick={() => insertFormLink(identifier, form)}
+                      >
+                        <Box>
+                          <Typography variant="body2" style={{ fontWeight: 500 }}>
+                            {form.name}
+                          </Typography>
+                          {form.description && (
+                            <Typography variant="caption" color="textSecondary">
+                              {form.description.length > 40 
+                                ? form.description.substring(0, 40) + '...'
+                                : form.description}
+                            </Typography>
+                          )}
+                        </Box>
+                      </MenuItem>
+                    ))}
+                  </Menu>
+                </>
+              )}
             </Box>
             <Typography 
               variant="caption" 
               color="textSecondary"
               style={{ marginTop: 8, display: 'block' }}
             >
-              Clique em uma variável para inseri-la no texto da mensagem
+              Clique em uma variável ou selecione um formulário para inserir no texto da mensagem
             </Typography>
           </Box>
         )}
