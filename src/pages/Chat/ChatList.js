@@ -152,7 +152,17 @@ export default function ChatList({
   };
 
   const getPrimaryText = (chat) => {
-    const mainText = chat.title;
+    // Para chats individuais, mostrar o nome do outro usuário
+    let mainText = chat.title;
+    if (!chat.isGroup && chat.users && chat.users.length === 2) {
+      const otherUser = chat.users.find((u) => u.userId !== user.id);
+      if (otherUser && otherUser.user) {
+        mainText = otherUser.user.name;
+      }
+    } else {
+      mainText = chat.title;
+    }
+    
     const unreads = unreadMessages(chat);
     return (
       <>
