@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useContext } from "react";
+import React, { useState, useCallback, useContext, useEffect } from "react";
 import { toast } from "react-toastify";
 import { format, parseISO } from "date-fns";
 
@@ -43,6 +43,7 @@ import toastError from "../../errors/toastError";
 
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../../components/Can";
+import { SocketContext } from "../../context/Socket/SocketContext";
 
 const useStyles = makeStyles(theme => ({
 	mainPaper: {
@@ -100,10 +101,12 @@ const Connections = () => {
 
 	const { user } = useContext(AuthContext);
 	const { whatsApps, loading } = useContext(WhatsAppsContext);
+	const socketManager = useContext(SocketContext);
 	const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
 	const [qrModalOpen, setQrModalOpen] = useState(false);
 	const [selectedWhatsApp, setSelectedWhatsApp] = useState(null);
 	const [confirmModalOpen, setConfirmModalOpen] = useState(false);
+	const [loadingButtons, setLoadingButtons] = useState({});
 	const confirmationModalInitialState = {
 		action: "",
 		title: "",
@@ -115,19 +118,65 @@ const Connections = () => {
 		confirmationModalInitialState
 	);
 
+	// Listener para abrir QR modal automaticamente quando QR code for gerado
+	useEffect(() => {
+		const companyId = localStorage.getItem("companyId");
+		const socket = socketManager.getSocket(companyId);
+
+		const handleWhatsAppSessionUpdate = (data) => {
+			if (data.action === "update" && data.session) {
+				const whatsApp = data.session;
+				// Se o status mudou para qrcode e há um QR code válido, abrir modal
+				if (whatsApp.status === "qrcode" && whatsApp.qrcode && whatsApp.qrcode.trim() !== "") {
+					// Verificar se não é um QR code inválido
+					if (!whatsApp.qrcode.includes('linktr.ee') && 
+					    !whatsApp.qrcode.includes('http://') && 
+					    !whatsApp.qrcode.includes('https://') &&
+					    !whatsApp.qrcode.startsWith('http')) {
+						setSelectedWhatsApp(whatsApp);
+						setQrModalOpen(true);
+						toast.success("QR Code gerado com sucesso!");
+					}
+				}
+			}
+		};
+
+		socket.on(`company-${companyId}-whatsappSession`, handleWhatsAppSessionUpdate);
+
+		return () => {
+			socket.off(`company-${companyId}-whatsappSession`, handleWhatsAppSessionUpdate);
+		};
+	}, [socketManager]);
+
 	const handleStartWhatsAppSession = async whatsAppId => {
+		setLoadingButtons(prev => ({ ...prev, [whatsAppId]: true }));
 		try {
 			await api.post(`/whatsappsession/${whatsAppId}`);
+			toast.success("Iniciando conexão...");
 		} catch (err) {
 			toastError(err);
+		} finally {
+			setLoadingButtons(prev => ({ ...prev, [whatsAppId]: false }));
 		}
 	};
 
 	const handleRequestNewQrCode = async whatsAppId => {
+		setLoadingButtons(prev => ({ ...prev, [`newQr_${whatsAppId}`]: true }));
 		try {
 			await api.put(`/whatsappsession/${whatsAppId}`);
+			toast.success("Gerando novo QR Code...");
+			// Aguardar um pouco e abrir o modal se o QR code for gerado
+			setTimeout(() => {
+				const whatsApp = whatsApps.find(w => w.id === whatsAppId);
+				if (whatsApp) {
+					setSelectedWhatsApp(whatsApp);
+					setQrModalOpen(true);
+				}
+			}, 1500);
 		} catch (err) {
 			toastError(err);
+		} finally {
+			setLoadingButtons(prev => ({ ...prev, [`newQr_${whatsAppId}`]: false }));
 		}
 	};
 
@@ -218,6 +267,8 @@ const Connections = () => {
 							variant="outlined"
 							color="primary"
 							onClick={() => handleStartWhatsAppSession(whatsApp.id)}
+							disabled={loadingButtons[whatsApp.id]}
+							startIcon={loadingButtons[whatsApp.id] ? <CircularProgress size={16} /> : null}
 						>
 							{i18n.t("connections.buttons.tryAgain")}
 						</Button>{" "}
@@ -226,6 +277,8 @@ const Connections = () => {
 							variant="outlined"
 							color="secondary"
 							onClick={() => handleRequestNewQrCode(whatsApp.id)}
+							disabled={loadingButtons[`newQr_${whatsApp.id}`]}
+							startIcon={loadingButtons[`newQr_${whatsApp.id}`] ? <CircularProgress size={16} /> : null}
 						>
 							{i18n.t("connections.buttons.newQr")}
 						</Button>
