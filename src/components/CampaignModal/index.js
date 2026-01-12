@@ -22,7 +22,6 @@ import PhoneIcon from "@material-ui/icons/Phone";
 import EmailIcon from "@material-ui/icons/Email";
 import AddIcon from "@material-ui/icons/Add";
 import DescriptionIcon from "@material-ui/icons/Description";
-import DescriptionIcon from "@material-ui/icons/Description";
 
 import { i18n } from "../../translate/i18n";
 import moment from "moment";
