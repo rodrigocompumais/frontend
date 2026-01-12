@@ -195,6 +195,7 @@ const KanbanCard = ({
 }) => {
   const queueColor = ticket.queue?.color || "#6B7280";
   const classes = useStyles({ queueColor });
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
 
   const getInitials = (name) => {
     if (!name) return "?";
