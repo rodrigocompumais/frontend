@@ -155,7 +155,7 @@ const Forms = () => {
   const handleCopyLink = (form) => {
     const link = `${window.location.origin}/f/${form.slug}`;
     navigator.clipboard.writeText(link);
-    toast.success(i18n.t("forms.toasts.linkCopied"));
+    toast.success(`Link copiado: ${link}`);
   };
 
   const handleViewPublic = (form) => {

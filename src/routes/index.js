@@ -67,7 +67,7 @@ const Routes = () => {
         <TicketsContextProvider>
           <Switch>
             <Route exact path="/" component={Landing} />
-            <Route exact path="/f/:slug" component={PublicForm} />
+            <Route exact path="/f/:slug" component={PublicForm} isPublic={true} />
             <Route exact path="/login" component={Login} />
             <Route exact path="/signup" component={Signup} />
             <Route exact path="/signup/success" component={SignupSuccess} />

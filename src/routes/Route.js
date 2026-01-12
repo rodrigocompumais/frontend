@@ -5,7 +5,7 @@ import moment from "moment";
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
 
-const Route = ({ component: Component, isPrivate = false, allowExpired = false, ...rest }) => {
+const Route = ({ component: Component, isPrivate = false, isPublic = false, allowExpired = false, ...rest }) => {
 	const { isAuth, loading, user } = useContext(AuthContext);
 
 	// Verificar se a assinatura está vencida
@@ -27,8 +27,9 @@ const Route = ({ component: Component, isPrivate = false, allowExpired = false, 
 	}
 
 	// Se está autenticado e a rota não é privada (ex: login, signup)
+	// MAS SOMENTE se não for uma rota pública (permite acesso mesmo estando autenticado)
 	// Redireciona para dashboard ou para página de expiração
-	if (isAuth && !isPrivate) {
+	if (isAuth && !isPrivate && !isPublic) {
 		const redirectPath = isSubscriptionExpired() ? "/subscription-expired" : "/dashboard";
 		return (
 			<>
