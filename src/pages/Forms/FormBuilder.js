@@ -147,6 +147,7 @@ const FormBuilder = () => {
     settings: {
       formType: "normal", // "normal" ou "quotation"
       quotationItems: [], // Array de { productName: string, quantity: number }
+      whatsAppMessage: "", // Mensagem pré-definida para envio via WhatsApp
     },
   });
 
@@ -852,6 +853,27 @@ const FormBuilder = () => {
                   />
                 </Grid>
               )}
+              <Grid item xs={12}>
+                <TextField
+                  label="Mensagem WhatsApp (pré-definida)"
+                  fullWidth
+                  multiline
+                  rows={4}
+                  value={formData.settings?.whatsAppMessage || ""}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      settings: {
+                        ...formData.settings,
+                        whatsAppMessage: e.target.value,
+                      },
+                    })
+                  }
+                  variant="outlined"
+                  placeholder="Digite a mensagem que será enviada automaticamente quando o botão WhatsApp for clicado"
+                  helperText="Esta mensagem será enviada diretamente através da plataforma quando o botão WhatsApp for clicado nas respostas do formulário. Requer que 'Criar Ticket' esteja ativado."
+                />
+              </Grid>
             </Grid>
           </Box>
         )}

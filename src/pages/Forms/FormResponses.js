@@ -185,13 +185,32 @@ const FormResponses = () => {
     }
   };
 
-  const handleWhatsApp = (phone) => {
-    if (!phone) {
+  const handleWhatsApp = async (response) => {
+    if (!response.responderPhone) {
       toast.error("Número de telefone não disponível");
       return;
     }
-    const whatsappUrl = `https://wa.me/${phone.replace(/\D/g, "")}`;
-    window.open(whatsappUrl, "_blank");
+
+    const message = form?.settings?.whatsAppMessage || "";
+    if (!message.trim()) {
+      toast.error("Mensagem pré-definida não configurada no formulário");
+      return;
+    }
+
+    try {
+      // Se houver ticket, usar o ticket para enviar mensagem
+      const ticketId = response.ticketId || response.ticket?.id;
+      if (ticketId) {
+        await api.post(`/messages/${ticketId}`, {
+          body: message,
+        });
+        toast.success("Mensagem enviada com sucesso!");
+      } else {
+        toast.error("Ticket não disponível. Ative a opção 'Criar Ticket' no formulário.");
+      }
+    } catch (err) {
+      toastError(err);
+    }
   };
 
   const handleMenuOpen = (event, response) => {
@@ -296,7 +315,7 @@ const FormResponses = () => {
                         <IconButton
                           size="small"
                           className={classes.whatsappButton}
-                          onClick={() => handleWhatsApp(response.responderPhone)}
+                          onClick={() => handleWhatsApp(response)}
                         >
                           <WhatsAppIcon fontSize="small" />
                         </IconButton>
@@ -390,7 +409,7 @@ const FormResponses = () => {
                   <IconButton
                     size="small"
                     className={classes.whatsappButton}
-                    onClick={() => handleWhatsApp(selectedResponse.responderPhone)}
+                    onClick={() => handleWhatsApp(selectedResponse)}
                   >
                     <WhatsAppIcon />
                   </IconButton>
