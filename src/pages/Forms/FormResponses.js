@@ -198,16 +198,16 @@ const FormResponses = () => {
     }
 
     try {
-      // Se houver ticket, usar o ticket para enviar mensagem
-      const ticketId = response.ticketId || response.ticket?.id;
-      if (ticketId) {
-        await api.post(`/messages/${ticketId}`, {
-          body: message,
-        });
-        toast.success("Mensagem enviada com sucesso!");
-      } else {
-        toast.error("Ticket não disponível. Ative a opção 'Criar Ticket' no formulário.");
-      }
+      // Limpar número (remover caracteres não numéricos)
+      const phoneNumber = response.responderPhone.replace(/\D/g, "");
+
+      // Usar o novo endpoint que cria contato e ticket automaticamente
+      await api.post("/messages/send-by-phone", {
+        number: phoneNumber,
+        body: message,
+      });
+
+      toast.success("Mensagem enviada com sucesso!");
     } catch (err) {
       toastError(err);
     }
