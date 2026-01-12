@@ -33,6 +33,8 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     ...theme.scrollbarStyles,
     backgroundColor: theme.palette.type === "dark" ? "#0B1120" : "#F9FAFB",
+    display: "flex",
+    flexDirection: "column",
   },
   inputArea: {
     position: "relative",
@@ -218,6 +220,9 @@ export default function ChatMessages({
               <Box 
                 key={key} 
                 className={`${classes.messageBubble} ${isOwnMessage ? classes.boxRight : classes.boxLeft}`}
+                style={{
+                  alignSelf: isOwnMessage ? "flex-end" : "flex-start"
+                }}
               >
                 <Typography className={classes.senderName}>
                   {item.sender.name}

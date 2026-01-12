@@ -119,7 +119,8 @@ export function ChatModal({
         return;
       }
 
-      if (!users || users.length === 0) {
+      // Para grupos, é obrigatório ter pelo menos um usuário além do criador
+      if (type === "new" && (!users || users.length === 0)) {
         alert(i18n.t("chat.toasts.fillUser"));
         return;
       }
@@ -133,6 +134,7 @@ export function ChatModal({
         const { data } = await api.post("/chats", {
           users,
           title,
+          isGroup: users && users.length > 0, // Se tem usuários, é grupo
         });
         handleLoadNewChat(data);
       }
@@ -196,6 +198,7 @@ function Chat(props) {
   const [messagesPage, setMessagesPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState(0);
+  const [chatType, setChatType] = useState("individual"); // "individual" ou "group"
   const isMounted = useRef(true);
   const scrollToBottomRef = useRef();
   const { id } = useParams();
@@ -210,7 +213,8 @@ function Chat(props) {
 
   useEffect(() => {
     if (isMounted.current) {
-      findChats().then((data) => {
+      const isGroup = chatType === "group";
+      findChats(isGroup).then((data) => {
         const { records } = data;
         if (records.length > 0) {
           setChats(records);
@@ -218,13 +222,18 @@ function Chat(props) {
 
           if (id && records.length) {
             const chat = records.find((r) => r.uuid === id);
-            selectChat(chat);
+            if (chat) {
+              selectChat(chat);
+            }
           }
+        } else {
+          setChats([]);
+          setChatsPageInfo(data);
         }
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [chatType]);
 
   useEffect(() => {
     if (isObject(currentChat) && has(currentChat, "id")) {
@@ -354,9 +363,11 @@ function Chat(props) {
     }
   };
 
-  const findChats = async () => {
+  const findChats = async (isGroup = false) => {
     try {
-      const { data } = await api.get("/chats");
+      const { data } = await api.get("/chats", {
+        params: { isGroup: isGroup }
+      });
       return data;
     } catch (err) {
       console.log(err);
@@ -367,7 +378,21 @@ function Chat(props) {
     return (
       <Grid className={classes.gridContainer} container>
         <Grid className={classes.gridItem} md={3} item>
-          
+          <Tabs
+            value={chatType === "individual" ? 0 : 1}
+            indicatorColor="secondary"
+            textColor="secondary"
+            onChange={(e, v) => {
+              setChatType(v === 0 ? "individual" : "group");
+              setCurrentChat({});
+              setMessages([]);
+              setMessagesPage(1);
+            }}
+            className={classes.tabs}
+          >
+            <Tab label="Chats Individuais" />
+            <Tab label="Grupos" />
+          </Tabs>
             <div className={classes.btnContainer}>
               <Button
                 onClick={() => {
@@ -378,7 +403,7 @@ function Chat(props) {
                 variant="contained"
                 className={classes.newButton}
               >
-                {i18n.t("chat.buttons.new")}
+                {chatType === "group" ? "Novo Grupo" : i18n.t("chat.buttons.new")}
               </Button>
             </div>
           
@@ -426,17 +451,36 @@ function Chat(props) {
             <Tab label={i18n.t("chat.chats")} />
             <Tab label={i18n.t("chat.messages")} />
           </Tabs>
+          <Tabs
+            value={chatType === "individual" ? 0 : 1}
+            indicatorColor="secondary"
+            textColor="secondary"
+            onChange={(e, v) => {
+              setChatType(v === 0 ? "individual" : "group");
+              setCurrentChat({});
+              setMessages([]);
+              setMessagesPage(1);
+            }}
+            className={classes.tabs}
+            style={{ marginTop: 8 }}
+          >
+            <Tab label="Chats Individuais" />
+            <Tab label="Grupos" />
+          </Tabs>
         </Grid>
         {tab === 0 && (
           <Grid className={classes.gridItemTab} md={12} item>
             <div className={classes.btnContainer}>
               <Button
-                onClick={() => setShowDialog(true)}
+                onClick={() => {
+                  setDialogType("new");
+                  setShowDialog(true);
+                }}
                 color="primary"
                 variant="contained"
                 className={classes.newButton}
               >
-                {i18n.t("chat.buttons.newChat")}
+                {chatType === "group" ? "Novo Grupo" : i18n.t("chat.buttons.newChat")}
               </Button>
             </div>
             <ChatList
