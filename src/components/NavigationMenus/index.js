@@ -166,7 +166,7 @@ const NavigationMenus = () => {
               className={classes.menuItem}
               onClick={() => handleNavigate('/', () => setAtendimentoAnchor(null))}
             >
-              <ListItemIcon className={classes.listItemIcon}>
+              <ListItemIcon>
                 <DashboardIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText primary="Dashboard" />
@@ -177,7 +177,7 @@ const NavigationMenus = () => {
           className={classes.menuItem}
           onClick={() => handleNavigate('/tickets', () => setAtendimentoAnchor(null))}
         >
-          <ListItemIcon className={classes.listItemIcon}>
+          <ListItemIcon>
             <WhatsAppIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.tickets")} />
@@ -187,7 +187,7 @@ const NavigationMenus = () => {
             className={classes.menuItem}
             onClick={() => handleNavigate('/kanban', () => setAtendimentoAnchor(null))}
           >
-            <ListItemIcon className={classes.listItemIcon}>
+            <ListItemIcon>
               <TableChartIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText primary="Kanban" />
@@ -198,7 +198,7 @@ const NavigationMenus = () => {
             className={classes.menuItem}
             onClick={() => handleNavigate('/chats', () => setAtendimentoAnchor(null))}
           >
-            <ListItemIcon className={classes.listItemIcon}>
+            <ListItemIcon>
               <ForumIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText primary={i18n.t("mainDrawer.listItems.chats")} />
@@ -208,7 +208,7 @@ const NavigationMenus = () => {
           className={classes.menuItem}
           onClick={() => handleNavigate('/quick-messages', () => setAtendimentoAnchor(null))}
         >
-          <ListItemIcon className={classes.listItemIcon}>
+          <ListItemIcon>
             <FlashOnIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.quickMessages")} />
@@ -235,7 +235,7 @@ const NavigationMenus = () => {
           className={classes.menuItem}
           onClick={() => handleNavigate('/todolist', () => setGestaoAnchor(null))}
         >
-          <ListItemIcon className={classes.listItemIcon}>
+          <ListItemIcon>
             <BorderColorIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.tasks")} />
@@ -244,7 +244,7 @@ const NavigationMenus = () => {
           className={classes.menuItem}
           onClick={() => handleNavigate('/schedules', () => setGestaoAnchor(null))}
         >
-          <ListItemIcon className={classes.listItemIcon}>
+          <ListItemIcon>
             <EventIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.schedules")} />
@@ -253,7 +253,7 @@ const NavigationMenus = () => {
           className={classes.menuItem}
           onClick={() => handleNavigate('/contacts', () => setGestaoAnchor(null))}
         >
-          <ListItemIcon className={classes.listItemIcon}>
+          <ListItemIcon>
             <ContactPhoneIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.contacts")} />
@@ -262,7 +262,7 @@ const NavigationMenus = () => {
           className={classes.menuItem}
           onClick={() => handleNavigate('/tags', () => setGestaoAnchor(null))}
         >
-          <ListItemIcon className={classes.listItemIcon}>
+          <ListItemIcon>
             <LocalOfferIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.tags")} />
@@ -271,7 +271,7 @@ const NavigationMenus = () => {
           className={classes.menuItem}
           onClick={() => handleNavigate('/forms', () => setGestaoAnchor(null))}
         >
-          <ListItemIcon className={classes.listItemIcon}>
+          <ListItemIcon>
             <AssignmentIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.forms")} />
@@ -302,7 +302,7 @@ const NavigationMenus = () => {
                   className={classes.menuItem}
                   onClick={() => handleNavigate('/campaigns', () => setAutomacaoAnchor(null))}
                 >
-                  <ListItemIcon className={classes.listItemIcon}>
+                  <ListItemIcon>
                     <EventAvailableIcon fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary={i18n.t("mainDrawer.listItems.campaigns")} />
@@ -311,7 +311,7 @@ const NavigationMenus = () => {
                   className={classes.menuItem}
                   onClick={() => handleNavigate('/contact-lists', () => setAutomacaoAnchor(null))}
                 >
-                  <ListItemIcon className={classes.listItemIcon}>
+                  <ListItemIcon>
                     <PeopleIcon fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary="Listas de Contatos" />
@@ -320,7 +320,7 @@ const NavigationMenus = () => {
                   className={classes.menuItem}
                   onClick={() => handleNavigate('/flowbuilders', () => setAutomacaoAnchor(null))}
                 >
-                  <ListItemIcon className={classes.listItemIcon}>
+                  <ListItemIcon>
                     <AccountTreeIcon fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary={i18n.t("mainDrawer.listItems.flows")} />
@@ -332,7 +332,7 @@ const NavigationMenus = () => {
                 className={classes.menuItem}
                 onClick={() => handleNavigate('/prompts', () => setAutomacaoAnchor(null))}
               >
-                <ListItemIcon className={classes.listItemIcon}>
+                <ListItemIcon>
                   <AllInclusiveIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText primary={i18n.t("mainDrawer.listItems.prompts")} />
@@ -367,7 +367,7 @@ const NavigationMenus = () => {
                 className={classes.menuItem}
                 onClick={() => handleNavigate('/users', () => setAdministracaoAnchor(null))}
               >
-                <ListItemIcon className={classes.listItemIcon}>
+                <ListItemIcon>
                   <PeopleIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText primary={i18n.t("mainDrawer.listItems.users")} />
@@ -376,7 +376,7 @@ const NavigationMenus = () => {
                 className={classes.menuItem}
                 onClick={() => handleNavigate('/connections', () => setAdministracaoAnchor(null))}
               >
-                <ListItemIcon className={classes.listItemIcon}>
+                <ListItemIcon>
                   <Badge badgeContent={connectionWarning ? "!" : 0} color="error">
                     <SyncAltIcon fontSize="small" />
                   </Badge>
@@ -387,7 +387,7 @@ const NavigationMenus = () => {
                 className={classes.menuItem}
                 onClick={() => handleNavigate('/queues', () => setAdministracaoAnchor(null))}
               >
-                <ListItemIcon className={classes.listItemIcon}>
+                <ListItemIcon>
                   <AccountTreeOutlinedIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText primary={i18n.t("mainDrawer.listItems.queues")} />
@@ -396,7 +396,7 @@ const NavigationMenus = () => {
                 className={classes.menuItem}
                 onClick={() => handleNavigate('/files', () => setAdministracaoAnchor(null))}
               >
-                <ListItemIcon className={classes.listItemIcon}>
+                <ListItemIcon>
                   <AttachFileIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText primary={i18n.t("mainDrawer.listItems.files")} />
@@ -406,7 +406,7 @@ const NavigationMenus = () => {
                   className={classes.menuItem}
                   onClick={() => handleNavigate('/queue-integration', () => setAdministracaoAnchor(null))}
                 >
-                  <ListItemIcon className={classes.listItemIcon}>
+                  <ListItemIcon>
                     <DeviceHubOutlinedIcon fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary={i18n.t("mainDrawer.listItems.queueIntegration")} />
@@ -417,7 +417,7 @@ const NavigationMenus = () => {
                   className={classes.menuItem}
                   onClick={() => handleNavigate('/messages-api', () => setAdministracaoAnchor(null))}
                 >
-                  <ListItemIcon className={classes.listItemIcon}>
+                  <ListItemIcon>
                     <CodeRoundedIcon fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary={i18n.t("mainDrawer.listItems.messagesAPI")} />
@@ -427,7 +427,7 @@ const NavigationMenus = () => {
                 className={classes.menuItem}
                 onClick={() => handleNavigate('/financeiro', () => setAdministracaoAnchor(null))}
               >
-                <ListItemIcon className={classes.listItemIcon}>
+                <ListItemIcon>
                   <LocalAtmIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText primary={i18n.t("mainDrawer.listItems.financeiro")} />
@@ -439,7 +439,7 @@ const NavigationMenus = () => {
                     className={classes.menuItem}
                     onClick={() => handleNavigate('/announcements', () => setAdministracaoAnchor(null))}
                   >
-                    <ListItemIcon className={classes.listItemIcon}>
+                    <ListItemIcon>
                       <AnnouncementIcon fontSize="small" />
                     </ListItemIcon>
                     <ListItemText primary={i18n.t("mainDrawer.listItems.annoucements")} />
@@ -471,7 +471,7 @@ const NavigationMenus = () => {
           className={classes.menuItem}
           onClick={() => handleNavigate('/helps', () => setSistemaAnchor(null))}
         >
-          <ListItemIcon className={classes.listItemIcon}>
+          <ListItemIcon>
             <HelpOutlineIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.helps")} />
@@ -484,7 +484,7 @@ const NavigationMenus = () => {
               className={classes.menuItem}
               onClick={() => handleNavigate('/settings', () => setSistemaAnchor(null))}
             >
-              <ListItemIcon className={classes.listItemIcon}>
+              <ListItemIcon>
                 <SettingsOutlinedIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText primary={i18n.t("mainDrawer.listItems.settings")} />
