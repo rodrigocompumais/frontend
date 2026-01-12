@@ -33,13 +33,18 @@ const useStyles = makeStyles((theme) => ({
     overflowX: "hidden",
     flex: 1,
     minHeight: 0,
-    maxHeight: "100%",
+    height: "100%",
     padding: theme.spacing(2),
     ...theme.scrollbarStyles,
     backgroundColor: theme.palette.type === "dark" ? "#0B1120" : "#F9FAFB",
     display: "flex",
     flexDirection: "column",
+  },
+  messagesWrapper: {
+    display: "flex",
+    flexDirection: "column",
     justifyContent: "flex-end",
+    minHeight: "min-content",
   },
   inputArea: {
     flexShrink: 0,
@@ -227,30 +232,32 @@ export default function ChatMessages({
   return (
     <Paper className={classes.mainContainer} elevation={0}>
       <div onScroll={handleScroll} className={classes.messageList}>
-        {Array.isArray(messages) &&
-          messages.map((item, key) => {
-            const isOwnMessage = item.senderId === user.id;
-            return (
-              <Box 
-                key={key} 
-                className={`${classes.messageBubble} ${isOwnMessage ? classes.boxRight : classes.boxLeft}`}
-                style={{
-                  alignSelf: isOwnMessage ? "flex-end" : "flex-start"
-                }}
-              >
-                <Typography className={classes.senderName}>
-                  {item.sender.name}
-                </Typography>
-                <Typography className={classes.messageContent}>
-                  {item.message}
-                </Typography>
-                <Typography className={classes.messageTime}>
-                  {datetimeToClient(item.createdAt)}
-                </Typography>
-              </Box>
-            );
-          })}
-        <div ref={baseRef}></div>
+        <div className={classes.messagesWrapper}>
+          {Array.isArray(messages) &&
+            messages.map((item, key) => {
+              const isOwnMessage = item.senderId === user.id;
+              return (
+                <Box 
+                  key={key} 
+                  className={`${classes.messageBubble} ${isOwnMessage ? classes.boxRight : classes.boxLeft}`}
+                  style={{
+                    alignSelf: isOwnMessage ? "flex-end" : "flex-start"
+                  }}
+                >
+                  <Typography className={classes.senderName}>
+                    {item.sender.name}
+                  </Typography>
+                  <Typography className={classes.messageContent}>
+                    {item.message}
+                  </Typography>
+                  <Typography className={classes.messageTime}>
+                    {datetimeToClient(item.createdAt)}
+                  </Typography>
+                </Box>
+              );
+            })}
+          <div ref={baseRef}></div>
+        </div>
       </div>
       <div className={classes.inputArea}>
         <div className={classes.inputContainer}>
