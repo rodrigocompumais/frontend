@@ -298,6 +298,7 @@ const TicketListItemCustom = ({ ticket }) => {
   const [whatsAppName, setWhatsAppName] = useState(null);
   const [tag, setTag] = useState([]);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [openTicketMessageDialog, setOpenTicketMessageDialog] = useState(false);
 
   const { ticketId } = useParams();
@@ -697,6 +698,11 @@ const TicketListItemCustom = ({ ticket }) => {
         </Menu>
       </ListItem>
       <Divider variant="inset" component="li" />
+      <ContactAvatarModal
+        open={avatarModalOpen}
+        onClose={() => setAvatarModalOpen(false)}
+        contact={ticket?.contact}
+      />
     </React.Fragment>
   );
 };

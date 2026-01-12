@@ -24,6 +24,7 @@ import api from "../../services/api";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ContactModal from "../../components/ContactModal";
 import ConfirmationModal from "../../components/ConfirmationModal/";
+import ContactAvatarModal from "../../components/ContactAvatarModal";
 
 import { i18n } from "../../translate/i18n";
 import MainHeader from "../../components/MainHeader";
@@ -110,6 +111,8 @@ const Contacts = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [openModalImport, setOpenModalImport] = useState(false);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState(null);
 
   const socketManager = useContext(SocketContext);
 
@@ -350,7 +353,14 @@ const Contacts = () => {
               {contacts.map((contact) => (
                 <TableRow key={contact.id}>
                   <TableCell style={{ paddingRight: 0 }}>
-                    {<Avatar src={contact.profilePicUrl} />}
+                    <Avatar 
+                      src={contact.profilePicUrl}
+                      onClick={() => {
+                        setSelectedContact(contact);
+                        setAvatarModalOpen(true);
+                      }}
+                      style={{ cursor: "pointer" }}
+                    />
                   </TableCell>
                   <TableCell>{contact.name}</TableCell>
                   <TableCell align="center">{contact.number}</TableCell>
@@ -394,6 +404,14 @@ const Contacts = () => {
           </TableBody>
         </Table>
       </Paper>
+      <ContactAvatarModal
+        open={avatarModalOpen}
+        onClose={() => {
+          setAvatarModalOpen(false);
+          setSelectedContact(null);
+        }}
+        contact={selectedContact}
+      />
     </MainContainer>
   );
 };

@@ -20,6 +20,7 @@ import { CardHeader } from "@material-ui/core";
 import { ContactForm } from "../ContactForm";
 import ContactModal from "../ContactModal";
 import { ContactNotes } from "../ContactNotes";
+import ContactAvatarModal from "../ContactAvatarModal";
 
 const drawerWidth = 320;
 
@@ -90,6 +91,7 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 
 	const [modalOpen, setModalOpen] = useState(false);
 	const [openForm, setOpenForm] = useState(false);
+	const [avatarModalOpen, setAvatarModalOpen] = useState(false);
 
 	useEffect(() => {
 		setOpenForm(false);
@@ -130,7 +132,14 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 								style={{ cursor: "pointer", width: '100%' }}
 								titleTypographyProps={{ noWrap: true }}
 								subheaderTypographyProps={{ noWrap: true }}
-								avatar={<Avatar src={contact.profilePicUrl} alt="contact_image" style={{ width: 60, height: 60 }} />}
+								avatar={
+									<Avatar 
+										src={contact.profilePicUrl} 
+										alt="contact_image" 
+										style={{ width: 60, height: 60, cursor: "pointer" }}
+										onClick={() => setAvatarModalOpen(true)}
+									/>
+								}
 								title={
 									<>
 										<Typography onClick={() => setOpenForm(true)}>
@@ -192,6 +201,11 @@ const ContactDrawer = ({ open, handleDrawerClose, contact, ticket, loading }) =>
 					</div>
 				)}
 			</Drawer>
+			<ContactAvatarModal
+				open={avatarModalOpen}
+				onClose={() => setAvatarModalOpen(false)}
+				contact={contact}
+			/>
 		</>
 	);
 };

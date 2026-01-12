@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import {
   Card,
@@ -11,6 +11,7 @@ import {
   Tooltip,
   Badge,
 } from "@material-ui/core";
+import ContactAvatarModal from "../ContactAvatarModal";
 import {
   Visibility as VisibilityIcon,
   SwapHoriz as TransferIcon,
@@ -246,6 +247,11 @@ const KanbanCard = ({
               <Avatar
                 src={ticket.contact?.profilePicUrl}
                 className={classes.avatar}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setAvatarModalOpen(true);
+                }}
+                style={{ cursor: "pointer" }}
               >
                 {getInitials(ticket.contact?.name)}
               </Avatar>
@@ -323,6 +329,11 @@ const KanbanCard = ({
           </Tooltip>
         </Box>
       </CardContent>
+      <ContactAvatarModal
+        open={avatarModalOpen}
+        onClose={() => setAvatarModalOpen(false)}
+        contact={ticket?.contact}
+      />
     </Card>
   );
 };
