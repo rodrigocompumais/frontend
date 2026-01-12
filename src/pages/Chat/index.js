@@ -42,10 +42,7 @@ const useStyles = makeStyles((theme) => ({
     border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
   },
   gridContainer: {
-    flex: 1,
-    minHeight: 0,
-    display: "flex",
-    flexDirection: "column",
+    height: "100%",
     borderRadius: theme.spacing(2),
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
@@ -54,8 +51,7 @@ const useStyles = makeStyles((theme) => ({
   gridItem: {
     display: "flex",
     flexDirection: "column",
-    minHeight: 0,
-    flex: 1,
+    height: "100%",
     "&:first-child": {
       borderRight: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
       [theme.breakpoints.down("md")]: {
