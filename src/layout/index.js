@@ -49,14 +49,14 @@ const useStyles = makeStyles((theme) => ({
     zIndex: theme.zIndex.drawer + 1,
   },
   logo: {
-    height: "36px",
+    height: "65px",
     width: "auto",
-    maxWidth: 150,
+    maxWidth: 270,
     marginRight: theme.spacing(2),
     cursor: 'pointer',
     [theme.breakpoints.down("xs")]: {
-      height: "32px",
-      maxWidth: 120,
+      height: "58px",
+      maxWidth: 216,
     },
   },
   grow: {
