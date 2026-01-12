@@ -200,6 +200,7 @@ const FormBuilder = () => {
         settings: data.settings || {
           formType: "normal",
           quotationItems: [],
+          whatsAppMessage: "",
         },
       });
     } catch (err) {
@@ -213,14 +214,25 @@ const FormBuilder = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const fieldsToSend = formData.fields.map((field, index) => ({
-        ...field,
-        order: index,
-      }));
+      const isQuotation = formData.settings?.formType === "quotation";
+      
+      // Se for cotação, não enviar campos normais (ou enviar array vazio)
+      const fieldsToSend = isQuotation 
+        ? [] 
+        : formData.fields.map((field, index) => ({
+            ...field,
+            order: index,
+          }));
 
       const payload = {
         ...formData,
         fields: fieldsToSend,
+        // Garantir que settings seja um objeto válido
+        settings: formData.settings || {
+          formType: "normal",
+          quotationItems: [],
+          whatsAppMessage: "",
+        },
       };
 
       if (isEdit) {
