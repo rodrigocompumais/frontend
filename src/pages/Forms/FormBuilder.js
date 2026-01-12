@@ -24,6 +24,11 @@ import {
   DialogActions,
   Tabs,
   Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
 } from "@material-ui/core";
 
 import MainContainer from "../../components/MainContainer";
@@ -139,6 +144,10 @@ const FormBuilder = () => {
     sendWebhook: false,
     webhookUrl: "",
     fields: [],
+    settings: {
+      formType: "normal", // "normal" ou "quotation"
+      quotationItems: [], // Array de { productName: string, quantity: number }
+    },
   });
 
   const [fieldForm, setFieldForm] = useState({
@@ -187,6 +196,10 @@ const FormBuilder = () => {
         sendWebhook: data.sendWebhook || false,
         webhookUrl: data.webhookUrl || "",
         fields: customFields.sort((a, b) => a.order - b.order),
+        settings: data.settings || {
+          formType: "normal",
+          quotationItems: [],
+        },
       });
     } catch (err) {
       toastError(err);
@@ -289,6 +302,55 @@ const FormBuilder = () => {
       handleAddOption();
     }
   };
+
+  // Funções para gerenciar itens de cotação
+  const handleAddQuotationItem = () => {
+    const items = formData.settings?.quotationItems || [];
+    const newItems = [
+      ...items,
+      {
+        productName: "",
+        quantity: 1,
+      },
+    ];
+    setFormData({
+      ...formData,
+      settings: {
+        ...formData.settings,
+        quotationItems: newItems,
+      },
+    });
+  };
+
+  const handleRemoveQuotationItem = (index) => {
+    const items = formData.settings?.quotationItems || [];
+    const newItems = items.filter((_, i) => i !== index);
+    setFormData({
+      ...formData,
+      settings: {
+        ...formData.settings,
+        quotationItems: newItems,
+      },
+    });
+  };
+
+  const handleUpdateQuotationItem = (index, field, value) => {
+    const items = formData.settings?.quotationItems || [];
+    const newItems = [...items];
+    newItems[index] = {
+      ...newItems[index],
+      [field]: value,
+    };
+    setFormData({
+      ...formData,
+      settings: {
+        ...formData.settings,
+        quotationItems: newItems,
+      },
+    });
+  };
+
+  const isQuotationForm = formData.settings?.formType === "quotation";
 
   return (
     <MainContainer>
@@ -428,93 +490,230 @@ const FormBuilder = () => {
                   label="Formulário Anônimo (não coleta nome e telefone)"
                 />
               </Grid>
+              <Grid item xs={12}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Tipo de Formulário</InputLabel>
+                  <Select
+                    value={formData.settings?.formType || "normal"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          formType: e.target.value,
+                          quotationItems: e.target.value === "quotation" 
+                            ? (formData.settings?.quotationItems || []) 
+                            : [],
+                        },
+                      })
+                    }
+                    label="Tipo de Formulário"
+                  >
+                    <MenuItem value="normal">Normal</MenuItem>
+                    <MenuItem value="quotation">Cotação</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
             </Grid>
           </Box>
         )}
 
         {tabValue === 1 && (
           <Box className={classes.section} style={{ marginTop: 24 }}>
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              marginBottom={2}
-            >
-              <Typography className={classes.sectionTitle}>Campos</Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<AddIcon />}
-                onClick={handleAddField}
-              >
-                Adicionar Campo
-              </Button>
-            </Box>
-
-            {formData.fields.length === 0 && (
-              <Box
-                padding={4}
-                textAlign="center"
-                style={{
-                  border: `1px dashed #ccc`,
-                  borderRadius: 4,
-                }}
-              >
-                <Typography color="textSecondary">
-                  Nenhum campo adicionado. Clique em "Adicionar Campo" para
-                  começar.
-                </Typography>
-              </Box>
-            )}
-
-            {formData.fields.map((field, index) => (
-              <Paper key={index} className={classes.fieldItem}>
-                <Box className={classes.fieldHeader}>
-                  <Box display="flex" alignItems="center">
-                    <DragIndicatorIcon style={{ marginRight: 8 }} />
-                    <Typography variant="subtitle1" style={{ fontWeight: 600 }}>
-                      {field.label || "Campo sem nome"}
-                    </Typography>
-                    <Chip
-                      label={
-                        fieldTypes.find((ft) => ft.value === field.fieldType)
-                          ?.label || field.fieldType
-                      }
-                      size="small"
-                      className={classes.fieldTypeChip}
-                    />
-                    {field.isRequired && (
-                      <Chip
-                        label="Obrigatório"
-                        size="small"
-                        color="primary"
-                        className={classes.fieldTypeChip}
-                      />
-                    )}
-                  </Box>
-                  <Box>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditField(field, index)}
-                    >
-                      <EditIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => handleDeleteField(index)}
-                      color="secondary"
-                    >
-                      <DeleteIcon fontSize="small" />
-                    </IconButton>
-                  </Box>
-                </Box>
-                {field.helpText && (
-                  <Typography variant="caption" color="textSecondary">
-                    {field.helpText}
+            {isQuotationForm ? (
+              <>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  marginBottom={2}
+                >
+                  <Typography className={classes.sectionTitle}>
+                    Itens de Cotação
                   </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={handleAddQuotationItem}
+                  >
+                    Adicionar Item
+                  </Button>
+                </Box>
+
+                {(!formData.settings?.quotationItems ||
+                  formData.settings.quotationItems.length === 0) && (
+                  <Box
+                    padding={4}
+                    textAlign="center"
+                    style={{
+                      border: `1px dashed #ccc`,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <Typography color="textSecondary">
+                      Nenhum item adicionado. Clique em "Adicionar Item" para
+                      começar.
+                    </Typography>
+                  </Box>
                 )}
-              </Paper>
-            ))}
+
+                {formData.settings?.quotationItems &&
+                  formData.settings.quotationItems.length > 0 && (
+                    <Paper style={{ overflowX: "auto", marginBottom: 16 }}>
+                      <Table>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Nome do Produto</TableCell>
+                            <TableCell align="center" style={{ width: 120 }}>
+                              Quantidade
+                            </TableCell>
+                            <TableCell align="center" style={{ width: 100 }}>
+                              Ações
+                            </TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {formData.settings.quotationItems.map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell>
+                                <TextField
+                                  fullWidth
+                                  variant="outlined"
+                                  size="small"
+                                  value={item.productName || ""}
+                                  onChange={(e) =>
+                                    handleUpdateQuotationItem(
+                                      index,
+                                      "productName",
+                                      e.target.value
+                                    )
+                                  }
+                                  placeholder="Nome do produto"
+                                />
+                              </TableCell>
+                              <TableCell align="center">
+                                <TextField
+                                  type="number"
+                                  variant="outlined"
+                                  size="small"
+                                  value={item.quantity || 1}
+                                  onChange={(e) =>
+                                    handleUpdateQuotationItem(
+                                      index,
+                                      "quantity",
+                                      parseInt(e.target.value) || 1
+                                    )
+                                  }
+                                  inputProps={{ min: 1 }}
+                                  style={{ width: 100 }}
+                                />
+                              </TableCell>
+                              <TableCell align="center">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => handleRemoveQuotationItem(index)}
+                                  color="secondary"
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </Paper>
+                  )}
+
+                <Typography variant="body2" color="textSecondary" style={{ marginTop: 16 }}>
+                  * Para cada item, o respondente poderá preencher: Valor Unitário, Valor Total e Observações
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  marginBottom={2}
+                >
+                  <Typography className={classes.sectionTitle}>Campos</Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={handleAddField}
+                  >
+                    Adicionar Campo
+                  </Button>
+                </Box>
+
+                {formData.fields.length === 0 && (
+                  <Box
+                    padding={4}
+                    textAlign="center"
+                    style={{
+                      border: `1px dashed #ccc`,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <Typography color="textSecondary">
+                      Nenhum campo adicionado. Clique em "Adicionar Campo" para
+                      começar.
+                    </Typography>
+                  </Box>
+                )}
+
+                {formData.fields.map((field, index) => (
+                  <Paper key={index} className={classes.fieldItem}>
+                    <Box className={classes.fieldHeader}>
+                      <Box display="flex" alignItems="center">
+                        <DragIndicatorIcon style={{ marginRight: 8 }} />
+                        <Typography variant="subtitle1" style={{ fontWeight: 600 }}>
+                          {field.label || "Campo sem nome"}
+                        </Typography>
+                        <Chip
+                          label={
+                            fieldTypes.find((ft) => ft.value === field.fieldType)
+                              ?.label || field.fieldType
+                          }
+                          size="small"
+                          className={classes.fieldTypeChip}
+                        />
+                        {field.isRequired && (
+                          <Chip
+                            label="Obrigatório"
+                            size="small"
+                            color="primary"
+                            className={classes.fieldTypeChip}
+                          />
+                        )}
+                      </Box>
+                      <Box>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEditField(field, index)}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteField(index)}
+                          color="secondary"
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                    {field.helpText && (
+                      <Typography variant="caption" color="textSecondary">
+                        {field.helpText}
+                      </Typography>
+                    )}
+                  </Paper>
+                ))}
+              </>
+            )}
           </Box>
         )}
 
