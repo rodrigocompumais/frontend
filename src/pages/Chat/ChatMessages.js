@@ -39,7 +39,7 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "flex-end",
   },
   inputArea: {
-    position: "relative",
+    flexShrink: 0,
     padding: theme.spacing(2),
     backgroundColor: theme.palette.background.paper,
     borderTop: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
