@@ -155,13 +155,12 @@ const UserModal = ({ open, onClose, userId }) => {
 		try {
 			const formData = new FormData();
 			formData.append("avatar", avatarFile);
-			const { data } = await api.post(`/users/${userId}/avatar`, formData, {
-				headers: {
-					"Content-Type": "multipart/form-data"
-				}
-			});
+			const { data } = await api.post(`/users/${userId}/avatar`, formData);
 			setUser(prev => ({ ...prev, avatar: data.avatar }));
 			setAvatarFile(null);
+			if (data.avatar) {
+				setAvatarPreview(`${process.env.REACT_APP_BACKEND_URL}/public/${data.avatar}`);
+			}
 			toast.success("Foto atualizada com sucesso!");
 		} catch (err) {
 			toastError(err);
