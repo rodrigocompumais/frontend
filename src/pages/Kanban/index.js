@@ -38,9 +38,16 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     height: "100%",
+    maxHeight: "calc(100vh - 64px)",
     padding: theme.spacing(2),
     backgroundColor: theme.palette.fancyBackground,
     overflow: "hidden",
+    [theme.breakpoints.down("sm")]: {
+      height: "auto",
+      maxHeight: "none",
+      minHeight: "calc(100vh - 64px)",
+      padding: theme.spacing(1),
+    },
   },
   header: {
     marginBottom: theme.spacing(2),
@@ -73,12 +80,20 @@ const useStyles = makeStyles((theme) => ({
       borderRadius: 12,
       backgroundColor: theme.palette.background.paper,
     },
+    [theme.breakpoints.down("sm")]: {
+      minWidth: "100%",
+      width: "100%",
+    },
   },
   filterSelect: {
     minWidth: 150,
     "& .MuiOutlinedInput-root": {
       borderRadius: 12,
       backgroundColor: theme.palette.background.paper,
+    },
+    [theme.breakpoints.down("sm")]: {
+      minWidth: "auto",
+      flex: 1,
     },
   },
   metricsBar: {
@@ -114,6 +129,10 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "hidden",
     paddingBottom: theme.spacing(2),
     ...theme.scrollbarStyles,
+    [theme.breakpoints.down("sm")]: {
+      minHeight: 0,
+      maxHeight: "calc(100vh - 300px)",
+    },
   },
   columnWrapper: {
     display: "flex",
