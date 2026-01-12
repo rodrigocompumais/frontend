@@ -428,19 +428,21 @@ function Chat(props) {
               <Tab label="Grupos" />
             </Tabs>
           </div>
-            <div className={classes.btnContainer}>
-              <Button
-                onClick={() => {
-                  setDialogType("new");
-                  setShowDialog(true);
-                }}
-                color="primary"
-                variant="contained"
-                className={classes.newButton}
-              >
-                {chatType === "group" ? "Novo Grupo" : i18n.t("chat.buttons.new")}
-              </Button>
-            </div>
+            {chatType === "group" && (
+              <div className={classes.btnContainer}>
+                <Button
+                  onClick={() => {
+                    setDialogType("new");
+                    setShowDialog(true);
+                  }}
+                  color="primary"
+                  variant="contained"
+                  className={classes.newButton}
+                >
+                  Novo Grupo
+                </Button>
+              </div>
+            )}
           
           <ChatList
             chats={chats}
@@ -505,19 +507,21 @@ function Chat(props) {
         </Grid>
         {tab === 0 && (
           <Grid className={classes.gridItemTab} md={12} item>
-            <div className={classes.btnContainer}>
-              <Button
-                onClick={() => {
-                  setDialogType("new");
-                  setShowDialog(true);
-                }}
-                color="primary"
-                variant="contained"
-                className={classes.newButton}
-              >
-                {chatType === "group" ? "Novo Grupo" : i18n.t("chat.buttons.newChat")}
-              </Button>
-            </div>
+            {chatType === "group" && (
+              <div className={classes.btnContainer}>
+                <Button
+                  onClick={() => {
+                    setDialogType("new");
+                    setShowDialog(true);
+                  }}
+                  color="primary"
+                  variant="contained"
+                  className={classes.newButton}
+                >
+                  Novo Grupo
+                </Button>
+              </div>
+            )}
             <ChatList
               chats={chats}
               pageInfo={chatsPageInfo}
