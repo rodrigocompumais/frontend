@@ -35,8 +35,8 @@ import {
   SettingsOutlined as SettingsOutlinedIcon,
   HeadsetMic as HeadsetMicIcon,
   BusinessCenter as BusinessCenterIcon,
-  SmartToy as SmartToyIcon,
-  AdminPanelSettings as AdminPanelSettingsIcon,
+  Extension as ExtensionIcon,
+  Security as SecurityIcon,
   Settings as SettingsIcon,
 } from '@material-ui/icons';
 import { Badge } from '@material-ui/core';
@@ -291,7 +291,7 @@ const NavigationMenus = () => {
           <Button
             className={classes.menuButton}
             onClick={(e) => setAutomacaoAnchor(e.currentTarget)}
-            startIcon={<SmartToyIcon />}
+            startIcon={<ExtensionIcon />}
           >
             {i18n.t("navigation.automacaoIA")}
           </Button>
@@ -359,7 +359,7 @@ const NavigationMenus = () => {
             <Button
               className={classes.menuButton}
               onClick={(e) => setAdministracaoAnchor(e.currentTarget)}
-              startIcon={<AdminPanelSettingsIcon />}
+              startIcon={<SecurityIcon />}
             >
               {i18n.t("navigation.administracao")}
             </Button>
