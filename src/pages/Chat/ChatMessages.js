@@ -6,6 +6,7 @@ import {
   makeStyles,
   Paper,
   Typography,
+  Avatar,
 } from "@material-ui/core";
 import SendIcon from "@material-ui/icons/Send";
 
@@ -108,16 +109,27 @@ const useStyles = makeStyles((theme) => ({
   },
   messageBubble: {
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "row",
     maxWidth: "70%",
     minWidth: "120px",
     marginBottom: theme.spacing(1.5),
     wordWrap: "break-word",
     animation: "fadeIn 0.3s ease",
+    gap: theme.spacing(1),
     [theme.breakpoints.down("sm")]: {
       maxWidth: "85%",
       minWidth: "100px",
     },
+  },
+  messageContent: {
+    display: "flex",
+    flexDirection: "column",
+    flex: 1,
+  },
+  messageAvatar: {
+    width: 32,
+    height: 32,
+    flexShrink: 0,
   },
   "@keyframes fadeIn": {
     from: {
@@ -159,7 +171,7 @@ const useStyles = makeStyles((theme) => ({
     textTransform: "uppercase",
     letterSpacing: "0.5px",
   },
-  messageContent: {
+  messageText: {
     fontSize: "0.9375rem",
     lineHeight: 1.5,
     color: theme.palette.text.primary,
@@ -236,23 +248,36 @@ export default function ChatMessages({
           {Array.isArray(messages) &&
             messages.map((item, key) => {
               const isOwnMessage = item.senderId === user.id;
+              const avatarUrl = item.sender?.avatar 
+                ? `${process.env.REACT_APP_BACKEND_URL}/public/${item.sender.avatar}`
+                : null;
               return (
                 <Box 
                   key={key} 
                   className={`${classes.messageBubble} ${isOwnMessage ? classes.boxRight : classes.boxLeft}`}
                   style={{
-                    alignSelf: isOwnMessage ? "flex-end" : "flex-start"
+                    alignSelf: isOwnMessage ? "flex-end" : "flex-start",
+                    flexDirection: isOwnMessage ? "row-reverse" : "row"
                   }}
                 >
-                  <Typography className={classes.senderName}>
-                    {item.sender.name}
-                  </Typography>
-                  <Typography className={classes.messageContent}>
-                    {item.message}
-                  </Typography>
-                  <Typography className={classes.messageTime}>
-                    {datetimeToClient(item.createdAt)}
-                  </Typography>
+                  <Avatar 
+                    src={avatarUrl} 
+                    alt={item.sender.name}
+                    className={classes.messageAvatar}
+                  >
+                    {item.sender.name?.charAt(0).toUpperCase()}
+                  </Avatar>
+                  <div className={classes.messageContent}>
+                    <Typography className={classes.senderName}>
+                      {item.sender.name}
+                    </Typography>
+                    <Typography className={classes.messageText}>
+                      {item.message}
+                    </Typography>
+                    <Typography className={classes.messageTime}>
+                      {datetimeToClient(item.createdAt)}
+                    </Typography>
+                  </div>
                 </Box>
               );
             })}

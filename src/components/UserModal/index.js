@@ -17,6 +17,9 @@ import Select from "@material-ui/core/Select";
 import InputLabel from "@material-ui/core/InputLabel";
 import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
+import Avatar from "@material-ui/core/Avatar";
+import IconButton from "@material-ui/core/IconButton";
+import PhotoCameraIcon from "@material-ui/icons/PhotoCamera";
 
 import { i18n } from "../../translate/i18n";
 
@@ -55,6 +58,23 @@ const useStyles = makeStyles(theme => ({
 		margin: theme.spacing(1),
 		minWidth: 120,
 	},
+	avatarContainer: {
+		display: "flex",
+		flexDirection: "column",
+		alignItems: "center",
+		marginBottom: theme.spacing(2),
+	},
+	avatar: {
+		width: 100,
+		height: 100,
+		marginBottom: theme.spacing(1),
+	},
+	avatarInput: {
+		display: "none",
+	},
+	avatarButton: {
+		marginTop: theme.spacing(1),
+	},
 }));
 
 const UserSchema = Yup.object().shape({
@@ -82,6 +102,8 @@ const UserModal = ({ open, onClose, userId }) => {
 	const [user, setUser] = useState(initialState);
 	const [selectedQueueIds, setSelectedQueueIds] = useState([]);
 	const [whatsappId, setWhatsappId] = useState(false);
+	const [avatarFile, setAvatarFile] = useState(null);
+	const [avatarPreview, setAvatarPreview] = useState(null);
 	const { loading, whatsApps } = useWhatsApps();
 
 	useEffect(() => {
@@ -95,6 +117,11 @@ const UserModal = ({ open, onClose, userId }) => {
 				const userQueueIds = data.queues?.map(queue => queue.id);
 				setSelectedQueueIds(userQueueIds);
 				setWhatsappId(data.whatsappId ? data.whatsappId : '');
+				if (data.avatar) {
+					setAvatarPreview(`${process.env.REACT_APP_BACKEND_URL}/public/${data.avatar}`);
+				} else {
+					setAvatarPreview(null);
+				}
 			} catch (err) {
 				toastError(err);
 			}
@@ -106,6 +133,39 @@ const UserModal = ({ open, onClose, userId }) => {
 	const handleClose = () => {
 		onClose();
 		setUser(initialState);
+		setAvatarFile(null);
+		setAvatarPreview(null);
+	};
+
+	const handleAvatarChange = (e) => {
+		const file = e.target.files[0];
+		if (file) {
+			if (file.size > 5 * 1024 * 1024) {
+				toast.error("Arquivo muito grande! Máximo 5MB");
+				return;
+			}
+			setAvatarFile(file);
+			setAvatarPreview(URL.createObjectURL(file));
+		}
+	};
+
+	const handleUploadAvatar = async () => {
+		if (!avatarFile || !userId) return;
+		
+		try {
+			const formData = new FormData();
+			formData.append("avatar", avatarFile);
+			const { data } = await api.post(`/users/${userId}/avatar`, formData, {
+				headers: {
+					"Content-Type": "multipart/form-data"
+				}
+			});
+			setUser(prev => ({ ...prev, avatar: data.avatar }));
+			setAvatarFile(null);
+			toast.success("Foto atualizada com sucesso!");
+		} catch (err) {
+			toastError(err);
+		}
 	};
 
 	const handleSaveUser = async values => {
@@ -151,6 +211,43 @@ const UserModal = ({ open, onClose, userId }) => {
 					{({ touched, errors, isSubmitting }) => (
 						<Form>
 							<DialogContent dividers>
+								{userId && (
+									<div className={classes.avatarContainer}>
+										<Avatar
+											src={avatarPreview}
+											alt={user.name}
+											className={classes.avatar}
+										>
+											{user.name?.charAt(0).toUpperCase()}
+										</Avatar>
+										<input
+											accept="image/*"
+											className={classes.avatarInput}
+											id="avatar-upload"
+											type="file"
+											onChange={handleAvatarChange}
+										/>
+										<label htmlFor="avatar-upload">
+											<IconButton
+												color="primary"
+												component="span"
+												className={classes.avatarButton}
+											>
+												<PhotoCameraIcon />
+											</IconButton>
+										</label>
+										{avatarFile && (
+											<Button
+												size="small"
+												variant="outlined"
+												color="primary"
+												onClick={handleUploadAvatar}
+											>
+												Salvar Foto
+											</Button>
+										)}
+									</div>
+								)}
 								<div className={classes.multFieldLine}>
 									<Field
 										as={TextField}

@@ -4,8 +4,10 @@ import {
   IconButton,
   List,
   ListItem,
+  ListItemAvatar,
   ListItemSecondaryAction,
   ListItemText,
+  Avatar,
   makeStyles,
 } from "@material-ui/core";
 
@@ -184,6 +186,25 @@ export default function ChatList({
     );
   };
 
+  const getUserAvatar = (chat) => {
+    if (!chat.isGroup && chat.users && chat.users.length === 2) {
+      const otherUser = chat.users.find((u) => u.userId !== user.id);
+      if (otherUser && otherUser.user) {
+        const avatarUrl = otherUser.user.avatar 
+          ? `${process.env.REACT_APP_BACKEND_URL}/public/${otherUser.user.avatar}`
+          : null;
+        return {
+          src: avatarUrl,
+          name: otherUser.user.name
+        };
+      }
+    }
+    return {
+      src: null,
+      name: chat.title
+    };
+  };
+
   const getSecondaryText = (chat) => {
     return chat.lastMessage !== ""
       ? `${datetimeToClient(chat.updatedAt)}: ${chat.lastMessage}`
@@ -211,18 +232,25 @@ export default function ChatList({
           <List>
             {Array.isArray(chats) &&
               chats.length > 0 &&
-              chats.map((chat, key) => (
-                <ListItem
-                  onClick={() => goToMessages(chat)}
-                  key={key}
-                  className={getItemClassName(chat)}
-                  button
-                >
-                  <ListItemText
-                    className={classes.listItemText}
-                    primary={getPrimaryText(chat)}
-                    secondary={getSecondaryText(chat)}
-                  />
+              chats.map((chat, key) => {
+                const avatarInfo = getUserAvatar(chat);
+                return (
+                  <ListItem
+                    onClick={() => goToMessages(chat)}
+                    key={key}
+                    className={getItemClassName(chat)}
+                    button
+                  >
+                    <ListItemAvatar>
+                      <Avatar src={avatarInfo.src} alt={avatarInfo.name}>
+                        {avatarInfo.name?.charAt(0).toUpperCase()}
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      className={classes.listItemText}
+                      primary={getPrimaryText(chat)}
+                      secondary={getSecondaryText(chat)}
+                    />
                   {chat.ownerId === user.id && (
                     <ListItemSecondaryAction>
                       <div className={classes.actionButtons}>
@@ -257,7 +285,8 @@ export default function ChatList({
                     </ListItemSecondaryAction>
                   )}
                 </ListItem>
-              ))}
+                );
+              })}
           </List>
         </div>
       </div>

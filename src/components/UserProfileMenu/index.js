@@ -97,10 +97,14 @@ const UserProfileMenu = ({ volume, setVolume }) => {
     startTour();
   };
 
+  const avatarUrl = user.avatar 
+    ? `${process.env.REACT_APP_BACKEND_URL}/public/${user.avatar}`
+    : null;
+
   return (
     <>
       <IconButton onClick={handleMenu} style={{ color: 'white' }}>
-        <Avatar alt={user.name} src={user.avatar} className={classes.avatar}>
+        <Avatar alt={user.name} src={avatarUrl} className={classes.avatar}>
           {user.name?.charAt(0).toUpperCase()}
         </Avatar>
       </IconButton>
