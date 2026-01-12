@@ -73,12 +73,22 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     overflow: "auto",
     width: '100%',
+    display: "flex",
+    flexDirection: "column",
+  },
+  contentNoScroll: {
+    flex: 1,
+    overflow: "hidden",
+    width: '100%',
+    display: "flex",
+    flexDirection: "column",
   },
 }));
 
 const LoggedInLayout = ({ children, themeToggle }) => {
   const location = useLocation();
   const isDashboard = location.pathname === "/dashboard" || location.pathname === "/";
+  const isChatPage = location.pathname.startsWith("/chats");
   const classes = useStyles();
   const { handleLogout, loading } = useContext(AuthContext);
   const { user } = useContext(AuthContext);
@@ -162,7 +172,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         </Toolbar>
       </AppBar>
       
-      <main className={classes.content}>
+      <main className={isChatPage ? classes.contentNoScroll : classes.content}>
         {children ? children : null}
       </main>
       

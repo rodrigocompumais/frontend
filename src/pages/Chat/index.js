@@ -36,13 +36,16 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(2),
     minHeight: 0,
-    overflowY: "hidden",
+    height: "calc(100vh - 56px)",
+    maxHeight: "calc(100vh - 56px)",
+    overflow: "hidden",
     borderRadius: theme.spacing(2),
     backgroundColor: theme.palette.background.default,
     border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
   },
   gridContainer: {
     height: "100%",
+    maxHeight: "100%",
     borderRadius: theme.spacing(2),
     backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
@@ -52,6 +55,8 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     height: "100%",
+    maxHeight: "100%",
+    overflow: "hidden",
     "&:first-child": {
       borderRight: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
       [theme.breakpoints.down("md")]: {
@@ -63,9 +68,11 @@ const useStyles = makeStyles((theme) => ({
   gridItemTab: {
     flex: 1,
     minHeight: 0,
+    maxHeight: "100%",
     display: "flex",
     flexDirection: "column",
     width: "100%",
+    overflow: "hidden",
   },
   btnContainer: {
     textAlign: "right",
