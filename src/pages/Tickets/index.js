@@ -13,9 +13,8 @@ const useStyles = makeStyles(theme => ({
 	chatContainer: {
 		flex: 1,
 		width: '100%',
-		height: `calc(100vh - 48px)`,
-		minHeight: '100vh',
-		overflowY: "hidden",
+		height: `calc(100vh - 56px)`,
+		overflow: "hidden",
 		backgroundColor: theme.palette.background.default,
 	},
 
@@ -28,9 +27,8 @@ const useStyles = makeStyles(theme => ({
 	contactsWrapper: {
 		display: "flex",
 		height: "100%",
-		minHeight: `calc(100vh - 48px)`,
 		flexDirection: "column",
-		overflowY: "hidden",
+		overflow: "hidden",
 	},
 	messagessWrapper: {
 		display: "flex",

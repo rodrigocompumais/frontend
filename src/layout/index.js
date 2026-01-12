@@ -38,8 +38,11 @@ const useStyles = makeStyles((theme) => ({
     }
   },
   toolbar: {
-    paddingRight: 24,
-    paddingLeft: 16,
+    paddingRight: 16,
+    paddingLeft: 12,
+    paddingTop: 4,
+    paddingBottom: 4,
+    minHeight: 56,
     color: theme.palette.dark.main,
     background: theme.palette.barraSuperior,
     display: 'flex',
@@ -49,14 +52,14 @@ const useStyles = makeStyles((theme) => ({
     zIndex: theme.zIndex.drawer + 1,
   },
   logo: {
-    height: "90px",
+    height: "45px",
     width: "auto",
-    maxWidth: 350,
-    marginRight: theme.spacing(2),
+    maxWidth: 200,
+    marginRight: theme.spacing(1.5),
     cursor: 'pointer',
     [theme.breakpoints.down("xs")]: {
-      height: "80px",
-      maxWidth: 300,
+      height: "40px",
+      maxWidth: 180,
     },
   },
   grow: {
