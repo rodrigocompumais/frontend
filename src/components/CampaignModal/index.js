@@ -41,7 +41,6 @@ import {
   Typography,
   Chip,
   Menu,
-  Button,
 } from "@material-ui/core";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ConfirmationModal from "../ConfirmationModal";
