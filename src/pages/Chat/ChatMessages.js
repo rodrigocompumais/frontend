@@ -193,14 +193,20 @@ export default function ChatMessages({
   };
 
   useEffect(() => {
-    if (unreadMessages(chat) > 0) {
+    if (chat && unreadMessages(chat) > 0) {
       try {
         api.post(`/chats/${chat.id}/read`, { userId: user.id });
       } catch (err) {}
     }
     scrollToBottomRef.current = scrollToBottom;
+    // Scroll to bottom quando mensagens mudam
+    if (messages.length > 0) {
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [messages, chat]);
 
   const handleScroll = (e) => {
     const { scrollTop } = e.currentTarget;
@@ -249,6 +255,10 @@ export default function ChatMessages({
                 e.preventDefault();
                 handleSendMessage(contentMessage);
                 setContentMessage("");
+                // Scroll to bottom após enviar mensagem
+                setTimeout(() => {
+                  scrollToBottom();
+                }, 100);
               }
             }}
             onChange={(e) => setContentMessage(e.target.value)}
@@ -267,6 +277,10 @@ export default function ChatMessages({
               if (contentMessage.trim() !== "") {
                 handleSendMessage(contentMessage);
                 setContentMessage("");
+                // Scroll to bottom após enviar mensagem
+                setTimeout(() => {
+                  scrollToBottom();
+                }, 100);
               }
             }}
             className={classes.buttonSend}

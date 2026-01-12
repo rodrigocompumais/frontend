@@ -185,6 +185,7 @@ export function ChatModal({
 
 function Chat(props) {
   const classes = useStyles();
+  const theme = useTheme();
   const { user } = useContext(AuthContext);
   const history = useHistory();
 
@@ -237,6 +238,7 @@ function Chat(props) {
 
   useEffect(() => {
     if (isObject(currentChat) && has(currentChat, "id")) {
+      setMessagesPage(1); // Resetar para primeira página ao trocar de chat
       findMessages(currentChat.id).then(() => {
         if (typeof scrollToBottomRef.current === "function") {
           setTimeout(() => {
@@ -284,8 +286,14 @@ function Chat(props) {
 
     if (isObject(currentChat) && has(currentChat, "id")) {
       socket.on(`company-${companyId}-chat-${currentChat.id}`, (data) => {
-        if (data.action === "new-message") {
-          setMessages((prev) => [...prev, data.newMessage]);
+        if (data.action === "new-message" && data.newMessage.chatId === currentChat.id) {
+          // Adicionar nova mensagem no final (mensagens mais recentes)
+          setMessages((prev) => {
+            // Verificar se a mensagem já existe para evitar duplicatas
+            const exists = prev.some(msg => msg.id === data.newMessage.id);
+            if (exists) return prev;
+            return [...prev, data.newMessage];
+          });
           const changedChats = chats.map((chat) => {
             if (chat.id === data.newMessage.chatId) {
               return {
@@ -295,7 +303,11 @@ function Chat(props) {
             return chat;
           });
           setChats(changedChats);
-          scrollToBottomRef.current();
+          setTimeout(() => {
+            if (scrollToBottomRef.current) {
+              scrollToBottomRef.current();
+            }
+          }, 100);
         }
 
         if (data.action === "update") {
@@ -350,9 +362,18 @@ function Chat(props) {
       const { data } = await api.get(
         `/chats/${chatId}/messages?pageNumber=${messagesPage}`
       );
-      setMessagesPage((prev) => prev + 1);
+      const nextPage = messagesPage + 1;
+      setMessagesPage(nextPage);
       setMessagesPageInfo(data);
-      setMessages((prev) => [...data.records, ...prev]);
+      // Se é a primeira página, substituir todas as mensagens
+      // Se não, adicionar mensagens antigas no início (para scroll infinito)
+      if (messagesPage === 1) {
+        // Mensagens já vêm ordenadas do backend (mais antigas primeiro, mais recentes por último)
+        setMessages(data.records);
+      } else {
+        // Adicionar mensagens antigas no início
+        setMessages((prev) => [...data.records, ...prev]);
+      }
     } catch (err) {}
     setLoading(false);
   };
@@ -378,21 +399,23 @@ function Chat(props) {
     return (
       <Grid className={classes.gridContainer} container>
         <Grid className={classes.gridItem} md={3} item>
-          <Tabs
-            value={chatType === "individual" ? 0 : 1}
-            indicatorColor="secondary"
-            textColor="secondary"
-            onChange={(e, v) => {
-              setChatType(v === 0 ? "individual" : "group");
-              setCurrentChat({});
-              setMessages([]);
-              setMessagesPage(1);
-            }}
-            className={classes.tabs}
-          >
-            <Tab label="Chats Individuais" />
-            <Tab label="Grupos" />
-          </Tabs>
+          <div style={{ borderBottom: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}` }}>
+            <Tabs
+              value={chatType === "individual" ? 0 : 1}
+              indicatorColor="secondary"
+              textColor="secondary"
+              onChange={(e, v) => {
+                setChatType(v === 0 ? "individual" : "group");
+                setCurrentChat({});
+                setMessages([]);
+                setMessagesPage(1);
+              }}
+              className={classes.tabs}
+            >
+              <Tab label="Chats Individuais" />
+              <Tab label="Grupos" />
+            </Tabs>
+          </div>
             <div className={classes.btnContainer}>
               <Button
                 onClick={() => {
