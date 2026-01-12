@@ -247,6 +247,22 @@ const PublicForm = () => {
       }
     });
 
+    // Validate quotation items if form is quotation type
+    if (form.settings?.formType === "quotation") {
+      if (!quotationItems || quotationItems.length === 0) {
+        newErrors["quotationItems"] = "É necessário adicionar pelo menos um item de cotação.";
+      } else {
+        quotationItems.forEach((item, index) => {
+          if (!item.productName || item.productName.trim() === "") {
+            newErrors[`quotationItem-${index}-productName`] = `Nome do produto no item ${index + 1} é obrigatório.`;
+          }
+          if (item.quantity <= 0) {
+            newErrors[`quotationItem-${index}-quantity`] = `Quantidade no item ${index + 1} deve ser maior que zero.`;
+          }
+        });
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
