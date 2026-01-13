@@ -190,17 +190,27 @@ const useStyles = makeStyles((theme) => ({
   previewContainer: {
     display: "flex",
     gap: theme.spacing(1),
-    padding: theme.spacing(1),
+    padding: theme.spacing(1.5),
     marginBottom: theme.spacing(1),
     flexWrap: "wrap",
+    backgroundColor: theme.palette.type === "dark" 
+      ? "rgba(255, 255, 255, 0.05)" 
+      : "rgba(0, 0, 0, 0.02)",
+    borderRadius: theme.spacing(1),
+    border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"}`,
+    maxHeight: "200px",
+    overflowY: "auto",
+    ...theme.scrollbarStyles,
   },
   previewImage: {
     position: "relative",
-    width: "100px",
-    height: "100px",
+    width: "120px",
+    height: "120px",
     borderRadius: theme.spacing(1),
     overflow: "hidden",
-    border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)"}`,
+    border: `2px solid ${theme.palette.primary.main}`,
+    boxShadow: theme.shadows[2],
+    flexShrink: 0,
   },
   previewImageImg: {
     width: "100%",
@@ -211,14 +221,14 @@ const useStyles = makeStyles((theme) => ({
     position: "absolute",
     top: 4,
     right: 4,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
     color: "#FFFFFF",
     padding: theme.spacing(0.5),
     minWidth: "auto",
-    width: "24px",
-    height: "24px",
+    width: "28px",
+    height: "28px",
     "&:hover": {
-      backgroundColor: "rgba(0, 0, 0, 0.7)",
+      backgroundColor: "rgba(244, 67, 54, 0.9)",
     },
   },
   fileInput: {
@@ -325,13 +335,16 @@ export default function ChatMessages({
     if (contentMessage.trim() === "" && selectedImages.length === 0) return;
 
     try {
+      const messageText = contentMessage.trim();
+      
       if (selectedImages.length > 0) {
         // Enviar cada imagem
         for (const imageData of selectedImages) {
           const formData = new FormData();
           formData.append("media", imageData.file);
-          if (contentMessage.trim()) {
-            formData.append("message", contentMessage);
+          // Só adiciona mensagem se houver texto digitado
+          if (messageText) {
+            formData.append("message", messageText);
           }
           
           await handleSendMessage(formData, true);
@@ -340,7 +353,7 @@ export default function ChatMessages({
         setContentMessage("");
       } else {
         // Enviar apenas texto
-        await handleSendMessage(contentMessage, false);
+        await handleSendMessage(messageText, false);
         setContentMessage("");
       }
       
@@ -385,11 +398,14 @@ export default function ChatMessages({
                     {item.mediaPath && (
                       <img 
                         src={`${process.env.REACT_APP_BACKEND_URL}/public/${item.mediaPath}`}
-                        alt={item.mediaName || "Imagem"}
+                        alt=""
                         className={classes.messageImage}
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                        }}
                       />
                     )}
-                    {item.message && (
+                    {item.message && item.message.trim() && (
                       <Typography className={classes.messageText}>
                         {item.message}
                       </Typography>
