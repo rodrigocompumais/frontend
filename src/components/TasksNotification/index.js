@@ -139,9 +139,6 @@ const TasksNotification = () => {
     
     setLoading(true);
     try {
-      const today = moment().startOf('day').toISOString();
-      const tomorrow = moment().add(1, 'day').startOf('day').toISOString();
-      
       // Buscar tarefas pendentes do usuário
       const { data } = await api.get("/tasks", {
         params: {
@@ -161,7 +158,7 @@ const TasksNotification = () => {
         return dueDate.isBefore(now, 'day') && task.status === 'pending';
       });
 
-      const today = tasks.filter(task => {
+      const todayTasks = tasks.filter(task => {
         if (!task.dueDate) return false;
         const dueDate = moment(task.dueDate);
         return dueDate.isSame(now, 'day') && task.status === 'pending';
@@ -181,7 +178,7 @@ const TasksNotification = () => {
       };
 
       setOverdueTasks(sortTasks(overdue));
-      setTodayTasks(sortTasks(today));
+      setTodayTasks(sortTasks(todayTasks));
 
       // Notificar sobre novas tarefas vencidas (apenas na primeira vez ou quando houver novas)
       if (overdue.length > 0) {
@@ -220,9 +217,9 @@ const TasksNotification = () => {
       }
 
       // Notificar sobre tarefas para hoje (apenas na primeira vez)
-      if (today.length > 0 && !lastNotificationTime) {
+      if (todayTasks.length > 0 && !lastNotificationTime) {
         toast.info(
-          `📅 Você tem ${today.length} ${today.length === 1 ? 'tarefa para hoje' : 'tarefas para hoje'}`,
+          `📅 Você tem ${todayTasks.length} ${todayTasks.length === 1 ? 'tarefa para hoje' : 'tarefas para hoje'}`,
           {
             autoClose: 4000,
             onClick: () => {
