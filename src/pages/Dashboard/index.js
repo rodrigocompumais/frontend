@@ -46,7 +46,6 @@ import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
 import InputLabel from "@material-ui/core/InputLabel";
 import toastError from "../../errors/toastError";
-import QuickAccessButtons from "../../components/QuickAccessButtons";
 import SettingsIcon from "@material-ui/icons/Settings";
 
 import { makeStyles } from "@material-ui/core/styles";
@@ -478,7 +477,6 @@ const Dashboard = () => {
 
   return (
     <div className={classes.root}>
-      <QuickAccessButtons />
       <Container maxWidth="xl" className={classes.container}>
         {/* Header */}
         <Box className={classes.header}>

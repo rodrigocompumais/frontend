@@ -20,6 +20,7 @@ import UserProfileMenu from "../components/UserProfileMenu";
 import MobileNavigationMenu from "../components/MobileNavigationMenu";
 import TourGuide from "../components/TourGuide";
 import TasksNotification from "../components/TasksNotification";
+import QuickAccessButtons from "../components/QuickAccessButtons";
 
 import { SocketContext } from "../context/Socket/SocketContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
@@ -187,6 +188,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       
       <main className={isChatPage ? classes.contentNoScroll : classes.content}>
         {children ? children : null}
+        <QuickAccessButtons />
       </main>
       
       {isDashboard && <AiChatFloating />}
