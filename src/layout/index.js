@@ -1,11 +1,13 @@
 import React, { useState, useContext, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useHistory } from "react-router-dom";
 import {
   makeStyles,
   AppBar,
   Toolbar,
   useTheme,
+  IconButton,
 } from "@material-ui/core";
+import DashboardIcon from "@material-ui/icons/Dashboard";
 
 import NotificationsPopOver from "../components/NotificationsPopOver";
 import { AuthContext } from "../context/Auth/AuthContext";
@@ -18,7 +20,6 @@ import UserProfileMenu from "../components/UserProfileMenu";
 import MobileNavigationMenu from "../components/MobileNavigationMenu";
 import TourGuide from "../components/TourGuide";
 
-import logo from "../assets/logo.png";
 import { SocketContext } from "../context/Socket/SocketContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
 import AiChatFloating from "../components/AiChatFloating";
@@ -51,15 +52,21 @@ const useStyles = makeStyles((theme) => ({
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
   },
-  logo: {
-    height: "45px",
-    width: "auto",
-    maxWidth: 200,
+  dashboardButton: {
     marginRight: theme.spacing(1.5),
-    cursor: 'pointer',
+    padding: theme.spacing(1),
+    color: theme.palette.dark.main,
+    '&:hover': {
+      backgroundColor: theme.palette.action.hover,
+    },
     [theme.breakpoints.down("xs")]: {
-      height: "40px",
-      maxWidth: 180,
+      padding: theme.spacing(0.75),
+    },
+  },
+  dashboardIcon: {
+    fontSize: "28px",
+    [theme.breakpoints.down("xs")]: {
+      fontSize: "24px",
     },
   },
   grow: {
@@ -87,6 +94,7 @@ const useStyles = makeStyles((theme) => ({
 
 const LoggedInLayout = ({ children, themeToggle }) => {
   const location = useLocation();
+  const history = useHistory();
   const isDashboard = location.pathname === "/dashboard" || location.pathname === "/";
   const isChatPage = location.pathname.startsWith("/chats");
   const classes = useStyles();
@@ -138,13 +146,15 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         color="primary"
       >
         <Toolbar variant="dense" className={classes.toolbar}>
-          {/* Logo à esquerda */}
-          <img 
-            src={logo} 
-            className={classes.logo} 
-            alt="logo"
-            onClick={() => window.location.href = '/'}
-          />
+          {/* Botão Dashboard à esquerda */}
+          <IconButton
+            className={classes.dashboardButton}
+            onClick={() => history.push('/dashboard')}
+            aria-label="Ir para Dashboard"
+            title="Dashboard"
+          >
+            <DashboardIcon className={classes.dashboardIcon} />
+          </IconButton>
 
           {/* Menus de navegação dropdown (desktop) */}
           <div className="tour-menu-navigation">
