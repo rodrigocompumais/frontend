@@ -19,6 +19,7 @@ import QuickActionButton from "../components/QuickActionButton";
 import UserProfileMenu from "../components/UserProfileMenu";
 import MobileNavigationMenu from "../components/MobileNavigationMenu";
 import TourGuide from "../components/TourGuide";
+import TasksNotification from "../components/TasksNotification";
 
 import { SocketContext } from "../context/Socket/SocketContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
@@ -172,6 +173,8 @@ const LoggedInLayout = ({ children, themeToggle }) => {
 
           {/* Notificações e popovers */}
           {user.id && <NotificationsPopOver volume={volume} />}
+
+          {user.id && <TasksNotification />}
 
           <AnnouncementsPopover />
 
