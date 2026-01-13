@@ -23,9 +23,12 @@ import HighlightOffIcon from "@material-ui/icons/HighlightOff";
 import LockIcon from "@material-ui/icons/Lock";
 import LockOpenIcon from "@material-ui/icons/LockOpen";
 import EditIcon from "@material-ui/icons/Edit";
-import { FormControlLabel, Switch } from "@material-ui/core";
+import { FormControlLabel, Switch, Dialog, DialogContent, Box, Typography } from "@material-ui/core";
 import Autocomplete from "@material-ui/lab/Autocomplete";
 import { isString, isEmpty, isObject, has } from "lodash";
+import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import ChevronRightIcon from "@material-ui/icons/ChevronRight";
+import VisibilityIcon from "@material-ui/icons/Visibility";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -94,6 +97,93 @@ const useStyles = makeStyles((theme) => ({
     borderTop: "1px solid rgba(0, 0, 0, 0.12)",
     gap: "8px",
     flexWrap: "wrap",
+  },
+  previewModal: {
+    "& .MuiDialog-paper": {
+      maxWidth: "90vw",
+      maxHeight: "90vh",
+      backgroundColor: "rgba(0, 0, 0, 0.95)",
+      borderRadius: theme.spacing(2),
+    },
+  },
+  previewModalContent: {
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: theme.spacing(2),
+    minHeight: "400px",
+    maxHeight: "80vh",
+  },
+  previewImage: {
+    maxWidth: "100%",
+    maxHeight: "80vh",
+    objectFit: "contain",
+    borderRadius: theme.spacing(1),
+  },
+  previewNavButton: {
+    position: "absolute",
+    top: "50%",
+    transform: "translateY(-50%)",
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    color: "#FFFFFF",
+    zIndex: 10,
+    "&:hover": {
+      backgroundColor: "rgba(255, 255, 255, 0.3)",
+    },
+    "&:disabled": {
+      opacity: 0.3,
+    },
+  },
+  previewNavButtonLeft: {
+    left: theme.spacing(2),
+  },
+  previewNavButtonRight: {
+    right: theme.spacing(2),
+  },
+  previewIndicators: {
+    display: "flex",
+    justifyContent: "center",
+    gap: theme.spacing(1),
+    padding: theme.spacing(2),
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  previewIndicator: {
+    width: "8px",
+    height: "8px",
+    borderRadius: "50%",
+    backgroundColor: "rgba(255, 255, 255, 0.4)",
+    cursor: "pointer",
+    transition: "all 0.3s",
+    "&.active": {
+      backgroundColor: "#FFFFFF",
+      width: "24px",
+      borderRadius: "4px",
+    },
+  },
+  previewImageInfo: {
+    position: "absolute",
+    bottom: theme.spacing(2),
+    left: theme.spacing(2),
+    right: theme.spacing(2),
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    color: "#FFFFFF",
+    padding: theme.spacing(1, 2),
+    borderRadius: theme.spacing(1),
+    textAlign: "center",
+  },
+  previewButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    padding: theme.spacing(1, 2),
+    borderRadius: theme.spacing(1),
+    backgroundColor: theme.palette.primary.main,
+    color: "#FFFFFF",
+    cursor: "pointer",
+    "&:hover": {
+      backgroundColor: theme.palette.primary.dark,
+    },
   },
 
   emojiBox: {
@@ -490,6 +580,8 @@ const MessageInputCustom = (props) => {
   const [improveLoading, setImproveLoading] = useState(false);
   const [improvedText, setImprovedText] = useState("");
   const [isInternalMessage, setIsInternalMessage] = useState(false);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const inputRef = useRef();
   const previewUrlsRef = useRef([]);
   const { setReplyingMessage, replyingMessage } =
@@ -518,6 +610,40 @@ const MessageInputCustom = (props) => {
       setReplyingMessage(null);
     };
   }, [ticketId, setReplyingMessage]);
+
+  // Filtrar apenas imagens para o carrossel
+  const imageMedias = medias.filter(media => media.preview);
+
+  // Funções de navegação do carrossel
+  const handlePrevImage = () => {
+    setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : imageMedias.length - 1));
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) => (prev < imageMedias.length - 1 ? prev + 1 : 0));
+  };
+
+  const handleIndicatorClick = (index) => {
+    setCurrentImageIndex(index);
+  };
+
+  // Navegação por teclado no modal de preview
+  useEffect(() => {
+    if (!previewModalOpen || imageMedias.length <= 1) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'ArrowLeft') {
+        setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : imageMedias.length - 1));
+      } else if (e.key === 'ArrowRight') {
+        setCurrentImageIndex((prev) => (prev < imageMedias.length - 1 ? prev + 1 : 0));
+      } else if (e.key === 'Escape') {
+        setPreviewModalOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [previewModalOpen, imageMedias.length]);
 
   // const handleChangeInput = e => {
   // 	if (isObject(e) && has(e, 'value')) {
@@ -831,9 +957,11 @@ const MessageInputCustom = (props) => {
     );
   };
 
+
   if (medias.length > 0)
     return (
-      <Paper elevation={0} square className={classes.viewMediaInputWrapper}>
+      <>
+        <Paper elevation={0} square className={classes.viewMediaInputWrapper}>
         <IconButton
           aria-label="cancel-upload"
           component="span"
@@ -856,25 +984,17 @@ const MessageInputCustom = (props) => {
             <CircularProgress className={classes.circleLoading} />
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flex: 1 }}>
-            {medias.map((media, index) => (
-              <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
-                {media.preview ? (
-                  <img 
-                    src={media.preview} 
-                    alt={media.name || 'Preview'} 
-                    style={{ 
-                      maxWidth: '200px', 
-                      maxHeight: '150px', 
-                      borderRadius: '8px',
-                      objectFit: 'contain'
-                    }} 
-                  />
-                ) : (
-                  <span style={{ color: '#666' }}>{media.name || 'Arquivo selecionado'}</span>
-                )}
-              </div>
-            ))}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+            <div 
+              className={classes.previewButton}
+              onClick={() => {
+                setCurrentImageIndex(0);
+                setPreviewModalOpen(true);
+              }}
+            >
+              <VisibilityIcon style={{ fontSize: 18 }} />
+              <span>{medias.length} {medias.length === 1 ? 'imagem selecionada' : 'imagens selecionadas'}</span>
+            </div>
           </div>
         )}
         <IconButton
@@ -886,6 +1006,84 @@ const MessageInputCustom = (props) => {
           <SendIcon className={classes.sendMessageIcons} />
         </IconButton>
       </Paper>
+
+      {/* Modal de Preview com Carrossel */}
+      <Dialog
+        open={previewModalOpen}
+        onClose={() => setPreviewModalOpen(false)}
+        className={classes.previewModal}
+        maxWidth={false}
+        fullWidth
+      >
+        <DialogContent className={classes.previewModalContent} style={{ padding: 0 }}>
+          {imageMedias.length > 0 ? (
+            <>
+              {/* Imagem atual */}
+              <img
+                src={imageMedias[currentImageIndex]?.preview}
+                alt={imageMedias[currentImageIndex]?.name || 'Preview'}
+                className={classes.previewImage}
+              />
+
+              {/* Botão anterior */}
+              {imageMedias.length > 1 && (
+                <IconButton
+                  className={`${classes.previewNavButton} ${classes.previewNavButtonLeft}`}
+                  onClick={handlePrevImage}
+                  aria-label="Imagem anterior"
+                >
+                  <ChevronLeftIcon />
+                </IconButton>
+              )}
+
+              {/* Botão próximo */}
+              {imageMedias.length > 1 && (
+                <IconButton
+                  className={`${classes.previewNavButton} ${classes.previewNavButtonRight}`}
+                  onClick={handleNextImage}
+                  aria-label="Próxima imagem"
+                >
+                  <ChevronRightIcon />
+                </IconButton>
+              )}
+
+              {/* Informações da imagem */}
+              <Box className={classes.previewImageInfo}>
+                <Typography variant="body2" style={{ fontWeight: 500 }}>
+                  {imageMedias[currentImageIndex]?.name || 'Imagem'}
+                </Typography>
+                {imageMedias.length > 1 && (
+                  <Typography variant="caption" style={{ opacity: 0.8 }}>
+                    {currentImageIndex + 1} de {imageMedias.length}
+                  </Typography>
+                )}
+              </Box>
+
+              {/* Indicadores */}
+              {imageMedias.length > 1 && (
+                <Box className={classes.previewIndicators}>
+                  {imageMedias.map((_, index) => (
+                    <Box
+                      key={index}
+                      className={`${classes.previewIndicator} ${
+                        index === currentImageIndex ? 'active' : ''
+                      }`}
+                      onClick={() => handleIndicatorClick(index)}
+                    />
+                  ))}
+                </Box>
+              )}
+            </>
+          ) : (
+            <Box p={4} textAlign="center">
+              <Typography variant="body1" color="textSecondary">
+                Nenhuma imagem para visualizar
+              </Typography>
+            </Box>
+          )}
+        </DialogContent>
+      </Dialog>
+      </>
     );
   else {
     return (
