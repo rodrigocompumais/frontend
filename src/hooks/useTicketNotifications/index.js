@@ -37,13 +37,18 @@ const useTicketNotifications = () => {
       // Não notificar mensagens internas ou mensagens enviadas pelo próprio usuário
       if (message.isInternal || message.fromMe) return;
 
-      // Verificar se o ticket pertence ao usuário ou à fila do usuário
-      const isTicketOwner = ticket.userId === user.id;
-      const isInQueue = user.queues?.some((queue) => queue.id === ticket.queueId) || false;
-      const hasNoOwner = !ticket.userId;
-
-      // Não notificar se o ticket não pertence ao usuário ou à fila
-      if (!isTicketOwner && !isInQueue && !hasNoOwner) return;
+      // Se o ticket tem um responsável, notificar apenas para ele
+      if (ticket.userId) {
+        if (ticket.userId !== user.id) {
+          return; // Não notificar se não é o responsável
+        }
+      } else {
+        // Se não tem responsável, verificar se o usuário está na fila
+        const isInQueue = user.queues?.some((queue) => queue.id === ticket.queueId) || false;
+        if (!isInQueue && ticket.queueId) {
+          return; // Não notificar se não está na fila e o ticket tem fila
+        }
+      }
 
       // Verificar se o ticket está sendo visualizado atualmente
       const ticketUuid = ticket.uuid;
