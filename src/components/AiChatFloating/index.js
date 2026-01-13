@@ -25,19 +25,25 @@ import { toast } from "react-toastify";
 import toastError from "../../errors/toastError";
 
 const STORAGE_KEY = "ai_chat_messages";
+const STORAGE_KEY_POSITION = "ai_chat_floating_position";
 const MAX_STORED_MESSAGES = 50;
 
 const useStyles = makeStyles((theme) => ({
   // Container principal fixo no canto inferior direito
   container: {
     position: "fixed",
-    bottom: theme.spacing(3),
-    right: theme.spacing(3),
     zIndex: 1300,
     display: "flex",
     flexDirection: "column",
     alignItems: "flex-end",
     gap: theme.spacing(2),
+    userSelect: "none",
+  },
+  containerDragging: {
+    transition: "none",
+  },
+  containerIdle: {
+    transition: "all 0.3s ease",
   },
   // Container dos FABs com hover
   fabContainer: {
@@ -57,15 +63,16 @@ const useStyles = makeStyles((theme) => ({
   },
   // Botão FAB principal
   fab: {
-    background: "transparent",
+    backgroundColor: "transparent",
     color: "#FFFFFF",
-    boxShadow: "0 4px 20px rgba(14, 165, 233, 0.4)",
+    boxShadow: "none",
     transition: "all 0.3s ease",
     position: "relative",
     overflow: "hidden",
     "&:hover": {
-      transform: "scale(1.05)",
-      boxShadow: "0 6px 25px rgba(14, 165, 233, 0.5)",
+      backgroundColor: "rgba(255, 255, 255, 0.1)",
+      transform: "scale(1.1)",
+      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
     },
   },
   // Botão FAB secundário (Resumo IA)
@@ -107,9 +114,10 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
   },
   fabOpen: {
-    background: "linear-gradient(135deg, #EF4444 0%, #F87171 100%)",
+    backgroundColor: "transparent",
+    color: "#FFFFFF",
     "&:hover": {
-      background: "linear-gradient(135deg, #F87171 0%, #EF4444 100%)",
+      backgroundColor: "rgba(255, 255, 255, 0.1)",
     },
   },
   // Painel do chat
@@ -159,12 +167,6 @@ const useStyles = makeStyles((theme) => ({
     height: "100%",
     position: "relative",
     zIndex: 1,
-  },
-  
-  fabWithBackground: {
-    "&:hover .faviconFab": {
-      opacity: 0.8,
-    },
   },
   headerActions: {
     display: "flex",
@@ -297,8 +299,12 @@ const AiChatFloating = () => {
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+  const containerRef = useRef(null);
+  const [position, setPosition] = useState({ x: null, y: null });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
 
-  // Carregar mensagens do localStorage ao iniciar
+  // Carregar mensagens e posição do localStorage ao iniciar
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -311,7 +317,27 @@ const AiChatFloating = () => {
     } catch (err) {
       console.warn("Erro ao carregar mensagens do cache:", err);
     }
+
+    // Carregar posição
+    try {
+      const storedPos = localStorage.getItem(STORAGE_KEY_POSITION);
+      if (storedPos) {
+        const parsed = JSON.parse(storedPos);
+        setPosition(parsed);
+      }
+    } catch (err) {
+      console.warn("Erro ao carregar posição:", err);
+    }
   }, []);
+
+  // Salvar posição no localStorage
+  const savePosition = (pos) => {
+    try {
+      localStorage.setItem(STORAGE_KEY_POSITION, JSON.stringify(pos));
+    } catch (err) {
+      console.warn("Erro ao salvar posição:", err);
+    }
+  };
 
   // Salvar mensagens no localStorage quando mudam
   useEffect(() => {
@@ -432,8 +458,79 @@ const AiChatFloating = () => {
     });
   };
 
+  // Handlers de drag
+  const handleMouseDown = (e) => {
+    if (e.button !== 0 || open) return; // Apenas botão esquerdo e só quando fechado
+    // Verificar se o clique foi no FAB principal, não no painel do chat
+    const target = e.target.closest('[class*="MuiFab-root"]');
+    if (!target) return;
+    
+    e.preventDefault();
+    setIsDragging(true);
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (rect) {
+      const currentX = position.x !== null ? position.x : window.innerWidth - rect.width - 24;
+      const currentY = position.y !== null ? position.y : window.innerHeight - rect.height - 24;
+      setDragStart({
+        x: e.clientX - currentX,
+        y: e.clientY - currentY,
+      });
+    }
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging || dragStart.x === undefined || dragStart.y === undefined || open) return;
+      
+      const newX = e.clientX - dragStart.x;
+      const newY = e.clientY - dragStart.y;
+      
+      // Limitar dentro da viewport
+      const maxX = window.innerWidth - 56;
+      const maxY = window.innerHeight - 56;
+      const minX = 0;
+      const minY = 0;
+      
+      const clampedX = Math.max(minX, Math.min(maxX, newX));
+      const clampedY = Math.max(minY, Math.min(maxY, newY));
+      
+      const newPosition = { x: clampedX, y: clampedY };
+      setPosition(newPosition);
+      savePosition(newPosition);
+    };
+
+    const handleMouseUp = () => {
+      if (isDragging) {
+        setIsDragging(false);
+      }
+    };
+
+    if (isDragging) {
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, dragStart, open]);
+
+  const containerStyle = {
+    left: position.x !== null ? position.x : undefined,
+    top: position.y !== null ? position.y : undefined,
+    bottom: position.y === null ? 24 : undefined,
+    right: position.x === null ? 24 : undefined,
+    cursor: !open && isDragging ? "grabbing" : !open ? "grab" : "default",
+  };
+
   return (
-    <Box className={classes.container}>
+    <Box 
+      ref={containerRef} 
+      className={`${classes.container} ${isDragging && !open ? classes.containerDragging : classes.containerIdle}`} 
+      style={containerStyle} 
+      onMouseDown={handleMouseDown}
+    >
       {/* Painel do Chat */}
       <Collapse in={open} timeout={300}>
         <Paper className={classes.chatPanel} elevation={8}>
@@ -569,7 +666,7 @@ const AiChatFloating = () => {
             max={99}
           >
             <Fab
-              className={`${classes.fab} ${open ? classes.fabOpen : ""} ${!open ? classes.fabWithBackground : ""}`}
+              className={`${classes.fab} ${open ? classes.fabOpen : ""}`}
               onClick={() => setOpen(!open)}
               aria-label="Chat com IA"
             >
