@@ -13,10 +13,26 @@ const usePendingTicketNotification = () => {
 
   // Inicializar elemento de áudio
   useEffect(() => {
-    audioRef.current = new Audio(newChatSound);
-    audioRef.current.loop = true;
-    audioRef.current.volume = 0.5;
+    if (!audioRef.current) {
+      audioRef.current = new Audio(newChatSound);
+      audioRef.current.volume = 0.5;
+    }
+    
+    // Atualizar loop baseado na configuração do usuário
+    // Se o campo não existir ou for undefined, assume true (comportamento padrão)
+    const shouldRepeat = user?.repeatPendingChatSound !== false && user?.repeatPendingChatSound !== undefined ? user.repeatPendingChatSound : true;
+    
+    if (audioRef.current) {
+      audioRef.current.loop = shouldRepeat;
+    }
 
+    return () => {
+      // Não destruir o áudio aqui, apenas pausar
+    };
+  }, [user?.repeatPendingChatSound]);
+
+  // Limpar áudio ao desmontar
+  useEffect(() => {
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
