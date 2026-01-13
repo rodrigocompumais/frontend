@@ -192,6 +192,33 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     marginBottom: theme.spacing(2),
   },
+  tasksSection: {
+    marginTop: theme.spacing(3),
+    marginBottom: theme.spacing(3),
+  },
+  tasksTable: {
+    marginTop: theme.spacing(2),
+  },
+  taskRow: {
+    cursor: "pointer",
+    "&:hover": {
+      backgroundColor: theme.palette.type === "dark" 
+        ? "rgba(255, 255, 255, 0.05)" 
+        : "rgba(0, 0, 0, 0.02)",
+    },
+  },
+  taskPriority: {
+    fontWeight: 600,
+  },
+  taskPriorityHigh: {
+    color: "#EF4444",
+  },
+  taskPriorityMedium: {
+    color: "#F59E0B",
+  },
+  taskPriorityLow: {
+    color: "#22C55E",
+  },
   summaryLoadingBox: {
     display: "flex",
     flexDirection: "column",
@@ -224,6 +251,9 @@ const Dashboard = () => {
   const [ticketModalStatus, setTicketModalStatus] = useState("");
   const [ticketModalData, setTicketModalData] = useState([]);
   const [ticketModalLoading, setTicketModalLoading] = useState(false);
+  // Estados para tarefas pendentes
+  const [pendingTasks, setPendingTasks] = useState([]);
+  const [tasksLoading, setTasksLoading] = useState(false);
   const { find } = useDashboard();
   const { count: contactsCount } = useContacts({});
   const history = useHistory();
@@ -268,6 +298,22 @@ const Dashboard = () => {
       // Fetch extended dashboard data
       const { data: extended } = await api.get("/dashboard/extended", { params });
       setExtendedData(extended || {});
+
+      // Fetch pending tasks
+      try {
+        const { data: tasksData } = await api.get("/tasks", {
+          params: {
+            status: "pending",
+            limit: 10,
+            showAll: false,
+          },
+        });
+        setPendingTasks(tasksData.tasks || []);
+      } catch (err) {
+        // Se a API de tarefas não existir, apenas ignora
+        console.log("Tarefas não disponíveis");
+        setPendingTasks([]);
+      }
 
       setLastUpdate(new Date());
     } catch (err) {
@@ -485,7 +531,7 @@ const Dashboard = () => {
 
         {/* Primary Stats */}
         <Grid container spacing={2} className={classes.statsSection}>
-          <Grid item xs={4} sm={4} md={2}>
+          <Grid item xs={6} sm={4} md={2}>
             <StatCard
               title="Em Atendimento"
               value={counters.supportHappening || 0}
@@ -496,7 +542,7 @@ const Dashboard = () => {
             />
           </Grid>
 
-          <Grid item xs={4} sm={4} md={2}>
+          <Grid item xs={6} sm={4} md={2}>
             <StatCard
               title="Aguardando"
               value={counters.supportPending || 0}
@@ -507,7 +553,7 @@ const Dashboard = () => {
             />
           </Grid>
 
-          <Grid item xs={4} sm={4} md={2}>
+          <Grid item xs={6} sm={4} md={2}>
             <StatCard
               title="Finalizados"
               value={counters.supportFinished || 0}
@@ -518,7 +564,7 @@ const Dashboard = () => {
             />
           </Grid>
 
-          <Grid item xs={4} sm={4} md={2}>
+          <Grid item xs={6} sm={4} md={2}>
             <StatCard
               title="Contatos"
               value={contactsCount || 0}
@@ -529,7 +575,7 @@ const Dashboard = () => {
             />
           </Grid>
 
-          <Grid item xs={4} sm={4} md={2}>
+          <Grid item xs={6} sm={4} md={2}>
             <StatCard
               title="T. Atendimento"
               value={formatTime(counters.avgSupportTime || 0)}
@@ -539,7 +585,7 @@ const Dashboard = () => {
             />
           </Grid>
 
-          <Grid item xs={4} sm={4} md={2}>
+          <Grid item xs={6} sm={4} md={2}>
             <StatCard
               title="T. Espera"
               value={formatTime(counters.avgWaitTime || 0)}
@@ -676,6 +722,115 @@ const Dashboard = () => {
             />
           </Grid>
         </Grid>
+
+        {/* Pending Tasks Section */}
+        {pendingTasks.length > 0 && (
+          <>
+            <Typography className={classes.sectionTitle}>
+              📋 Tarefas Pendentes
+            </Typography>
+            <Grid container spacing={3} className={classes.tasksSection}>
+              <Grid item xs={12}>
+                <Paper elevation={2} className={classes.tasksTable}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell><strong>Tarefa</strong></TableCell>
+                        <TableCell><strong>Prioridade</strong></TableCell>
+                        <TableCell><strong>Categoria</strong></TableCell>
+                        <TableCell><strong>Prazo</strong></TableCell>
+                        <TableCell><strong>Responsável</strong></TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {pendingTasks.map((task) => (
+                        <TableRow
+                          key={task.id}
+                          className={classes.taskRow}
+                          onClick={() => history.push("/todolist")}
+                        >
+                          <TableCell>
+                            <Typography variant="body2" style={{ fontWeight: 500 }}>
+                              {task.title || "Sem título"}
+                            </Typography>
+                            {task.description && (
+                              <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 4 }}>
+                                {task.description.length > 60 
+                                  ? `${task.description.substring(0, 60)}...` 
+                                  : task.description}
+                              </Typography>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Chip
+                              label={task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
+                              size="small"
+                              className={`${classes.taskPriority} ${
+                                task.priority === "high" 
+                                  ? classes.taskPriorityHigh 
+                                  : task.priority === "medium" 
+                                  ? classes.taskPriorityMedium 
+                                  : classes.taskPriorityLow
+                              }`}
+                              style={{
+                                backgroundColor: task.priority === "high" 
+                                  ? "rgba(239, 68, 68, 0.1)" 
+                                  : task.priority === "medium" 
+                                  ? "rgba(245, 158, 11, 0.1)" 
+                                  : "rgba(34, 197, 94, 0.1)",
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="textSecondary">
+                              {task.category || "-"}
+                            </Typography>
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="textSecondary">
+                              {task.dueDate 
+                                ? moment(task.dueDate).format("DD/MM/YYYY")
+                                : "-"}
+                            </Typography>
+                            {task.dueDate && moment(task.dueDate).isBefore(moment(), 'day') && (
+                              <Chip
+                                label="Atrasada"
+                                size="small"
+                                style={{
+                                  backgroundColor: "#EF4444",
+                                  color: "#FFFFFF",
+                                  marginTop: 4,
+                                  fontSize: "0.7rem",
+                                }}
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Typography variant="body2" color="textSecondary">
+                              {task.user?.name || "Não atribuída"}
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  {pendingTasks.length >= 10 && (
+                    <Box p={2} textAlign="center">
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => history.push("/todolist")}
+                        endIcon={<OpenInNewIcon />}
+                      >
+                        Ver todas as tarefas
+                      </Button>
+                    </Box>
+                  )}
+                </Paper>
+              </Grid>
+            </Grid>
+          </>
+        )}
 
         {/* Attendants Table */}
         {attendants.length > 0 && (

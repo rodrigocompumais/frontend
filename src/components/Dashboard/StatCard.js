@@ -6,11 +6,23 @@ const useStyles = makeStyles((theme) => ({
   card: {
     padding: theme.spacing(3),
     height: "100%",
+    minHeight: "120px",
     position: "relative",
     overflow: "hidden",
     borderRadius: theme.spacing(2),
     transition: "all 0.3s ease-in-out",
     cursor: "pointer",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+    [theme.breakpoints.down('sm')]: {
+      padding: theme.spacing(2),
+      minHeight: "100px",
+    },
+    [theme.breakpoints.down('xs')]: {
+      padding: theme.spacing(1.5),
+      minHeight: "90px",
+    },
     "&:hover": {
       transform: "translateY(-4px)",
       boxShadow: theme.shadows[8],
@@ -39,12 +51,26 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(1),
     textTransform: "uppercase",
     letterSpacing: "0.5px",
+    [theme.breakpoints.down('sm')]: {
+      fontSize: "0.75rem",
+      marginBottom: theme.spacing(0.5),
+    },
+    [theme.breakpoints.down('xs')]: {
+      fontSize: "0.7rem",
+      letterSpacing: "0.3px",
+    },
   },
   value: {
     fontSize: "2rem",
     fontWeight: 700,
     lineHeight: 1.2,
     marginBottom: theme.spacing(0.5),
+    [theme.breakpoints.down('sm')]: {
+      fontSize: "1.5rem",
+    },
+    [theme.breakpoints.down('xs')]: {
+      fontSize: "1.25rem",
+    },
   },
   iconContainer: {
     position: "absolute",
@@ -57,6 +83,27 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "center",
     opacity: 0.9,
+    "& svg": {
+      fontSize: "28px",
+      [theme.breakpoints.down('sm')]: {
+        fontSize: "24px",
+      },
+      [theme.breakpoints.down('xs')]: {
+        fontSize: "20px",
+      },
+    },
+    [theme.breakpoints.down('sm')]: {
+      width: "40px",
+      height: "40px",
+      top: theme.spacing(1.5),
+      right: theme.spacing(1.5),
+    },
+    [theme.breakpoints.down('xs')]: {
+      width: "32px",
+      height: "32px",
+      top: theme.spacing(1),
+      right: theme.spacing(1),
+    },
   },
   trendIndicator: {
     display: "flex",
