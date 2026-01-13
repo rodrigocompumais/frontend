@@ -303,6 +303,7 @@ const AiChatFloating = () => {
   const [position, setPosition] = useState({ x: null, y: null });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [openUpward, setOpenUpward] = useState(false);
 
   // Carregar mensagens e posição do localStorage ao iniciar
   useEffect(() => {
@@ -516,12 +517,44 @@ const AiChatFloating = () => {
     };
   }, [isDragging, dragStart, open]);
 
+  // Calcular se deve abrir para cima baseado na posição
+  useEffect(() => {
+    if (!open) return;
+    
+    const calculateOpenDirection = () => {
+      const chatHeight = 500; // Altura aproximada do chat
+      const margin = 100; // Margem de segurança
+      const threshold = chatHeight + margin;
+      
+      let currentY;
+      if (position.y !== null) {
+        currentY = position.y;
+      } else {
+        // Posição padrão (bottom: 24)
+        currentY = window.innerHeight - 56 - 24; // altura do FAB + bottom
+      }
+      
+      const spaceBelow = window.innerHeight - currentY - 56; // espaço abaixo do botão
+      const shouldOpenUpward = spaceBelow < threshold;
+      
+      setOpenUpward(shouldOpenUpward);
+    };
+    
+    calculateOpenDirection();
+    window.addEventListener("resize", calculateOpenDirection);
+    
+    return () => {
+      window.removeEventListener("resize", calculateOpenDirection);
+    };
+  }, [open, position]);
+
   const containerStyle = {
     left: position.x !== null ? position.x : undefined,
     top: position.y !== null ? position.y : undefined,
     bottom: position.y === null ? 24 : undefined,
     right: position.x === null ? 24 : undefined,
     cursor: !open && isDragging ? "grabbing" : !open ? "grab" : "default",
+    flexDirection: open && openUpward ? "column-reverse" : "column",
   };
 
   return (
