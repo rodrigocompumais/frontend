@@ -51,6 +51,7 @@ import PublicForm from "../pages/Forms/PublicForm";
 import FormResponses from "../pages/Forms/FormResponses";
 import FormAnalytics from "../pages/Forms/FormAnalytics";
 import SubscriptionExpired from "../pages/SubscriptionExpired";
+import QuickAccessButtonsSettings from "../pages/QuickAccessButtonsSettings";
 
 const Routes = () => {
   const [showCampaigns, setShowCampaigns] = useState(false);
@@ -100,6 +101,12 @@ const Routes = () => {
                   isPrivate
                 />
                 <Route exact path="/todolist" component={ToDoList} isPrivate />
+                <Route
+                  exact
+                  path="/quick-access-buttons-settings"
+                  component={QuickAccessButtonsSettings}
+                  isPrivate
+                />
                 <Route
                   exact
                   path="/schedules"
