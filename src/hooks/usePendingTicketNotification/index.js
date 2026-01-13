@@ -63,6 +63,11 @@ const usePendingTicketNotification = () => {
   // Controlar reprodução do áudio baseado no número de tickets pendentes
   const updateAudioState = () => {
     const hasPendingTickets = pendingTicketsRef.current.size > 0;
+    const shouldRepeat = user?.repeatPendingChatSound !== false; // Default true se não estiver definido
+    
+    if (audioRef.current) {
+      audioRef.current.loop = shouldRepeat;
+    }
     
     if (hasPendingTickets && !isPlayingRef.current && audioRef.current) {
       // Há tickets pendentes e o áudio não está tocando
@@ -70,7 +75,15 @@ const usePendingTicketNotification = () => {
         console.warn("Não foi possível tocar o áudio:", err);
       });
       isPlayingRef.current = true;
-      console.log("🔊 Áudio iniciado - tickets pendentes:", pendingTicketsRef.current.size);
+      console.log("🔊 Áudio iniciado - tickets pendentes:", pendingTicketsRef.current.size, "Repetir:", shouldRepeat);
+      
+      // Se não deve repetir, parar após uma reprodução
+      if (!shouldRepeat) {
+        audioRef.current.onended = () => {
+          isPlayingRef.current = false;
+          console.log("🔇 Áudio parado - reprodução única concluída");
+        };
+      }
     } else if (!hasPendingTickets && isPlayingRef.current && audioRef.current) {
       // Não há mais tickets pendentes, parar o áudio
       audioRef.current.pause();

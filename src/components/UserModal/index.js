@@ -17,6 +17,8 @@ import Select from "@material-ui/core/Select";
 import InputLabel from "@material-ui/core/InputLabel";
 import MenuItem from "@material-ui/core/MenuItem";
 import FormControl from "@material-ui/core/FormControl";
+import FormControlLabel from "@material-ui/core/FormControlLabel";
+import Switch from "@material-ui/core/Switch";
 import Avatar from "@material-ui/core/Avatar";
 import IconButton from "@material-ui/core/IconButton";
 import PhotoCameraIcon from "@material-ui/icons/PhotoCamera";
@@ -94,7 +96,8 @@ const UserModal = ({ open, onClose, userId }) => {
 		email: "",
 		password: "",
 		profile: "user",
-		allTicket: "desabled"
+		allTicket: "desabled",
+		repeatPendingChatSound: true
 	};
 
 	const { user: loggedInUser } = useContext(AuthContext);
@@ -168,7 +171,7 @@ const UserModal = ({ open, onClose, userId }) => {
 	};
 
 	const handleSaveUser = async values => {
-		const userData = { ...values, whatsappId, queueIds: selectedQueueIds, allTicket: values.allTicket };
+		const userData = { ...values, whatsappId, queueIds: selectedQueueIds, allTicket: values.allTicket, repeatPendingChatSound: values.repeatPendingChatSound };
 		try {
 			if (userId) {
 				await api.put(`/users/${userId}`, userData);
@@ -385,6 +388,23 @@ const UserModal = ({ open, onClose, userId }) => {
 											</FormControl>
 										</div>
 
+									)}
+								/>
+								
+								<Can
+									role={loggedInUser.profile}
+									perform="user-modal:editProfile"
+									yes={() => (
+										<FormControlLabel
+											control={
+												<Field
+													as={Switch}
+													name="repeatPendingChatSound"
+													color="primary"
+												/>
+											}
+											label="Repetir som de chat em espera"
+										/>
 									)}
 								/>
 								
