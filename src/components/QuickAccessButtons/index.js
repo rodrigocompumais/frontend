@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import { Box, Fab, Tooltip, useTheme, useMediaQuery } from "@material-ui/core";
 import ChevronRightIcon from "@material-ui/icons/ChevronRight";
@@ -20,13 +20,13 @@ const useStyles = makeStyles((theme) => ({
     transition: "all 0.3s ease",
   },
   arrowButton: {
-    backgroundColor: "#FFFFFF",
-    color: theme.palette.text.primary,
+    backgroundColor: "transparent",
+    color: "#FFFFFF",
     boxShadow: theme.shadows[4],
     width: 48,
     height: 48,
     "&:hover": {
-      backgroundColor: "#F5F5F5",
+      backgroundColor: "rgba(255, 255, 255, 0.1)",
       boxShadow: theme.shadows[8],
     },
     transition: "all 0.3s ease",
@@ -64,9 +64,13 @@ const QuickAccessButtons = () => {
   const classes = useStyles();
   const theme = useTheme();
   const history = useHistory();
+  const location = useLocation();
   const { buttons, loading } = useQuickAccessButtons();
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
+
+  // Verificar se está no dashboard
+  const isDashboard = location.pathname === "/dashboard" || location.pathname === "/";
 
   // Filtrar apenas botões visíveis
   const visibleButtons = buttons.filter((btn) => btn.isVisible);
@@ -118,6 +122,11 @@ const QuickAccessButtons = () => {
     e.stopPropagation();
     setIsOpen(true);
   };
+
+  // Não mostrar nada se não estiver no dashboard
+  if (!isDashboard) {
+    return null;
+  }
 
   return (
     <Box ref={containerRef} className={classes.container}>
