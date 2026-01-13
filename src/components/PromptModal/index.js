@@ -81,7 +81,6 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const [selectedModel, setSelectedModel] = useState("gpt-3.5-turbo-1106");
     const [selectedProvider, setSelectedProvider] = useState("openai");
     const [showApiKey, setShowApiKey] = useState(false);
-    const [queues, setQueues] = useState([]);
 
     const handleToggleApiKey = () => {
         setShowApiKey(!showApiKey);
@@ -103,18 +102,6 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     };
 
     const [prompt, setPrompt] = useState(initialState);
-
-    useEffect(() => {
-        const fetchQueues = async () => {
-            try {
-                const { data } = await api.get("/queue");
-                setQueues(data);
-            } catch (err) {
-                toastError(err);
-            }
-        };
-        fetchQueues();
-    }, []);
 
     useEffect(() => {
         const fetchPrompt = async () => {
@@ -316,30 +303,6 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                     }
                                     label={i18n.t("promptModal.form.canTransferToAgent")}
                                 />
-                                
-                                {values.canTransferToAgent && (
-                                    <FormControl fullWidth margin="dense" variant="outlined">
-                                        <InputLabel id="transfer-queue-select-label">
-                                            {i18n.t("promptModal.form.transferQueueId")}
-                                        </InputLabel>
-                                        <Field
-                                            as={Select}
-                                            labelId="transfer-queue-select-label"
-                                            name="transferQueueId"
-                                            label={i18n.t("promptModal.form.transferQueueId")}
-                                            error={touched.transferQueueId && Boolean(errors.transferQueueId)}
-                                        >
-                                            <MenuItem value="">
-                                                <em>{i18n.t("promptModal.form.selectQueue")}</em>
-                                            </MenuItem>
-                                            {queues.map(queue => (
-                                                <MenuItem key={queue.id} value={queue.id}>
-                                                    {queue.name}
-                                                </MenuItem>
-                                            ))}
-                                        </Field>
-                                    </FormControl>
-                                )}
                                 
                                 <div className={classes.multFieldLine}>
                                     <FormControl fullWidth margin="dense" variant="outlined">

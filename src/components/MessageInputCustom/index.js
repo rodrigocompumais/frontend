@@ -92,6 +92,8 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     backgroundColor: "#eee",
     borderTop: "1px solid rgba(0, 0, 0, 0.12)",
+    gap: "8px",
+    flexWrap: "wrap",
   },
 
   emojiBox: {
@@ -489,6 +491,7 @@ const MessageInputCustom = (props) => {
   const [improvedText, setImprovedText] = useState("");
   const [isInternalMessage, setIsInternalMessage] = useState(false);
   const inputRef = useRef();
+  const previewUrlsRef = useRef([]);
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
   const { user } = useContext(AuthContext);
@@ -504,6 +507,13 @@ const MessageInputCustom = (props) => {
     return () => {
       setInputMessage("");
       setShowEmoji(false);
+      // Limpar preview URLs antes de limpar medias
+      previewUrlsRef.current.forEach((url) => {
+        if (url) {
+          URL.revokeObjectURL(url);
+        }
+      });
+      previewUrlsRef.current = [];
       setMedias([]);
       setReplyingMessage(null);
     };
@@ -528,12 +538,38 @@ const MessageInputCustom = (props) => {
     }
 
     const selectedMedias = Array.from(e.target.files);
-    setMedias(selectedMedias);
+    // Criar preview URLs para imagens
+    const mediasWithPreview = selectedMedias.map(media => {
+      let preview = null;
+      if (media.type.startsWith('image/')) {
+        preview = URL.createObjectURL(media);
+        previewUrlsRef.current.push(preview);
+      }
+      return {
+        file: media,
+        name: media.name,
+        preview: preview,
+        type: media.type
+      };
+    });
+    setMedias(mediasWithPreview);
   };
 
   const handleInputPaste = (e) => {
     if (e.clipboardData.files[0]) {
-      setMedias([e.clipboardData.files[0]]);
+      const file = e.clipboardData.files[0];
+      let preview = null;
+      if (file.type.startsWith('image/')) {
+        preview = URL.createObjectURL(file);
+        previewUrlsRef.current.push(preview);
+      }
+      const mediaWithPreview = {
+        file: file,
+        name: file.name,
+        preview: preview,
+        type: file.type
+      };
+      setMedias([mediaWithPreview]);
     }
   };
 
@@ -583,8 +619,10 @@ const MessageInputCustom = (props) => {
     const formData = new FormData();
     formData.append("fromMe", true);
     medias.forEach((media) => {
-      formData.append("medias", media);
-      formData.append("body", media.name);
+      // Se media é um objeto com file, usar file, senão usar media diretamente (compatibilidade)
+      const fileToUpload = media.file || media;
+      formData.append("medias", fileToUpload);
+      formData.append("body", media.name || fileToUpload.name);
     });
 
     try {
@@ -592,6 +630,14 @@ const MessageInputCustom = (props) => {
     } catch (err) {
       toastError(err);
     }
+
+    // Limpar preview URLs para liberar memória
+    previewUrlsRef.current.forEach((url) => {
+      if (url) {
+        URL.revokeObjectURL(url);
+      }
+    });
+    previewUrlsRef.current = [];
 
     setLoading(false);
     setMedias([]);
@@ -791,7 +837,16 @@ const MessageInputCustom = (props) => {
         <IconButton
           aria-label="cancel-upload"
           component="span"
-          onClick={(e) => setMedias([])}
+          onClick={(e) => {
+            // Limpar preview URLs antes de limpar medias
+            previewUrlsRef.current.forEach((url) => {
+              if (url) {
+                URL.revokeObjectURL(url);
+              }
+            });
+            previewUrlsRef.current = [];
+            setMedias([]);
+          }}
         >
           <CancelIcon className={classes.sendMessageIcons} />
         </IconButton>
@@ -801,10 +856,26 @@ const MessageInputCustom = (props) => {
             <CircularProgress className={classes.circleLoading} />
           </div>
         ) : (
-          <span>
-            {medias[0]?.name}
-            {/* <img src={media.preview} alt=""></img> */}
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', flex: 1 }}>
+            {medias.map((media, index) => (
+              <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%' }}>
+                {media.preview ? (
+                  <img 
+                    src={media.preview} 
+                    alt={media.name || 'Preview'} 
+                    style={{ 
+                      maxWidth: '200px', 
+                      maxHeight: '150px', 
+                      borderRadius: '8px',
+                      objectFit: 'contain'
+                    }} 
+                  />
+                ) : (
+                  <span style={{ color: '#666' }}>{media.name || 'Arquivo selecionado'}</span>
+                )}
+              </div>
+            ))}
+          </div>
         )}
         <IconButton
           aria-label="send-upload"
