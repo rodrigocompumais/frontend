@@ -26,12 +26,14 @@ const useStyles = makeStyles((theme) => ({
   },
   arrowButton: {
     backgroundColor: "transparent",
-    color: "#FFFFFF",
+    color: theme.palette.text.primary,
     boxShadow: theme.shadows[4],
     width: 48,
     height: 48,
     "&:hover": {
-      backgroundColor: "rgba(255, 255, 255, 0.1)",
+      backgroundColor: theme.palette.type === "dark" 
+        ? "rgba(255, 255, 255, 0.1)" 
+        : "rgba(0, 0, 0, 0.05)",
       boxShadow: theme.shadows[8],
     },
     transition: "all 0.3s ease",
