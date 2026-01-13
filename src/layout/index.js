@@ -25,6 +25,8 @@ import QuickAccessButtons from "../components/QuickAccessButtons";
 import { SocketContext } from "../context/Socket/SocketContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
 import AiChatFloating from "../components/AiChatFloating";
+import useChatNotifications from "../hooks/useChatNotifications";
+import useTicketNotifications from "../hooks/useTicketNotifications";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -108,6 +110,10 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   const [volume, setVolume] = useState(localStorage.getItem("volume") || 1);
 
   const socketManager = useContext(SocketContext);
+
+  // Hooks de notificação de chats
+  useChatNotifications();
+  useTicketNotifications();
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
