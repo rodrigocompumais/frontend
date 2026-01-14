@@ -8,6 +8,7 @@ import {
   Forum,
   ExpandLess,
   ExpandMore,
+  Ticket,
 } from "@material-ui/icons";
 import { i18n } from "../../translate/i18n";
 
@@ -42,7 +43,7 @@ const useStyles = makeStyles((theme) => ({
   },
   actionsMenu: {
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "column-reverse",
     gap: 4,
     backgroundColor: theme.palette.background.paper,
     borderRadius: 8,
@@ -50,6 +51,7 @@ const useStyles = makeStyles((theme) => ({
     boxShadow: theme.shadows[4],
     border: `1px solid ${theme.palette.divider}`,
     pointerEvents: "auto",
+    marginBottom: 4,
   },
   actionButton: {
     backgroundColor: theme.palette.background.paper,
@@ -72,6 +74,8 @@ const QuickActionsMenu = ({
   onQuickMessageClick,
   onScheduleClick,
   onInternalChatClick,
+  onGenerateTicketClick,
+  showGenerateTicket = false,
   chatContainerRef,
 }) => {
   const classes = useStyles();
@@ -135,17 +139,17 @@ const QuickActionsMenu = ({
           });
         } catch (e) {
           console.error("Erro ao carregar posição salva:", e);
-          // Posição padrão se houver erro
+          // Posição padrão se houver erro (canto inferior esquerdo)
           setPosition({
-            x: containerBounds.width - 50,
-            y: containerBounds.height - 80,
+            x: 10,
+            y: containerBounds.height - 46,
           });
         }
       } else {
-        // Posição padrão (canto direito inferior)
+        // Posição padrão (canto inferior esquerdo)
         setPosition({
-          x: containerBounds.width - 50,
-          y: containerBounds.height - 80,
+          x: 10,
+          y: containerBounds.height - 46,
         });
       }
       setPositionInitialized(true);
@@ -294,6 +298,19 @@ const QuickActionsMenu = ({
     },
   ];
 
+  // Adicionar botão de gerar ticket apenas se showGenerateTicket for true
+  if (showGenerateTicket) {
+    actions.push({
+      id: "generateTicket",
+      icon: <Ticket className={classes.actionIcon} />,
+      label: i18n.t("quickActions.generateTicket"),
+      onClick: () => {
+        onGenerateTicketClick();
+        setExpanded(false);
+      },
+    });
+  }
+
   return (
     <div
       ref={containerRef}
@@ -303,17 +320,6 @@ const QuickActionsMenu = ({
         top: `${position.y}px`,
       }}
     >
-      <Tooltip title={expanded ? i18n.t("quickActions.collapse") : i18n.t("quickActions.expand")}>
-        <IconButton
-          ref={buttonRef}
-          className={classes.toggleButton}
-          onClick={handleToggle}
-          onMouseDown={handleMouseDown}
-          size="small"
-        >
-          {expanded ? <ExpandLess /> : <MoreVert />}
-        </IconButton>
-      </Tooltip>
       <Collapse in={expanded} timeout="auto" unmountOnExit>
         <div className={classes.actionsMenu}>
           {actions.map((action) => (
@@ -329,6 +335,17 @@ const QuickActionsMenu = ({
           ))}
         </div>
       </Collapse>
+      <Tooltip title={expanded ? i18n.t("quickActions.collapse") : i18n.t("quickActions.expand")}>
+        <IconButton
+          ref={buttonRef}
+          className={classes.toggleButton}
+          onClick={handleToggle}
+          onMouseDown={handleMouseDown}
+          size="small"
+        >
+          {expanded ? <ExpandLess /> : <MoreVert />}
+        </IconButton>
+      </Tooltip>
     </div>
   );
 };

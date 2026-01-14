@@ -1053,6 +1053,7 @@ const messages = {
         quickMessage: "Respostas Rápidas",
         schedule: "Agendamento",
         internalChat: "Chat Interno",
+        generateTicket: "Gerar Ticket",
         expand: "Expandir ações rápidas",
         collapse: "Recolher ações rápidas",
         createTask: "Criar Tarefa",

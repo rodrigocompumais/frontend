@@ -192,6 +192,41 @@ const Ticket = () => {
     history.push("/chats");
   };
 
+  const handleGenerateTicket = async () => {
+    if (!ticket.id) {
+      toast.error("Ticket não encontrado");
+      return;
+    }
+
+    try {
+      const response = await api.post("/chat-ai/generate-ticket", {
+        ticketId: ticket.id,
+      });
+
+      const { title, description, clientName } = response.data;
+
+      // Construir URL com os parâmetros
+      const baseUrl = "http://192.168.2.98:5000/tickets/novo";
+      const params = new URLSearchParams({
+        title: title || "Novo Ticket",
+        description: description || "",
+        client_name: clientName || contact?.name || "Cliente",
+      });
+
+      const url = `${baseUrl}?${params.toString()}`;
+
+      // Abrir em nova guia
+      window.open(url, "_blank");
+    } catch (err) {
+      console.error("Erro ao gerar ticket:", err);
+      toastError(err);
+    }
+  };
+
+  // Verificar se deve mostrar o botão de gerar ticket (apenas para companyId === 1)
+  const companyId = parseInt(localStorage.getItem("companyId") || "0");
+  const showGenerateTicket = companyId === 1;
+
   const chatContainerRef = React.useRef(null);
 
   const renderMessagesList = () => {
@@ -214,6 +249,8 @@ const Ticket = () => {
               onQuickMessageClick={() => setQuickMessageModalOpen(true)}
               onScheduleClick={() => setScheduleModalOpen(true)}
               onInternalChatClick={handleInternalChatClick}
+              onGenerateTicketClick={handleGenerateTicket}
+              showGenerateTicket={showGenerateTicket}
             />
           )}
         </div>
