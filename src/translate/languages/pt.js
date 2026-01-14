@@ -1072,6 +1072,10 @@ const messages = {
         close: "Fechar",
         quickMessages: "Respostas Rápidas",
         noQuickMessages: "Nenhuma resposta rápida encontrada",
+        select: "Selecionar",
+        createNew: "Criar Nova Resposta Rápida",
+        shortcodeHelper: "Exemplo: /saudacao",
+        saving: "Salvando...",
       },
       contactLists: {
         title: "Listas de Contatos",
