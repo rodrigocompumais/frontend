@@ -14,18 +14,20 @@ import { i18n } from "../../translate/i18n";
 const useStyles = makeStyles((theme) => ({
   quickActionsContainer: {
     position: "fixed",
-    bottom: 80,
+    bottom: 100,
     left: 20,
-    zIndex: 1000,
+    zIndex: 1300,
     display: "flex",
     flexDirection: "column-reverse",
     alignItems: "center",
     gap: 4,
+    pointerEvents: "none",
   },
   toggleButton: {
     backgroundColor: theme.palette.background.paper,
     color: theme.palette.text.primary,
     boxShadow: theme.shadows[2],
+    pointerEvents: "auto",
     "&:hover": {
       backgroundColor: theme.palette.action.hover,
       boxShadow: theme.shadows[4],
@@ -45,6 +47,7 @@ const useStyles = makeStyles((theme) => ({
     boxShadow: theme.shadows[4],
     border: `1px solid ${theme.palette.divider}`,
     marginBottom: 4,
+    pointerEvents: "auto",
   },
   actionButton: {
     backgroundColor: theme.palette.background.paper,

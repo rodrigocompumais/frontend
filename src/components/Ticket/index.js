@@ -230,14 +230,12 @@ const Ticket = () => {
   const renderMessagesList = () => {
     return (
       <>
-        <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
-          <MessagesList
-            ticket={ticket}
-            ticketId={ticket.id}
-            isGroup={ticket.isGroup}
-            onAiHandlersReady={setAiHandlers}
-          ></MessagesList>
-        </div>
+        <MessagesList
+          ticket={ticket}
+          ticketId={ticket.id}
+          isGroup={ticket.isGroup}
+          onAiHandlersReady={setAiHandlers}
+        ></MessagesList>
         <MessageInput 
           ticketId={ticket.id} 
           ticketStatus={ticket.status}
