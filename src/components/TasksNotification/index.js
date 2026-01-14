@@ -18,6 +18,7 @@ import { Typography, Box, Divider, useTheme } from "@material-ui/core";
 
 import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
@@ -66,6 +67,7 @@ const useStyles = makeStyles((theme) => ({
     color: theme.palette.text.secondary,
     display: "flex",
     alignItems: "center",
+    flexWrap: "wrap",
     gap: theme.spacing(1),
     marginTop: theme.spacing(0.5),
   },
@@ -121,18 +123,22 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+const TASK_NOTIFICATION_STORAGE_KEY = "taskNotificationShown";
+const NOTIFICATION_EXPIRY_HOURS = 6;
+
 const TasksNotification = () => {
   const classes = useStyles();
   const theme = useTheme();
   const history = useHistory();
   const { user } = useContext(AuthContext);
+  const socketManager = useContext(SocketContext);
   
   const anchorEl = useRef();
   const [isOpen, setIsOpen] = useState(false);
   const [overdueTasks, setOverdueTasks] = useState([]);
   const [todayTasks, setTodayTasks] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [lastNotificationTime, setLastNotificationTime] = useState(null);
+
 
   const fetchTasks = useCallback(async () => {
     if (!user?.id) return;
@@ -167,7 +173,7 @@ const TasksNotification = () => {
       // Ordenar por prioridade e data
       const sortTasks = (tasksList) => {
         return tasksList.sort((a, b) => {
-          const priorityOrder = { high: 3, medium: 2, low: 1 };
+          const priorityOrder = { urgent: 4, high: 3, medium: 2, low: 1 };
           const priorityDiff = (priorityOrder[b.priority] || 0) - (priorityOrder[a.priority] || 0);
           if (priorityDiff !== 0) return priorityDiff;
           
@@ -177,47 +183,41 @@ const TasksNotification = () => {
         });
       };
 
-      setOverdueTasks(sortTasks(overdue));
-      setTodayTasks(sortTasks(todayTasks));
+      const sortedOverdue = sortTasks(overdue);
+      const sortedToday = sortTasks(todayTasks);
 
-      // Notificar sobre novas tarefas vencidas (apenas na primeira vez ou quando houver novas)
-      if (overdue.length > 0) {
-        if (!lastNotificationTime) {
-          // Primeira vez - notificar se houver tarefas vencidas
-          toast.warning(
-            `⚠️ Você tem ${overdue.length} ${overdue.length === 1 ? 'tarefa vencida' : 'tarefas vencidas'}`,
-            {
-              autoClose: 5000,
-              onClick: () => {
-                setIsOpen(true);
-                history.push("/todolist");
-              },
-            }
-          );
-        } else {
-          // Verificar se há novas tarefas vencidas desde a última verificação
-          const newOverdue = overdue.filter(task => {
-            const taskDate = moment(task.updatedAt || task.createdAt);
-            return taskDate.isAfter(lastNotificationTime);
-          });
-          
-          if (newOverdue.length > 0) {
-            toast.warning(
-              `⚠️ Você tem ${newOverdue.length} ${newOverdue.length === 1 ? 'nova tarefa vencida' : 'novas tarefas vencidas'}`,
-              {
-                autoClose: 5000,
-                onClick: () => {
-                  setIsOpen(true);
-                  history.push("/todolist");
-                },
-              }
-            );
-          }
-        }
+      setOverdueTasks(sortedOverdue);
+      setTodayTasks(sortedToday);
+
+      // Verificar se deve limpar notificação (se todas as tarefas foram finalizadas)
+      const hasPendingTasks = tasks.some(task => task.status === 'pending');
+      if (!hasPendingTasks) {
+        localStorage.removeItem(TASK_NOTIFICATION_STORAGE_KEY);
       }
 
-      // Notificar sobre tarefas para hoje (apenas na primeira vez)
-      if (todayTasks.length > 0 && !lastNotificationTime) {
+      // Verificar se a notificação já foi exibida (com expiração de 6 horas)
+      const stored = localStorage.getItem(TASK_NOTIFICATION_STORAGE_KEY);
+      const shouldShow = !stored || moment().isAfter(moment(JSON.parse(stored).timestamp).add(NOTIFICATION_EXPIRY_HOURS, 'hours'));
+
+      // Notificar sobre novas tarefas vencidas (apenas uma vez com expiração de 6 horas)
+      if (overdue.length > 0 && shouldShow) {
+        toast.warning(
+          `⚠️ Você tem ${overdue.length} ${overdue.length === 1 ? 'tarefa vencida' : 'tarefas vencidas'}`,
+          {
+            autoClose: 5000,
+            onClick: () => {
+              setIsOpen(true);
+              history.push("/todolist");
+            },
+          }
+        );
+        localStorage.setItem(TASK_NOTIFICATION_STORAGE_KEY, JSON.stringify({
+          timestamp: moment().toISOString()
+        }));
+      }
+
+      // Notificar sobre tarefas para hoje (apenas uma vez com expiração de 6 horas)
+      if (todayTasks.length > 0 && overdue.length === 0 && shouldShow) {
         toast.info(
           `📅 Você tem ${todayTasks.length} ${todayTasks.length === 1 ? 'tarefa para hoje' : 'tarefas para hoje'}`,
           {
@@ -228,9 +228,10 @@ const TasksNotification = () => {
             },
           }
         );
+        localStorage.setItem(TASK_NOTIFICATION_STORAGE_KEY, JSON.stringify({
+          timestamp: moment().toISOString()
+        }));
       }
-
-      setLastNotificationTime(moment());
     } catch (err) {
       console.error("Erro ao buscar tarefas:", err);
       // Não mostrar erro se a API de tarefas não existir
@@ -240,21 +241,52 @@ const TasksNotification = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, lastNotificationTime, history]);
+  }, [user?.id, history]);
+
+  const fetchTasksRef = useRef(fetchTasks);
+  
+  useEffect(() => {
+    fetchTasksRef.current = fetchTasks;
+  }, [fetchTasks]);
 
   useEffect(() => {
     if (!user?.id) return;
 
     // Buscar tarefas imediatamente
-    fetchTasks();
+    if (fetchTasksRef.current) {
+      fetchTasksRef.current();
+    }
 
     // Atualizar a cada 2 minutos
     const interval = setInterval(() => {
-      fetchTasks();
+      if (fetchTasksRef.current) {
+        fetchTasksRef.current();
+      }
     }, 120000); // 2 minutos
 
     return () => clearInterval(interval);
-  }, [user?.id, fetchTasks]);
+  }, [user?.id]);
+
+  // Listener de socket para atualizar quando tarefa for finalizada
+  useEffect(() => {
+    if (!user?.companyId) return;
+
+    const companyId = user.companyId;
+    const socket = socketManager.getSocket(companyId);
+
+    const handleTaskUpdate = (data) => {
+      // Atualizar tarefas quando houver mudanças
+      if (fetchTasksRef.current) {
+        fetchTasksRef.current();
+      }
+    };
+
+    socket.on(`company-${companyId}-task`, handleTaskUpdate);
+
+    return () => {
+      socket.off(`company-${companyId}-task`, handleTaskUpdate);
+    };
+  }, [user?.companyId, socketManager]);
 
   const handleClick = (event) => {
     setIsOpen(!isOpen);
@@ -271,6 +303,7 @@ const TasksNotification = () => {
 
   const getPriorityClass = (priority) => {
     switch (priority) {
+      case "urgent":
       case "high":
         return classes.priorityHigh;
       case "medium":
@@ -284,6 +317,8 @@ const TasksNotification = () => {
 
   const getPriorityLabel = (priority) => {
     switch (priority) {
+      case "urgent":
+        return "Urgente";
       case "high":
         return "Alta";
       case "medium":
@@ -379,10 +414,12 @@ const TasksNotification = () => {
                   >
                     <ListItemText
                       primary={
-                        <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                          <Typography className={classes.taskTitle}>
-                            {task.title || "Sem título"}
-                          </Typography>
+                        <Typography className={classes.taskTitle}>
+                          {task.title || "Sem título"}
+                        </Typography>
+                      }
+                      secondary={
+                        <Box className={classes.taskMeta}>
                           {task.priority && (
                             <Chip
                               label={getPriorityLabel(task.priority)}
@@ -390,17 +427,14 @@ const TasksNotification = () => {
                               className={`${classes.priorityChip} ${getPriorityClass(task.priority)}`}
                             />
                           )}
-                          <Chip
-                            label="Vencida"
-                            size="small"
-                            className={classes.overdueBadge}
-                          />
-                        </Box>
-                      }
-                      secondary={
-                        <Box className={classes.taskMeta}>
                           {task.dueDate && (
                             <span>{formatDueDate(task.dueDate)}</span>
+                          )}
+                          {task.assignedTo && (
+                            <>
+                              <span>•</span>
+                              <span>Responsável: {task.assignedTo.name}</span>
+                            </>
                           )}
                           {task.category && (
                             <>
@@ -437,10 +471,12 @@ const TasksNotification = () => {
                   >
                     <ListItemText
                       primary={
-                        <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
-                          <Typography className={classes.taskTitle}>
-                            {task.title || "Sem título"}
-                          </Typography>
+                        <Typography className={classes.taskTitle}>
+                          {task.title || "Sem título"}
+                        </Typography>
+                      }
+                      secondary={
+                        <Box className={classes.taskMeta}>
                           {task.priority && (
                             <Chip
                               label={getPriorityLabel(task.priority)}
@@ -448,16 +484,21 @@ const TasksNotification = () => {
                               className={`${classes.priorityChip} ${getPriorityClass(task.priority)}`}
                             />
                           )}
-                          <Chip
-                            label="Hoje"
-                            size="small"
-                            className={classes.todayBadge}
-                          />
-                        </Box>
-                      }
-                      secondary={
-                        <Box className={classes.taskMeta}>
-                          {task.category && <span>{task.category}</span>}
+                          {task.dueDate && (
+                            <span>{formatDueDate(task.dueDate)}</span>
+                          )}
+                          {task.assignedTo && (
+                            <>
+                              <span>•</span>
+                              <span>Responsável: {task.assignedTo.name}</span>
+                            </>
+                          )}
+                          {task.category && (
+                            <>
+                              <span>•</span>
+                              <span>{task.category}</span>
+                            </>
+                          )}
                         </Box>
                       }
                     />
