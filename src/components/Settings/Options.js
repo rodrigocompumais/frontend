@@ -116,6 +116,13 @@ export default function Options(props) {
   const [loadingGeminiApiKey, setLoadingGeminiApiKey] = useState(false);
   const [testingGeminiApiKey, setTestingGeminiApiKey] = useState(false);
   
+  const [openaiApiKey, setOpenaiApiKey] = useState("");
+  const [loadingOpenaiApiKey, setLoadingOpenaiApiKey] = useState(false);
+  const [testingOpenaiApiKey, setTestingOpenaiApiKey] = useState(false);
+  
+  const [providerConfigs, setProviderConfigs] = useState(null);
+  const [loadingProviderConfigs, setLoadingProviderConfigs] = useState(false);
+  
   // recursos a mais da plw design
 
   const [SendGreetingAccepted, setSendGreetingAccepted] = useState("disabled");
@@ -206,7 +213,37 @@ export default function Options(props) {
       if (geminiKey) {
         setGeminiApiKey(geminiKey.value);
       }
+
+      const openaiKey = settings.find((s) => s.key === "openaiApiKey");
+      if (openaiKey) {
+        setOpenaiApiKey(openaiKey.value);
+      }
+      
     }
+    
+    // Carregar configurações de providers se ambas as chaves estiverem configuradas
+    const loadProviderConfigurations = async () => {
+      try {
+        const geminiKey = settings.find((s) => s.key === "geminiApiKey");
+        const openaiKey = settings.find((s) => s.key === "openaiApiKey");
+        
+        if (geminiKey?.value && openaiKey?.value) {
+          setLoadingProviderConfigs(true);
+          try {
+            const { data } = await api.get("/ai/providers/config");
+            setProviderConfigs(data);
+          } catch (err) {
+            console.error("Erro ao carregar configurações de providers:", err);
+          } finally {
+            setLoadingProviderConfigs(false);
+          }
+        }
+      } catch (err) {
+        console.error("Erro:", err);
+      }
+    };
+    
+    loadProviderConfigurations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
 
@@ -403,7 +440,7 @@ export default function Options(props) {
 
     setTestingGeminiApiKey(true);
     try {
-      const { data } = await api.get("/ai/test-key");
+      const { data } = await api.get("/ai/test-key?provider=gemini");
       if (data.valid) {
         toast.success(data.message || "Chave da API do Gemini válida e funcionando!");
       } else {
@@ -414,6 +451,76 @@ export default function Options(props) {
       toast.error(errorMessage);
     } finally {
       setTestingGeminiApiKey(false);
+    }
+  }
+
+  async function handleOpenaiApiKey(value) {
+    setOpenaiApiKey(value);
+    setLoadingOpenaiApiKey(true);
+    await update({
+      key: "openaiApiKey",
+      value,
+    });
+    toast.success(i18n.t("settings.options.toasts.success"));
+    setLoadingOpenaiApiKey(false);
+    
+    // Recarregar configurações de providers se ambas chaves estiverem configuradas
+    setTimeout(() => {
+      if (value && geminiApiKey) {
+        loadProviderConfigurations();
+      }
+    }, 500);
+  }
+
+  async function handleTestOpenaiApiKey() {
+    if (!openaiApiKey || openaiApiKey.trim() === "") {
+      toast.error("Por favor, insira uma chave da API do OpenAI antes de testar.");
+      return;
+    }
+
+    setTestingOpenaiApiKey(true);
+    try {
+      const { data } = await api.get("/ai/test-key?provider=openai");
+      if (data.valid) {
+        toast.success(data.message || "Chave da API do OpenAI válida e funcionando!");
+      } else {
+        toast.error(data.message || "Chave da API do OpenAI inválida.");
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || "Erro ao testar chave da API";
+      toast.error(errorMessage);
+    } finally {
+      setTestingOpenaiApiKey(false);
+    }
+  }
+
+  const loadProviderConfigurations = async () => {
+    if (!geminiApiKey || !openaiApiKey) {
+      return;
+    }
+    
+    setLoadingProviderConfigs(true);
+    try {
+      const { data } = await api.get("/ai/providers/config");
+      setProviderConfigs(data);
+    } catch (err) {
+      console.error("Erro ao carregar configurações de providers:", err);
+    } finally {
+      setLoadingProviderConfigs(false);
+    }
+  };
+
+  async function handleProviderConfigChange(functionType, provider) {
+    try {
+      await api.post("/ai/providers/config", {
+        functionType,
+        provider
+      });
+      toast.success("Configuração de provider atualizada!");
+      loadProviderConfigurations();
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || err.response?.data?.error || "Erro ao atualizar configuração";
+      toast.error(errorMessage);
     }
   }
   return (
@@ -645,7 +752,90 @@ export default function Options(props) {
             {i18n.t("settings.options.fields.geminiApiKey.helper")}
           </Typography>
         </Grid>
+        <Grid xs={12} sm={6} md={6} item>
+          <FormControl className={classes.selectContainer} style={{ width: "100%" }}>
+            <TextField
+              id="openaiApiKey"
+              name="openaiApiKey"
+              margin="dense"
+              label={i18n.t("settings.options.fields.openaiApiKey.title")}
+              variant="outlined"
+              type="password"
+              value={openaiApiKey}
+              onChange={async (e) => {
+                handleOpenaiApiKey(e.target.value);
+              }}
+              placeholder={i18n.t("settings.options.fields.openaiApiKey.placeholder")}
+              style={{ marginBottom: 8 }}
+            />
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleTestOpenaiApiKey}
+              disabled={testingOpenaiApiKey || loadingOpenaiApiKey || !openaiApiKey}
+              startIcon={testingOpenaiApiKey ? <CircularProgress size={16} /> : null}
+              style={{ marginTop: 8 }}
+            >
+              {testingOpenaiApiKey ? "Testando..." : "Testar Chave"}
+            </Button>
+            <FormHelperText>
+              {loadingOpenaiApiKey && i18n.t("settings.options.updating")}
+            </FormHelperText>
+          </FormControl>
+        </Grid>
+        <Grid xs={12} sm={6} md={6} item>
+          <Typography variant="body2" color="textSecondary">
+            {i18n.t("settings.options.fields.openaiApiKey.helper")}
+          </Typography>
+        </Grid>
       </Grid>
+      
+      {/* Configuração de Providers - Mostrar apenas quando ambas chaves estiverem configuradas */}
+      {geminiApiKey && openaiApiKey && (
+        <>
+          <Grid spacing={3} container style={{ marginTop: 20, marginBottom: 10 }}>
+            <Grid xs={12} item>
+              <Typography variant="h6" style={{ marginBottom: 10 }}>
+                {i18n.t("settings.options.fields.aiProviderConfig.title")}
+              </Typography>
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: 20 }}>
+                {i18n.t("settings.options.fields.aiProviderConfig.helper")}
+              </Typography>
+            </Grid>
+            
+            {["summaries", "chat", "messageImprovement", "transcription", "campaigns"].map((functionType) => {
+              const functionLabels = {
+                summaries: i18n.t("settings.options.fields.aiProviderConfig.summaries"),
+                chat: i18n.t("settings.options.fields.aiProviderConfig.chat"),
+                messageImprovement: i18n.t("settings.options.fields.aiProviderConfig.messageImprovement"),
+                transcription: i18n.t("settings.options.fields.aiProviderConfig.transcription"),
+                campaigns: i18n.t("settings.options.fields.aiProviderConfig.campaigns")
+              };
+              
+              const currentProvider = providerConfigs?.configured?.[functionType] || "gemini";
+              
+              return (
+                <Grid xs={12} sm={6} md={4} item key={functionType}>
+                  <FormControl className={classes.selectContainer} style={{ width: "100%" }}>
+                    <InputLabel id={`provider-${functionType}-label`}>
+                      {functionLabels[functionType]}
+                    </InputLabel>
+                    <Select
+                      labelId={`provider-${functionType}-label`}
+                      value={currentProvider}
+                      onChange={(e) => handleProviderConfigChange(functionType, e.target.value)}
+                    >
+                      <MenuItem value="gemini">Gemini</MenuItem>
+                      <MenuItem value="openai">OpenAI</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Grid>
+              );
+            })}
+          </Grid>
+        </>
+      )}
+      
       {/*-----------------IXC DESATIVADO 4.6.5-----------------*/}
       {/*<Grid spacing={3} container
         style={{ marginBottom: 10 }}>
