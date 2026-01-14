@@ -8,7 +8,7 @@ import {
   Forum,
   ExpandLess,
   ExpandMore,
-  Ticket,
+  ConfirmationNumber,
 } from "@material-ui/icons";
 import { i18n } from "../../translate/i18n";
 
@@ -302,7 +302,7 @@ const QuickActionsMenu = ({
   if (showGenerateTicket) {
     actions.push({
       id: "generateTicket",
-      icon: <Ticket className={classes.actionIcon} />,
+      icon: <ConfirmationNumber className={classes.actionIcon} />,
       label: i18n.t("quickActions.generateTicket"),
       onClick: () => {
         onGenerateTicketClick();
