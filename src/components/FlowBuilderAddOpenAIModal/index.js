@@ -6,14 +6,14 @@ import { makeStyles } from "@material-ui/core/styles";
 import { green } from "@material-ui/core/colors";
 import Button from "@material-ui/core/Button";
 import { MenuItem, FormControl, InputLabel, Select } from "@material-ui/core";
-import { Visibility, VisibilityOff } from "@material-ui/icons";
-import { InputAdornment, IconButton } from "@material-ui/core";
 import Dialog from "@material-ui/core/Dialog";
 import DialogActions from "@material-ui/core/DialogActions";
 import DialogContent from "@material-ui/core/DialogContent";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import { i18n } from "../../translate/i18n";
 import TextField from "@material-ui/core/TextField";
+import api from "../../services/api";
+import { toast } from "react-toastify";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -62,10 +62,6 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
   const classes = useStyles();
   const isMounted = useRef(true);
 
-  const handleToggleApiKey = () => {
-    setShowApiKey(!showApiKey);
-  };
-
   const initialState = {
     name: "",
     prompt: "",
@@ -74,13 +70,12 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
     voiceRegion: "",
     maxTokens: 100,
     temperature: 1,
-    apiKey: "",
     queueId: null,
     maxMessages: 10,
   };
 
-  const [showApiKey, setShowApiKey] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState("texto");
+  const [apiKeyStatus, setApiKeyStatus] = useState(false);
 
   const [activeModal, setActiveModal] = useState(false);
   const [integration, setIntegration] = useState();
@@ -90,6 +85,16 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
   });
 
   useEffect(() => {
+    const checkApiKey = async () => {
+      try {
+        const { data } = await api.get("/settings");
+        const openaiKey = data.find(s => s.key === "openaiApiKey");
+        setApiKeyStatus(!!openaiKey?.value);
+      } catch (err) {
+        console.error("Erro ao verificar API key:", err);
+      }
+    };
+
     if (open === "edit") {
       setLabels({
         title: "Editar OpenAI do fluxo",
@@ -109,6 +114,10 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
       setActiveModal(true);
     }
 
+    if (open) {
+      checkApiKey();
+    }
+
     return () => {
       isMounted.current = false;
     };
@@ -124,18 +133,29 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
   };
 
   const handleSavePrompt = (values) => {
+    // Verificar se há API key configurada
+    if (!apiKeyStatus) {
+      toast.error(
+        "Para usar OpenAI, configure a API Key em Configurações → Integrações → Chave da API do OpenAI"
+      );
+      return;
+    }
+
+    // Remover apiKey dos valores - será buscada das Settings
+    const { apiKey, ...valuesWithoutApiKey } = values;
+
     if (open === "edit") {
       handleClose();
       onUpdate({
         ...data,
-        data: { typebotIntegration: { ...values,  voice: selectedVoice} },
+        data: { typebotIntegration: { ...valuesWithoutApiKey, voice: selectedVoice} },
       });
     } else if (open === "create") {
-      values.projectName = values.name;
+      valuesWithoutApiKey.projectName = valuesWithoutApiKey.name;
       handleClose();
       onSave({
         typebotIntegration: {
-          ...values,
+          ...valuesWithoutApiKey,
           voice: selectedVoice
         }
       });
@@ -179,26 +199,19 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
                   required
                 />
                 <FormControl fullWidth margin="dense" variant="outlined">
-                  <Field
-                    as={TextField}
-                    label={i18n.t("promptModal.form.apikey")}
-                    name="apiKey"
-                    type={showApiKey ? "text" : "password"}
-                    error={touched.apiKey && Boolean(errors.apiKey)}
-                    helperText={touched.apiKey && errors.apiKey}
+                  <TextField
+                    label="API Key do OpenAI"
+                    value={apiKeyStatus 
+                      ? "✓ API Key configurada em Configurações → Integrações" 
+                      : "⚠ API Key não configurada"}
                     variant="outlined"
                     margin="dense"
                     fullWidth
-                    required
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          <IconButton onClick={handleToggleApiKey}>
-                            {showApiKey ? <VisibilityOff /> : <Visibility />}
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
+                    disabled
+                    error={!apiKeyStatus}
+                    helperText={apiKeyStatus 
+                      ? "A API Key será obtida das configurações da empresa" 
+                      : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
                   />
                 </FormControl>
                 <Field

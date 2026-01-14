@@ -15,8 +15,6 @@ import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import { i18n } from "../../translate/i18n";
 import { MenuItem, FormControl, InputLabel, Select, Menu, Grid, FormControlLabel, Checkbox } from "@material-ui/core";
-import { Visibility, VisibilityOff } from "@material-ui/icons";
-import { InputAdornment, IconButton } from "@material-ui/core";
 import QueueSelectSingle from "../../components/QueueSelectSingle";
 
 import api from "../../services/api";
@@ -68,11 +66,7 @@ const getPromptSchema = (provider) => {
         maxMessages: Yup.number().required(i18n.t("promptModal.formErrors.maxMessages.required"))
     };
 
-    // Se for OpenAI, apiKey é obrigatória
-    if (provider === "openai") {
-        baseSchema.apiKey = Yup.string().required(i18n.t("promptModal.formErrors.apikey.required"));
-    }
-
+    // Não validar apiKey aqui - será validado nas Settings
     return Yup.object().shape(baseSchema);
 };
 
@@ -80,11 +74,8 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const classes = useStyles();
     const [selectedModel, setSelectedModel] = useState("gpt-3.5-turbo-1106");
     const [selectedProvider, setSelectedProvider] = useState("openai");
-    const [showApiKey, setShowApiKey] = useState(false);
-
-    const handleToggleApiKey = () => {
-        setShowApiKey(!showApiKey);
-    };
+    const [apiKeyStatus, setApiKeyStatus] = useState({ gemini: false, openai: false });
+    const [loadingApiKeyStatus, setLoadingApiKeyStatus] = useState(false);
 
     const initialState = {
         name: "",
@@ -93,7 +84,6 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         provider: "openai",
         maxTokens: 100,
         temperature: 1,
-        apiKey: "",
         queueId: '',
         maxMessages: 10,
         canSendInternalMessages: false,
@@ -109,22 +99,43 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                 setPrompt(initialState);
                 setSelectedProvider("openai");
                 setSelectedModel("gpt-3.5-turbo-1106");
-                return;
-            }
-            try {
-                const { data } = await api.get(`/prompt/${promptId}`);
-                setPrompt(prevState => {
-                    return { ...prevState, ...data };
-                });
-                
-                setSelectedModel(data.model || "gpt-3.5-turbo-1106");
-                setSelectedProvider(data.provider || "openai");
-            } catch (err) { 
-                toastError(err);
+            } else {
+                try {
+                    const { data } = await api.get(`/prompt/${promptId}`);
+                    setPrompt(prevState => {
+                        return { ...prevState, ...data };
+                    });
+                    
+                    setSelectedModel(data.model || "gpt-3.5-turbo-1106");
+                    setSelectedProvider(data.provider || "openai");
+                } catch (err) { 
+                    toastError(err);
+                }
             }
         };
 
-        fetchPrompt();
+        const checkApiKeys = async () => {
+            setLoadingApiKeyStatus(true);
+            try {
+                const { data } = await api.get("/settings");
+                const geminiKey = data.find(s => s.key === "geminiApiKey");
+                const openaiKey = data.find(s => s.key === "openaiApiKey");
+                
+                setApiKeyStatus({
+                    gemini: !!geminiKey?.value,
+                    openai: !!openaiKey?.value
+                });
+            } catch (err) {
+                console.error("Erro ao verificar API keys:", err);
+            } finally {
+                setLoadingApiKeyStatus(false);
+            }
+        };
+
+        if (open) {
+            fetchPrompt();
+            checkApiKeys();
+        }
     }, [promptId, open]);
 
     const handleClose = () => {
@@ -150,18 +161,30 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     };
 
     const handleSavePrompt = async values => {
+        // Verificar se há API key configurada para o provider selecionado
+        if (selectedProvider === "openai" && !apiKeyStatus.openai) {
+            toast.error(
+                "Para usar OpenAI, configure a API Key em Configurações → Integrações → Chave da API do OpenAI"
+            );
+            return;
+        }
+        
+        if (selectedProvider === "gemini" && !apiKeyStatus.gemini) {
+            toast.error(
+                "Para usar Gemini, configure a API Key em Configurações → Integrações → Chave da API do Gemini"
+            );
+            return;
+        }
+
         const promptData = { 
             ...values, 
             model: selectedModel,
             provider: selectedProvider
         };
         
-        // Se for Gemini, não enviar apiKey (será usado das Settings)
-        if (selectedProvider === "gemini") {
-            promptData.apiKey = "";
-        }
+        // Não enviar apiKey - será buscada das Settings
+        delete promptData.apiKey;
         
-        console.log(promptData);
         if (!values.queueId) {
             toastError(i18n.t("promptModal.setor"));
             return;
@@ -173,7 +196,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                 await api.post("/prompt", promptData);
             }
             toast.success(i18n.t("promptModal.success"));
-            refreshPrompts(  )
+            refreshPrompts();
         } catch (err) {
             toastError(err);
         }
@@ -233,25 +256,19 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                 </FormControl>
                                 {selectedProvider === "openai" && (
                                     <FormControl fullWidth margin="dense" variant="outlined">
-                                        <Field
-                                            as={TextField}
-                                            label={i18n.t("promptModal.form.apikey")}
-                                            name="apiKey"
-                                            type={showApiKey ? 'text' : 'password'}
-                                            error={touched.apiKey && Boolean(errors.apiKey)}
-                                            helperText={touched.apiKey && errors.apiKey}
+                                        <TextField
+                                            label="API Key do OpenAI"
+                                            value={apiKeyStatus.openai 
+                                                ? "✓ API Key configurada em Configurações → Integrações" 
+                                                : "⚠ API Key não configurada"}
                                             variant="outlined"
                                             margin="dense"
                                             fullWidth
-                                            InputProps={{
-                                                endAdornment: (
-                                                    <InputAdornment position="end">
-                                                        <IconButton onClick={handleToggleApiKey}>
-                                                            {showApiKey ? <VisibilityOff /> : <Visibility />}
-                                                        </IconButton>
-                                                    </InputAdornment>
-                                                ),
-                                            }}
+                                            disabled
+                                            error={!apiKeyStatus.openai}
+                                            helperText={apiKeyStatus.openai 
+                                                ? "A API Key será obtida das configurações da empresa" 
+                                                : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
                                         />
                                     </FormControl>
                                 )}
@@ -259,12 +276,17 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                     <FormControl fullWidth margin="dense" variant="outlined">
                                         <TextField
                                             label="API Key do Gemini"
-                                            value="Usará a API Key configurada em Configurações → Integrações"
+                                            value={apiKeyStatus.gemini 
+                                                ? "✓ API Key configurada em Configurações → Integrações" 
+                                                : "⚠ API Key não configurada"}
                                             variant="outlined"
                                             margin="dense"
                                             fullWidth
                                             disabled
-                                            helperText="A API Key do Gemini será obtida das configurações da empresa"
+                                            error={!apiKeyStatus.gemini}
+                                            helperText={apiKeyStatus.gemini 
+                                                ? "A API Key será obtida das configurações da empresa" 
+                                                : "Configure a API Key em Configurações → Integrações → Chave da API do Gemini"}
                                         />
                                     </FormControl>
                                 )}
