@@ -146,18 +146,25 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     };
 
     const handleChangeModel = (e) => {
-        setSelectedModel(e.target.value);
+        const newModel = e.target.value;
+        setSelectedModel(newModel);
+        // Atualizar também no estado do prompt para sincronizar com Formik
+        setPrompt(prev => ({ ...prev, model: newModel }));
     };
 
     const handleChangeProvider = (e) => {
         const newProvider = e.target.value;
         setSelectedProvider(newProvider);
         // Se mudar para Gemini, resetar modelo para o padrão do Gemini
+        let defaultModel;
         if (newProvider === "gemini") {
-            setSelectedModel("gemini-2.5-flash");
+            defaultModel = "gemini-2.5-flash";
         } else {
-            setSelectedModel("gpt-3.5-turbo-1106");
+            defaultModel = "gpt-3.5-turbo-1106";
         }
+        setSelectedModel(defaultModel);
+        // Atualizar também no estado do prompt
+        setPrompt(prev => ({ ...prev, provider: newProvider, model: defaultModel }));
     };
 
     const handleSavePrompt = async values => {
@@ -328,26 +335,30 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                 
                                 <div className={classes.multFieldLine}>
                                     <FormControl fullWidth margin="dense" variant="outlined">
-                                    <InputLabel>{i18n.t("promptModal.form.model")}</InputLabel>
+                                        <InputLabel id="model-select-label" shrink={!!selectedModel}>
+                                            {i18n.t("promptModal.form.model")}
+                                        </InputLabel>
                                         <Select
-                                            id="type-select"
-                                            labelWidth={60}
-                                            name="model"
+                                            labelId="model-select-label"
+                                            id="model-select"
                                             value={selectedModel}
                                             onChange={handleChangeModel}
-                                            multiple={false}
+                                            displayEmpty={false}
                                         >
                                             {selectedProvider === "openai" ? (
                                                 <>
-                                                    <MenuItem key={"gpt-3.5"} value={"gpt-3.5-turbo-1106"}>
+                                                    <MenuItem value="gpt-3.5-turbo-1106">
                                                         GPT 3.5 turbo
                                                     </MenuItem>
-                                                    <MenuItem key={"gpt-4"} value={"gpt-4o-mini"}>
+                                                    <MenuItem value="gpt-4o-mini">
+                                                        GPT 4.0 Mini
+                                                    </MenuItem>
+                                                    <MenuItem value="gpt-4o">
                                                         GPT 4.0
                                                     </MenuItem>
                                                 </>
                                             ) : (
-                                                <MenuItem key={"gemini-2.5-flash"} value={"gemini-2.5-flash"}>
+                                                <MenuItem value="gemini-2.5-flash">
                                                     Gemini 2.5 Flash
                                                 </MenuItem>
                                             )}
