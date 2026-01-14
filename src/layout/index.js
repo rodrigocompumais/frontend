@@ -20,6 +20,7 @@ import MobileNavigationMenu from "../components/MobileNavigationMenu";
 import TourGuide from "../components/TourGuide";
 import TasksNotification from "../components/TasksNotification";
 import QuickAccessButtons from "../components/QuickAccessButtons";
+import TrialBarNotification from "../components/TrialBarNotification";
 
 import { SocketContext } from "../context/Socket/SocketContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
@@ -47,26 +48,28 @@ const useStyles = makeStyles((theme) => ({
     paddingTop: 4,
     paddingBottom: 4,
     minHeight: 56,
-    color: theme.palette.dark.main,
+    color: '#FFFFFF',
     background: theme.palette.barraSuperior,
     display: 'flex',
     alignItems: 'center',
+    gap: theme.spacing(1),
   },
   appBar: {
     zIndex: theme.zIndex.drawer + 1,
   },
   dashboardButton: {
-    marginRight: theme.spacing(1.5),
+    marginRight: theme.spacing(2),
     padding: theme.spacing(1, 2),
-    color: theme.palette.dark.main,
+    color: '#FFFFFF',
     textTransform: 'none',
     fontSize: '0.95rem',
     fontWeight: 500,
     '&:hover': {
-      backgroundColor: theme.palette.action.hover,
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
     },
     [theme.breakpoints.down("xs")]: {
       padding: theme.spacing(0.75, 1.5),
+      marginRight: theme.spacing(1),
     },
   },
   dashboardIcon: {
@@ -179,6 +182,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
           {/* Espaçador flexível */}
           <div className={classes.grow} />
 
+          {/* Notificação de teste gratuito */}
+          <TrialBarNotification />
+
           {/* Notificações e popovers */}
           {user.id && <NotificationsPopOver volume={volume} />}
 
@@ -188,7 +194,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
 
           <ChatPopover />
 
-          {/* Menu de perfil do usuário (agora inclui todos os controles) */}
+          {/* Menu de perfil do usuário */}
           <UserProfileMenu volume={volume} setVolume={setVolume} />
         </Toolbar>
       </AppBar>

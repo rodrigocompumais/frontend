@@ -56,9 +56,9 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   menuButton: {
-    color: 'white',
+    color: '#FFFFFF',
     textTransform: 'none',
-    marginRight: theme.spacing(1),
+    marginRight: theme.spacing(2),
     fontSize: '0.95rem',
     fontWeight: 500,
     '&:hover': {
