@@ -506,8 +506,8 @@ const messages = {
           apikey: "API Key",
           max_messages: "Máximo de mensajes en el Historial",
           canSendInternalMessages: "Permitir envío de mensajes internos",
-          canTransferToAgent: "Permitir transferencia a agente en línea",
-          transferQueueId: "Cola de destino para transferencia",
+          canTransferToAgent: "Permitir transferencia de cola",
+          canChangeTag: "Permitir alterar etiqueta",
           selectQueue: "Seleccione una cola",
         },
         formErrors: {

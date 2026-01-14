@@ -15,7 +15,6 @@ import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import { i18n } from "../../translate/i18n";
 import { MenuItem, FormControl, InputLabel, Select, Menu, Grid, FormControlLabel, Checkbox } from "@material-ui/core";
-import QueueSelectSingle from "../../components/QueueSelectSingle";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -62,11 +61,11 @@ const getPromptSchema = (provider) => {
         model: Yup.string().required(i18n.t("promptModal.formErrors.modal.required")),
         maxTokens: Yup.number().required(i18n.t("promptModal.formErrors.maxTokens.required")),
         temperature: Yup.number().required(i18n.t("promptModal.formErrors.temperature.required")),
-        queueId: Yup.number().required(i18n.t("promptModal.formErrors.queueId.required")),
         maxMessages: Yup.number().required(i18n.t("promptModal.formErrors.maxMessages.required"))
     };
 
     // Não validar apiKey aqui - será validado nas Settings
+    // queueId agora é opcional
     return Yup.object().shape(baseSchema);
 };
 
@@ -84,11 +83,10 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         provider: "openai",
         maxTokens: 100,
         temperature: 1,
-        queueId: '',
         maxMessages: 10,
         canSendInternalMessages: false,
         canTransferToAgent: false,
-        transferQueueId: ''
+        canChangeTag: false
     };
 
     const [prompt, setPrompt] = useState(initialState);
@@ -102,8 +100,17 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             } else {
                 try {
                     const { data } = await api.get(`/prompt/${promptId}`);
-                    setPrompt(prevState => {
-                        return { ...prevState, ...data };
+                    setPrompt({
+                        name: data.name || "",
+                        prompt: data.prompt || "",
+                        model: data.model || "gpt-3.5-turbo-1106",
+                        provider: data.provider || "openai",
+                        maxTokens: data.maxTokens || 100,
+                        temperature: data.temperature !== undefined ? data.temperature : 1,
+                        maxMessages: data.maxMessages || 10,
+                        canSendInternalMessages: data.canSendInternalMessages === true,
+                        canTransferToAgent: data.canTransferToAgent === true,
+                        canChangeTag: data.canChangeTag === true
                     });
                     
                     setSelectedModel(data.model || "gpt-3.5-turbo-1106");
@@ -191,11 +198,6 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         
         // Não enviar apiKey - será buscada das Settings
         delete promptData.apiKey;
-        
-        if (!values.queueId) {
-            toastError(i18n.t("promptModal.setor"));
-            return;
-        }
         try {
             if (promptId) {
                 await api.put(`/prompt/${promptId}`, promptData);
@@ -309,8 +311,6 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                     rows={10}
                                     multiline={true}
                                 />
-                                <QueueSelectSingle touched={touched} errors={errors}/>
-                                
                                 <FormControlLabel
                                     control={
                                         <Field
@@ -331,6 +331,17 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                         />
                                     }
                                     label={i18n.t("promptModal.form.canTransferToAgent")}
+                                />
+                                
+                                <FormControlLabel
+                                    control={
+                                        <Field
+                                            as={Checkbox}
+                                            name="canChangeTag"
+                                            color="primary"
+                                        />
+                                    }
+                                    label={i18n.t("promptModal.form.canChangeTag")}
                                 />
                                 
                                 <div className={classes.multFieldLine}>

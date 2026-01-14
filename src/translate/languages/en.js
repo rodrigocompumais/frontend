@@ -501,8 +501,8 @@ const messages = {
 					apikey: "API Key",
 					max_messages: "Maximum messages in History",
 					canSendInternalMessages: "Allow sending internal messages",
-					canTransferToAgent: "Allow transfer to online agent",
-					transferQueueId: "Destination queue for transfer",
+					canTransferToAgent: "Allow queue transfer",
+					canChangeTag: "Allow tag change",
 					selectQueue: "Select a queue",
 				},
 				formErrors: {
