@@ -45,6 +45,7 @@ import { Can } from '../Can';
 import { AuthContext } from '../../context/Auth/AuthContext';
 import { WhatsAppsContext } from '../../context/WhatsApp/WhatsAppsContext';
 import usePlans from '../../hooks/usePlans';
+import useNotificationCounts from '../../hooks/useNotificationCounts';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -86,6 +87,7 @@ const NavigationMenus = () => {
   const { user } = useContext(AuthContext);
   const { whatsApps } = useContext(WhatsAppsContext);
   const { getPlanCompany } = usePlans();
+  const { pendingTicketsCount, unreadMessagesCount, totalNotifications } = useNotificationCounts();
 
   // Estados para os dropdowns
   const [atendimentoAnchor, setAtendimentoAnchor] = useState(null);
@@ -151,7 +153,11 @@ const NavigationMenus = () => {
       <Button
         className={classes.menuButton}
         onClick={(e) => setAtendimentoAnchor(e.currentTarget)}
-        startIcon={<HeadsetMicIcon />}
+        startIcon={
+          <Badge badgeContent={totalNotifications > 0 ? totalNotifications : 0} color="error" max={99}>
+            <HeadsetMicIcon />
+          </Badge>
+        }
       >
         {i18n.t("navigation.atendimento")}
       </Button>
@@ -184,7 +190,13 @@ const NavigationMenus = () => {
           onClick={() => handleNavigate('/tickets', () => setAtendimentoAnchor(null))}
         >
           <ListItemIcon>
-            <WhatsAppIcon fontSize="small" />
+            <Badge 
+              badgeContent={pendingTicketsCount + unreadMessagesCount > 0 ? pendingTicketsCount + unreadMessagesCount : 0} 
+              color="error" 
+              max={99}
+            >
+              <WhatsAppIcon fontSize="small" />
+            </Badge>
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.tickets")} />
         </MenuItem>
