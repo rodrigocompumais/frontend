@@ -5,7 +5,7 @@ import {
   AppBar,
   Toolbar,
   useTheme,
-  IconButton,
+  Button,
 } from "@material-ui/core";
 import DashboardIcon from "@material-ui/icons/Dashboard";
 
@@ -15,7 +15,6 @@ import BackdropLoading from "../components/BackdropLoading";
 import toastError from "../errors/toastError";
 import AnnouncementsPopover from "../components/AnnouncementsPopover";
 import NavigationMenus from "../components/NavigationMenus";
-import QuickActionButton from "../components/QuickActionButton";
 import UserProfileMenu from "../components/UserProfileMenu";
 import MobileNavigationMenu from "../components/MobileNavigationMenu";
 import TourGuide from "../components/TourGuide";
@@ -58,19 +57,24 @@ const useStyles = makeStyles((theme) => ({
   },
   dashboardButton: {
     marginRight: theme.spacing(1.5),
-    padding: theme.spacing(1),
+    padding: theme.spacing(1, 2),
     color: theme.palette.dark.main,
+    textTransform: 'none',
+    fontSize: '0.95rem',
+    fontWeight: 500,
     '&:hover': {
       backgroundColor: theme.palette.action.hover,
     },
     [theme.breakpoints.down("xs")]: {
-      padding: theme.spacing(0.75),
+      padding: theme.spacing(0.75, 1.5),
     },
   },
   dashboardIcon: {
-    fontSize: "28px",
+    fontSize: "20px",
+    marginRight: theme.spacing(1),
     [theme.breakpoints.down("xs")]: {
-      fontSize: "24px",
+      fontSize: "18px",
+      marginRight: theme.spacing(0.5),
     },
   },
   grow: {
@@ -155,14 +159,14 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       >
         <Toolbar variant="dense" className={classes.toolbar}>
           {/* Botão Dashboard à esquerda */}
-          <IconButton
+          <Button
             className={classes.dashboardButton}
             onClick={() => history.push('/dashboard')}
+            startIcon={<DashboardIcon className={classes.dashboardIcon} />}
             aria-label="Ir para Dashboard"
-            title="Dashboard"
           >
-            <DashboardIcon className={classes.dashboardIcon} />
-          </IconButton>
+            Dashboard
+          </Button>
 
           {/* Menus de navegação dropdown (desktop) */}
           <div className="tour-menu-navigation">
@@ -174,9 +178,6 @@ const LoggedInLayout = ({ children, themeToggle }) => {
 
           {/* Espaçador flexível */}
           <div className={classes.grow} />
-
-          {/* Botão de ação rápida */}
-          <QuickActionButton />
 
           {/* Notificações e popovers */}
           {user.id && <NotificationsPopOver volume={volume} />}
