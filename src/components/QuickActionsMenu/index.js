@@ -15,7 +15,7 @@ const useStyles = makeStyles((theme) => ({
   quickActionsContainer: {
     position: "fixed",
     bottom: 100,
-    left: 20,
+    right: 20,
     zIndex: 1300,
     display: "flex",
     flexDirection: "column-reverse",
@@ -159,7 +159,7 @@ const QuickActionsMenu = ({
       <Collapse in={expanded} timeout="auto" unmountOnExit>
         <div className={classes.actionsMenu}>
           {actions.map((action) => (
-            <Tooltip key={action.id} title={action.label} placement="right">
+            <Tooltip key={action.id} title={action.label} placement="left">
               <IconButton
                 className={classes.actionButton}
                 onClick={action.onClick}
