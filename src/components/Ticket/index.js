@@ -192,10 +192,15 @@ const Ticket = () => {
     history.push("/chats");
   };
 
+  const chatContainerRef = React.useRef(null);
+
   const renderMessagesList = () => {
     return (
       <>
-        <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
+        <div 
+          ref={chatContainerRef}
+          style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}
+        >
           <MessagesList
             ticket={ticket}
             ticketId={ticket.id}
@@ -204,6 +209,7 @@ const Ticket = () => {
           ></MessagesList>
           {ticket.id && (
             <QuickActionsMenu
+              chatContainerRef={chatContainerRef}
               onTaskClick={() => setTaskModalOpen(true)}
               onQuickMessageClick={() => setQuickMessageModalOpen(true)}
               onScheduleClick={() => setScheduleModalOpen(true)}

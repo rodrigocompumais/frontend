@@ -13,10 +13,10 @@ import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   quickActionsContainer: {
-    position: "fixed",
+    position: "absolute",
     zIndex: 1000,
     display: "flex",
-    flexDirection: "column",
+    flexDirection: "column-reverse",
     alignItems: "center",
     gap: 4,
     pointerEvents: "none",
@@ -72,28 +72,85 @@ const QuickActionsMenu = ({
   onQuickMessageClick,
   onScheduleClick,
   onInternalChatClick,
+  chatContainerRef,
 }) => {
   const classes = useStyles();
   const [expanded, setExpanded] = useState(false);
-  const [position, setPosition] = useState({ x: window.innerWidth - 50, y: window.innerHeight - 120 });
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [hasMoved, setHasMoved] = useState(false);
+  const [containerBounds, setContainerBounds] = useState({ width: 0, height: 0 });
+  const [positionInitialized, setPositionInitialized] = useState(false);
   const containerRef = useRef(null);
   const buttonRef = useRef(null);
 
-  // Carregar posição salva do localStorage
+  // Calcular limites do container do chat
   useEffect(() => {
-    const savedPosition = localStorage.getItem("quickActionsPosition");
-    if (savedPosition) {
-      try {
-        const pos = JSON.parse(savedPosition);
-        setPosition(pos);
-      } catch (e) {
-        console.error("Erro ao carregar posição salva:", e);
+    const updateBounds = () => {
+      if (chatContainerRef?.current) {
+        const rect = chatContainerRef.current.getBoundingClientRect();
+        const newBounds = {
+          width: rect.width,
+          height: rect.height,
+        };
+        setContainerBounds(newBounds);
+        
+        // Ajustar posição se estiver fora dos limites (mas não na primeira inicialização)
+        if (newBounds.width > 0 && newBounds.height > 0 && positionInitialized) {
+          setPosition(prev => ({
+            x: Math.max(0, Math.min(newBounds.width - 36, prev.x)),
+            y: Math.max(0, Math.min(newBounds.height - 36, prev.y)),
+          }));
+        }
       }
+    };
+
+    updateBounds();
+    window.addEventListener("resize", updateBounds);
+    
+    // Atualizar bounds quando o container mudar de tamanho
+    const resizeObserver = new ResizeObserver(updateBounds);
+    if (chatContainerRef?.current) {
+      resizeObserver.observe(chatContainerRef.current);
     }
-  }, []);
+    
+    return () => {
+      window.removeEventListener("resize", updateBounds);
+      resizeObserver.disconnect();
+    };
+  }, [chatContainerRef, positionInitialized]);
+
+  // Inicializar posição apenas uma vez
+  useEffect(() => {
+    if (containerBounds.width > 0 && containerBounds.height > 0 && !positionInitialized) {
+      const savedPosition = localStorage.getItem("quickActionsPosition");
+      if (savedPosition) {
+        try {
+          const pos = JSON.parse(savedPosition);
+          // Garantir que a posição está dentro dos limites do container
+          setPosition({
+            x: Math.max(0, Math.min(containerBounds.width - 36, pos.x || containerBounds.width - 50)),
+            y: Math.max(0, Math.min(containerBounds.height - 36, pos.y || containerBounds.height - 80)),
+          });
+        } catch (e) {
+          console.error("Erro ao carregar posição salva:", e);
+          // Posição padrão se houver erro
+          setPosition({
+            x: containerBounds.width - 50,
+            y: containerBounds.height - 80,
+          });
+        }
+      } else {
+        // Posição padrão (canto direito inferior)
+        setPosition({
+          x: containerBounds.width - 50,
+          y: containerBounds.height - 80,
+        });
+      }
+      setPositionInitialized(true);
+    }
+  }, [containerBounds, positionInitialized]);
 
   // Salvar posição no localStorage quando mudar
   useEffect(() => {
@@ -132,16 +189,17 @@ const QuickActionsMenu = ({
   const handleMouseDown = (e) => {
     // Só arrastar se clicar no botão ou seus filhos (ícone)
     const target = e.target;
-    if (buttonRef.current && (
+    if (buttonRef.current && chatContainerRef?.current && (
       target === buttonRef.current || 
       buttonRef.current.contains(target) ||
       target.closest('button') === buttonRef.current
     )) {
       setIsDragging(true);
       setHasMoved(false);
+      const containerRect = chatContainerRef.current.getBoundingClientRect();
       setDragStart({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y,
+        x: e.clientX - containerRect.left - position.x,
+        y: e.clientY - containerRect.top - position.y,
       });
       e.preventDefault();
       e.stopPropagation();
@@ -150,21 +208,23 @@ const QuickActionsMenu = ({
 
   useEffect(() => {
     const handleMouseMove = (e) => {
-      if (isDragging) {
-        const deltaX = Math.abs(e.clientX - (dragStart.x + position.x));
-        const deltaY = Math.abs(e.clientY - (dragStart.y + position.y));
+      if (isDragging && chatContainerRef?.current) {
+        const containerRect = chatContainerRef.current.getBoundingClientRect();
+        const deltaX = Math.abs(e.clientX - (dragStart.x + containerRect.left + position.x));
+        const deltaY = Math.abs(e.clientY - (dragStart.y + containerRect.top + position.y));
         
         // Se moveu mais de 5px, considera como arrasto
         if (deltaX > 5 || deltaY > 5) {
           setHasMoved(true);
         }
         
-        const newX = e.clientX - dragStart.x;
-        const newY = e.clientY - dragStart.y;
+        // Calcular nova posição relativa ao container
+        const newX = e.clientX - containerRect.left - dragStart.x;
+        const newY = e.clientY - containerRect.top - dragStart.y;
         
-        // Limitar dentro da tela
-        const maxX = window.innerWidth - 36;
-        const maxY = window.innerHeight - 36;
+        // Limitar dentro do container do chat
+        const maxX = containerBounds.width - 36;
+        const maxY = containerBounds.height - 36;
         const minX = 0;
         const minY = 0;
         
@@ -193,7 +253,7 @@ const QuickActionsMenu = ({
         document.removeEventListener("mouseup", handleMouseUp);
       };
     }
-  }, [isDragging, dragStart, position]);
+  }, [isDragging, dragStart, position, chatContainerRef, containerBounds]);
 
   const actions = [
     {

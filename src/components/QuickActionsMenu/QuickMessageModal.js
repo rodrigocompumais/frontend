@@ -87,11 +87,29 @@ const QuickMessageModal = ({ open, onClose, onSendMessage }) => {
   const fetchQuickMessages = async () => {
     setLoading(true);
     try {
-      const data = await list();
-      setQuickMessages(data.quickMessages || []);
-      setFilteredMessages(data.quickMessages || []);
+      const companyId = localStorage.getItem("companyId");
+      if (!companyId || !user?.id) {
+        setQuickMessages([]);
+        setFilteredMessages([]);
+        setLoading(false);
+        return;
+      }
+      
+      // O endpoint /quick-messages/list retorna um array diretamente
+      const data = await list({
+        companyId: companyId.toString(),
+        userId: user.id.toString(),
+      });
+      
+      // O endpoint retorna um array diretamente, não um objeto
+      const messages = Array.isArray(data) ? data : (data.records || data.quickMessages || []);
+      setQuickMessages(messages);
+      setFilteredMessages(messages);
     } catch (err) {
+      console.error("Erro ao buscar mensagens rápidas:", err);
       toastError(err);
+      setQuickMessages([]);
+      setFilteredMessages([]);
     } finally {
       setLoading(false);
     }
