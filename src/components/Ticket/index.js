@@ -227,32 +227,16 @@ const Ticket = () => {
   const companyId = parseInt(localStorage.getItem("companyId") || "0");
   const showGenerateTicket = companyId === 1;
 
-  const chatContainerRef = React.useRef(null);
-
   const renderMessagesList = () => {
     return (
       <>
-        <div 
-          ref={chatContainerRef}
-          style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}
-        >
+        <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
           <MessagesList
             ticket={ticket}
             ticketId={ticket.id}
             isGroup={ticket.isGroup}
             onAiHandlersReady={setAiHandlers}
           ></MessagesList>
-          {ticket.id && (
-            <QuickActionsMenu
-              chatContainerRef={chatContainerRef}
-              onTaskClick={() => setTaskModalOpen(true)}
-              onQuickMessageClick={() => setQuickMessageModalOpen(true)}
-              onScheduleClick={() => setScheduleModalOpen(true)}
-              onInternalChatClick={handleInternalChatClick}
-              onGenerateTicketClick={handleGenerateTicket}
-              showGenerateTicket={showGenerateTicket}
-            />
-          )}
         </div>
         <MessageInput 
           ticketId={ticket.id} 
@@ -303,6 +287,16 @@ const Ticket = () => {
         onClose={() => setScheduleModalOpen(false)}
         contact={contact}
       />
+      {ticket.id && (
+        <QuickActionsMenu
+          onTaskClick={() => setTaskModalOpen(true)}
+          onQuickMessageClick={() => setQuickMessageModalOpen(true)}
+          onScheduleClick={() => setScheduleModalOpen(true)}
+          onInternalChatClick={handleInternalChatClick}
+          onGenerateTicketClick={handleGenerateTicket}
+          showGenerateTicket={showGenerateTicket}
+        />
+      )}
     </div>
   );
 };
