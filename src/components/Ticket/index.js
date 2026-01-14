@@ -13,6 +13,10 @@ import TicketInfo from "../TicketInfo";
 import TicketActionButtons from "../TicketActionButtonsCustom";
 import MessagesList from "../MessagesList";
 import ChatAIModal from "../ChatAIModal";
+import QuickActionsMenu from "../QuickActionsMenu";
+import TaskModal from "../QuickActionsMenu/TaskModal";
+import QuickMessageModal from "../QuickActionsMenu/QuickMessageModal";
+import ScheduleModal from "../QuickActionsMenu/ScheduleModal";
 import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import toastError from "../../errors/toastError";
@@ -71,6 +75,9 @@ const Ticket = () => {
   const [contact, setContact] = useState({});
   const [ticket, setTicket] = useState({});
   const [aiHandlers, setAiHandlers] = useState(null);
+  const [taskModalOpen, setTaskModalOpen] = useState(false);
+  const [quickMessageModalOpen, setQuickMessageModalOpen] = useState(false);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
 
   const socketManager = useContext(SocketContext);
 
@@ -160,15 +167,50 @@ const Ticket = () => {
     }
   };
 
+  const handleQuickMessageSend = (message) => {
+    // Send message via API (same format as MessageInput)
+    const sendMessage = async () => {
+      try {
+        const messageData = {
+          read: 1,
+          fromMe: true,
+          mediaUrl: "",
+          body: message.trim(),
+          quotedMsg: null,
+          isInternal: false,
+        };
+        await api.post(`/messages/${ticket.id}`, messageData);
+        toast.success("Mensagem enviada com sucesso!");
+      } catch (err) {
+        toastError(err);
+      }
+    };
+    sendMessage();
+  };
+
+  const handleInternalChatClick = () => {
+    history.push("/chats");
+  };
+
   const renderMessagesList = () => {
     return (
       <>
-        <MessagesList
-          ticket={ticket}
-          ticketId={ticket.id}
-          isGroup={ticket.isGroup}
-          onAiHandlersReady={setAiHandlers}
-        ></MessagesList>
+        <div style={{ position: "relative", flex: 1, display: "flex", flexDirection: "column" }}>
+          <MessagesList
+            ticket={ticket}
+            ticketId={ticket.id}
+            isGroup={ticket.isGroup}
+            onAiHandlersReady={setAiHandlers}
+          ></MessagesList>
+          {ticket.id && (
+            <QuickActionsMenu
+              onTaskClick={() => setTaskModalOpen(true)}
+              onQuickMessageClick={() => setQuickMessageModalOpen(true)}
+              onScheduleClick={() => setScheduleModalOpen(true)}
+              onInternalChatClick={handleInternalChatClick}
+            />
+          )}
+        </div>
         <MessageInput 
           ticketId={ticket.id} 
           ticketStatus={ticket.status}
@@ -201,6 +243,22 @@ const Ticket = () => {
         contact={contact}
         loading={loading}
         ticket={ticket}
+      />
+      <TaskModal
+        open={taskModalOpen}
+        onClose={() => setTaskModalOpen(false)}
+        contact={contact}
+        ticket={ticket}
+      />
+      <QuickMessageModal
+        open={quickMessageModalOpen}
+        onClose={() => setQuickMessageModalOpen(false)}
+        onSendMessage={handleQuickMessageSend}
+      />
+      <ScheduleModal
+        open={scheduleModalOpen}
+        onClose={() => setScheduleModalOpen(false)}
+        contact={contact}
       />
     </div>
   );
