@@ -26,6 +26,7 @@ import ModalImageCors from "../ModalImageCors";
 import MessageOptionsMenu from "../MessageOptionsMenu";
 import whatsBackground from "../../assets/wa-background.png";
 import LocationPreview from "../LocationPreview";
+import ContactCard from "../ContactCard";
 
 import whatsBackgroundDark from "../../assets/wa-background-dark.png"; //DARK MODE PLW DESIGN//
 
@@ -469,6 +470,13 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
   };
 
   const checkMessageMedia = (message) => {
+    // Check for vCard first (can be in body even if mediaType is not set)
+    const isVCard = message.mediaType === "vcard" || 
+                    (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD"));
+    
+    if (isVCard) {
+      return <ContactCard vcardString={message.body} ticketId={message.ticketId} />
+    }
 
     if (message.mediaType === "locationMessage" && message.body.split('|').length >= 2) {
       let locationParts = message.body.split('|')
@@ -482,24 +490,6 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
 
       return <LocationPreview image={imageLocation} link={linkLocation} description={descriptionLocation} />
     }
-    /* else if (message.mediaType === "vcard") {
-      let array = message.body.split("\n");
-      let obj = [];
-      let contact = "";
-      for (let index = 0; index < array.length; index++) {
-        const v = array[index];
-        let values = v.split(":");
-        for (let ind = 0; ind < values.length; ind++) {
-          if (values[ind].indexOf("+") !== -1) {
-            obj.push({ number: values[ind] });
-          }
-          if (values[ind].indexOf("FN") !== -1) {
-            contact = values[ind + 1];
-          }
-        }
-      }
-      return <VcardPreview contact={contact} numbers={obj[0].number} />
-    } */
     /*else if (message.mediaType === "multi_vcard") {
       console.log("multi_vcard")
       console.log(message)
@@ -798,12 +788,12 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
                   </div>
                 )}
 
-                {(message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard"
+                {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
                   //|| message.mediaType === "multi_vcard" 
                 ) && checkMessageMedia(message)}
                 <div className={classes.textContentItem}>
                   {message.quotedMsg && renderQuotedMessage(message)}
-                  <MarkdownWrapper>{message.mediaType === "locationMessage" ? null : message.body}</MarkdownWrapper>
+                  <MarkdownWrapper>{(message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD"))) ? null : message.body}</MarkdownWrapper>
                   <span className={classes.timestamp}>
 				    {message.isEdited && <span>Editada </span>}
                     {format(parseISO(message.createdAt), "HH:mm")}
@@ -829,7 +819,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
                 >
                   <ExpandMore />
                 </IconButton>
-                {(message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard"
+                {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
                   //|| message.mediaType === "multi_vcard" 
                 ) && checkMessageMedia(message)}
                 <div
@@ -850,7 +840,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
                     <span className={classes.internalBadge}>🔒 INTERNA</span>
                   )}
                   {message.quotedMsg && renderQuotedMessage(message)}
-                  <MarkdownWrapper>{message.mediaType === "locationMessage" ? null : message.body}</MarkdownWrapper>
+                  <MarkdownWrapper>{(message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD"))) ? null : message.body}</MarkdownWrapper>
                   <span className={classes.timestamp}>
 				    {message.isEdited && <span>{i18n.t("messagesList.edited")}</span>}
                     {format(parseISO(message.createdAt), "HH:mm")}

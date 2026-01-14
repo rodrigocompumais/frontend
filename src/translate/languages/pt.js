@@ -857,6 +857,10 @@ const messages = {
       locationPreview: {
         button: "Visualizar",
       },
+      contactCard: {
+        sendMessage: "Conversar",
+        addContact: "Adicionar",
+      },
       navigation: {
         atendimento: "Atendimento",
         gestao: "Gestão",
