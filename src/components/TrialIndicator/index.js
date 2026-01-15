@@ -1,10 +1,9 @@
-import React, { useContext, useMemo } from "react";
+import React from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import { Box, Typography, LinearProgress } from "@material-ui/core";
 import AccessTimeIcon from "@material-ui/icons/AccessTime";
-import moment from "moment";
-import { AuthContext } from "../../context/Auth/AuthContext";
+import useTrialPeriod from "../../hooks/useTrialPeriod";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -117,41 +116,15 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const TrialIndicator = ({ collapsed = false }) => {
-  const { user } = useContext(AuthContext);
-
-  const { daysLeft, progressValue, isExpired, isTrialPeriod } = useMemo(() => {
-    if (!user?.company?.dueDate || !user?.company?.createdAt) {
-      return { daysLeft: 0, progressValue: 0, isExpired: true, isTrialPeriod: false };
-    }
-
-    const dueDate = moment(user.company.dueDate);
-    const createdAt = moment(user.company.createdAt);
-    const today = moment();
-    const days = dueDate.diff(today, "days");
-    const expired = today.isAfter(dueDate);
-    
-    // Verificar se é período de teste grátis:
-    // - Empresa criada há menos de 7 dias
-    // - E o dueDate está dentro de 7 dias da criação
-    const daysSinceCreation = today.diff(createdAt, "days");
-    const daysFromCreationToDue = dueDate.diff(createdAt, "days");
-    const isTrial = daysSinceCreation <= 7 && daysFromCreationToDue <= 7;
-    
-    // Progresso baseado em 7 dias de teste
-    const progress = expired ? 0 : Math.min(100, (days / 7) * 100);
-
-    return {
-      daysLeft: Math.max(0, days),
-      progressValue: progress,
-      isExpired: expired,
-      isTrialPeriod: isTrial,
-    };
-  }, [user?.company?.dueDate, user?.company?.createdAt]);
+  const { isInTrialPeriod, daysLeft, isExpired } = useTrialPeriod();
 
   const classes = useStyles({ daysLeft });
 
+  // Progresso baseado em 7 dias de teste
+  const progressValue = isExpired ? 0 : Math.min(100, (daysLeft / 7) * 100);
+
   // Não mostrar se não for período de teste ou se já expirou
-  if (!isTrialPeriod || isExpired) {
+  if (!isInTrialPeriod || isExpired) {
     return null;
   }
 

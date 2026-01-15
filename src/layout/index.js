@@ -20,6 +20,7 @@ import MobileNavigationMenu from "../components/MobileNavigationMenu";
 import TourGuide from "../components/TourGuide";
 import TasksNotification from "../components/TasksNotification";
 import QuickAccessButtons from "../components/QuickAccessButtons";
+import TrialBanner from "../components/TrialBanner";
 
 import { SocketContext } from "../context/Socket/SocketContext";
 import ChatPopover from "../pages/Chat/ChatPopover";
@@ -152,6 +153,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
 
   return (
     <div className={classes.root}>
+      {/* Banner de período de teste */}
+      <TrialBanner />
+      
       <AppBar
         position="static"
         className={classes.appBar}
