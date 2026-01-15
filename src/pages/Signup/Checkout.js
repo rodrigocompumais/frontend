@@ -576,14 +576,8 @@ const Checkout = () => {
     }
 
     try {
-      const { cardNumber, expirationDate, securityCode } = window.mpCardFields;
-      
-      // Obter valores dos campos - usar elementos atuais
-      const currentCardNumberEl = cardNumberElement || document.getElementById('mp-card-number');
-      const currentExpirationEl = expirationDateElement || document.getElementById('mp-card-expiration');
-      const currentSecurityEl = securityCodeElement || document.getElementById('mp-card-security');
-
-      if (!currentCardNumberEl || !currentExpirationEl || !currentSecurityEl || !window.mpCardFields) {
+      // Verificar se os campos foram inicializados
+      if (!window.mpCardFields || !window.mpCardFields.cardNumber || !window.mpCardFields.expirationDate || !window.mpCardFields.securityCode) {
         throw new Error("Campos do cartão não foram inicializados. Por favor, recarregue a página.");
       }
 
