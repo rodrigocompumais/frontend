@@ -283,10 +283,10 @@ const Checkout = () => {
     identificationNumber: "",
   });
 
-  // Referências para os campos do Mercado Pago
-  const cardNumberRef = useRef(null);
-  const expirationDateRef = useRef(null);
-  const securityCodeRef = useRef(null);
+  // Referências para os campos do Mercado Pago - usando state para trigger de montagem
+  const [cardNumberElement, setCardNumberElement] = useState(null);
+  const [expirationDateElement, setExpirationDateElement] = useState(null);
+  const [securityCodeElement, setSecurityCodeElement] = useState(null);
   const cardholderNameRef = useRef(null);
 
   // Dados do signup (do sessionStorage ou params)
@@ -316,37 +316,29 @@ const Checkout = () => {
     loadPublicKey();
   }, []);
 
+  // Efeito para inicializar campos quando todos os elementos e SDK estiverem prontos
   useEffect(() => {
-    if (!publicKey) return;
-
-    // Verificar se os elementos estão no DOM
-    const cardNumberEl = document.getElementById('mp-card-number');
-    const expirationEl = document.getElementById('mp-card-expiration');
-    const securityEl = document.getElementById('mp-card-security');
-
-    if (!cardNumberEl || !expirationEl || !securityEl) {
-      // Elementos ainda não estão no DOM, tentar novamente depois
-      const timeoutId = setTimeout(() => {
-        // Forçar re-render para tentar novamente
-        setMpInstance((prev) => prev);
-      }, 200);
-      return () => clearTimeout(timeoutId);
+    if (!publicKey || !cardNumberElement || !expirationDateElement || !securityCodeElement) {
+      return;
     }
 
     // Verificar se o SDK já foi carregado
-    if (window.MercadoPago) {
-      // SDK já carregado, apenas inicializar
+    if (window.MercadoPago && window.MercadoPago.prototype) {
+      // SDK já carregado, inicializar
       const mp = new window.MercadoPago(publicKey);
       setMpInstance(mp);
-      // Aguardar um pouco mais para garantir que os elementos estão prontos
-      setTimeout(() => {
-        initializeCardFields(mp);
-      }, 300);
+      
+      // Aguardar um pouco para garantir que os elementos estão completamente renderizados
+      const timer = setTimeout(() => {
+        initializeCardFields(mp, cardNumberElement, expirationDateElement, securityCodeElement);
+      }, 100);
+      
+      return () => clearTimeout(timer);
     } else {
       // Carregar SDK e depois inicializar
       loadMercadoPagoSDK();
     }
-  }, [publicKey]);
+  }, [publicKey, cardNumberElement, expirationDateElement, securityCodeElement]);
 
   const loadPublicKey = async () => {
     try {
@@ -361,25 +353,30 @@ const Checkout = () => {
   const loadMercadoPagoSDK = () => {
     // Verificar se o script já foi adicionado
     if (document.querySelector('script[src="https://sdk.mercadopago.com/js/v2"]')) {
-      // Script já existe, apenas inicializar quando carregar
-      if (window.MercadoPago) {
+      // Script já existe, aguardar carregar
+      if (window.MercadoPago && window.MercadoPago.prototype) {
         const mp = new window.MercadoPago(publicKey);
         setMpInstance(mp);
-        setTimeout(() => {
-          initializeCardFields(mp);
-        }, 100);
+        if (cardNumberElement && expirationDateElement && securityCodeElement) {
+          setTimeout(() => {
+            initializeCardFields(mp, cardNumberElement, expirationDateElement, securityCodeElement);
+          }, 100);
+        }
       } else {
         // Aguardar o script carregar
         const checkSDK = setInterval(() => {
-          if (window.MercadoPago) {
+          if (window.MercadoPago && window.MercadoPago.prototype && cardNumberElement && expirationDateElement && securityCodeElement) {
             clearInterval(checkSDK);
             const mp = new window.MercadoPago(publicKey);
             setMpInstance(mp);
             setTimeout(() => {
-              initializeCardFields(mp);
+              initializeCardFields(mp, cardNumberElement, expirationDateElement, securityCodeElement);
             }, 100);
           }
         }, 100);
+        
+        // Limpar intervalo após 10 segundos
+        setTimeout(() => clearInterval(checkSDK), 10000);
       }
       return;
     }
@@ -389,12 +386,12 @@ const Checkout = () => {
     script.src = "https://sdk.mercadopago.com/js/v2";
     script.async = true;
     script.onload = () => {
-      if (window.MercadoPago && publicKey) {
+      if (window.MercadoPago && window.MercadoPago.prototype && publicKey && cardNumberElement && expirationDateElement && securityCodeElement) {
         const mp = new window.MercadoPago(publicKey);
         setMpInstance(mp);
         // Aguardar um pouco para garantir que os elementos estão no DOM
         setTimeout(() => {
-          initializeCardFields(mp);
+          initializeCardFields(mp, cardNumberElement, expirationDateElement, securityCodeElement);
         }, 200);
       }
     };
@@ -405,35 +402,25 @@ const Checkout = () => {
     document.body.appendChild(script);
   };
 
-  const initializeCardFields = (mp) => {
+  const initializeCardFields = (mp, cardNumberEl, expirationEl, securityEl) => {
     if (!mp || !mp.fields) {
       console.error("SDK do Mercado Pago não inicializado corretamente");
       return;
     }
 
-    // Obter elementos do DOM por ID para garantir que estão disponíveis
-    const cardNumberEl = document.getElementById('mp-card-number');
-    const expirationEl = document.getElementById('mp-card-expiration');
-    const securityEl = document.getElementById('mp-card-security');
-
     if (!cardNumberEl || !expirationEl || !securityEl) {
-      console.error("Elementos DOM não encontrados:", {
+      console.error("Elementos DOM não fornecidos:", {
         cardNumber: !!cardNumberEl,
         expirationDate: !!expirationEl,
         securityCode: !!securityEl,
       });
-      // Tentar novamente após um delay
-      setTimeout(() => {
-        if (mp && mp.fields) {
-          initializeCardFields(mp);
-        }
-      }, 500);
       return;
     }
 
-    // Verificar também os refs
-    if (!cardNumberRef.current || !expirationDateRef.current || !securityCodeRef.current) {
-      console.warn("Refs não estão prontos, mas elementos foram encontrados por ID");
+    // Verificar se os elementos estão realmente no DOM
+    if (!document.body.contains(cardNumberEl) || !document.body.contains(expirationEl) || !document.body.contains(securityEl)) {
+      console.error("Elementos não estão no DOM");
+      return;
     }
 
     try {
@@ -454,27 +441,21 @@ const Checkout = () => {
         }
       }
 
-      // Garantir que os elementos estão vazios
-      if (cardNumberEl) {
-        cardNumberEl.innerHTML = "";
-      }
-      if (expirationEl) {
-        expirationEl.innerHTML = "";
-      }
-      if (securityEl) {
-        securityEl.innerHTML = "";
-      }
+      // Garantir que os elementos estão vazios e prontos
+      cardNumberEl.innerHTML = "";
+      expirationEl.innerHTML = "";
+      securityEl.innerHTML = "";
 
-      // Atualizar refs também
-      if (cardNumberRef.current && cardNumberRef.current !== cardNumberEl) {
-        cardNumberRef.current = cardNumberEl;
-      }
-      if (expirationDateRef.current && expirationDateRef.current !== expirationEl) {
-        expirationDateRef.current = expirationEl;
-      }
-      if (securityCodeRef.current && securityCodeRef.current !== securityEl) {
-        securityCodeRef.current = securityEl;
-      }
+      // Garantir que os elementos têm estilo correto
+      cardNumberEl.style.minHeight = "56px";
+      cardNumberEl.style.width = "100%";
+      cardNumberEl.style.display = "block";
+      expirationEl.style.minHeight = "56px";
+      expirationEl.style.width = "100%";
+      expirationEl.style.display = "block";
+      securityEl.style.minHeight = "56px";
+      securityEl.style.width = "100%";
+      securityEl.style.display = "block";
 
       // Inicializar campos de cartão do Mercado Pago
       console.log("Inicializando campos do Mercado Pago...", {
@@ -495,7 +476,7 @@ const Checkout = () => {
         placeholder: "CVV",
       });
 
-      // Montar campos nos elementos usando os elementos do DOM diretamente
+      // Montar campos nos elementos
       cardNumber.mount(cardNumberEl);
       expirationDate.mount(expirationEl);
       securityCode.mount(securityEl);
@@ -595,6 +576,17 @@ const Checkout = () => {
     }
 
     try {
+      const { cardNumber, expirationDate, securityCode } = window.mpCardFields;
+      
+      // Obter valores dos campos - usar elementos atuais
+      const currentCardNumberEl = cardNumberElement || document.getElementById('mp-card-number');
+      const currentExpirationEl = expirationDateElement || document.getElementById('mp-card-expiration');
+      const currentSecurityEl = securityCodeElement || document.getElementById('mp-card-security');
+
+      if (!currentCardNumberEl || !currentExpirationEl || !currentSecurityEl || !window.mpCardFields) {
+        throw new Error("Campos do cartão não foram inicializados. Por favor, recarregue a página.");
+      }
+
       const { cardNumber, expirationDate, securityCode } = window.mpCardFields;
       
       // Obter valores dos campos
@@ -774,7 +766,11 @@ const Checkout = () => {
                 {/* Número do Cartão */}
                 <Box className={classes.mpCardContainer}>
                   <div 
-                    ref={cardNumberRef} 
+                    ref={(el) => {
+                      if (el && !cardNumberElement) {
+                        setCardNumberElement(el);
+                      }
+                    }}
                     className="mp-card" 
                     style={{ 
                       minHeight: '56px', 
@@ -798,7 +794,11 @@ const Checkout = () => {
                     {/* Data de Validade */}
                     <Box className={classes.mpCardContainer}>
                       <div 
-                        ref={expirationDateRef} 
+                        ref={(el) => {
+                          if (el && !expirationDateElement) {
+                            setExpirationDateElement(el);
+                          }
+                        }}
                         className="mp-card"
                         style={{ 
                           minHeight: '56px', 
@@ -816,7 +816,11 @@ const Checkout = () => {
                     {/* CVV */}
                     <Box className={classes.mpCardContainer}>
                       <div 
-                        ref={securityCodeRef} 
+                        ref={(el) => {
+                          if (el && !securityCodeElement) {
+                            setSecurityCodeElement(el);
+                          }
+                        }}
                         className="mp-card"
                         style={{ 
                           minHeight: '56px', 
