@@ -357,7 +357,8 @@ const TasksNotification = () => {
         onClick={handleClick}
         ref={anchorEl}
         aria-label="Tarefas"
-        style={{ color: "#FFFFFF" }}
+        color="inherit"
+        style={{ color: "white" }}
       >
         <Badge 
           overlap="rectangular" 

@@ -244,7 +244,8 @@ const NotificationsPopOver = (volume) => {
 				onClick={handleClick}
 				ref={anchorEl}
 				aria-label="Open Notifications"
-				style={{ color: "#FFFFFF" }}
+				color="inherit"
+				style={{color:"white"}}
 			>
 				<Badge overlap="rectangular" badgeContent={notifications.length} color="secondary">
 					<ChatIcon />

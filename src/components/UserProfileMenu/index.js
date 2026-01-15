@@ -103,7 +103,7 @@ const UserProfileMenu = ({ volume, setVolume }) => {
 
   return (
     <>
-      <IconButton onClick={handleMenu} style={{ color: '#FFFFFF' }}>
+      <IconButton onClick={handleMenu} style={{ color: 'white' }}>
         <Avatar alt={user.name} src={avatarUrl} className={classes.avatar}>
           {user.name?.charAt(0).toUpperCase()}
         </Avatar>
