@@ -574,26 +574,20 @@ const SignUp = () => {
           toast.error("Erro ao criar conta. Por favor, tente novamente.");
         }
       } else {
-        // Criar preferência de pagamento para planos pagos
-      const response = await openApi.post("/companies/create-payment-preference", {
-        name: values.name,
-        email: values.email,
-        phone: values.phone,
-        password: values.password,
-        planId: selectedPlanId,
-        recurrence: "MENSAL",
-      });
-
-      if (response.data && response.data.initPoint) {
-        // Salvar preference_id no sessionStorage para uso nas páginas de callback
-        if (response.data.preferenceId) {
-          sessionStorage.setItem("mp_preference_id", response.data.preferenceId);
-        }
-        // Redirecionar para o checkout do Mercado Pago
-        window.location.href = response.data.initPoint;
-      } else {
-        toast.error("Erro ao criar preferência de pagamento. Por favor, tente novamente.");
-        }
+        // Salvar dados no sessionStorage para o checkout transparente
+        const signupData = {
+          name: values.name,
+          email: values.email,
+          phone: values.phone,
+          password: values.password,
+          planId: selectedPlanId,
+          planName: selectedPlan.name,
+          planValue: selectedPlan.value,
+        };
+        sessionStorage.setItem("signupData", JSON.stringify(signupData));
+        
+        // Redirecionar para o checkout transparente
+        history.push("/signup/checkout");
       }
     } catch (err) {
       console.error("Erro ao processar cadastro:", err);
