@@ -317,21 +317,36 @@ const Checkout = () => {
   }, []);
 
   useEffect(() => {
-    if (publicKey && cardNumberRef.current && expirationDateRef.current && securityCodeRef.current) {
-      // Verificar se o SDK já foi carregado
-      if (window.MercadoPago) {
-        // SDK já carregado, apenas inicializar
-        const mp = new window.MercadoPago(publicKey);
-        setMpInstance(mp);
-        setTimeout(() => {
-          initializeCardFields(mp);
-        }, 100);
-      } else {
-        // Carregar SDK e depois inicializar
-        loadMercadoPagoSDK();
-      }
+    if (!publicKey) return;
+
+    // Verificar se os elementos estão no DOM
+    const cardNumberEl = document.getElementById('mp-card-number');
+    const expirationEl = document.getElementById('mp-card-expiration');
+    const securityEl = document.getElementById('mp-card-security');
+
+    if (!cardNumberEl || !expirationEl || !securityEl) {
+      // Elementos ainda não estão no DOM, tentar novamente depois
+      const timeoutId = setTimeout(() => {
+        // Forçar re-render para tentar novamente
+        setMpInstance((prev) => prev);
+      }, 200);
+      return () => clearTimeout(timeoutId);
     }
-  }, [publicKey, cardNumberRef.current, expirationDateRef.current, securityCodeRef.current]);
+
+    // Verificar se o SDK já foi carregado
+    if (window.MercadoPago) {
+      // SDK já carregado, apenas inicializar
+      const mp = new window.MercadoPago(publicKey);
+      setMpInstance(mp);
+      // Aguardar um pouco mais para garantir que os elementos estão prontos
+      setTimeout(() => {
+        initializeCardFields(mp);
+      }, 300);
+    } else {
+      // Carregar SDK e depois inicializar
+      loadMercadoPagoSDK();
+    }
+  }, [publicKey]);
 
   const loadPublicKey = async () => {
     try {
@@ -396,13 +411,29 @@ const Checkout = () => {
       return;
     }
 
-    if (!cardNumberRef.current || !expirationDateRef.current || !securityCodeRef.current) {
-      console.error("Elementos DOM não estão prontos:", {
-        cardNumber: !!cardNumberRef.current,
-        expirationDate: !!expirationDateRef.current,
-        securityCode: !!securityCodeRef.current,
+    // Obter elementos do DOM por ID para garantir que estão disponíveis
+    const cardNumberEl = document.getElementById('mp-card-number');
+    const expirationEl = document.getElementById('mp-card-expiration');
+    const securityEl = document.getElementById('mp-card-security');
+
+    if (!cardNumberEl || !expirationEl || !securityEl) {
+      console.error("Elementos DOM não encontrados:", {
+        cardNumber: !!cardNumberEl,
+        expirationDate: !!expirationEl,
+        securityCode: !!securityEl,
       });
+      // Tentar novamente após um delay
+      setTimeout(() => {
+        if (mp && mp.fields) {
+          initializeCardFields(mp);
+        }
+      }, 500);
       return;
+    }
+
+    // Verificar também os refs
+    if (!cardNumberRef.current || !expirationDateRef.current || !securityCodeRef.current) {
+      console.warn("Refs não estão prontos, mas elementos foram encontrados por ID");
     }
 
     try {
@@ -424,21 +455,32 @@ const Checkout = () => {
       }
 
       // Garantir que os elementos estão vazios
-      if (cardNumberRef.current) {
-        cardNumberRef.current.innerHTML = "";
+      if (cardNumberEl) {
+        cardNumberEl.innerHTML = "";
       }
-      if (expirationDateRef.current) {
-        expirationDateRef.current.innerHTML = "";
+      if (expirationEl) {
+        expirationEl.innerHTML = "";
       }
-      if (securityCodeRef.current) {
-        securityCodeRef.current.innerHTML = "";
+      if (securityEl) {
+        securityEl.innerHTML = "";
+      }
+
+      // Atualizar refs também
+      if (cardNumberRef.current && cardNumberRef.current !== cardNumberEl) {
+        cardNumberRef.current = cardNumberEl;
+      }
+      if (expirationDateRef.current && expirationDateRef.current !== expirationEl) {
+        expirationDateRef.current = expirationEl;
+      }
+      if (securityCodeRef.current && securityCodeRef.current !== securityEl) {
+        securityCodeRef.current = securityEl;
       }
 
       // Inicializar campos de cartão do Mercado Pago
       console.log("Inicializando campos do Mercado Pago...", {
-        cardNumberElement: cardNumberRef.current,
-        expirationDateElement: expirationDateRef.current,
-        securityCodeElement: securityCodeRef.current,
+        cardNumberElement: cardNumberEl,
+        expirationDateElement: expirationEl,
+        securityCodeElement: securityEl,
       });
 
       const cardNumber = mp.fields.create("cardNumber", {
@@ -453,10 +495,10 @@ const Checkout = () => {
         placeholder: "CVV",
       });
 
-      // Montar campos nos elementos
-      cardNumber.mount(cardNumberRef.current);
-      expirationDate.mount(expirationDateRef.current);
-      securityCode.mount(securityCodeRef.current);
+      // Montar campos nos elementos usando os elementos do DOM diretamente
+      cardNumber.mount(cardNumberEl);
+      expirationDate.mount(expirationEl);
+      securityCode.mount(securityEl);
 
       console.log("Campos montados com sucesso:", {
         cardNumber: !!cardNumber,
