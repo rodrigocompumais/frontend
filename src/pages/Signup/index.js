@@ -72,6 +72,7 @@ const useStyles = makeStyles((theme) => ({
   },
   gridContainer: {
     minHeight: 600,
+    alignItems: "flex-start",
   },
   // Coluna esquerda - Benefícios
   benefitsColumn: {
@@ -482,15 +483,16 @@ const SignUp = () => {
         const list = await listPlans();
         if (!isMounted) return;
         setPlans(list);
-        // Se veio do botão "Começar gratuitamente", forçar seleção do plano gratuito
+        // Se veio do botão "Começar gratuitamente", selecionar primeiro plano disponível (todos terão período de teste)
         if (list.length > 0) {
           if (isFreeFlow) {
-            // Fluxo gratuito: procurar e selecionar apenas plano gratuito
+            // Fluxo gratuito: procurar plano gratuito primeiro, se não houver, selecionar o primeiro disponível
             const freePlan = list.find((p) => p.value === 0 || p.value === null);
             if (freePlan) {
               setSelectedPlanId(freePlan.id);
             } else {
-              toast.error("Nenhum plano gratuito disponível. Entre em contato para mais informações.");
+              // Se não houver plano gratuito, selecionar o primeiro disponível (todos terão período de teste de 7 dias)
+              setSelectedPlanId(list[0].id);
             }
           } else if (planIdFromUrl) {
             // Verificar se o planId da URL existe na lista
@@ -784,7 +786,7 @@ const SignUp = () => {
                         {/* Seleção de Plano */}
                         <Box className={classes.plansSection}>
                           <Typography className={classes.plansSectionTitle}>
-                          {isFreeFlow ? "Selecione o plano que deseja usar após o período de teste" : "Selecione seu plano"}
+                          {isFreeFlow ? "Selecione o plano desejado e preencha seus dados..." : "Selecione seu plano"}
                           </Typography>
 
                           {loadingPlans ? (
