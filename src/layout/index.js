@@ -58,12 +58,12 @@ const useStyles = makeStyles((theme) => ({
   dashboardButton: {
     marginRight: theme.spacing(1.5),
     padding: theme.spacing(1, 2),
-    color: theme.palette.dark.main,
+    color: '#FFF',
     textTransform: 'none',
     fontSize: '0.95rem',
     fontWeight: 500,
     '&:hover': {
-      backgroundColor: theme.palette.action.hover,
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
     },
     [theme.breakpoints.down("xs")]: {
       padding: theme.spacing(0.75, 1.5),

@@ -10,7 +10,6 @@ import {
   Divider,
 } from '@material-ui/core';
 import {
-  Dashboard as DashboardIcon,
   WhatsApp as WhatsAppIcon,
   TableChart as TableChartIcon,
   Forum as ForumIcon,
@@ -170,21 +169,6 @@ const NavigationMenus = () => {
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
         className={classes.menu}
       >
-        <Can
-          role={user.profile}
-          perform="dashboard:view"
-          yes={() => (
-            <MenuItem
-              className={classes.menuItem}
-              onClick={() => handleNavigate('/', () => setAtendimentoAnchor(null))}
-            >
-              <ListItemIcon>
-                <DashboardIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Dashboard" />
-            </MenuItem>
-          )}
-        />
         <MenuItem
           className={classes.menuItem}
           onClick={() => handleNavigate('/tickets', () => setAtendimentoAnchor(null))}

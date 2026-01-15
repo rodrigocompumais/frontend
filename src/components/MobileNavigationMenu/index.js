@@ -14,7 +14,6 @@ import {
 } from '@material-ui/core';
 import MenuIcon from '@material-ui/icons/Menu';
 import {
-  Dashboard as DashboardIcon,
   WhatsApp as WhatsAppIcon,
   TableChart as TableChartIcon,
   Forum as ForumIcon,
@@ -159,18 +158,6 @@ const MobileNavigationMenu = () => {
             <ListSubheader className={classes.subheader}>
               {i18n.t("navigation.atendimento")}
             </ListSubheader>
-            <Can
-              role={user.profile}
-              perform="dashboard:view"
-              yes={() => (
-                <ListItem button onClick={() => handleNavigate('/')}>
-                  <ListItemIcon>
-                    <DashboardIcon />
-                  </ListItemIcon>
-                  <ListItemText primary="Dashboard" />
-                </ListItem>
-              )}
-            />
             <ListItem button onClick={() => handleNavigate('/tickets')}>
               <ListItemIcon>
                 <WhatsAppIcon />
