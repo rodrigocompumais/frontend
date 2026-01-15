@@ -140,17 +140,27 @@ const useStyles = makeStyles((theme) => ({
   },
   mpCardContainer: {
     marginBottom: theme.spacing(2),
+    minHeight: 56,
+    width: "100%",
     "& .mp-card": {
+      width: "100%",
+      minHeight: 56,
       borderRadius: 12,
       background: "rgba(30, 41, 59, 0.5)",
       border: "1px solid rgba(148, 163, 184, 0.3)",
       padding: theme.spacing(1.5),
+      transition: "all 0.2s ease",
       "&:hover": {
         borderColor: "rgba(0, 217, 255, 0.5)",
       },
       "&.mp-focus": {
         borderColor: "#00D9FF",
         borderWidth: 2,
+      },
+      "& iframe": {
+        width: "100% !important",
+        height: "56px !important",
+        border: "none !important",
       },
       "& input": {
         color: "#F9FAFB !important",
@@ -160,9 +170,17 @@ const useStyles = makeStyles((theme) => ({
         width: "100%",
         fontSize: "1rem",
         fontFamily: "'Inter', sans-serif",
+        padding: theme.spacing(1),
         "&::placeholder": {
           color: "rgba(148, 163, 184, 0.6)",
         },
+      },
+    },
+    "& .mp-form-control": {
+      width: "100%",
+      "& iframe": {
+        width: "100% !important",
+        height: "56px !important",
       },
     },
   },
@@ -300,12 +318,20 @@ const Checkout = () => {
 
   useEffect(() => {
     if (publicKey && cardNumberRef.current && expirationDateRef.current && securityCodeRef.current) {
-      // Aguardar um pouco para garantir que os refs estão prontos
-      setTimeout(() => {
+      // Verificar se o SDK já foi carregado
+      if (window.MercadoPago) {
+        // SDK já carregado, apenas inicializar
+        const mp = new window.MercadoPago(publicKey);
+        setMpInstance(mp);
+        setTimeout(() => {
+          initializeCardFields(mp);
+        }, 100);
+      } else {
+        // Carregar SDK e depois inicializar
         loadMercadoPagoSDK();
-      }, 100);
+      }
     }
-  }, [publicKey]);
+  }, [publicKey, cardNumberRef.current, expirationDateRef.current, securityCodeRef.current]);
 
   const loadPublicKey = async () => {
     try {
@@ -318,38 +344,125 @@ const Checkout = () => {
   };
 
   const loadMercadoPagoSDK = () => {
+    // Verificar se o script já foi adicionado
+    if (document.querySelector('script[src="https://sdk.mercadopago.com/js/v2"]')) {
+      // Script já existe, apenas inicializar quando carregar
+      if (window.MercadoPago) {
+        const mp = new window.MercadoPago(publicKey);
+        setMpInstance(mp);
+        setTimeout(() => {
+          initializeCardFields(mp);
+        }, 100);
+      } else {
+        // Aguardar o script carregar
+        const checkSDK = setInterval(() => {
+          if (window.MercadoPago) {
+            clearInterval(checkSDK);
+            const mp = new window.MercadoPago(publicKey);
+            setMpInstance(mp);
+            setTimeout(() => {
+              initializeCardFields(mp);
+            }, 100);
+          }
+        }, 100);
+      }
+      return;
+    }
+
     // Carregar SDK do Mercado Pago
     const script = document.createElement("script");
     script.src = "https://sdk.mercadopago.com/js/v2";
     script.async = true;
     script.onload = () => {
-      if (window.MercadoPago) {
+      if (window.MercadoPago && publicKey) {
         const mp = new window.MercadoPago(publicKey);
         setMpInstance(mp);
-        initializeCardFields(mp);
+        // Aguardar um pouco para garantir que os elementos estão no DOM
+        setTimeout(() => {
+          initializeCardFields(mp);
+        }, 200);
       }
+    };
+    script.onerror = () => {
+      console.error("Erro ao carregar SDK do Mercado Pago");
+      toast.error("Erro ao carregar serviços de pagamento. Por favor, recarregue a página.");
     };
     document.body.appendChild(script);
   };
 
   const initializeCardFields = (mp) => {
+    if (!mp || !mp.fields) {
+      console.error("SDK do Mercado Pago não inicializado corretamente");
+      return;
+    }
+
     if (!cardNumberRef.current || !expirationDateRef.current || !securityCodeRef.current) {
+      console.error("Elementos DOM não estão prontos:", {
+        cardNumber: !!cardNumberRef.current,
+        expirationDate: !!expirationDateRef.current,
+        securityCode: !!securityCodeRef.current,
+      });
       return;
     }
 
     try {
+      // Limpar campos anteriores se existirem
+      if (window.mpCardFields) {
+        try {
+          if (window.mpCardFields.cardNumber && typeof window.mpCardFields.cardNumber.unmount === 'function') {
+            window.mpCardFields.cardNumber.unmount();
+          }
+          if (window.mpCardFields.expirationDate && typeof window.mpCardFields.expirationDate.unmount === 'function') {
+            window.mpCardFields.expirationDate.unmount();
+          }
+          if (window.mpCardFields.securityCode && typeof window.mpCardFields.securityCode.unmount === 'function') {
+            window.mpCardFields.securityCode.unmount();
+          }
+        } catch (e) {
+          console.warn("Erro ao desmontar campos anteriores:", e);
+        }
+      }
+
+      // Garantir que os elementos estão vazios
+      if (cardNumberRef.current) {
+        cardNumberRef.current.innerHTML = "";
+      }
+      if (expirationDateRef.current) {
+        expirationDateRef.current.innerHTML = "";
+      }
+      if (securityCodeRef.current) {
+        securityCodeRef.current.innerHTML = "";
+      }
+
       // Inicializar campos de cartão do Mercado Pago
+      console.log("Inicializando campos do Mercado Pago...", {
+        cardNumberElement: cardNumberRef.current,
+        expirationDateElement: expirationDateRef.current,
+        securityCodeElement: securityCodeRef.current,
+      });
+
       const cardNumber = mp.fields.create("cardNumber", {
         placeholder: "Número do cartão",
-      }).mount(cardNumberRef.current);
-
+      });
+      
       const expirationDate = mp.fields.create("expirationDate", {
         placeholder: "MM/AA",
-      }).mount(expirationDateRef.current);
-
+      });
+      
       const securityCode = mp.fields.create("securityCode", {
         placeholder: "CVV",
-      }).mount(securityCodeRef.current);
+      });
+
+      // Montar campos nos elementos
+      cardNumber.mount(cardNumberRef.current);
+      expirationDate.mount(expirationDateRef.current);
+      securityCode.mount(securityCodeRef.current);
+
+      console.log("Campos montados com sucesso:", {
+        cardNumber: !!cardNumber,
+        expirationDate: !!expirationDate,
+        securityCode: !!securityCode,
+      });
 
       // Event listeners para cardNumber
       cardNumber.on("validityChange", (event) => {
@@ -618,9 +731,23 @@ const Checkout = () => {
                 
                 {/* Número do Cartão */}
                 <Box className={classes.mpCardContainer}>
-                  <div ref={cardNumberRef} className="mp-card" />
+                  <div 
+                    ref={cardNumberRef} 
+                    className="mp-card" 
+                    style={{ 
+                      minHeight: '56px', 
+                      width: '100%',
+                      display: 'block'
+                    }}
+                    id="mp-card-number"
+                  />
                   {errors.cardNumber && (
                     <Typography className={classes.errorText}>{errors.cardNumber}</Typography>
+                  )}
+                  {!mpInstance && (
+                    <Typography style={{ color: 'rgba(148, 163, 184, 0.6)', fontSize: '0.85rem', marginTop: '8px' }}>
+                      Carregando campos de pagamento...
+                    </Typography>
                   )}
                 </Box>
 
@@ -628,7 +755,16 @@ const Checkout = () => {
                   <Grid item xs={6}>
                     {/* Data de Validade */}
                     <Box className={classes.mpCardContainer}>
-                      <div ref={expirationDateRef} className="mp-card" />
+                      <div 
+                        ref={expirationDateRef} 
+                        className="mp-card"
+                        style={{ 
+                          minHeight: '56px', 
+                          width: '100%',
+                          display: 'block'
+                        }}
+                        id="mp-card-expiration"
+                      />
                       {errors.expirationDate && (
                         <Typography className={classes.errorText}>{errors.expirationDate}</Typography>
                       )}
@@ -637,7 +773,16 @@ const Checkout = () => {
                   <Grid item xs={6}>
                     {/* CVV */}
                     <Box className={classes.mpCardContainer}>
-                      <div ref={securityCodeRef} className="mp-card" />
+                      <div 
+                        ref={securityCodeRef} 
+                        className="mp-card"
+                        style={{ 
+                          minHeight: '56px', 
+                          width: '100%',
+                          display: 'block'
+                        }}
+                        id="mp-card-security"
+                      />
                       {errors.securityCode && (
                         <Typography className={classes.errorText}>{errors.securityCode}</Typography>
                       )}
