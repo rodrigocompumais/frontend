@@ -6,7 +6,7 @@ import LoggedInLayout from "../layout";
 import Dashboard from "../pages/Dashboard/";
 import TicketResponsiveContainer from "../pages/TicketResponsiveContainer";
 import Signup from "../pages/Signup/";
-import SignupCheckout from "../pages/Signup/Checkout";
+// import SignupCheckout from "../pages/Signup/Checkout"; // Checkout transparente desabilitado
 import SignupSuccess from "../pages/Signup/Success";
 import SignupFailure from "../pages/Signup/Failure";
 import SignupPending from "../pages/Signup/Pending";
@@ -74,7 +74,7 @@ const Routes = () => {
             <Route exact path="/f/:slug" component={PublicForm} isPublic={true} />
             <Route exact path="/login" component={Login} />
             <Route exact path="/signup" component={Signup} />
-            <Route exact path="/signup/checkout" component={SignupCheckout} />
+            {/* <Route exact path="/signup/checkout" component={SignupCheckout} /> Checkout transparente desabilitado */}
             <Route exact path="/signup/success" component={SignupSuccess} />
             <Route exact path="/signup/failure" component={SignupFailure} />
             <Route exact path="/signup/pending" component={SignupPending} />

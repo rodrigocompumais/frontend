@@ -574,20 +574,47 @@ const SignUp = () => {
           toast.error("Erro ao criar conta. Por favor, tente novamente.");
         }
       } else {
-        // Salvar dados no sessionStorage para o checkout transparente
-        const signupData = {
+        // Validar campos antes de criar preferência
+        if (!values.name || values.name.trim().length < 2) {
+          toast.error("Nome da empresa deve ter no mínimo 2 caracteres.");
+          return;
+        }
+
+        if (!values.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
+          toast.error("Email inválido. Por favor, informe um email válido.");
+          return;
+        }
+
+        if (!values.phone || values.phone.replace(/\D/g, "").length < 10) {
+          toast.error("Telefone inválido. Por favor, informe um telefone válido.");
+          return;
+        }
+
+        if (!values.password || values.password.length < 5) {
+          toast.error("Senha deve ter no mínimo 5 caracteres.");
+          return;
+        }
+
+        // Criar preferência de pagamento para planos pagos
+        const response = await openApi.post("/companies/create-payment-preference", {
           name: values.name,
           email: values.email,
           phone: values.phone,
           password: values.password,
           planId: selectedPlanId,
-          planName: selectedPlan.name,
-          planValue: selectedPlan.value,
-        };
-        sessionStorage.setItem("signupData", JSON.stringify(signupData));
-        
-        // Redirecionar para o checkout transparente
-        history.push("/signup/checkout");
+          recurrence: "MENSAL",
+        });
+
+        if (response.data && response.data.initPoint) {
+          // Salvar preference_id no sessionStorage para uso nas páginas de callback
+          if (response.data.preferenceId) {
+            sessionStorage.setItem("mp_preference_id", response.data.preferenceId);
+          }
+          // Redirecionar para o checkout do Mercado Pago
+          window.location.href = response.data.initPoint;
+        } else {
+          toast.error("Erro ao criar preferência de pagamento. Por favor, tente novamente.");
+        }
       }
     } catch (err) {
       console.error("Erro ao processar cadastro:", err);
