@@ -10,6 +10,7 @@ import Signup from "../pages/Signup/";
 import SignupSuccess from "../pages/Signup/Success";
 import SignupFailure from "../pages/Signup/Failure";
 import SignupPending from "../pages/Signup/Pending";
+import SetupAutoRenew from "../pages/Signup/SetupAutoRenew";
 import Login from "../pages/Login/";
 import Connections from "../pages/Connections/";
 import SettingsCustom from "../pages/SettingsCustom/";
@@ -78,6 +79,7 @@ const Routes = () => {
             <Route exact path="/signup/success" component={SignupSuccess} />
             <Route exact path="/signup/failure" component={SignupFailure} />
             <Route exact path="/signup/pending" component={SignupPending} />
+            <Route exact path="/signup/setup-auto-renew" component={SetupAutoRenew} />
             <Route exact path="/forgetpsw" component={ForgetPassword} />
             {/* <Route exact path="/create-company" component={Companies} /> */}
             <Route exact path="/subscription-expired" component={SubscriptionExpired} isPrivate allowExpired />

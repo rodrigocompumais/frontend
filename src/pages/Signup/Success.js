@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useHistory, useLocation } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import { Box, Typography, Button, Container, CircularProgress } from "@material-ui/core";
+import { Alert } from "@material-ui/lab";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
+import CreditCardIcon from "@material-ui/icons/CreditCard";
 import { openApi } from "../../services/api";
 import { toast } from "react-toastify";
 
@@ -94,12 +96,62 @@ const SignupSuccess = () => {
   const location = useLocation();
   const [isVerifying, setIsVerifying] = useState(true);
   const [paymentStatus, setPaymentStatus] = useState(null);
+  const [companyId, setCompanyId] = useState(null);
+  const [checkingCompany, setCheckingCompany] = useState(false);
 
   // Extrair preference_id da URL ou sessionStorage
   const searchParams = new URLSearchParams(location.search);
   const preferenceIdFromUrl = searchParams.get("preference_id");
   const preferenceIdFromStorage = sessionStorage.getItem("mp_preference_id");
   const preferenceId = preferenceIdFromUrl || preferenceIdFromStorage;
+  const companyIdFromUrl = searchParams.get("companyId");
+
+  // Verificar se empresa foi criada
+  useEffect(() => {
+    const checkCompany = async () => {
+      if (companyIdFromUrl) {
+        setCompanyId(parseInt(companyIdFromUrl));
+        setIsVerifying(false);
+        return;
+      }
+
+      // Tentar encontrar empresa pelo email do sessionStorage
+      const signupData = sessionStorage.getItem("signupData");
+      if (!signupData) {
+        setIsVerifying(false);
+        return;
+      }
+
+      try {
+        setCheckingCompany(true);
+        const data = JSON.parse(signupData);
+        
+        // Aguardar alguns segundos para o webhook processar
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        // Tentar buscar empresa por email
+        try {
+          const response = await openApi.get("/companies/by-email", {
+            params: { email: data.email },
+          });
+          
+          if (response.data && response.data.exists && response.data.company) {
+            setCompanyId(response.data.company.id);
+          }
+        } catch (err) {
+          // Se não encontrar, não é erro crítico
+          console.log("Empresa ainda não foi criada ou não encontrada");
+        }
+        
+        setCheckingCompany(false);
+      } catch (error) {
+        console.error("Erro ao verificar empresa:", error);
+        setCheckingCompany(false);
+      }
+    };
+
+    checkCompany();
+  }, [companyIdFromUrl]);
 
   useEffect(() => {
     if (!preferenceId) {
@@ -129,6 +181,10 @@ const SignupSuccess = () => {
           setTimeout(() => {
             history.push(`/signup/failure?preference_id=${preferenceId}`);
           }, 2000);
+        } else if (status === "approved") {
+          // Se aprovado, tentar obter companyId do metadata
+          // Por enquanto, vamos oferecer a opção de configurar renovação
+          // O usuário precisará fazer login primeiro
         }
       } catch (error) {
         console.error("Erro ao verificar status do pagamento:", error);
@@ -139,7 +195,16 @@ const SignupSuccess = () => {
     verifyPaymentStatus();
   }, [preferenceId, history]);
 
-  if (isVerifying) {
+  const handleSetupAutoRenew = () => {
+    if (companyId) {
+      history.push(`/signup/setup-auto-renew?companyId=${companyId}`);
+    } else {
+      toast.info("Faça login primeiro para configurar a renovação automática");
+      history.push("/login");
+    }
+  };
+
+  if (isVerifying || checkingCompany) {
     return (
       <Box className={classes.root}>
         <Container className={classes.container}>
@@ -147,10 +212,12 @@ const SignupSuccess = () => {
             <Box className={classes.loadingContainer}>
               <CircularProgress size={60} style={{ color: "#00D9FF" }} />
               <Typography className={classes.title}>
-                Verificando Pagamento...
+                {checkingCompany ? "Verificando Empresa..." : "Verificando Pagamento..."}
               </Typography>
               <Typography className={classes.loadingText}>
-                Aguarde enquanto verificamos o status do seu pagamento.
+                {checkingCompany 
+                  ? "Aguarde enquanto verificamos se sua empresa foi criada."
+                  : "Aguarde enquanto verificamos o status do seu pagamento."}
               </Typography>
             </Box>
           </Box>
@@ -172,13 +239,41 @@ const SignupSuccess = () => {
             automaticamente após a confirmação do pagamento pelo Mercado Pago.
             Você receberá um email quando tudo estiver pronto.
           </Typography>
-          <Button
-            className={classes.button}
-            variant="contained"
-            onClick={() => history.push("/login")}
-          >
-            Ir para Login
-          </Button>
+
+          {companyId && (
+            <Alert severity="info" style={{ marginBottom: 24, textAlign: "left" }}>
+              <strong>Configure Renovação Automática</strong>
+              <Typography variant="body2" style={{ marginTop: 8 }}>
+                Configure seu cartão agora para que sua assinatura seja renovada automaticamente,
+                sem precisar se preocupar com pagamentos futuros.
+              </Typography>
+            </Alert>
+          )}
+
+          <Box style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {companyId && (
+              <Button
+                className={classes.button}
+                variant="contained"
+                startIcon={<CreditCardIcon />}
+                onClick={handleSetupAutoRenew}
+                style={{ background: "linear-gradient(135deg, #00D9FF, #22C55E)" }}
+              >
+                Configurar Renovação Automática
+              </Button>
+            )}
+            <Button
+              className={classes.button}
+              variant="contained"
+              onClick={() => history.push("/login")}
+              style={companyId ? { 
+                background: "rgba(255, 255, 255, 0.1)",
+                color: "#FFFFFF"
+              } : {}}
+            >
+              {companyId ? "Configurar Depois" : "Ir para Login"}
+            </Button>
+          </Box>
         </Box>
       </Container>
     </Box>
