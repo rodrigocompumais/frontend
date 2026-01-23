@@ -68,7 +68,7 @@ const ScheduleSchema = Yup.object().shape({
 	sendAt: Yup.string().required("Obrigatório")
 });
 
-const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, reload }) => {
+const ScheduleModal = ({ open, onClose, scheduleId, contactId, cleanContact, reload, embedded = false }) => {
 	const classes = useStyles();
 	const history = useHistory();
 	const { user } = useContext(AuthContext);
