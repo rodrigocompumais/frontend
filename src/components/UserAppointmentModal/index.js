@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import Dialog from "@material-ui/core/Dialog";
 import DialogTitle from "@material-ui/core/DialogTitle";
@@ -13,12 +13,13 @@ import ScheduleDispatchForm from "./ScheduleDispatchForm";
 const useStyles = makeStyles((theme) => ({
     dialog: {
         "& .MuiDialog-paper": {
-            maxWidth: "600px",
+            maxWidth: "900px",
             width: "100%",
         },
     },
     tabPanel: {
         padding: 0,
+        width: "100%",
     },
 }));
 
@@ -31,9 +32,10 @@ function TabPanel(props) {
             hidden={value !== index}
             id={`schedule-tabpanel-${index}`}
             aria-labelledby={`schedule-tab-${index}`}
+            style={{ width: "100%" }}
             {...other}
         >
-            {value === index && <Box>{children}</Box>}
+            {value === index && <Box sx={{ width: "100%" }}>{children}</Box>}
         </div>
     );
 }
@@ -68,7 +70,7 @@ const UserAppointmentModal = ({
         <Dialog
             open={open}
             onClose={handleClose}
-            maxWidth="md"
+            maxWidth="lg"
             fullWidth
             scroll="paper"
             className={classes.dialog}
