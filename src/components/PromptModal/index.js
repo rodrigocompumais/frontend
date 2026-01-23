@@ -86,7 +86,8 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         maxMessages: 10,
         canSendInternalMessages: false,
         canTransferToAgent: false,
-        canChangeTag: false
+        canChangeTag: false,
+        permitirCriarAgendamentos: false
     };
 
     const [prompt, setPrompt] = useState(initialState);
@@ -110,7 +111,8 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                         maxMessages: data.maxMessages || 10,
                         canSendInternalMessages: data.canSendInternalMessages === true,
                         canTransferToAgent: data.canTransferToAgent === true,
-                        canChangeTag: data.canChangeTag === true
+                        canChangeTag: data.canChangeTag === true,
+                        permitirCriarAgendamentos: data.permitirCriarAgendamentos === true
                     });
                     
                     setSelectedModel(data.model || "gpt-3.5-turbo-1106");
@@ -342,6 +344,17 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                         />
                                     }
                                     label={i18n.t("promptModal.form.canChangeTag")}
+                                />
+                                
+                                <FormControlLabel
+                                    control={
+                                        <Field
+                                            as={Checkbox}
+                                            name="permitirCriarAgendamentos"
+                                            color="primary"
+                                        />
+                                    }
+                                    label={i18n.t("promptModal.form.permitirCriarAgendamentos")}
                                 />
                                 
                                 <div className={classes.multFieldLine}>

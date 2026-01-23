@@ -503,6 +503,7 @@ const messages = {
 					canSendInternalMessages: "Allow sending internal messages",
 					canTransferToAgent: "Allow queue transfer",
 					canChangeTag: "Allow tag change",
+					permitirCriarAgendamentos: "Allow creating appointments",
 					selectQueue: "Select a queue",
 				},
 				formErrors: {

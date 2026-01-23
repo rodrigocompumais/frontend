@@ -508,6 +508,7 @@ const messages = {
           canSendInternalMessages: "Permitir envío de mensajes internos",
           canTransferToAgent: "Permitir transferencia de cola",
           canChangeTag: "Permitir alterar etiqueta",
+          permitirCriarAgendamentos: "Permitir crear citas",
           selectQueue: "Seleccione una cola",
         },
         formErrors: {

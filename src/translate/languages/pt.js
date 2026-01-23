@@ -518,6 +518,7 @@ const messages = {
           canSendInternalMessages: "Permitir envio de mensagens internas",
           canTransferToAgent: "Permitir transferência de fila",
           canChangeTag: "Permitir alterar tag",
+          permitirCriarAgendamentos: "Permitir criar agendamentos",
           selectQueue: "Selecione uma fila",
         },
         formErrors: {
