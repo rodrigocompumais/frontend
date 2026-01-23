@@ -10,7 +10,6 @@ import DialogActions from "@material-ui/core/DialogActions";
 import DialogContent from "@material-ui/core/DialogContent";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import Autocomplete from "@material-ui/lab/Autocomplete";
-import FormControl from "@material-ui/core/FormControl";
 import moment from "moment";
 import { isArray } from "lodash";
 
@@ -21,12 +20,7 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 
 const useStyles = makeStyles((theme) => ({
     root: {
-        display: "flex",
-        flexWrap: "wrap",
-    },
-    formControl: {
-        margin: theme.spacing(1),
-        minWidth: 120,
+        width: "100%",
     },
     btnWrapper: {
         position: "relative",
@@ -140,112 +134,96 @@ const UserAppointmentForm = ({ appointmentId, onClose, reload }) => {
                 }}
             >
                 {({ touched, errors, isSubmitting, values, setFieldValue }) => (
-                    <Form>
+                    <Form style={{ width: "100%" }}>
                         <DialogContent dividers>
-                            <FormControl variant="outlined" fullWidth>
-                                <Field
-                                    as={TextField}
-                                    label={i18n.t("userAppointmentModal.form.title")}
-                                    name="title"
-                                    error={touched.title && Boolean(errors.title)}
-                                    helperText={touched.title && errors.title}
-                                    variant="outlined"
-                                    margin="dense"
-                                    fullWidth
-                                />
-                            </FormControl>
-                            <br />
-                            <FormControl variant="outlined" fullWidth>
-                                <Field
-                                    as={TextField}
-                                    label={i18n.t("userAppointmentModal.form.description")}
-                                    name="description"
-                                    multiline
-                                    rows={3}
-                                    error={touched.description && Boolean(errors.description)}
-                                    helperText={touched.description && errors.description}
-                                    variant="outlined"
-                                    margin="dense"
-                                    fullWidth
-                                />
-                            </FormControl>
-                            <br />
-                            <FormControl variant="outlined" fullWidth>
-                                <Field
-                                    as={TextField}
-                                    label={i18n.t("userAppointmentModal.form.startTime")}
-                                    type="datetime-local"
-                                    name="startTime"
-                                    InputLabelProps={{
-                                        shrink: true,
-                                    }}
-                                    error={touched.startTime && Boolean(errors.startTime)}
-                                    helperText={touched.startTime && errors.startTime}
-                                    variant="outlined"
-                                    margin="dense"
-                                    fullWidth
-                                />
-                            </FormControl>
-                            <br />
-                            <FormControl variant="outlined" fullWidth>
-                                <Field
-                                    as={TextField}
-                                    label={i18n.t("userAppointmentModal.form.endTime")}
-                                    type="datetime-local"
-                                    name="endTime"
-                                    InputLabelProps={{
-                                        shrink: true,
-                                    }}
-                                    error={touched.endTime && Boolean(errors.endTime)}
-                                    helperText={touched.endTime && errors.endTime}
-                                    variant="outlined"
-                                    margin="dense"
-                                    fullWidth
-                                />
-                            </FormControl>
-                            <br />
-                            <FormControl variant="outlined" fullWidth>
-                                <Autocomplete
-                                    fullWidth
-                                    value={currentUser}
-                                    options={users}
-                                    onChange={(e, selectedUser) => {
-                                        const userId = selectedUser ? selectedUser.id : "";
-                                        setFieldValue("assignedUserId", userId);
-                                        setCurrentUser(selectedUser || initialUser);
-                                    }}
-                                    getOptionLabel={(option) => option.name}
-                                    getOptionSelected={(option, value) => value.id === option.id}
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
-                                            variant="outlined"
-                                            placeholder={i18n.t("userAppointmentModal.form.assignedTo")}
-                                        />
-                                    )}
-                                />
-                            </FormControl>
-                            <br />
-                            <FormControl variant="outlined" fullWidth>
-                                <Field
-                                    as={TextField}
-                                    select
-                                    label={i18n.t("userAppointmentModal.form.reminderMinutes")}
-                                    name="reminderMinutes"
-                                    variant="outlined"
-                                    margin="dense"
-                                    SelectProps={{
-                                        native: true,
-                                    }}
-                                    fullWidth
-                                >
-                                    <option value={5}>5 minutos</option>
-                                    <option value={10}>10 minutos</option>
-                                    <option value={15}>15 minutos</option>
-                                    <option value={30}>30 minutos</option>
-                                    <option value={60}>1 hora</option>
-                                </Field>
-                            </FormControl>
+                            <Field
+                                as={TextField}
+                                label={i18n.t("userAppointmentModal.form.title")}
+                                name="title"
+                                error={touched.title && Boolean(errors.title)}
+                                helperText={touched.title && errors.title}
+                                variant="outlined"
+                                margin="dense"
+                                fullWidth
+                            />
+                            <Field
+                                as={TextField}
+                                label={i18n.t("userAppointmentModal.form.description")}
+                                name="description"
+                                multiline
+                                rows={3}
+                                error={touched.description && Boolean(errors.description)}
+                                helperText={touched.description && errors.description}
+                                variant="outlined"
+                                margin="dense"
+                                fullWidth
+                            />
+                            <Field
+                                as={TextField}
+                                label={i18n.t("userAppointmentModal.form.startTime")}
+                                type="datetime-local"
+                                name="startTime"
+                                InputLabelProps={{
+                                    shrink: true,
+                                }}
+                                error={touched.startTime && Boolean(errors.startTime)}
+                                helperText={touched.startTime && errors.startTime}
+                                variant="outlined"
+                                margin="dense"
+                                fullWidth
+                            />
+                            <Field
+                                as={TextField}
+                                label={i18n.t("userAppointmentModal.form.endTime")}
+                                type="datetime-local"
+                                name="endTime"
+                                InputLabelProps={{
+                                    shrink: true,
+                                }}
+                                error={touched.endTime && Boolean(errors.endTime)}
+                                helperText={touched.endTime && errors.endTime}
+                                variant="outlined"
+                                margin="dense"
+                                fullWidth
+                            />
+                            <Autocomplete
+                                fullWidth
+                                value={currentUser}
+                                options={users}
+                                onChange={(e, selectedUser) => {
+                                    const userId = selectedUser ? selectedUser.id : "";
+                                    setFieldValue("assignedUserId", userId);
+                                    setCurrentUser(selectedUser || initialUser);
+                                }}
+                                getOptionLabel={(option) => option.name}
+                                getOptionSelected={(option, value) => value.id === option.id}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        variant="outlined"
+                                        label={i18n.t("userAppointmentModal.form.assignedTo")}
+                                        margin="dense"
+                                    />
+                                )}
+                            />
+                            <Field
+                                as={TextField}
+                                select
+                                label={i18n.t("userAppointmentModal.form.reminderMinutes")}
+                                name="reminderMinutes"
+                                variant="outlined"
+                                margin="dense"
+                                SelectProps={{
+                                    native: true,
+                                }}
+                                fullWidth
+                            >
+                                <option value={5}>5 minutos</option>
+                                <option value={10}>10 minutos</option>
+                                <option value={15}>15 minutos</option>
+                                <option value={30}>30 minutos</option>
+                                <option value={60}>1 hora</option>
+                            </Field>
                         </DialogContent>
                         <DialogActions>
                             <Button onClick={onClose} color="secondary" disabled={isSubmitting} variant="outlined">
