@@ -262,7 +262,10 @@ const MessageInput = ({ ticketStatus }) => {
 	const [showEmoji, setShowEmoji] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const [recording, setRecording] = useState(false);
+	const [previewModalOpen, setPreviewModalOpen] = useState(false);
+	const [currentImageIndex, setCurrentImageIndex] = useState(0);
 	const inputRef = useRef();
+	const previewUrlsRef = useRef([]);
 	const { setReplyingMessage, replyingMessage } = useContext(
 		ReplyMessageContext
 	);
@@ -279,10 +282,51 @@ const MessageInput = ({ ticketStatus }) => {
 		return () => {
 			setInputMessage("");
 			setShowEmoji(false);
+			// Limpar preview URLs antes de limpar medias
+			previewUrlsRef.current.forEach((url) => {
+				if (url) {
+					URL.revokeObjectURL(url);
+				}
+			});
+			previewUrlsRef.current = [];
 			setMedias([]);
 			setReplyingMessage(null);
 		};
 	}, [ticketId, setReplyingMessage]);
+
+	// Filtrar apenas imagens para o carrossel
+	const imageMedias = medias.filter(media => media.preview);
+
+	// Funções de navegação do carrossel
+	const handlePrevImage = () => {
+		setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : imageMedias.length - 1));
+	};
+
+	const handleNextImage = () => {
+		setCurrentImageIndex((prev) => (prev < imageMedias.length - 1 ? prev + 1 : 0));
+	};
+
+	const handleIndicatorClick = (index) => {
+		setCurrentImageIndex(index);
+	};
+
+	// Navegação por teclado no modal de preview
+	useEffect(() => {
+		if (!previewModalOpen || imageMedias.length <= 1) return;
+
+		const handleKeyDown = (e) => {
+			if (e.key === 'ArrowLeft') {
+				setCurrentImageIndex((prev) => (prev > 0 ? prev - 1 : imageMedias.length - 1));
+			} else if (e.key === 'ArrowRight') {
+				setCurrentImageIndex((prev) => (prev < imageMedias.length - 1 ? prev + 1 : 0));
+			} else if (e.key === 'Escape') {
+				setPreviewModalOpen(false);
+			}
+		};
+
+		window.addEventListener('keydown', handleKeyDown);
+		return () => window.removeEventListener('keydown', handleKeyDown);
+	}, [previewModalOpen, imageMedias.length]);
 
 	const handleChangeInput = e => {
 		setInputMessage(e.target.value);
@@ -299,7 +343,16 @@ const MessageInput = ({ ticketStatus }) => {
 		}
 
 		const selectedMedias = Array.from(e.target.files);
-		setMedias(selectedMedias);
+		// Criar preview URLs para imagens
+		const mediasWithPreview = selectedMedias.map(media => {
+			let preview = null;
+			if (media.type.startsWith('image/')) {
+				preview = URL.createObjectURL(media);
+				previewUrlsRef.current.push(preview);
+			}
+			return Object.assign(media, { preview });
+		});
+		setMedias(mediasWithPreview);
 	};
 
 	const handleInputPaste = e => {
@@ -378,6 +431,14 @@ const MessageInput = ({ ticketStatus }) => {
 		} catch (err) {
 			toastError(err);
 		}
+
+		// Limpar preview URLs para liberar memória
+		previewUrlsRef.current.forEach((url) => {
+			if (url) {
+				URL.revokeObjectURL(url);
+			}
+		});
+		previewUrlsRef.current = [];
 
 		setLoading(false);
 		setMedias([]);
@@ -487,40 +548,155 @@ const MessageInput = ({ ticketStatus }) => {
 
 	if (medias.length > 0)
 		return (
-			<Paper elevation={0} square className={classes.viewMediaInputWrapper}>
-				<IconButton
-					aria-label="cancel-upload"
-					component="span"
-					onClick={e => setMedias([])}
-				>
-					<CancelIcon className={classes.sendMessageIcons} />
-				</IconButton>
+			<>
+				<Paper elevation={0} square className={classes.viewMediaInputWrapper}>
+					<IconButton
+						aria-label="cancel-upload"
+						component="span"
+						onClick={(e) => {
+							// Limpar preview URLs antes de limpar medias
+							previewUrlsRef.current.forEach((url) => {
+								if (url) {
+									URL.revokeObjectURL(url);
+								}
+							});
+							previewUrlsRef.current = [];
+							setMedias([]);
+						}}
+					>
+						<CancelIcon className={classes.sendMessageIcons} />
+					</IconButton>
 
-				{loading ? (
-					<div>
-						<CircularProgress className={classes.circleLoading} />
-					</div>
-				) : (
-					<div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-						{medias[0]?.preview && (
-							<img
-								src={medias[0].preview}
-								alt="preview"
-								style={{ maxHeight: "200px", maxWidth: "100%", borderRadius: "8px", objectFit: "contain", marginBottom: "5px" }}
-							/>
-						)}
-						<span>{medias[0]?.name}</span>
-					</div>
-				)}
-				<IconButton
-					aria-label="send-upload"
-					component="span"
-					onClick={handleUploadMedia}
-					disabled={loading}
+					{loading ? (
+						<div>
+							<CircularProgress className={classes.circleLoading} />
+						</div>
+					) : (
+						<div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, overflowX: 'auto', padding: '4px' }}>
+							{medias.map((media, index) => (
+								<div
+									key={index}
+									style={{
+										position: 'relative',
+										cursor: 'pointer',
+										borderRadius: 8,
+										overflow: 'hidden',
+										width: 60,
+										height: 60,
+										flexShrink: 0,
+										border: '1px solid #ddd'
+									}}
+									onClick={() => {
+										setCurrentImageIndex(index);
+										setPreviewModalOpen(true);
+									}}
+								>
+									{media.preview ? (
+										<img
+											src={media.preview}
+											alt={media.name}
+											style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+										/>
+									) : (
+										<div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0' }}>
+											<AttachFileIcon style={{ fontSize: 24, color: '#666' }} />
+										</div>
+									)}
+								</div>
+							))}
+							{medias.length > 0 && (
+								<Typography variant="caption" style={{ marginLeft: 8 }}>
+									{medias.length > 1 ? `+${medias.length - 1}` : ''}
+								</Typography>
+							)}
+						</div>
+					)}
+					<IconButton
+						aria-label="send-upload"
+						component="span"
+						onClick={handleUploadMedia}
+						disabled={loading}
+					>
+						<SendIcon className={classes.sendMessageIcons} />
+					</IconButton>
+				</Paper>
+
+				{/* Modal de Preview com Carrossel */}
+				<Dialog
+					open={previewModalOpen}
+					onClose={() => setPreviewModalOpen(false)}
+					className={classes.previewModal}
+					maxWidth={false}
+					fullWidth
 				>
-					<SendIcon className={classes.sendMessageIcons} />
-				</IconButton>
-			</Paper>
+					<DialogContent className={classes.previewModalContent} style={{ padding: 0 }}>
+						{imageMedias.length > 0 ? (
+							<>
+								{/* Imagem atual */}
+								<img
+									src={imageMedias[currentImageIndex]?.preview}
+									alt={imageMedias[currentImageIndex]?.name || 'Preview'}
+									className={classes.previewImage}
+								/>
+
+								{/* Botão anterior */}
+								{imageMedias.length > 1 && (
+									<IconButton
+										className={`${classes.previewNavButton} ${classes.previewNavButtonLeft}`}
+										onClick={handlePrevImage}
+										aria-label="Imagem anterior"
+									>
+										<ChevronLeftIcon />
+									</IconButton>
+								)}
+
+								{/* Botão próximo */}
+								{imageMedias.length > 1 && (
+									<IconButton
+										className={`${classes.previewNavButton} ${classes.previewNavButtonRight}`}
+										onClick={handleNextImage}
+										aria-label="Próxima imagem"
+									>
+										<ChevronRightIcon />
+									</IconButton>
+								)}
+
+								{/* Informações da imagem */}
+								<Box className={classes.previewImageInfo}>
+									<Typography variant="body2" style={{ fontWeight: 500 }}>
+										{imageMedias[currentImageIndex]?.name || 'Imagem'}
+									</Typography>
+									{imageMedias.length > 1 && (
+										<Typography variant="caption" style={{ opacity: 0.8 }}>
+											{currentImageIndex + 1} de {imageMedias.length}
+										</Typography>
+									)}
+								</Box>
+
+								{/* Indicadores */}
+								{imageMedias.length > 1 && (
+									<Box className={classes.previewIndicators}>
+										{imageMedias.map((_, index) => (
+											<Box
+												key={index}
+												className={`${classes.previewIndicator} ${index === currentImageIndex ? 'active' : ''
+													}`}
+												onClick={() => handleIndicatorClick(index)}
+											/>
+										))}
+									</Box>
+								)}
+							</>
+						) : (
+							<Box p={4} textAlign="center">
+								<Typography variant="body1" color="textSecondary">
+									Nenhuma imagem para visualizar
+								</Typography>
+							</Box>
+						)}
+					</DialogContent>
+				</Dialog>
+			</>
 		);
 	else {
 		return (
