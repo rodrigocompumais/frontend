@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 
 import * as Yup from "yup";
 import { Formik, Form, Field } from "formik";
@@ -131,7 +131,7 @@ const useStyles = makeStyles(theme => ({
     },
 }));
 
-// Schema será criado dinamicamente baseado no provider
+// Schema serÃ¡ criado dinamicamente baseado no provider
 const getPromptSchema = (provider) => {
     const baseSchema = {
         name: Yup.string().min(5, i18n.t("promptModal.formErrors.name.short")).max(100, i18n.t("promptModal.formErrors.name.long")).required(i18n.t("promptModal.formErrors.name.required")),
@@ -142,8 +142,8 @@ const getPromptSchema = (provider) => {
         maxMessages: Yup.number().required(i18n.t("promptModal.formErrors.maxMessages.required"))
     };
 
-    // Não validar apiKey aqui - será validado nas Settings
-    // queueId agora é opcional
+    // NÃ£o validar apiKey aqui - serÃ¡ validado nas Settings
+    // queueId agora Ã© opcional
     return Yup.object().shape(baseSchema);
 };
 
@@ -165,1378 +165,979 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         canTransferToAgent: false,
         canChangeTag: false,
         permitirCriarAgendamentos: false
+    });
     const [templateModalOpen, setTemplateModalOpen] = useState(false);
-        const [useCustomAgentName, setUseCustomAgentName] = useState(false);
-        const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+    const [useCustomAgentName, setUseCustomAgentName] = useState(false);
+    const [isSavingTemplate, setIsSavingTemplate] = useState(false);
 
 
-        const initialState = {
-            name: "",
-            prompt: "",
-            model: "gpt-3.5-turbo-1106",
-            provider: "openai",
-            maxTokens: 100,
-            temperature: 1,
-            maxMessages: 10,
-            canSendInternalMessages: false,
-            canTransferToAgent: false,
-            canChangeTag: false,
-            permitirCriarAgendamentos: false
-        };
-
-        const [prompt, setPrompt] = useState(initialState);
-
-        // Templates built-in com mais opções de agentes
-        const builtInTemplates = [
-            {
-                id: "personalizado",
-                tipo: "personalizado",
-                nome: "Prompt Personalizado",
-                descricao: "Crie seu próprio agente do zero com configurações avançadas",
-                icon: "⚙️",
-                permissoes: {
-                    canSendInternalMessages: false,
-                    canTransferToAgent: false,
-                    canChangeTag: false,
-                    permitirCriarAgendamentos: false
-                }
-            },
-            {
-                id: "atendimento",
-                tipo: "atendimento",
-                nome: "Atendimento ao Cliente",
-                descricao: "Agente especializado em atender clientes com cordialidade e eficiência",
-                icon: "👤",
-                promptBase: "Você é um assistente de atendimento ao cliente profissional e cordial. Sua missão é ajudar os clientes de forma clara, educada e eficiente. Sempre mantenha um tom {tom_resposta} e seja prestativo. {observacoes}",
-                permissoes: {
-                    canSendInternalMessages: true,
-                    canTransferToAgent: true,
-                    canChangeTag: true,
-                    permitirCriarAgendamentos: false
-                }
-            },
-            {
-                id: "vendas",
-                tipo: "vendas",
-                nome: "Consultor de Vendas",
-                descricao: "Agente focado em converter leads e fechar vendas com persuasão",
-                icon: "💼",
-                promptBase: "Você é um consultor de vendas experiente e persuasivo. Seu objetivo é entender as necessidades do cliente e apresentar soluções que agreguem valor. Use um tom {tom_resposta} e seja convincente sem ser invasivo. {observacoes}",
-                permissoes: {
-                    canSendInternalMessages: true,
-                    canTransferToAgent: true,
-                    canChangeTag: true,
-                    permitirCriarAgendamentos: true
-                }
-            },
-            {
-                id: "suporte",
-                tipo: "suporte",
-                nome: "Suporte Técnico",
-                descricao: "Especialista em resolver problemas técnicos e orientar usuários",
-                icon: "🔧",
-                promptBase: "Você é um especialista em suporte técnico. Sua função é diagnosticar problemas, fornecer soluções claras e orientar os usuários passo a passo. Mantenha um tom {tom_resposta} e seja paciente e didático. {observacoes}",
-                permissoes: {
-                    canSendInternalMessages: true,
-                    canTransferToAgent: true,
-                    canChangeTag: true,
-                    permitirCriarAgendamentos: false
-                }
-            },
-            {
-                id: "agendador",
-                tipo: "agendador",
-                nome: "Agendador de Compromissos",
-                descricao: "Gerencia agendamentos e organiza compromissos automaticamente",
-                icon: "📅",
-                promptBase: "Você é um assistente de agendamentos. Sua função é ajudar a marcar, remarcar e gerenciar compromissos de forma organizada. Use um tom {tom_resposta} e seja preciso com datas e horários. {observacoes}",
-                permissoes: {
-                    canSendInternalMessages: true,
-                    canTransferToAgent: false,
-                    canChangeTag: true,
-                    permitirCriarAgendamentos: true
-                }
-            },
-            {
-                id: "faq",
-                tipo: "faq",
-                nome: "Respondedor de FAQ",
-                descricao: "Responde perguntas frequentes de forma rápida e precisa",
-                icon: "❓",
-                promptBase: "Você é um assistente especializado em responder perguntas frequentes. Forneça respostas claras, diretas e precisas. Use um tom {tom_resposta} e seja objetivo. {observacoes}",
-                permissoes: {
-                    canSendInternalMessages: false,
-                    canTransferToAgent: true,
-                    canChangeTag: false,
-                    permitirCriarAgendamentos: false
-                }
-            },
-            {
-                id: "triagem",
-                tipo: "triagem",
-                nome: "Triagem Inteligente",
-                descricao: "Classifica e direciona conversas para os setores corretos",
-                icon: "🎯",
-                promptBase: "Você é um assistente de triagem. Sua função é entender a necessidade do cliente e direcioná-lo para o setor ou pessoa adequada. Use um tom {tom_resposta} e seja eficiente na classificação. {observacoes}",
-                permissoes: {
-                    canSendInternalMessages: true,
-                    canTransferToAgent: true,
-                    canChangeTag: true,
-                    permitirCriarAgendamentos: false
-                }
-            },
-            {
-                id: "cobranca",
-                tipo: "cobranca",
-                nome: "Assistente de Cobrança",
-                descricao: "Gerencia cobranças e pagamentos com profissionalismo",
-                icon: "💰",
-                promptBase: "Você é um assistente de cobrança profissional. Sua função é lembrar sobre pagamentos pendentes de forma educada e ajudar com dúvidas sobre faturas. Use um tom {tom_resposta} e seja firme mas respeitoso. {observacoes}",
-                permissoes: {
-                    canSendInternalMessages: true,
-                    canTransferToAgent: true,
-                    canChangeTag: true,
-                    permitirCriarAgendamentos: false
-                }
-            },
-            {
-                id: "feedback",
-                tipo: "feedback",
-                nome: "Coletor de Feedback",
-                descricao: "Coleta avaliações e sugestões dos clientes",
-                icon: "⭐",
-                promptBase: "Você é um assistente de feedback. Sua função é coletar avaliações, opiniões e sugestões dos clientes de forma amigável. Use um tom {tom_resposta} e incentive respostas honestas. {observacoes}",
-                permissoes: {
-                    canSendInternalMessages: true,
-                    canTransferToAgent: false,
-                    canChangeTag: true,
-                    permitirCriarAgendamentos: false
-                }
-            }
-        ];
-
-        useEffect(() => {
-    const fetchPrompt = async () => {
-        if (!promptId) {
-            setPrompt(initialState);
-            setSelectedProvider("openai");
-            setSelectedModel("gpt-3.5-turbo-1106");
-            setSelectedTemplate(null);
-            setTemplateVariables({
-                nome_agente: "",
-                tom_resposta: "neutro",
-                observacoes: ""
-            });
-        } else {
-            try {
-                const { data } = await api.get(`/prompt/${promptId}`);
-                setPrompt({
-                    name: data.name || "",
-                    prompt: data.prompt || "",
-                    model: data.model || "gpt-3.5-turbo-1106",
-                    provider: data.provider || "openai",
-                    maxTokens: data.maxTokens || 100,
-                    temperature: data.temperature !== undefined ? data.temperature : 1,
-                    maxMessages: data.maxMessages || 10,
-                    canSendInternalMessages: data.canSendInternalMessages === true,
-                    canTransferToAgent: data.canTransferToAgent === true,
-                    canChangeTag: data.canChangeTag === true,
-                    permitirCriarAgendamentos: data.permitirCriarAgendamentos === true
-                });
-
-                setSelectedModel(data.model || "gpt-3.5-turbo-1106");
-                setSelectedProvider(data.provider || "openai");
-            } catch (err) {
-                toastError(err);
-            }
-        }
-    };
-
-    const checkApiKeys = async () => {
-        setLoadingApiKeyStatus(true);
-        try {
-            const { data } = await api.get("/settings");
-            const geminiKey = data.find(s => s.key === "geminiApiKey");
-            const openaiKey = data.find(s => s.key === "openaiApiKey");
-
-            setApiKeyStatus({
-                gemini: !!geminiKey?.value,
-                openai: !!openaiKey?.value
-            });
-        } catch (err) {
-            console.error("Erro ao verificar API keys:", err);
-        } finally {
-            setLoadingApiKeyStatus(false);
-        }
-    };
-
-    if (open) {
-        fetchPrompt();
-        checkApiKeys();
-    }
-}, [promptId, open]);
-
-const handleClose = () => {
-    setPrompt(initialState);
-    setSelectedModel("gpt-3.5-turbo-1106");
-    setSelectedProvider("openai");
-    onClose();
-};
-
-const handleChangeModel = (e) => {
-    const newModel = e.target.value;
-    setSelectedModel(newModel);
-    // Atualizar também no estado do prompt para sincronizar com Formik
-    setPrompt(prev => ({ ...prev, model: newModel }));
-};
-
-const handleChangeProvider = (e) => {
-    const newProvider = e.target.value;
-    setSelectedProvider(newProvider);
-    // Se mudar para Gemini, resetar modelo para o padrão do Gemini
-    let defaultModel;
-    if (newProvider === "gemini") {
-        defaultModel = "gemini-2.5-flash";
-    } else {
-        defaultModel = "gpt-3.5-turbo-1106";
-    }
-    setSelectedModel(defaultModel);
-    // Atualizar também no estado do prompt
-    setPrompt(prev => ({ ...prev, provider: newProvider, model: defaultModel }));
-};
-
-const handleSaveTemplate = async () => {
-    if (!selectedTemplate) {
-        toast.error("Selecione um template");
-        return;
-    }
-
-    const promptData = {
-        tipoAgente: selectedTemplate.tipo,
-        model: selectedModel,
-        provider: selectedProvider,
-        maxMessages: 10,
+    const initialState = {
+        name: "",
+        prompt: "",
+        model: "gpt-3.5-turbo-1106",
+        provider: "openai",
         maxTokens: 100,
         temperature: 1,
-        variables: {
-            ...templateVariables,
-            permitir_criar_agendamentos: selectedTemplate.tipo === "agendador"
+        maxMessages: 10,
+        canSendInternalMessages: false,
+        canTransferToAgent: false,
+        canChangeTag: false,
+        permitirCriarAgendamentos: false
+    };
+
+    const [prompt, setPrompt] = useState(initialState);
+
+    // Templates built-in com mais opÃ§Ãµes de agentes
+    const builtInTemplates = [
+        {
+            id: "personalizado",
+            tipo: "personalizado",
+            nome: "Prompt Personalizado",
+            descricao: "Crie seu prÃ³prio agente do zero com configuraÃ§Ãµes avanÃ§adas",
+            icon: "âš™ï¸",
+            permissoes: {
+                canSendInternalMessages: false,
+                canTransferToAgent: false,
+                canChangeTag: false,
+                permitirCriarAgendamentos: false
+            }
+        },
+        {
+            id: "atendimento",
+            tipo: "atendimento",
+            nome: "Atendimento ao Cliente",
+            descricao: "Agente especializado em atender clientes com cordialidade e eficiÃªncia",
+            icon: "ðŸ‘¤",
+            promptBase: "VocÃª Ã© um assistente de atendimento ao cliente profissional e cordial. Sua missÃ£o Ã© ajudar os clientes de forma clara, educada e eficiente. Sempre mantenha um tom {tom_resposta} e seja prestativo. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: true,
+                canChangeTag: true,
+                permitirCriarAgendamentos: false
+            }
+        },
+        {
+            id: "vendas",
+            tipo: "vendas",
+            nome: "Consultor de Vendas",
+            descricao: "Agente focado em converter leads e fechar vendas com persuasÃ£o",
+            icon: "ðŸ’¼",
+            promptBase: "VocÃª Ã© um consultor de vendas experiente e persuasivo. Seu objetivo Ã© entender as necessidades do cliente e apresentar soluÃ§Ãµes que agreguem valor. Use um tom {tom_resposta} e seja convincente sem ser invasivo. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: true,
+                canChangeTag: true,
+                permitirCriarAgendamentos: true
+            }
+        },
+        {
+            id: "suporte",
+            tipo: "suporte",
+            nome: "Suporte TÃ©cnico",
+            descricao: "Especialista em resolver problemas tÃ©cnicos e orientar usuÃ¡rios",
+            icon: "ðŸ”§",
+            promptBase: "VocÃª Ã© um especialista em suporte tÃ©cnico. Sua funÃ§Ã£o Ã© diagnosticar problemas, fornecer soluÃ§Ãµes claras e orientar os usuÃ¡rios passo a passo. Mantenha um tom {tom_resposta} e seja paciente e didÃ¡tico. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: true,
+                canChangeTag: true,
+                permitirCriarAgendamentos: false
+            }
+        },
+        {
+            id: "agendador",
+            tipo: "agendador",
+            nome: "Agendador de Compromissos",
+            descricao: "Gerencia agendamentos e organiza compromissos automaticamente",
+            icon: "ðŸ“…",
+            promptBase: "VocÃª Ã© um assistente de agendamentos. Sua funÃ§Ã£o Ã© ajudar a marcar, remarcar e gerenciar compromissos de forma organizada. Use um tom {tom_resposta} e seja preciso com datas e horÃ¡rios. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: false,
+                canChangeTag: true,
+                permitirCriarAgendamentos: true
+            }
+        },
+        {
+            id: "faq",
+            tipo: "faq",
+            nome: "Respondedor de FAQ",
+            descricao: "Responde perguntas frequentes de forma rÃ¡pida e precisa",
+            icon: "â“",
+            promptBase: "VocÃª Ã© um assistente especializado em responder perguntas frequentes. ForneÃ§a respostas claras, diretas e precisas. Use um tom {tom_resposta} e seja objetivo. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: false,
+                canTransferToAgent: true,
+                canChangeTag: false,
+                permitirCriarAgendamentos: false
+            }
+        },
+        {
+            id: "triagem",
+            tipo: "triagem",
+            nome: "Triagem Inteligente",
+            descricao: "Classifica e direciona conversas para os setores corretos",
+            icon: "ðŸŽ¯",
+            promptBase: "VocÃª Ã© um assistente de triagem. Sua funÃ§Ã£o Ã© entender a necessidade do cliente e direcionÃ¡-lo para o setor ou pessoa adequada. Use um tom {tom_resposta} e seja eficiente na classificaÃ§Ã£o. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: true,
+                canChangeTag: true,
+                permitirCriarAgendamentos: false
+            }
+        },
+        {
+            id: "cobranca",
+            tipo: "cobranca",
+            nome: "Assistente de CobranÃ§a",
+            descricao: "Gerencia cobranÃ§as e pagamentos com profissionalismo",
+            icon: "ðŸ’°",
+            promptBase: "VocÃª Ã© um assistente de cobranÃ§a profissional. Sua funÃ§Ã£o Ã© lembrar sobre pagamentos pendentes de forma educada e ajudar com dÃºvidas sobre faturas. Use um tom {tom_resposta} e seja firme mas respeitoso. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: true,
+                canChangeTag: true,
+                permitirCriarAgendamentos: false
+            }
+        },
+        {
+            id: "feedback",
+            tipo: "feedback",
+            nome: "Coletor de Feedback",
+            descricao: "Coleta avaliaÃ§Ãµes e sugestÃµes dos clientes",
+            icon: "â­",
+            promptBase: "VocÃª Ã© um assistente de feedback. Sua funÃ§Ã£o Ã© coletar avaliaÃ§Ãµes, opiniÃµes e sugestÃµes dos clientes de forma amigÃ¡vel. Use um tom {tom_resposta} e incentive respostas honestas. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: false,
+                canChangeTag: true,
+                permitirCriarAgendamentos: false
+            }
         }
+    ];
+
+    useEffect(() => {
+        const fetchPrompt = async () => {
+            if (!promptId) {
+                setPrompt(initialState);
+                setSelectedProvider("openai");
+                setSelectedModel("gpt-3.5-turbo-1106");
+                setSelectedTemplate(null);
+                setTemplateVariables({
+                    nome_agente: "",
+                    tom_resposta: "neutro",
+                    observacoes: ""
+                });
+            } else {
+                try {
+                    const { data } = await api.get(`/prompt/${promptId}`);
+                    setPrompt({
+                        name: data.name || "",
+                        prompt: data.prompt || "",
+                        model: data.model || "gpt-3.5-turbo-1106",
+                        provider: data.provider || "openai",
+                        maxTokens: data.maxTokens || 100,
+                        temperature: data.temperature !== undefined ? data.temperature : 1,
+                        maxMessages: data.maxMessages || 10,
+                        canSendInternalMessages: data.canSendInternalMessages === true,
+                        canTransferToAgent: data.canTransferToAgent === true,
+                        canChangeTag: data.canChangeTag === true,
+                        permitirCriarAgendamentos: data.permitirCriarAgendamentos === true
+                    });
+
+                    setSelectedModel(data.model || "gpt-3.5-turbo-1106");
+                    setSelectedProvider(data.provider || "openai");
+                } catch (err) {
+                    toastError(err);
+                }
+            }
+        };
+
+        const checkApiKeys = async () => {
+            setLoadingApiKeyStatus(true);
+            try {
+                const { data } = await api.get("/settings");
+                const geminiKey = data.find(s => s.key === "geminiApiKey");
+                const openaiKey = data.find(s => s.key === "openaiApiKey");
+
+                setApiKeyStatus({
+                    gemini: !!geminiKey?.value,
+                    openai: !!openaiKey?.value
+                });
+            } catch (err) {
+                console.error("Erro ao verificar API keys:", err);
+            } finally {
+                setLoadingApiKeyStatus(false);
+            }
+        };
+
+        if (open) {
+            fetchPrompt();
+            checkApiKeys();
+        }
+    }, [promptId, open]);
+
+    const handleClose = () => {
+        setPrompt(initialState);
+        setSelectedModel("gpt-3.5-turbo-1106");
+        setSelectedProvider("openai");
+        onClose();
     };
 
-    try {
-        await api.post("/prompt-templates/create", promptData);
-        toast.success(i18n.t("promptModal.success"));
-        refreshPrompts();
-        handleClose();
-    } catch (err) {
-        toastError(err);
-    }
-};
-
-const handleSavePrompt = async values => {
-    // Verificar se há API key configurada para o provider selecionado
-    if (selectedProvider === "openai" && !apiKeyStatus.openai) {
-        toast.error(
-            "Para usar OpenAI, configure a API Key em Configurações → Integrações → Chave da API do OpenAI"
-        );
-        return;
-    }
-
-    if (selectedProvider === "gemini" && !apiKeyStatus.gemini) {
-        toast.error(
-            "Para usar Gemini, configure a API Key em Configurações → Integrações → Chave da API do Gemini"
-        );
-        return;
-    }
-
-    const promptData = {
-        ...values,
-        model: selectedModel,
-        provider: selectedProvider
+    const handleChangeModel = (e) => {
+        const newModel = e.target.value;
+        setSelectedModel(newModel);
+        // Atualizar tambÃ©m no estado do prompt para sincronizar com Formik
+        setPrompt(prev => ({ ...prev, model: newModel }));
     };
 
-    // Não enviar apiKey - será buscada das Settings
-    delete promptData.apiKey;
-    try {
-        if (promptId) {
-            await api.put(`/prompt/${promptId}`, promptData);
+    const handleChangeProvider = (e) => {
+        const newProvider = e.target.value;
+        setSelectedProvider(newProvider);
+        // Se mudar para Gemini, resetar modelo para o padrÃ£o do Gemini
+        let defaultModel;
+        if (newProvider === "gemini") {
+            defaultModel = "gemini-2.5-flash";
         } else {
-            await api.post("/prompt", promptData);
+            defaultModel = "gpt-3.5-turbo-1106";
         }
-        toast.success(i18n.t("promptModal.success"));
-        refreshPrompts();
-    } catch (err) {
-        toastError(err);
-    }
-    handleClose();
-};
+        setSelectedModel(defaultModel);
+        // Atualizar tambÃ©m no estado do prompt
+        setPrompt(prev => ({ ...prev, provider: newProvider, model: defaultModel }));
+    };
 
-return (
-    <div className={classes.root}>
-        <Dialog
-            open={open}
-            onClose={handleClose}
-            maxWidth="md"
-            scroll="paper"
-            fullWidth
-        >
-            <DialogTitle id="form-dialog-title">
-                {promptId
-                    ? `${i18n.t("promptModal.title.edit")}`
-                    : `${i18n.t("promptModal.title.add")}`}
-            </DialogTitle>
-            <Formik
-                initialValues={prompt}
-                enableReinitialize={true}
-                validationSchema={getPromptSchema(selectedProvider)}
-                onSubmit={(values, actions) => {
-                    setTimeout(() => {
-                        handleSavePrompt(values);
-                        actions.setSubmitting(false);
-                    }, 400);
-                }}
+    const handleSaveTemplate = async () => {
+        if (!selectedTemplate) {
+            toast.error("Selecione um template");
+            return;
+        }
+
+        const promptData = {
+            tipoAgente: selectedTemplate.tipo,
+            model: selectedModel,
+            provider: selectedProvider,
+            maxMessages: 10,
+            maxTokens: 100,
+            temperature: 1,
+            variables: {
+                ...templateVariables,
+                permitir_criar_agendamentos: selectedTemplate.tipo === "agendador"
+            }
+        };
+
+        try {
+            await api.post("/prompt-templates/create", promptData);
+            toast.success(i18n.t("promptModal.success"));
+            refreshPrompts();
+            handleClose();
+        } catch (err) {
+            toastError(err);
+        }
+    };
+
+    const handleSavePrompt = async values => {
+        // Verificar se hÃ¡ API key configurada para o provider selecionado
+        if (selectedProvider === "openai" && !apiKeyStatus.openai) {
+            toast.error(
+                "Para usar OpenAI, configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do OpenAI"
+            );
+            return;
+        }
+
+        if (selectedProvider === "gemini" && !apiKeyStatus.gemini) {
+            toast.error(
+                "Para usar Gemini, configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do Gemini"
+            );
+            return;
+        }
+
+        const promptData = {
+            ...values,
+            model: selectedModel,
+            provider: selectedProvider
+        };
+
+        // NÃ£o enviar apiKey - serÃ¡ buscada das Settings
+        delete promptData.apiKey;
+        try {
+            if (promptId) {
+                await api.put(`/prompt/${promptId}`, promptData);
+            } else {
+                await api.post("/prompt", promptData);
+            }
+            toast.success(i18n.t("promptModal.success"));
+            refreshPrompts();
+        } catch (err) {
+            toastError(err);
+        }
+        handleClose();
+    };
+
+    return (
+        <div className={classes.root}>
+            <Dialog
+                open={open}
+                onClose={handleClose}
+                maxWidth="md"
+                scroll="paper"
+                fullWidth
             >
-                {({ touched, errors, isSubmitting, values }) => (
-                    <Form style={{ width: "100%" }}>
-                        <DialogContent dividers>
-                            {!promptId && (
-                                <>
-                                    <div style={{ marginBottom: 16 }}>
-                                        <h3 style={{ margin: "0 0 8px 0", fontSize: 18, fontWeight: 600 }}>
-                                            Escolha o tipo de agente
-                                        </h3>
-                                        <p style={{ margin: 0, fontSize: 14, color: "#666" }}>
-                                            Selecione um template pré-definido ou crie um prompt personalizado
-                                        </p>
-                                    </div>
+                <DialogTitle id="form-dialog-title">
+                    {promptId
+                        ? `${i18n.t("promptModal.title.edit")}`
+                        : `${i18n.t("promptModal.title.add")}`}
+                </DialogTitle>
+                <Formik
+                    initialValues={prompt}
+                    enableReinitialize={true}
+                    validationSchema={getPromptSchema(selectedProvider)}
+                    onSubmit={(values, actions) => {
+                        setTimeout(() => {
+                            handleSavePrompt(values);
+                            actions.setSubmitting(false);
+                        }, 400);
+                    }}
+                >
+                    {({ touched, errors, isSubmitting, values }) => (
+                        <Form style={{ width: "100%" }}>
+                            <DialogContent dividers>
+                                {!promptId && (
+                                    <>
+                                        <div style={{ marginBottom: 16 }}>
+                                            <h3 style={{ margin: "0 0 8px 0", fontSize: 18, fontWeight: 600 }}>
+                                                Escolha o tipo de agente
+                                            </h3>
+                                            <p style={{ margin: 0, fontSize: 14, color: "#666" }}>
+                                                Selecione um template prÃ©-definido ou crie um prompt personalizado
+                                            </p>
+                                        </div>
 
-                                    <div className={classes.cardsGrid}>
-                                        {builtInTemplates.map((template) => (
-                                            <div
-                                                key={template.id}
-                                                className={`${classes.templateCard} ${selectedTemplate?.id === template.id
+                                        <div className={classes.cardsGrid}>
+                                            {builtInTemplates.map((template) => (
+                                                <div
+                                                    key={template.id}
+                                                    className={`${classes.templateCard} ${selectedTemplate?.id === template.id
                                                         ? classes.templateCardSelected
                                                         : ""
-                                                    }`}
-                                                onClick={() => {
-                                                    setSelectedTemplate(template);
-                                                    // Inicializar permissões customizadas com as do template
-                                                    setCustomPermissions({ ...template.permissoes });
-                                                    if (template.tipo !== "personalizado") {
-                                                        setTemplateVariables({
-                                                            nome_agente: "",
-                                                            tom_resposta: "neutro",
-                                                            observacoes: ""
-                                                        });
-                                                    }
-                                                }}
-                                            >
-                                                <div className={classes.cardIcon}>{template.icon}</div>
-                                                <div className={classes.cardTitle}>{template.nome}</div>
-                                                <div className={classes.cardDescription}>
-                                                    {template.descricao}
+                                                        }`}
+                                                    onClick={() => {
+                                                        setSelectedTemplate(template);
+                                                        // Inicializar permissÃµes customizadas com as do template
+                                                        setCustomPermissions({ ...template.permissoes });
+                                                        if (template.tipo !== "personalizado") {
+                                                            setTemplateVariables({
+                                                                nome_agente: "",
+                                                                tom_resposta: "neutro",
+                                                                observacoes: ""
+                                                            });
+                                                        }
+                                                    }}
+                                                >
+                                                    <div className={classes.cardIcon}>{template.icon}</div>
+                                                    <div className={classes.cardTitle}>{template.nome}</div>
+                                                    <div className={classes.cardDescription}>
+                                                        {template.descricao}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
 
-                                    {selectedTemplate && selectedTemplate.tipo !== "personalizado" && (
-                                        <>
-                                            <Field
-                                                as={TextField}
-                                                label="Nome do Agente"
-                                                name="nome_agente"
-                                                value={templateVariables.nome_agente}
-                                                onChange={(e) => setTemplateVariables({
-                                                    ...templateVariables,
-                                                    nome_agente: e.target.value
-                                                })}
-                                                variant="outlined"
-                                                margin="dense"
-                                                fullWidth
-                                            />
-
-                                            <FormControl fullWidth margin="dense" variant="outlined">
-                                                <InputLabel id="tom-resposta-label">Tom de Resposta</InputLabel>
-                                                <Select
-                                                    labelId="tom-resposta-label"
-                                                    id="tom-resposta-select"
-                                                    value={templateVariables.tom_resposta}
+                                        {selectedTemplate && selectedTemplate.tipo !== "personalizado" && (
+                                            <>
+                                                <Field
+                                                    as={TextField}
+                                                    label="Nome do Agente"
+                                                    name="nome_agente"
+                                                    value={templateVariables.nome_agente}
                                                     onChange={(e) => setTemplateVariables({
                                                         ...templateVariables,
-                                                        tom_resposta: e.target.value
+                                                        nome_agente: e.target.value
                                                     })}
-                                                    label="Tom de Resposta"
-                                                >
-                                                    <MenuItem value="formal">Formal</MenuItem>
-                                                    <MenuItem value="neutro">Neutro</MenuItem>
-                                                    <MenuItem value="informal">Informal</MenuItem>
-                                                </Select>
-                                            </FormControl>
+                                                    variant="outlined"
+                                                    margin="dense"
+                                                    fullWidth
+                                                />
 
-                                            <Field
-                                                as={TextField}
-                                                label="Observações Adicionais"
-                                                name="observacoes"
-                                                value={templateVariables.observacoes}
-                                                onChange={(e) => setTemplateVariables({
-                                                    ...templateVariables,
-                                                    observacoes: e.target.value
-                                                })}
-                                                variant="outlined"
-                                                margin="dense"
-                                                fullWidth
-                                                multiline
-                                                rows={3}
-                                                helperText="Observações específicas que serão adicionadas ao prompt base"
-                                            />
-
-                                            <FormControl fullWidth margin="dense" variant="outlined">
-                                                <InputLabel id="provider-select-label">Provider</InputLabel>
-                                                <Select
-                                                    labelId="provider-select-label"
-                                                    id="provider-select"
-                                                    value={selectedProvider}
-                                                    onChange={handleChangeProvider}
-                                                    label="Provider"
-                                                >
-                                                    <MenuItem value="openai">OpenAI</MenuItem>
-                                                    <MenuItem value="gemini">Gemini</MenuItem>
-                                                </Select>
-                                            </FormControl>
-
-                                            {selectedProvider === "openai" && (
                                                 <FormControl fullWidth margin="dense" variant="outlined">
-                                                    <TextField
-                                                        label="API Key do OpenAI"
-                                                        value={apiKeyStatus.openai
-                                                            ? "✓ API Key configurada em Configurações → Integrações"
-                                                            : "⚠ API Key não configurada"}
-                                                        variant="outlined"
-                                                        margin="dense"
-                                                        fullWidth
-                                                        disabled
-                                                        error={!apiKeyStatus.openai}
-                                                        helperText={apiKeyStatus.openai
-                                                            ? "A API Key será obtida das configurações da empresa"
-                                                            : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
-                                                    />
-                                                </FormControl>
-                                            )}
-
-                                            {selectedProvider === "gemini" && (
-                                                <FormControl fullWidth margin="dense" variant="outlined">
-                                                    <TextField
-                                                        label="API Key do Gemini"
-                                                        value={apiKeyStatus.gemini
-                                                            ? "✓ API Key configurada em Configurações → Integrações"
-                                                            : "⚠ API Key não configurada"}
-                                                        variant="outlined"
-                                                        margin="dense"
-                                                        fullWidth
-                                                        disabled
-                                                        error={!apiKeyStatus.gemini}
-                                                        helperText={apiKeyStatus.gemini
-                                                            ? "A API Key será obtida das configurações da empresa"
-                                                            : "Configure a API Key em Configurações → Integrações → Chave da API do Gemini"}
-                                                    />
-                                                </FormControl>
-                                            )}
-
-                                            <div className={classes.permissionsSection}>
-                                                <div className={classes.permissionsTitle}>
-                                                    Permissões do Agente
-                                                </div>
-                                                <div className={classes.permissionsGrid}>
-                                                    <FormControlLabel
-                                                        control={
-                                                            <Checkbox
-                                                                checked={customPermissions.canSendInternalMessages}
-                                                                onChange={(e) => setCustomPermissions({
-                                                                    ...customPermissions,
-                                                                    canSendInternalMessages: e.target.checked
-                                                                })}
-                                                                color="primary"
-                                                            />
-                                                        }
-                                                        label="Enviar Mensagens Internas"
-                                                    />
-                                                    <FormControlLabel
-                                                        control={
-                                                            <Checkbox
-                                                                checked={customPermissions.canTransferToAgent}
-                                                                onChange={(e) => setCustomPermissions({
-                                                                    ...customPermissions,
-                                                                    canTransferToAgent: e.target.checked
-                                                                })}
-                                                                color="primary"
-                                                            />
-                                                        }
-                                                        label="Transferir para Agente"
-                                                    />
-                                                    <FormControlLabel
-                                                        control={
-                                                            <Checkbox
-                                                                checked={customPermissions.canChangeTag}
-                                                                onChange={(e) => setCustomPermissions({
-                                                                    ...customPermissions,
-                                                                    canChangeTag: e.target.checked
-                                                                })}
-                                                                color="primary"
-                                                            />
-                                                        }
-                                                        label="Alterar Tag"
-                                                    />
-                                                    <FormControlLabel
-                                                        control={
-                                                            <Checkbox
-                                                                checked={customPermissions.permitirCriarAgendamentos}
-                                                                onChange={(e) => setCustomPermissions({
-                                                                    ...customPermissions,
-                                                                    permitirCriarAgendamentos: e.target.checked
-                                                                })}
-                                                                color="primary"
-                                                            />
-                                                        }
-                                                        label="Criar Agendamentos"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {selectedTemplate && selectedTemplate.tipo === "personalizado" && (
-                                        <>
-                                            <Field
-                                                as={TextField}
-                                                label={i18n.t("promptModal.form.name")}
-                                                name="name"
-                                                error={touched.name && Boolean(errors.name)}
-                                                helperText={touched.name && errors.name}
-                                                variant="outlined"
-                                                margin="dense"
-                                                fullWidth
-                                            />
-                                            <FormControl fullWidth margin="dense" variant="outlined">
-                                                <InputLabel id="provider-select-label">Provider</InputLabel>
-                                                <Select
-                                                    labelId="provider-select-label"
-                                                    id="provider-select"
-                                                    value={selectedProvider}
-                                                    onChange={handleChangeProvider}
-                                                    label="Provider"
-                                                >
-                                                    <MenuItem value="openai">OpenAI</MenuItem>
-                                                    <MenuItem value="gemini">Gemini</MenuItem>
-                                                </Select>
-                                            </FormControl>
-                                            {selectedProvider === "openai" && (
-                                                <FormControl fullWidth margin="dense" variant="outlined">
-                                                    <TextField
-                                                        label="API Key do OpenAI"
-                                                        value={apiKeyStatus.openai
-                                                            ? "✓ API Key configurada em Configurações → Integrações"
-                                                            : "⚠ API Key não configurada"}
-                                                        variant="outlined"
-                                                        margin="dense"
-                                                        fullWidth
-                                                        disabled
-                                                        error={!apiKeyStatus.openai}
-                                                        helperText={apiKeyStatus.openai
-                                                            ? "A API Key será obtida das configurações da empresa"
-                                                            : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
-                                                    />
-                                                </FormControl>
-                                            )}
-                                            {selectedProvider === "gemini" && (
-                                                <FormControl fullWidth margin="dense" variant="outlined">
-                                                    <TextField
-                                                        label="API Key do Gemini"
-                                                        value={apiKeyStatus.gemini
-                                                            ? "✓ API Key configurada em Configurações → Integrações"
-                                                            : "⚠ API Key não configurada"}
-                                                        variant="outlined"
-                                                        margin="dense"
-                                                        fullWidth
-                                                        disabled
-                                                        error={!apiKeyStatus.gemini}
-                                                        helperText={apiKeyStatus.gemini
-                                                            ? "A API Key será obtida das configurações da empresa"
-                                                            : "Configure a API Key em Configurações → Integrações → Chave da API do Gemini"}
-                                                    />
-                                                </FormControl>
-                                            )}
-                                            <Field
-                                                as={TextField}
-                                                label={i18n.t("promptModal.form.prompt")}
-                                                name="prompt"
-                                                error={touched.prompt && Boolean(errors.prompt)}
-                                                helperText={touched.prompt && errors.prompt}
-                                                variant="outlined"
-                                                margin="dense"
-                                                fullWidth
-                                                rows={10}
-                                                multiline={true}
-                                            />
-                                            <FormControlLabel
-                                                control={
-                                                    <Field
-                                                        as={Checkbox}
-                                                        name="canSendInternalMessages"
-                                                        color="primary"
-                                                    />
-                                                }
-                                                label={i18n.t("promptModal.form.canSendInternalMessages")}
-                                            />
-
-                                            <FormControlLabel
-                                                control={
-                                                    <Field
-                                                        as={Checkbox}
-                                                        name="canTransferToAgent"
-                                                        color="primary"
-                                                    />
-                                                }
-                                                label={i18n.t("promptModal.form.canTransferToAgent")}
-                                            />
-
-                                            <FormControlLabel
-                                                control={
-                                                    <Field
-                                                        as={Checkbox}
-                                                        name="canChangeTag"
-                                                        color="primary"
-                                                    />
-                                                }
-                                                label={i18n.t("promptModal.form.canChangeTag")}
-                                            />
-
-                                            <FormControlLabel
-                                                control={
-                                                    <Field
-                                                        as={Checkbox}
-                                                        name="permitirCriarAgendamentos"
-                                                        color="primary"
-                                                    />
-                                                }
-                                                label={i18n.t("promptModal.form.permitirCriarAgendamentos")}
-                                            />
-
-                                            <div className={classes.multFieldLine}>
-                                                <FormControl fullWidth margin="dense" variant="outlined">
-                                                    <InputLabel id="model-select-label" shrink={!!selectedModel}>
-                                                        {i18n.t("promptModal.form.model")}
-                                                    </InputLabel>
+                                                    <InputLabel id="tom-resposta-label">Tom de Resposta</InputLabel>
                                                     <Select
-                                                        labelId="model-select-label"
-                                                        id="model-select"
-                                                        value={selectedModel}
-                                                        onChange={handleChangeModel}
-                                                        displayEmpty={false}
+                                                        labelId="tom-resposta-label"
+                                                        id="tom-resposta-select"
+                                                        value={templateVariables.tom_resposta}
+                                                        onChange={(e) => setTemplateVariables({
+                                                            ...templateVariables,
+                                                            tom_resposta: e.target.value
+                                                        })}
+                                                        label="Tom de Resposta"
                                                     >
-                                                        {selectedProvider === "openai" ? (
-                                                            <>
-                                                                <MenuItem value="gpt-3.5-turbo-1106">
-                                                                    GPT 3.5 turbo
-                                                                </MenuItem>
-                                                                <MenuItem value="gpt-4o-mini">
-                                                                    GPT 4.0 Mini
-                                                                </MenuItem>
-                                                                <MenuItem value="gpt-4o">
-                                                                    GPT 4.0
-                                                                </MenuItem>
-                                                            </>
-                                                        ) : (
-                                                            <MenuItem value="gemini-2.5-flash">
-                                                                Gemini 2.5 Flash
-                                                            </MenuItem>
-                                                        )}
+                                                        <MenuItem value="formal">Formal</MenuItem>
+                                                        <MenuItem value="neutro">Neutro</MenuItem>
+                                                        <MenuItem value="informal">Informal</MenuItem>
                                                     </Select>
                                                 </FormControl>
+
                                                 <Field
                                                     as={TextField}
-                                                    label={i18n.t("promptModal.form.temperature")}
-                                                    name="temperature"
-                                                    error={touched.temperature && Boolean(errors.temperature)}
-                                                    helperText={touched.temperature && errors.temperature}
+                                                    label="ObservaÃ§Ãµes Adicionais"
+                                                    name="observacoes"
+                                                    value={templateVariables.observacoes}
+                                                    onChange={(e) => setTemplateVariables({
+                                                        ...templateVariables,
+                                                        observacoes: e.target.value
+                                                    })}
                                                     variant="outlined"
                                                     margin="dense"
                                                     fullWidth
-                                                    type="number"
-                                                    inputProps={{
-                                                        step: "0.1",
-                                                        min: "0",
-                                                        max: "1"
-                                                    }}
+                                                    multiline
+                                                    rows={3}
+                                                    helperText="ObservaÃ§Ãµes especÃ­ficas que serÃ£o adicionadas ao prompt base"
                                                 />
-                                            </div>
 
-                                            <div className={classes.multFieldLine}>
-                                                <Field
-                                                    as={TextField}
-                                                    label={i18n.t("promptModal.form.max_tokens")}
-                                                    name="maxTokens"
-                                                    error={touched.maxTokens && Boolean(errors.maxTokens)}
-                                                    helperText={touched.maxTokens && errors.maxTokens}
-                                                    variant="outlined"
-                                                    margin="dense"
-                                                    fullWidth
-                                                />
-                                                <Field
-                                                    as={TextField}
-                                                    label={i18n.t("promptModal.form.max_messages")}
-                                                    name="maxMessages"
-                                                    error={touched.maxMessages && Boolean(errors.maxMessages)}
-                                                    helperText={touched.maxMessages && errors.maxMessages}
-                                                    variant="outlined"
-                                                    margin="dense"
-                                                    fullWidth
-                                                />
-                                            </div>
-                                        </>
-                                    )}
-                                </>
-                            )}
+                                                <FormControl fullWidth margin="dense" variant="outlined">
+                                                    <InputLabel id="provider-select-label">Provider</InputLabel>
+                                                    <Select
+                                                        labelId="provider-select-label"
+                                                        id="provider-select"
+                                                        value={selectedProvider}
+                                                        onChange={handleChangeProvider}
+                                                        label="Provider"
+                                                    >
+                                                        <MenuItem value="openai">OpenAI</MenuItem>
+                                                        <MenuItem value="gemini">Gemini</MenuItem>
+                                                    </Select>
+                                                </FormControl>
 
-                            {promptId && (
-                                <>
-                                    <Field
-                                        as={TextField}
-                                        label={i18n.t("promptModal.form.name")}
-                                        name="name"
-                                        error={touched.name && Boolean(errors.name)}
-                                        helperText={touched.name && errors.name}
-                                        variant="outlined"
-                                        margin="dense"
-                                        fullWidth
-                                    />
-                                    <FormControl fullWidth margin="dense" variant="outlined">
-                                        <InputLabel id="provider-select-label">Provider</InputLabel>
-                                        <Select
-                                            labelId="provider-select-label"
-                                            id="provider-select"
-                                            value={selectedProvider}
-                                            onChange={handleChangeProvider}
-                                            label="Provider"
-                                        >
-                                            <MenuItem value="openai">OpenAI</MenuItem>
-                                            <MenuItem value="gemini">Gemini</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                    {selectedProvider === "openai" && (
-                                        <FormControl fullWidth margin="dense" variant="outlined">
-                                            <TextField
-                                                label="API Key do OpenAI"
-                                                value={apiKeyStatus.openai
-                                                    ? "✓ API Key configurada em Configurações → Integrações"
-                                                    : "⚠ API Key não configurada"}
-                                                variant="outlined"
-                                                margin="dense"
-                                                fullWidth
-                                                disabled
-                                                error={!apiKeyStatus.openai}
-                                                helperText={apiKeyStatus.openai
-                                                    ? "A API Key será obtida das configurações da empresa"
-                                                    : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
-                                            />
-                                        </FormControl>
-                                    )}
-                                    {selectedProvider === "gemini" && (
-                                        <FormControl fullWidth margin="dense" variant="outlined">
-                                            <TextField
-                                                label="API Key do Gemini"
-                                                value={apiKeyStatus.gemini
-                                                    ? "✓ API Key configurada em Configurações → Integrações"
-                                                    : "⚠ API Key não configurada"}
-                                                variant="outlined"
-                                                margin="dense"
-                                                fullWidth
-                                                disabled
-                                                error={!apiKeyStatus.gemini}
-                                                helperText={apiKeyStatus.gemini
-                                                    ? "A API Key será obtida das configurações da empresa"
-                                                    : "Configure a API Key em Configurações → Integrações → Chave da API do Gemini"}
-                                            />
-                                        </FormControl>
-                                    )}
-                                    <Field
-                                        as={TextField}
-                                        label={i18n.t("promptModal.form.prompt")}
-                                        name="prompt"
-                                        error={touched.prompt && Boolean(errors.prompt)}
-                                        helperText={touched.prompt && errors.prompt}
-                                        variant="outlined"
-                                        margin="dense"
-                                        fullWidth
-                                        rows={10}
-                                        multiline={true}
-                                    />
-                                    <FormControlLabel
-                                        control={
-                                            <Field
-                                                as={Checkbox}
-                                                name="canSendInternalMessages"
-                                                color="primary"
-                                            />
-                                        }
-                                        label={i18n.t("promptModal.form.canSendInternalMessages")}
-                                    />
-
-                                    <FormControlLabel
-                                        control={
-                                            <Field
-                                                as={Checkbox}
-                                                name="canTransferToAgent"
-                                                color="primary"
-                                            />
-                                        }
-                                        label={i18n.t("promptModal.form.canTransferToAgent")}
-                                    />
-
-                                    <FormControlLabel
-                                        control={
-                                            <Field
-                                                as={Checkbox}
-                                                name="canChangeTag"
-                                                color="primary"
-                                            />
-                                        }
-                                        label={i18n.t("promptModal.form.canChangeTag")}
-                                    />
-
-                                    <FormControlLabel
-                                        control={
-                                            <Field
-                                                as={Checkbox}
-                                                name="permitirCriarAgendamentos"
-                                                color="primary"
-                                            />
-                                        }
-                                        label={i18n.t("promptModal.form.permitirCriarAgendamentos")}
-                                    />
-
-                                    <div className={classes.multFieldLine}>
-                                        <FormControl fullWidth margin="dense" variant="outlined">
-                                            <InputLabel id="model-select-label" shrink={!!selectedModel}>
-                                                {i18n.t("promptModal.form.model")}
-                                            </InputLabel>
-                                            <Select
-                                                labelId="model-select-label"
-                                                id="model-select"
-                                                value={selectedModel}
-                                                onChange={handleChangeModel}
-                                                displayEmpty={false}
-                                            >
-                                                {selectedProvider === "openai" ? (
-                                                    <>
-                                                        <MenuItem value="gpt-3.5-turbo-1106">
-                                                            GPT 3.5 turbo
-                                                        </MenuItem>
-                                                        <MenuItem value="gpt-4o-mini">
-                                                            GPT 4.0 Mini
-                                                        </MenuItem>
-                                                        <MenuItem value="gpt-4o">
-                                                            GPT 4.0
-                                                        </MenuItem>
-                                                    </>
-                                                ) : (
-                                                    <MenuItem value="gemini-2.5-flash">
-                                                        Gemini 2.5 Flash
-                                                    </MenuItem>
+                                                {selectedProvider === "openai" && (
+                                                    <FormControl fullWidth margin="dense" variant="outlined">
+                                                        <TextField
+                                                            label="API Key do OpenAI"
+                                                            value={apiKeyStatus.openai
+                                                                ? "âœ“ API Key configurada em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes"
+                                                                : "âš  API Key nÃ£o configurada"}
+                                                            variant="outlined"
+                                                            margin="dense"
+                                                            fullWidth
+                                                            disabled
+                                                            error={!apiKeyStatus.openai}
+                                                            helperText={apiKeyStatus.openai
+                                                                ? "A API Key serÃ¡ obtida das configuraÃ§Ãµes da empresa"
+                                                                : "Configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do OpenAI"}
+                                                        />
+                                                    </FormControl>
                                                 )}
+
+                                                {selectedProvider === "gemini" && (
+                                                    <FormControl fullWidth margin="dense" variant="outlined">
+                                                        <TextField
+                                                            label="API Key do Gemini"
+                                                            value={apiKeyStatus.gemini
+                                                                ? "âœ“ API Key configurada em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes"
+                                                                : "âš  API Key nÃ£o configurada"}
+                                                            variant="outlined"
+                                                            margin="dense"
+                                                            fullWidth
+                                                            disabled
+                                                            error={!apiKeyStatus.gemini}
+                                                            helperText={apiKeyStatus.gemini
+                                                                ? "A API Key serÃ¡ obtida das configuraÃ§Ãµes da empresa"
+                                                                : "Configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do Gemini"}
+                                                        />
+                                                    </FormControl>
+                                                )}
+
+                                                <div className={classes.permissionsSection}>
+                                                    <div className={classes.permissionsTitle}>
+                                                        PermissÃµes do Agente
+                                                    </div>
+                                                    <div className={classes.permissionsGrid}>
+                                                        <FormControlLabel
+                                                            control={
+                                                                <Checkbox
+                                                                    checked={customPermissions.canSendInternalMessages}
+                                                                    onChange={(e) => setCustomPermissions({
+                                                                        ...customPermissions,
+                                                                        canSendInternalMessages: e.target.checked
+                                                                    })}
+                                                                    color="primary"
+                                                                />
+                                                            }
+                                                            label="Enviar Mensagens Internas"
+                                                        />
+                                                        <FormControlLabel
+                                                            control={
+                                                                <Checkbox
+                                                                    checked={customPermissions.canTransferToAgent}
+                                                                    onChange={(e) => setCustomPermissions({
+                                                                        ...customPermissions,
+                                                                        canTransferToAgent: e.target.checked
+                                                                    })}
+                                                                    color="primary"
+                                                                />
+                                                            }
+                                                            label="Transferir para Agente"
+                                                        />
+                                                        <FormControlLabel
+                                                            control={
+                                                                <Checkbox
+                                                                    checked={customPermissions.canChangeTag}
+                                                                    onChange={(e) => setCustomPermissions({
+                                                                        ...customPermissions,
+                                                                        canChangeTag: e.target.checked
+                                                                    })}
+                                                                    color="primary"
+                                                                />
+                                                            }
+                                                            label="Alterar Tag"
+                                                        />
+                                                        <FormControlLabel
+                                                            control={
+                                                                <Checkbox
+                                                                    checked={customPermissions.permitirCriarAgendamentos}
+                                                                    onChange={(e) => setCustomPermissions({
+                                                                        ...customPermissions,
+                                                                        permitirCriarAgendamentos: e.target.checked
+                                                                    })}
+                                                                    color="primary"
+                                                                />
+                                                            }
+                                                            label="Criar Agendamentos"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </>
+                                        )}
+
+                                        {selectedTemplate && selectedTemplate.tipo === "personalizado" && (
+                                            <>
+                                                <Field
+                                                    as={TextField}
+                                                    label={i18n.t("promptModal.form.name")}
+                                                    name="name"
+                                                    error={touched.name && Boolean(errors.name)}
+                                                    helperText={touched.name && errors.name}
+                                                    variant="outlined"
+                                                    margin="dense"
+                                                    fullWidth
+                                                />
+                                                <FormControl fullWidth margin="dense" variant="outlined">
+                                                    <InputLabel id="provider-select-label">Provider</InputLabel>
+                                                    <Select
+                                                        labelId="provider-select-label"
+                                                        id="provider-select"
+                                                        value={selectedProvider}
+                                                        onChange={handleChangeProvider}
+                                                        label="Provider"
+                                                    >
+                                                        <MenuItem value="openai">OpenAI</MenuItem>
+                                                        <MenuItem value="gemini">Gemini</MenuItem>
+                                                    </Select>
+                                                </FormControl>
+                                                {selectedProvider === "openai" && (
+                                                    <FormControl fullWidth margin="dense" variant="outlined">
+                                                        <TextField
+                                                            label="API Key do OpenAI"
+                                                            value={apiKeyStatus.openai
+                                                                ? "âœ“ API Key configurada em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes"
+                                                                : "âš  API Key nÃ£o configurada"}
+                                                            variant="outlined"
+                                                            margin="dense"
+                                                            fullWidth
+                                                            disabled
+                                                            error={!apiKeyStatus.openai}
+                                                            helperText={apiKeyStatus.openai
+                                                                ? "A API Key serÃ¡ obtida das configuraÃ§Ãµes da empresa"
+                                                                : "Configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do OpenAI"}
+                                                        />
+                                                    </FormControl>
+                                                )}
+                                                {selectedProvider === "gemini" && (
+                                                    <FormControl fullWidth margin="dense" variant="outlined">
+                                                        <TextField
+                                                            label="API Key do Gemini"
+                                                            value={apiKeyStatus.gemini
+                                                                ? "âœ“ API Key configurada em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes"
+                                                                : "âš  API Key nÃ£o configurada"}
+                                                            variant="outlined"
+                                                            margin="dense"
+                                                            fullWidth
+                                                            disabled
+                                                            error={!apiKeyStatus.gemini}
+                                                            helperText={apiKeyStatus.gemini
+                                                                ? "A API Key serÃ¡ obtida das configuraÃ§Ãµes da empresa"
+                                                                : "Configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do Gemini"}
+                                                        />
+                                                    </FormControl>
+                                                )}
+                                                <Field
+                                                    as={TextField}
+                                                    label={i18n.t("promptModal.form.prompt")}
+                                                    name="prompt"
+                                                    error={touched.prompt && Boolean(errors.prompt)}
+                                                    helperText={touched.prompt && errors.prompt}
+                                                    variant="outlined"
+                                                    margin="dense"
+                                                    fullWidth
+                                                    rows={10}
+                                                    multiline={true}
+                                                />
+                                                <FormControlLabel
+                                                    control={
+                                                        <Field
+                                                            as={Checkbox}
+                                                            name="canSendInternalMessages"
+                                                            color="primary"
+                                                        />
+                                                    }
+                                                    label={i18n.t("promptModal.form.canSendInternalMessages")}
+                                                />
+
+                                                <FormControlLabel
+                                                    control={
+                                                        <Field
+                                                            as={Checkbox}
+                                                            name="canTransferToAgent"
+                                                            color="primary"
+                                                        />
+                                                    }
+                                                    label={i18n.t("promptModal.form.canTransferToAgent")}
+                                                />
+
+                                                <FormControlLabel
+                                                    control={
+                                                        <Field
+                                                            as={Checkbox}
+                                                            name="canChangeTag"
+                                                            color="primary"
+                                                        />
+                                                    }
+                                                    label={i18n.t("promptModal.form.canChangeTag")}
+                                                />
+
+                                                <FormControlLabel
+                                                    control={
+                                                        <Field
+                                                            as={Checkbox}
+                                                            name="permitirCriarAgendamentos"
+                                                            color="primary"
+                                                        />
+                                                    }
+                                                    label={i18n.t("promptModal.form.permitirCriarAgendamentos")}
+                                                />
+
+                                                <div className={classes.multFieldLine}>
+                                                    <FormControl fullWidth margin="dense" variant="outlined">
+                                                        <InputLabel id="model-select-label" shrink={!!selectedModel}>
+                                                            {i18n.t("promptModal.form.model")}
+                                                        </InputLabel>
+                                                        <Select
+                                                            labelId="model-select-label"
+                                                            id="model-select"
+                                                            value={selectedModel}
+                                                            onChange={handleChangeModel}
+                                                            displayEmpty={false}
+                                                        >
+                                                            {selectedProvider === "openai" ? (
+                                                                <>
+                                                                    <MenuItem value="gpt-3.5-turbo-1106">
+                                                                        GPT 3.5 turbo
+                                                                    </MenuItem>
+                                                                    <MenuItem value="gpt-4o-mini">
+                                                                        GPT 4.0 Mini
+                                                                    </MenuItem>
+                                                                    <MenuItem value="gpt-4o">
+                                                                        GPT 4.0
+                                                                    </MenuItem>
+                                                                </>
+                                                            ) : (
+                                                                <MenuItem value="gemini-2.5-flash">
+                                                                    Gemini 2.5 Flash
+                                                                </MenuItem>
+                                                            )}
+                                                        </Select>
+                                                    </FormControl>
+                                                    <Field
+                                                        as={TextField}
+                                                        label={i18n.t("promptModal.form.temperature")}
+                                                        name="temperature"
+                                                        error={touched.temperature && Boolean(errors.temperature)}
+                                                        helperText={touched.temperature && errors.temperature}
+                                                        variant="outlined"
+                                                        margin="dense"
+                                                        fullWidth
+                                                        type="number"
+                                                        inputProps={{
+                                                            step: "0.1",
+                                                            min: "0",
+                                                            max: "1"
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                <div className={classes.multFieldLine}>
+                                                    <Field
+                                                        as={TextField}
+                                                        label={i18n.t("promptModal.form.max_tokens")}
+                                                        name="maxTokens"
+                                                        error={touched.maxTokens && Boolean(errors.maxTokens)}
+                                                        helperText={touched.maxTokens && errors.maxTokens}
+                                                        variant="outlined"
+                                                        margin="dense"
+                                                        fullWidth
+                                                    />
+                                                    <Field
+                                                        as={TextField}
+                                                        label={i18n.t("promptModal.form.max_messages")}
+                                                        name="maxMessages"
+                                                        error={touched.maxMessages && Boolean(errors.maxMessages)}
+                                                        helperText={touched.maxMessages && errors.maxMessages}
+                                                        variant="outlined"
+                                                        margin="dense"
+                                                        fullWidth
+                                                    />
+                                                </div>
+                                            </>
+                                        )}
+                                    </>
+                                )}
+
+                                {promptId && (
+                                    <>
+                                        <Field
+                                            as={TextField}
+                                            label={i18n.t("promptModal.form.name")}
+                                            name="name"
+                                            error={touched.name && Boolean(errors.name)}
+                                            helperText={touched.name && errors.name}
+                                            variant="outlined"
+                                            margin="dense"
+                                            fullWidth
+                                        />
+                                        <FormControl fullWidth margin="dense" variant="outlined">
+                                            <InputLabel id="provider-select-label">Provider</InputLabel>
+                                            <Select
+                                                labelId="provider-select-label"
+                                                id="provider-select"
+                                                value={selectedProvider}
+                                                onChange={handleChangeProvider}
+                                                label="Provider"
+                                            >
+                                                <MenuItem value="openai">OpenAI</MenuItem>
+                                                <MenuItem value="gemini">Gemini</MenuItem>
                                             </Select>
                                         </FormControl>
+                                        {selectedProvider === "openai" && (
+                                            <FormControl fullWidth margin="dense" variant="outlined">
+                                                <TextField
+                                                    label="API Key do OpenAI"
+                                                    value={apiKeyStatus.openai
+                                                        ? "âœ“ API Key configurada em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes"
+                                                        : "âš  API Key nÃ£o configurada"}
+                                                    variant="outlined"
+                                                    margin="dense"
+                                                    fullWidth
+                                                    disabled
+                                                    error={!apiKeyStatus.openai}
+                                                    helperText={apiKeyStatus.openai
+                                                        ? "A API Key serÃ¡ obtida das configuraÃ§Ãµes da empresa"
+                                                        : "Configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do OpenAI"}
+                                                />
+                                            </FormControl>
+                                        )}
+                                        {selectedProvider === "gemini" && (
+                                            <FormControl fullWidth margin="dense" variant="outlined">
+                                                <TextField
+                                                    label="API Key do Gemini"
+                                                    value={apiKeyStatus.gemini
+                                                        ? "âœ“ API Key configurada em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes"
+                                                        : "âš  API Key nÃ£o configurada"}
+                                                    variant="outlined"
+                                                    margin="dense"
+                                                    fullWidth
+                                                    disabled
+                                                    error={!apiKeyStatus.gemini}
+                                                    helperText={apiKeyStatus.gemini
+                                                        ? "A API Key serÃ¡ obtida das configuraÃ§Ãµes da empresa"
+                                                        : "Configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do Gemini"}
+                                                />
+                                            </FormControl>
+                                        )}
                                         <Field
                                             as={TextField}
-                                            label={i18n.t("promptModal.form.temperature")}
-                                            name="temperature"
-                                            error={touched.temperature && Boolean(errors.temperature)}
-                                            helperText={touched.temperature && errors.temperature}
+                                            label={i18n.t("promptModal.form.prompt")}
+                                            name="prompt"
+                                            error={touched.prompt && Boolean(errors.prompt)}
+                                            helperText={touched.prompt && errors.prompt}
                                             variant="outlined"
                                             margin="dense"
                                             fullWidth
-                                            type="number"
-                                            inputProps={{
-                                                step: "0.1",
-                                                min: "0",
-                                                max: "1"
-                                            }}
+                                            rows={10}
+                                            multiline={true}
                                         />
-                                    </div>
-
-                                    <div className={classes.multFieldLine}>
-                                        <Field
-                                            as={TextField}
-                                            label={i18n.t("promptModal.form.max_tokens")}
-                                            name="maxTokens"
-                                            error={touched.maxTokens && Boolean(errors.maxTokens)}
-                                            helperText={touched.maxTokens && errors.maxTokens}
-                                            variant="outlined"
-                                            margin="dense"
-                                            fullWidth
+                                        <FormControlLabel
+                                            control={
+                                                <Field
+                                                    as={Checkbox}
+                                                    name="canSendInternalMessages"
+                                                    color="primary"
+                                                />
+                                            }
+                                            label={i18n.t("promptModal.form.canSendInternalMessages")}
                                         />
-                                        <Field
-                                            as={TextField}
-                                            label={i18n.t("promptModal.form.max_messages")}
-                                            name="maxMessages"
-                                            error={touched.maxMessages && Boolean(errors.maxMessages)}
-                                            helperText={touched.maxMessages && errors.maxMessages}
-                                            variant="outlined"
-                                            margin="dense"
-                                            fullWidth
+
+                                        <FormControlLabel
+                                            control={
+                                                <Field
+                                                    as={Checkbox}
+                                                    name="canTransferToAgent"
+                                                    color="primary"
+                                                />
+                                            }
+                                            label={i18n.t("promptModal.form.canTransferToAgent")}
                                         />
-                                    </div>
-                                </>
-                            )}
-                        </DialogContent>
-                        <DialogActions>
-                            <Button
-                                onClick={handleClose}
-                                color="secondary"
-                                disabled={isSubmitting}
-                                variant="outlined"
-                            >
-                                {i18n.t("promptModal.buttons.cancel")}
-                            </Button>
-                            {promptId && (
-                                <Button
-                                    type="submit"
-                                    color="primary"
-                                    disabled={isSubmitting}
-                                    variant="contained"
-                                    className={classes.btnWrapper}
-                                >
-                                    {i18n.t("promptModal.buttons.okEdit")}
-                                    {isSubmitting && (
-                                        <CircularProgress
-                                            size={24}
-                                            className={classes.buttonProgress}
+
+                                        <FormControlLabel
+                                            control={
+                                                <Field
+                                                    as={Checkbox}
+                                                    name="canChangeTag"
+                                                    color="primary"
+                                                />
+                                            }
+                                            label={i18n.t("promptModal.form.canChangeTag")}
                                         />
-                                    )}
-                                </Button>
-                            )}
-                        </DialogActions>
-                        <Select
-                            labelId="creation-mode-label"
-                            id="creation-mode-select"
-                            value={creationMode}
-                            onChange={(e) => {
-                                setCreationMode(e.target.value);
-                                if (e.target.value === "template") {
-                                    setSelectedTemplate(null);
-                                }
-                            }}
-                            label="Modo de Criação"
-                        >
-                            <MenuItem value="personalizado">Personalizado (Avançado)</MenuItem>
-                            <MenuItem value="template">Template Pré-definido</MenuItem>
-                        </Select>
-                    </FormControl>
-                )}
 
-                {creationMode === "template" && !promptId && (
-                    <>
-                        <FormControl fullWidth margin="dense" variant="outlined">
-                            <InputLabel id="template-select-label">Tipo de Agente</InputLabel>
-                            <Select
-                                labelId="template-select-label"
-                                id="template-select"
-                                value={selectedTemplate?.tipo || ""}
-                                onChange={(e) => {
-                                    const template = templates.find(t => t.tipo === e.target.value);
-                                    setSelectedTemplate(template);
-                                    if (template) {
-                                        setTemplateVariables({
-                                            nome_agente: template.defaultVariables.nome_agente || "",
-                                            tom_resposta: template.defaultVariables.tom_resposta || "neutro",
-                                            observacoes: ""
-                                        });
-                                    }
-                                }}
-                                label="Tipo de Agente"
-                            >
-                                {templates.map((template) => (
-                                    <MenuItem key={template.tipo} value={template.tipo}>
-                                        {template.nome} - {template.descricao}
-                                    </MenuItem>
-                                ))}
-                            </Select>
-                        </FormControl>
-
-                        {selectedTemplate && (
-                            <>
-                                <Field
-                                    as={TextField}
-                                    label="Nome do Agente"
-                                    name="nome_agente"
-                                    value={templateVariables.nome_agente}
-                                    onChange={(e) => setTemplateVariables({
-                                        ...templateVariables,
-                                        nome_agente: e.target.value
-                                    })}
-                                    variant="outlined"
-                                    margin="dense"
-                                    fullWidth
-                                />
-
-                                <FormControl fullWidth margin="dense" variant="outlined">
-                                    <InputLabel id="tom-resposta-label">Tom de Resposta</InputLabel>
-                                    <Select
-                                        labelId="tom-resposta-label"
-                                        id="tom-resposta-select"
-                                        value={templateVariables.tom_resposta}
-                                        onChange={(e) => setTemplateVariables({
-                                            ...templateVariables,
-                                            tom_resposta: e.target.value
-                                        })}
-                                        label="Tom de Resposta"
-                                    >
-                                        <MenuItem value="formal">Formal</MenuItem>
-                                        <MenuItem value="neutro">Neutro</MenuItem>
-                                        <MenuItem value="informal">Informal</MenuItem>
-                                    </Select>
-                                </FormControl>
-
-                                <Field
-                                    as={TextField}
-                                    label="Observações Adicionais"
-                                    name="observacoes"
-                                    value={templateVariables.observacoes}
-                                    onChange={(e) => setTemplateVariables({
-                                        ...templateVariables,
-                                        observacoes: e.target.value
-                                    })}
-                                    variant="outlined"
-                                    margin="dense"
-                                    fullWidth
-                                    multiline
-                                    rows={3}
-                                    helperText="Observações específicas que serão adicionadas ao prompt base"
-                                />
-
-                                <FormControl fullWidth margin="dense" variant="outlined">
-                                    <InputLabel id="provider-select-label">Provider</InputLabel>
-                                    <Select
-                                        labelId="provider-select-label"
-                                        id="provider-select"
-                                        value={selectedProvider}
-                                        onChange={handleChangeProvider}
-                                        label="Provider"
-                                    >
-                                        <MenuItem value="openai">OpenAI</MenuItem>
-                                        <MenuItem value="gemini">Gemini</MenuItem>
-                                    </Select>
-                                </FormControl>
-
-                                {selectedProvider === "openai" && (
-                                    <FormControl fullWidth margin="dense" variant="outlined">
-                                        <TextField
-                                            label="API Key do OpenAI"
-                                            value={apiKeyStatus.openai
-                                                ? "✓ API Key configurada em Configurações → Integrações"
-                                                : "⚠ API Key não configurada"}
-                                            variant="outlined"
-                                            margin="dense"
-                                            fullWidth
-                                            disabled
-                                            error={!apiKeyStatus.openai}
-                                            helperText={apiKeyStatus.openai
-                                                ? "A API Key será obtida das configurações da empresa"
-                                                : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
+                                        <FormControlLabel
+                                            control={
+                                                <Field
+                                                    as={Checkbox}
+                                                    name="permitirCriarAgendamentos"
+                                                    color="primary"
+                                                />
+                                            }
+                                            label={i18n.t("promptModal.form.permitirCriarAgendamentos")}
                                         />
-                                    </FormControl>
-                                )}
 
-                                {selectedProvider === "gemini" && (
-                                    <FormControl fullWidth margin="dense" variant="outlined">
-                                        <TextField
-                                            label="API Key do Gemini"
-                                            value={apiKeyStatus.gemini
-                                                ? "✓ API Key configurada em Configurações → Integrações"
-                                                : "⚠ API Key não configurada"}
-                                            variant="outlined"
-                                            margin="dense"
-                                            fullWidth
-                                            disabled
-                                            error={!apiKeyStatus.gemini}
-                                            helperText={apiKeyStatus.gemini
-                                                ? "A API Key será obtida das configurações da empresa"
-                                                : "Configure a API Key em Configurações → Integrações → Chave da API do Gemini"}
-                                        />
-                                    </FormControl>
-                                )}
-
-                                {selectedTemplate.tipo === "agendador" && (
-                                    <FormControlLabel
-                                        control={
-                                            <Checkbox
-                                                checked={templateVariables.permitir_criar_agendamentos || false}
-                                                onChange={(e) => setTemplateVariables({
-                                                    ...templateVariables,
-                                                    permitir_criar_agendamentos: e.target.checked
-                                                })}
-                                                color="primary"
+                                        <div className={classes.multFieldLine}>
+                                            <FormControl fullWidth margin="dense" variant="outlined">
+                                                <InputLabel id="model-select-label" shrink={!!selectedModel}>
+                                                    {i18n.t("promptModal.form.model")}
+                                                </InputLabel>
+                                                <Select
+                                                    labelId="model-select-label"
+                                                    id="model-select"
+                                                    value={selectedModel}
+                                                    onChange={handleChangeModel}
+                                                    displayEmpty={false}
+                                                >
+                                                    {selectedProvider === "openai" ? (
+                                                        <>
+                                                            <MenuItem value="gpt-3.5-turbo-1106">
+                                                                GPT 3.5 turbo
+                                                            </MenuItem>
+                                                            <MenuItem value="gpt-4o-mini">
+                                                                GPT 4.0 Mini
+                                                            </MenuItem>
+                                                            <MenuItem value="gpt-4o">
+                                                                GPT 4.0
+                                                            </MenuItem>
+                                                        </>
+                                                    ) : (
+                                                        <MenuItem value="gemini-2.5-flash">
+                                                            Gemini 2.5 Flash
+                                                        </MenuItem>
+                                                    )}
+                                                </Select>
+                                            </FormControl>
+                                            <Field
+                                                as={TextField}
+                                                label={i18n.t("promptModal.form.temperature")}
+                                                name="temperature"
+                                                error={touched.temperature && Boolean(errors.temperature)}
+                                                helperText={touched.temperature && errors.temperature}
+                                                variant="outlined"
+                                                margin="dense"
+                                                fullWidth
+                                                type="number"
+                                                inputProps={{
+                                                    step: "0.1",
+                                                    min: "0",
+                                                    max: "1"
+                                                }}
                                             />
-                                        }
-                                        label="Permitir criar agendamentos"
-                                    />
+                                        </div>
+
+                                        <div className={classes.multFieldLine}>
+                                            <Field
+                                                as={TextField}
+                                                label={i18n.t("promptModal.form.max_tokens")}
+                                                name="maxTokens"
+                                                error={touched.maxTokens && Boolean(errors.maxTokens)}
+                                                helperText={touched.maxTokens && errors.maxTokens}
+                                                variant="outlined"
+                                                margin="dense"
+                                                fullWidth
+                                            />
+                                            <Field
+                                                as={TextField}
+                                                label={i18n.t("promptModal.form.max_messages")}
+                                                name="maxMessages"
+                                                error={touched.maxMessages && Boolean(errors.maxMessages)}
+                                                helperText={touched.maxMessages && errors.maxMessages}
+                                                variant="outlined"
+                                                margin="dense"
+                                                fullWidth
+                                            />
+                                        </div>
+                                    </>
                                 )}
-
-                                <div style={{ marginTop: 16, padding: 12, backgroundColor: "#f5f5f5", borderRadius: 4 }}>
-                                    <strong>Permissões do Template:</strong>
-                                    <ul style={{ margin: "8px 0", paddingLeft: 20 }}>
-                                        <li>Mensagens Internas: {selectedTemplate.permissoes.canSendInternalMessages ? "Sim" : "Não"}</li>
-                                        <li>Transferir para Agente: {selectedTemplate.permissoes.canTransferToAgent ? "Sim" : "Não"}</li>
-                                        <li>Alterar Tag: {selectedTemplate.permissoes.canChangeTag ? "Sim" : "Não"}</li>
-                                        <li>Criar Agendamentos: {selectedTemplate.permissoes.permitirCriarAgendamentos ? "Sim" : "Não"}</li>
-                                    </ul>
-                                </div>
-                            </>
-                        )}
-                    </>
-                )}
-
-                {creationMode === "personalizado" && (
-                    <>
-                        <Field
-                            as={TextField}
-                            label={i18n.t("promptModal.form.name")}
-                            name="name"
-                            error={touched.name && Boolean(errors.name)}
-                            helperText={touched.name && errors.name}
-                            variant="outlined"
-                            margin="dense"
-                            fullWidth
-                        />
-                        <FormControl fullWidth margin="dense" variant="outlined">
-                            <InputLabel id="provider-select-label">Provider</InputLabel>
-                            <Select
-                                labelId="provider-select-label"
-                                id="provider-select"
-                                value={selectedProvider}
-                                onChange={handleChangeProvider}
-                                label="Provider"
-                            >
-                                <MenuItem value="openai">OpenAI</MenuItem>
-                                <MenuItem value="gemini">Gemini</MenuItem>
-                            </Select>
-                        </FormControl>
-                        {selectedProvider === "openai" && (
-                            <FormControl fullWidth margin="dense" variant="outlined">
-                                <TextField
-                                    label="API Key do OpenAI"
-                                    value={apiKeyStatus.openai
-                                        ? "✓ API Key configurada em Configurações → Integrações"
-                                        : "⚠ API Key não configurada"}
+                            </DialogContent>
+                            <DialogActions>
+                                <Button
+                                    onClick={handleClose}
+                                    color="secondary"
+                                    disabled={isSubmitting}
                                     variant="outlined"
-                                    margin="dense"
-                                    fullWidth
-                                    disabled
-                                    error={!apiKeyStatus.openai}
-                                    helperText={apiKeyStatus.openai
-                                        ? "A API Key será obtida das configurações da empresa"
-                                        : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
-                                />
-                            </FormControl>
-                        )}
-                        {selectedProvider === "gemini" && (
-                            <FormControl fullWidth margin="dense" variant="outlined">
-                                <TextField
-                                    label="API Key do Gemini"
-                                    value={apiKeyStatus.gemini
-                                        ? "✓ API Key configurada em Configurações → Integrações"
-                                        : "⚠ API Key não configurada"}
-                                    variant="outlined"
-                                    margin="dense"
-                                    fullWidth
-                                    disabled
-                                    error={!apiKeyStatus.gemini}
-                                    helperText={apiKeyStatus.gemini
-                                        ? "A API Key será obtida das configurações da empresa"
-                                        : "Configure a API Key em Configurações → Integrações → Chave da API do Gemini"}
-                                />
-                            </FormControl>
-                        )}
-                        <Field
-                            as={TextField}
-                            label={i18n.t("promptModal.form.prompt")}
-                            name="prompt"
-                            error={touched.prompt && Boolean(errors.prompt)}
-                            helperText={touched.prompt && errors.prompt}
-                            variant="outlined"
-                            margin="dense"
-                            fullWidth
-                            rows={10}
-                            multiline={true}
-                        />
-                        <FormControlLabel
-                            control={
-                                <Field
-                                    as={Checkbox}
-                                    name="canSendInternalMessages"
-                                    color="primary"
-                                />
-                            }
-                            label={i18n.t("promptModal.form.canSendInternalMessages")}
-                        />
-
-                        <FormControlLabel
-                            control={
-                                <Field
-                                    as={Checkbox}
-                                    name="canTransferToAgent"
-                                    color="primary"
-                                />
-                            }
-                            label={i18n.t("promptModal.form.canTransferToAgent")}
-                        />
-
-                        <FormControlLabel
-                            control={
-                                <Field
-                                    as={Checkbox}
-                                    name="canChangeTag"
-                                    color="primary"
-                                />
-                            }
-                            label={i18n.t("promptModal.form.canChangeTag")}
-                        />
-
-                        <FormControlLabel
-                            control={
-                                <Field
-                                    as={Checkbox}
-                                    name="permitirCriarAgendamentos"
-                                    color="primary"
-                                />
-                            }
-                            label={i18n.t("promptModal.form.permitirCriarAgendamentos")}
-                        />
-
-                        <div className={classes.multFieldLine}>
-                            <FormControl fullWidth margin="dense" variant="outlined">
-                                <InputLabel id="model-select-label" shrink={!!selectedModel}>
-                                    {i18n.t("promptModal.form.model")}
-                                </InputLabel>
-                                <Select
-                                    labelId="model-select-label"
-                                    id="model-select"
-                                    value={selectedModel}
-                                    onChange={handleChangeModel}
-                                    displayEmpty={false}
                                 >
-                                    {selectedProvider === "openai" ? (
-                                        <>
-                                            <MenuItem value="gpt-3.5-turbo-1106">
-                                                GPT 3.5 turbo
-                                            </MenuItem>
-                                            <MenuItem value="gpt-4o-mini">
-                                                GPT 4.0 Mini
-                                            </MenuItem>
-                                            <MenuItem value="gpt-4o">
-                                                GPT 4.0
-                                            </MenuItem>
-                                        </>
-                                    ) : (
-                                        <MenuItem value="gemini-2.5-flash">
-                                            Gemini 2.5 Flash
-                                        </MenuItem>
-                                    )}
-                                </Select>
-                            </FormControl>
-                            <Field
-                                as={TextField}
-                                label={i18n.t("promptModal.form.temperature")}
-                                name="temperature"
-                                error={touched.temperature && Boolean(errors.temperature)}
-                                helperText={touched.temperature && errors.temperature}
-                                variant="outlined"
-                                margin="dense"
-                                fullWidth
-                                type="number"
-                                inputProps={{
-                                    step: "0.1",
-                                    min: "0",
-                                    max: "1"
-                                }}
-                            />
-                        </div>
-
-                        <div className={classes.multFieldLine}>
-                            <Field
-                                as={TextField}
-                                label={i18n.t("promptModal.form.max_tokens")}
-                                name="maxTokens"
-                                error={touched.maxTokens && Boolean(errors.maxTokens)}
-                                helperText={touched.maxTokens && errors.maxTokens}
-                                variant="outlined"
-                                margin="dense"
-                                fullWidth
-                            />
-                            <Field
-                                as={TextField}
-                                label={i18n.t("promptModal.form.max_messages")}
-                                name="maxMessages"
-                                error={touched.maxMessages && Boolean(errors.maxMessages)}
-                                helperText={touched.maxMessages && errors.maxMessages}
-                                variant="outlined"
-                                margin="dense"
-                                fullWidth
-                            />
-                        </div>
-                    </>
-                )}
-            </DialogContent>
-            <DialogActions>
-                <Button
-                    onClick={handleClose}
-                    color="secondary"
-                    disabled={isSubmitting}
-                    variant="outlined"
-                >
-                    {i18n.t("promptModal.buttons.cancel")}
-                </Button>
-                {creationMode === "template" && !promptId ? (
-                    <Button
-                        onClick={handleSaveTemplate}
-                        color="primary"
-                        disabled={!selectedTemplate || isSubmitting}
-                        variant="contained"
-                        className={classes.btnWrapper}
-                    >
-                        {i18n.t("promptModal.buttons.okAdd")}
-                        {isSubmitting && (
-                            <CircularProgress
-                                size={24}
-                                className={classes.buttonProgress}
-                            />
-                        )}
-                    </Button>
-                ) : (
-                    <Button
-                        type="submit"
-                        color="primary"
-                        disabled={isSubmitting}
-                        variant="contained"
-                        className={classes.btnWrapper}
-                    >
-                        {promptId
-                            ? `${i18n.t("promptModal.buttons.okEdit")}`
-                            : `${i18n.t("promptModal.buttons.okAdd")}`}
-                        {isSubmitting && (
-                            <CircularProgress
-                                size={24}
-                                className={classes.buttonProgress}
-                            />
-                        )}
-                    </Button>
-                )}
-            </DialogActions>
-        </Form>
+                                    {i18n.t("promptModal.buttons.cancel")}
+                                </Button>
+                                {promptId && (
+                                    <Button
+                                        type="submit"
+                                        color="primary"
+                                        disabled={isSubmitting}
+                                        variant="contained"
+                                        className={classes.btnWrapper}
+                                    >
+                                        {i18n.t("promptModal.buttons.okEdit")}
+                                        {isSubmitting && (
+                                            <CircularProgress
+                                                size={24}
+                                                className={classes.buttonProgress}
+                                            />
+                                        )}
+                                    </Button>
+                                )}
+                            </DialogActions>
+                        </Form>
                     )}
-    </Formik>
-    </Dialog >
+                </Formik>
+            </Dialog >
+            <TemplateConfigModal
+                open={templateModalOpen}
+                onClose={() => setTemplateModalOpen(false)}
+                template={selectedTemplate}
+                templateVariables={templateVariables}
+                setTemplateVariables={setTemplateVariables}
+                useCustomAgentName={useCustomAgentName}
+                setUseCustomAgentName={setUseCustomAgentName}
+                selectedProvider={selectedProvider}
+                handleChangeProvider={handleChangeProvider}
+                apiKeyStatus={apiKeyStatus}
+                customPermissions={customPermissions}
+                setCustomPermissions={setCustomPermissions}
+                onSave={handleSaveTemplate}
+                isSubmitting={isSavingTemplate}
+            />
         </div >
     );
 };
