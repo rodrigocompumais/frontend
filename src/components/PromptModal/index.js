@@ -645,7 +645,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                         <FormControlLabel
                                             control={
                                                 <Checkbox
-                                                    checked={values.canSendInternalMessages === true || values.canSendInternalMessages === "true" || values.canSendInternalMessages === 1}
+                                                    checked={convertToBoolean(values.canSendInternalMessages)}
                                                     onChange={(e) => setFieldValue("canSendInternalMessages", e.target.checked)}
                                                     color="primary"
                                                 />
@@ -656,7 +656,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                         <FormControlLabel
                                             control={
                                                 <Checkbox
-                                                    checked={values.canTransferToAgent === true || values.canTransferToAgent === "true" || values.canTransferToAgent === 1}
+                                                    checked={convertToBoolean(values.canTransferToAgent)}
                                                     onChange={(e) => setFieldValue("canTransferToAgent", e.target.checked)}
                                                     color="primary"
                                                 />
@@ -667,7 +667,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                         <FormControlLabel
                                             control={
                                                 <Checkbox
-                                                    checked={values.canChangeTag === true || values.canChangeTag === "true" || values.canChangeTag === 1}
+                                                    checked={convertToBoolean(values.canChangeTag)}
                                                     onChange={(e) => setFieldValue("canChangeTag", e.target.checked)}
                                                     color="primary"
                                                 />
@@ -678,7 +678,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                         <FormControlLabel
                                             control={
                                                 <Checkbox
-                                                    checked={values.permitirCriarAgendamentos === true || values.permitirCriarAgendamentos === "true" || values.permitirCriarAgendamentos === 1}
+                                                    checked={convertToBoolean(values.permitirCriarAgendamentos)}
                                                     onChange={(e) => setFieldValue("permitirCriarAgendamentos", e.target.checked)}
                                                     color="primary"
                                                 />
@@ -792,7 +792,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                                 label={i18n.t("promptModal.form.permitirCriarAgendamentos")}
                                             />
 
-                                            {(values.permitirCriarAgendamentos === true || values.permitirCriarAgendamentos === "true" || values.permitirCriarAgendamentos === 1) && (
+                                            {convertToBoolean(values.permitirCriarAgendamentos) && (
                                                 <div style={{ marginTop: 8, padding: 16, border: '1px solid #eee', borderRadius: 8 }}>
                                                     <div style={{ marginBottom: 8, fontWeight: 'bold' }}>Horário de Funcionamento</div>
                                                     <Field
