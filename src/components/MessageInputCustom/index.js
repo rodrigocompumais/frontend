@@ -525,7 +525,7 @@ const CustomInput = (props) => {
           }
         }}
         onChange={(event, opt) => {
-         
+
           if (isObject(opt) && has(opt, "value") && isNil(opt.mediaPath)) {
             setInputMessage(opt.value);
             setTimeout(() => {
@@ -682,20 +682,89 @@ const MessageInputCustom = (props) => {
   };
 
   const handleInputPaste = (e) => {
-    if (e.clipboardData.files[0]) {
-      const file = e.clipboardData.files[0];
-      let preview = null;
-      if (file.type.startsWith('image/')) {
-        preview = URL.createObjectURL(file);
-        previewUrlsRef.current.push(preview);
+    // Handling local files
+    if (e.clipboardData.files.length > 0) {
+      e.preventDefault(); // Prevent duplicate pasting if the input handles it too
+      const selectedMedias = Array.from(e.clipboardData.files);
+
+      const mediasWithPreview = selectedMedias.map(media => {
+        let preview = null;
+        if (media.type.startsWith('image/')) {
+          preview = URL.createObjectURL(media);
+          previewUrlsRef.current.push(preview);
+        }
+        return {
+          file: media,
+          name: media.name,
+          preview: preview,
+          type: media.type
+        };
+      });
+
+      setMedias(prev => [...prev, ...mediasWithPreview]);
+      return;
+    }
+
+    // Handling items (e.g. screenshots)
+    if (e.clipboardData.items) {
+      const items = Array.from(e.clipboardData.items);
+      const files = [];
+
+      items.forEach(item => {
+        if (item.kind === 'file') {
+          const file = item.getAsFile();
+          if (file) files.push(file);
+        }
+      });
+
+      if (files.length > 0) {
+        e.preventDefault();
+        const mediasWithPreview = files.map(media => {
+          let preview = null;
+          if (media.type.startsWith('image/')) {
+            preview = URL.createObjectURL(media);
+            previewUrlsRef.current.push(preview);
+          }
+          return {
+            file: media,
+            name: media.name,
+            preview: preview,
+            type: media.type
+          };
+        });
+
+        setMedias(prev => [...prev, ...mediasWithPreview]);
       }
-      const mediaWithPreview = {
-        file: file,
-        name: file.name,
-        preview: preview,
-        type: file.type
-      };
-      setMedias([mediaWithPreview]);
+    }
+  };
+
+  const onDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const selectedMedias = Array.from(e.dataTransfer.files);
+
+      const mediasWithPreview = selectedMedias.map(media => {
+        let preview = null;
+        if (media.type.startsWith('image/')) {
+          preview = URL.createObjectURL(media);
+          previewUrlsRef.current.push(preview);
+        }
+        return {
+          file: media,
+          name: media.name,
+          preview: preview,
+          type: media.type
+        };
+      });
+
+      setMedias(prev => [...prev, ...mediasWithPreview]);
     }
   };
 
@@ -707,7 +776,7 @@ const MessageInputCustom = (props) => {
       const formData = new FormData();
       const filename = `${new Date().getTime()}.${extension}`;
       formData.append("medias", blob, filename);
-      formData.append("body",  message);
+      formData.append("body", message);
       formData.append("fromMe", true);
 
       await api.post(`/messages/${ticketId}`, formData);
@@ -717,7 +786,7 @@ const MessageInputCustom = (props) => {
     }
     setLoading(false);
   };
-  
+
   const handleQuickAnswersClick = async (value) => {
     if (value.mediaPath) {
       try {
@@ -862,11 +931,11 @@ const MessageInputCustom = (props) => {
     try {
       // Preparar o payload
       const draftText = inputMessage.trim();
-      
+
       // Construir payload - o backend pode ter comportamentos diferentes
       // baseado se há texto ou não na caixa
       let payload;
-      
+
       if (draftText && draftText.length > 0) {
         // Quando há texto: enviar com draftText
         payload = {
@@ -895,9 +964,9 @@ const MessageInputCustom = (props) => {
         data: err.response?.data,
         message: err.message
       });
-      
+
       toastError(err);
-      
+
       if (err.response?.status === 404) {
         toast.error("Rota não encontrada. Verifique se o backend está rodando e a rota /chat-ai/improve está disponível.");
       } else if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
@@ -962,133 +1031,164 @@ const MessageInputCustom = (props) => {
     return (
       <>
         <Paper elevation={0} square className={classes.viewMediaInputWrapper}>
-        <IconButton
-          aria-label="cancel-upload"
-          component="span"
-          onClick={(e) => {
-            // Limpar preview URLs antes de limpar medias
-            previewUrlsRef.current.forEach((url) => {
-              if (url) {
-                URL.revokeObjectURL(url);
-              }
-            });
-            previewUrlsRef.current = [];
-            setMedias([]);
-          }}
-        >
-          <CancelIcon className={classes.sendMessageIcons} />
-        </IconButton>
+          <IconButton
+            aria-label="cancel-upload"
+            component="span"
+            onClick={(e) => {
+              // Limpar preview URLs antes de limpar medias
+              previewUrlsRef.current.forEach((url) => {
+                if (url) {
+                  URL.revokeObjectURL(url);
+                }
+              });
+              previewUrlsRef.current = [];
+              setMedias([]);
+            }}
+          >
+            <CancelIcon className={classes.sendMessageIcons} />
+          </IconButton>
 
-        {loading ? (
-          <div>
-            <CircularProgress className={classes.circleLoading} />
-          </div>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-            <div 
-              className={classes.previewButton}
-              onClick={() => {
-                setCurrentImageIndex(0);
-                setPreviewModalOpen(true);
-              }}
-            >
-              <VisibilityIcon style={{ fontSize: 18 }} />
-              <span>{medias.length} {medias.length === 1 ? 'imagem selecionada' : 'imagens selecionadas'}</span>
+          {loading ? (
+            <div>
+              <CircularProgress className={classes.circleLoading} />
             </div>
-          </div>
-        )}
-        <IconButton
-          aria-label="send-upload"
-          component="span"
-          onClick={handleUploadMedia}
-          disabled={loading}
-        >
-          <SendIcon className={classes.sendMessageIcons} />
-        </IconButton>
-      </Paper>
-
-      {/* Modal de Preview com Carrossel */}
-      <Dialog
-        open={previewModalOpen}
-        onClose={() => setPreviewModalOpen(false)}
-        className={classes.previewModal}
-        maxWidth={false}
-        fullWidth
-      >
-        <DialogContent className={classes.previewModalContent} style={{ padding: 0 }}>
-          {imageMedias.length > 0 ? (
-            <>
-              {/* Imagem atual */}
-              <img
-                src={imageMedias[currentImageIndex]?.preview}
-                alt={imageMedias[currentImageIndex]?.name || 'Preview'}
-                className={classes.previewImage}
-              />
-
-              {/* Botão anterior */}
-              {imageMedias.length > 1 && (
-                <IconButton
-                  className={`${classes.previewNavButton} ${classes.previewNavButtonLeft}`}
-                  onClick={handlePrevImage}
-                  aria-label="Imagem anterior"
-                >
-                  <ChevronLeftIcon />
-                </IconButton>
-              )}
-
-              {/* Botão próximo */}
-              {imageMedias.length > 1 && (
-                <IconButton
-                  className={`${classes.previewNavButton} ${classes.previewNavButtonRight}`}
-                  onClick={handleNextImage}
-                  aria-label="Próxima imagem"
-                >
-                  <ChevronRightIcon />
-                </IconButton>
-              )}
-
-              {/* Informações da imagem */}
-              <Box className={classes.previewImageInfo}>
-                <Typography variant="body2" style={{ fontWeight: 500 }}>
-                  {imageMedias[currentImageIndex]?.name || 'Imagem'}
-                </Typography>
-                {imageMedias.length > 1 && (
-                  <Typography variant="caption" style={{ opacity: 0.8 }}>
-                    {currentImageIndex + 1} de {imageMedias.length}
-                  </Typography>
-                )}
-              </Box>
-
-              {/* Indicadores */}
-              {imageMedias.length > 1 && (
-                <Box className={classes.previewIndicators}>
-                  {imageMedias.map((_, index) => (
-                    <Box
-                      key={index}
-                      className={`${classes.previewIndicator} ${
-                        index === currentImageIndex ? 'active' : ''
-                      }`}
-                      onClick={() => handleIndicatorClick(index)}
-                    />
-                  ))}
-                </Box>
-              )}
-            </>
           ) : (
-            <Box p={4} textAlign="center">
-              <Typography variant="body1" color="textSecondary">
-                Nenhuma imagem para visualizar
-              </Typography>
-            </Box>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, overflowX: 'auto', padding: '4px' }}>
+              {medias.map((media, index) => (
+                <div
+                  key={index}
+                  style={{
+                    position: 'relative',
+                    cursor: 'pointer',
+                    borderRadius: 8,
+                    overflow: 'hidden',
+                    width: 60,
+                    height: 60,
+                    flexShrink: 0,
+                    border: '1px solid #ddd'
+                  }}
+                  onClick={() => {
+                    setCurrentImageIndex(index);
+                    setPreviewModalOpen(true);
+                  }}
+                >
+                  {media.preview ? (
+                    <img
+                      src={media.preview}
+                      alt={media.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0' }}>
+                      <AttachFileIcon style={{ fontSize: 24, color: '#666' }} />
+                    </div>
+                  )}
+                </div>
+              ))}
+              {medias.length > 0 && (
+                <Typography variant="caption" style={{ marginLeft: 8 }}>
+                  {medias.length > 1 ? `+${medias.length - 1}` : ''}
+                </Typography>
+              )}
+            </div>
           )}
-        </DialogContent>
-      </Dialog>
+          <IconButton
+            aria-label="send-upload"
+            component="span"
+            onClick={handleUploadMedia}
+            disabled={loading}
+          >
+            <SendIcon className={classes.sendMessageIcons} />
+          </IconButton>
+        </Paper>
+
+        {/* Modal de Preview com Carrossel */}
+        <Dialog
+          open={previewModalOpen}
+          onClose={() => setPreviewModalOpen(false)}
+          className={classes.previewModal}
+          maxWidth={false}
+          fullWidth
+        >
+          <DialogContent className={classes.previewModalContent} style={{ padding: 0 }}>
+            {imageMedias.length > 0 ? (
+              <>
+                {/* Imagem atual */}
+                <img
+                  src={imageMedias[currentImageIndex]?.preview}
+                  alt={imageMedias[currentImageIndex]?.name || 'Preview'}
+                  className={classes.previewImage}
+                />
+
+                {/* Botão anterior */}
+                {imageMedias.length > 1 && (
+                  <IconButton
+                    className={`${classes.previewNavButton} ${classes.previewNavButtonLeft}`}
+                    onClick={handlePrevImage}
+                    aria-label="Imagem anterior"
+                  >
+                    <ChevronLeftIcon />
+                  </IconButton>
+                )}
+
+                {/* Botão próximo */}
+                {imageMedias.length > 1 && (
+                  <IconButton
+                    className={`${classes.previewNavButton} ${classes.previewNavButtonRight}`}
+                    onClick={handleNextImage}
+                    aria-label="Próxima imagem"
+                  >
+                    <ChevronRightIcon />
+                  </IconButton>
+                )}
+
+                {/* Informações da imagem */}
+                <Box className={classes.previewImageInfo}>
+                  <Typography variant="body2" style={{ fontWeight: 500 }}>
+                    {imageMedias[currentImageIndex]?.name || 'Imagem'}
+                  </Typography>
+                  {imageMedias.length > 1 && (
+                    <Typography variant="caption" style={{ opacity: 0.8 }}>
+                      {currentImageIndex + 1} de {imageMedias.length}
+                    </Typography>
+                  )}
+                </Box>
+
+                {/* Indicadores */}
+                {imageMedias.length > 1 && (
+                  <Box className={classes.previewIndicators}>
+                    {imageMedias.map((_, index) => (
+                      <Box
+                        key={index}
+                        className={`${classes.previewIndicator} ${index === currentImageIndex ? 'active' : ''
+                          }`}
+                        onClick={() => handleIndicatorClick(index)}
+                      />
+                    ))}
+                  </Box>
+                )}
+              </>
+            ) : (
+              <Box p={4} textAlign="center">
+                <Typography variant="body1" color="textSecondary">
+                  Nenhuma imagem para visualizar
+                </Typography>
+              </Box>
+            )}
+          </DialogContent>
+        </Dialog>
       </>
     );
   else {
     return (
       <React.Fragment>
-        <Paper square elevation={0} className={classes.mainWrapper}>
+        <Paper
+          square
+          elevation={0}
+          className={classes.mainWrapper}
+          onDragOver={onDragOver}
+          onDrop={onDrop}
+        >
           {replyingMessage && renderReplyingMessage(replyingMessage)}
           <div className={classes.newMessageBox}>
             <EmojiOptions

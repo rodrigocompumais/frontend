@@ -213,8 +213,62 @@ const MessageInput = ({ ticketStatus }) => {
 	};
 
 	const handleInputPaste = e => {
-		if (e.clipboardData.files[0]) {
-			setMedias([e.clipboardData.files[0]]);
+		if (e.clipboardData.files.length > 0) {
+			e.preventDefault();
+			const selectedMedias = Array.from(e.clipboardData.files);
+			const mediasWithPreview = selectedMedias.map(media => {
+				let preview = null;
+				if (media.type.startsWith('image/')) {
+					preview = URL.createObjectURL(media);
+				}
+				return Object.assign(media, { preview });
+			});
+			setMedias(mediasWithPreview);
+			return;
+		}
+
+		if (e.clipboardData.items) {
+			const items = Array.from(e.clipboardData.items);
+			const files = [];
+			items.forEach(item => {
+				if (item.kind === 'file') {
+					files.push(item.getAsFile());
+				}
+			});
+
+			if (files.length > 0) {
+				e.preventDefault();
+				const mediasWithPreview = files.map(media => {
+					let preview = null;
+					if (media.type.startsWith('image/')) {
+						preview = URL.createObjectURL(media);
+					}
+					return Object.assign(media, { preview });
+				});
+				setMedias(mediasWithPreview);
+			}
+		}
+	};
+
+	const onDragOver = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+	};
+
+	const onDrop = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+
+		if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+			const selectedMedias = Array.from(e.dataTransfer.files);
+			const mediasWithPreview = selectedMedias.map(media => {
+				let preview = null;
+				if (media.type.startsWith('image/')) {
+					preview = URL.createObjectURL(media);
+				}
+				return Object.assign(media, { preview });
+			});
+			setMedias(mediasWithPreview);
 		}
 	};
 
@@ -357,10 +411,16 @@ const MessageInput = ({ ticketStatus }) => {
 						<CircularProgress className={classes.circleLoading} />
 					</div>
 				) : (
-					<span>
-						{medias[0]?.name}
-						{/* <img src={media.preview} alt=""></img> */}
-					</span>
+					<div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+						{medias[0]?.preview && (
+							<img
+								src={medias[0].preview}
+								alt="preview"
+								style={{ maxHeight: "200px", maxWidth: "100%", borderRadius: "8px", objectFit: "contain", marginBottom: "5px" }}
+							/>
+						)}
+						<span>{medias[0]?.name}</span>
+					</div>
 				)}
 				<IconButton
 					aria-label="send-upload"
@@ -374,7 +434,13 @@ const MessageInput = ({ ticketStatus }) => {
 		);
 	else {
 		return (
-			<Paper square elevation={0} className={classes.mainWrapper}>
+			<Paper
+				square
+				elevation={0}
+				className={classes.mainWrapper}
+				onDragOver={onDragOver}
+				onDrop={onDrop}
+			>
 				{replyingMessage && renderReplyingMessage(replyingMessage)}
 				<div className={classes.newMessageBox}>
 					<IconButton
