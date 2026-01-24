@@ -316,6 +316,11 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         }
     ];
 
+    const convertToBoolean = (value) => {
+        if (value === true || value === "true") return true;
+        return ["1", 1, "True", "TRUE"].includes(value);
+    };
+
     useEffect(() => {
         const fetchPrompt = async () => {
             if (!promptId) {
@@ -339,10 +344,17 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                         maxTokens: data.maxTokens || 100,
                         temperature: data.temperature !== undefined ? data.temperature : 1,
                         maxMessages: data.maxMessages || 10,
-                        canSendInternalMessages: ["true", "1", 1, true].includes(data.canSendInternalMessages),
-                        canTransferToAgent: ["true", "1", 1, true].includes(data.canTransferToAgent),
-                        canChangeTag: ["true", "1", 1, true].includes(data.canChangeTag),
-                        permitirCriarAgendamentos: ["true", "1", 1, true].includes(data.permitirCriarAgendamentos)
+                        canSendInternalMessages: convertToBoolean(data.canSendInternalMessages),
+                        canTransferToAgent: convertToBoolean(data.canTransferToAgent),
+                        canChangeTag: convertToBoolean(data.canChangeTag),
+                        permitirCriarAgendamentos: convertToBoolean(data.permitirCriarAgendamentos)
+                    });
+                    console.log("Prompt Data Loaded:", data);
+                    console.log("Permissions Debug:", {
+                        internal: convertToBoolean(data.canSendInternalMessages),
+                        transfer: convertToBoolean(data.canTransferToAgent),
+                        tag: convertToBoolean(data.canChangeTag),
+                        schedule: convertToBoolean(data.permitirCriarAgendamentos)
                     });
 
                     setSelectedModel(data.model || "gpt-3.5-turbo-1106");
@@ -498,7 +510,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                         }, 400);
                     }}
                 >
-                    {({ touched, errors, isSubmitting, values }) => (
+                    {({ touched, errors, isSubmitting, values, setFieldValue }) => (
                         <Form style={{ width: "100%" }}>
                             <DialogContent dividers>
                                 {!promptId && !isManualMode && (
@@ -623,9 +635,9 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                         />
                                         <FormControlLabel
                                             control={
-                                                <Field
-                                                    as={Checkbox}
-                                                    name="canSendInternalMessages"
+                                                <Checkbox
+                                                    checked={values.canSendInternalMessages === true || values.canSendInternalMessages === "true" || values.canSendInternalMessages === 1}
+                                                    onChange={(e) => setFieldValue("canSendInternalMessages", e.target.checked)}
                                                     color="primary"
                                                 />
                                             }
@@ -634,9 +646,9 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
 
                                         <FormControlLabel
                                             control={
-                                                <Field
-                                                    as={Checkbox}
-                                                    name="canTransferToAgent"
+                                                <Checkbox
+                                                    checked={values.canTransferToAgent === true || values.canTransferToAgent === "true" || values.canTransferToAgent === 1}
+                                                    onChange={(e) => setFieldValue("canTransferToAgent", e.target.checked)}
                                                     color="primary"
                                                 />
                                             }
@@ -645,9 +657,9 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
 
                                         <FormControlLabel
                                             control={
-                                                <Field
-                                                    as={Checkbox}
-                                                    name="canChangeTag"
+                                                <Checkbox
+                                                    checked={values.canChangeTag === true || values.canChangeTag === "true" || values.canChangeTag === 1}
+                                                    onChange={(e) => setFieldValue("canChangeTag", e.target.checked)}
                                                     color="primary"
                                                 />
                                             }
@@ -656,9 +668,9 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
 
                                         <FormControlLabel
                                             control={
-                                                <Field
-                                                    as={Checkbox}
-                                                    name="permitirCriarAgendamentos"
+                                                <Checkbox
+                                                    checked={values.permitirCriarAgendamentos === true || values.permitirCriarAgendamentos === "true" || values.permitirCriarAgendamentos === 1}
+                                                    onChange={(e) => setFieldValue("permitirCriarAgendamentos", e.target.checked)}
                                                     color="primary"
                                                 />
                                             }
