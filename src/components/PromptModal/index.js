@@ -169,7 +169,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const [templateModalOpen, setTemplateModalOpen] = useState(false);
     const [useCustomAgentName, setUseCustomAgentName] = useState(false);
     const [isSavingTemplate, setIsSavingTemplate] = useState(false);
-
+    const [isManualMode, setIsManualMode] = useState(false);
 
     const initialState = {
         name: "",
@@ -193,8 +193,8 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             id: "personalizado",
             tipo: "personalizado",
             nome: "Prompt Personalizado",
-            descricao: "Crie seu prÃ³prio agente do zero com configuraÃ§Ãµes avanÃ§adas",
-            icon: "âš™ï¸",
+            descricao: "Crie seu próprio agente do zero com configurações avançadas",
+            icon: "⚙️",
             permissoes: {
                 canSendInternalMessages: false,
                 canTransferToAgent: false,
@@ -206,9 +206,9 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             id: "atendimento",
             tipo: "atendimento",
             nome: "Atendimento ao Cliente",
-            descricao: "Agente especializado em atender clientes com cordialidade e eficiÃªncia",
-            icon: "ðŸ‘¤",
-            promptBase: "VocÃª Ã© um assistente de atendimento ao cliente profissional e cordial. Sua missÃ£o Ã© ajudar os clientes de forma clara, educada e eficiente. Sempre mantenha um tom {tom_resposta} e seja prestativo. {observacoes}",
+            descricao: "Agente especializado em atender clientes com cordialidade e eficiência",
+            icon: "👤",
+            promptBase: "Você é um assistente de atendimento ao cliente profissional e cordial. Sua missão é ajudar os clientes de forma clara, educada e eficiente. Sempre mantenha um tom {tom_resposta} e seja prestativo. {observacoes}",
             permissoes: {
                 canSendInternalMessages: true,
                 canTransferToAgent: true,
@@ -220,9 +220,9 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             id: "vendas",
             tipo: "vendas",
             nome: "Consultor de Vendas",
-            descricao: "Agente focado em converter leads e fechar vendas com persuasÃ£o",
-            icon: "ðŸ’¼",
-            promptBase: "VocÃª Ã© um consultor de vendas experiente e persuasivo. Seu objetivo Ã© entender as necessidades do cliente e apresentar soluÃ§Ãµes que agreguem valor. Use um tom {tom_resposta} e seja convincente sem ser invasivo. {observacoes}",
+            descricao: "Agente focado em converter leads e fechar vendas com persuasão",
+            icon: "💼",
+            promptBase: "Você é um consultor de vendas experiente e persuasivo. Seu objetivo é entender as necessidades do cliente e apresentar soluções que agreguem valor. Use um tom {tom_resposta} e seja convincente sem ser invasivo. {observacoes}",
             permissoes: {
                 canSendInternalMessages: true,
                 canTransferToAgent: true,
@@ -233,10 +233,10 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         {
             id: "suporte",
             tipo: "suporte",
-            nome: "Suporte TÃ©cnico",
-            descricao: "Especialista em resolver problemas tÃ©cnicos e orientar usuÃ¡rios",
-            icon: "ðŸ”§",
-            promptBase: "VocÃª Ã© um especialista em suporte tÃ©cnico. Sua funÃ§Ã£o Ã© diagnosticar problemas, fornecer soluÃ§Ãµes claras e orientar os usuÃ¡rios passo a passo. Mantenha um tom {tom_resposta} e seja paciente e didÃ¡tico. {observacoes}",
+            nome: "Suporte Técnico",
+            descricao: "Especialista em resolver problemas técnicos e orientar usuários",
+            icon: "🔧",
+            promptBase: "Você é um especialista em suporte técnico. Sua função é diagnosticar problemas, fornecer soluções claras e orientar os usuários passo a passo. Mantenha um tom {tom_resposta} e seja paciente e didático. {observacoes}",
             permissoes: {
                 canSendInternalMessages: true,
                 canTransferToAgent: true,
@@ -249,8 +249,8 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             tipo: "agendador",
             nome: "Agendador de Compromissos",
             descricao: "Gerencia agendamentos e organiza compromissos automaticamente",
-            icon: "ðŸ“…",
-            promptBase: "VocÃª Ã© um assistente de agendamentos. Sua funÃ§Ã£o Ã© ajudar a marcar, remarcar e gerenciar compromissos de forma organizada. Use um tom {tom_resposta} e seja preciso com datas e horÃ¡rios. {observacoes}",
+            icon: "📅",
+            promptBase: "Você é um assistente de agendamentos. Sua função é ajudar a marcar, remarcar e gerenciar compromissos de forma organizada. Use um tom {tom_resposta} e seja preciso com datas e horários. {observacoes}",
             permissoes: {
                 canSendInternalMessages: true,
                 canTransferToAgent: false,
@@ -262,9 +262,9 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             id: "faq",
             tipo: "faq",
             nome: "Respondedor de FAQ",
-            descricao: "Responde perguntas frequentes de forma rÃ¡pida e precisa",
-            icon: "â“",
-            promptBase: "VocÃª Ã© um assistente especializado em responder perguntas frequentes. ForneÃ§a respostas claras, diretas e precisas. Use um tom {tom_resposta} e seja objetivo. {observacoes}",
+            descricao: "Responde perguntas frequentes de forma rápida e precisa",
+            icon: "❓",
+            promptBase: "Você é um assistente especializado em responder perguntas frequentes. Forneça respostas claras, diretas e precisas. Use um tom {tom_resposta} e seja objetivo. {observacoes}",
             permissoes: {
                 canSendInternalMessages: false,
                 canTransferToAgent: true,
@@ -277,8 +277,8 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             tipo: "triagem",
             nome: "Triagem Inteligente",
             descricao: "Classifica e direciona conversas para os setores corretos",
-            icon: "ðŸŽ¯",
-            promptBase: "VocÃª Ã© um assistente de triagem. Sua funÃ§Ã£o Ã© entender a necessidade do cliente e direcionÃ¡-lo para o setor ou pessoa adequada. Use um tom {tom_resposta} e seja eficiente na classificaÃ§Ã£o. {observacoes}",
+            icon: "🎯",
+            promptBase: "Você é um assistente de triagem. Sua função é entender a necessidade do cliente e direcioná-lo para o setor ou pessoa adequada. Use um tom {tom_resposta} e seja eficiente na classificação. {observacoes}",
             permissoes: {
                 canSendInternalMessages: true,
                 canTransferToAgent: true,
@@ -289,10 +289,10 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         {
             id: "cobranca",
             tipo: "cobranca",
-            nome: "Assistente de CobranÃ§a",
-            descricao: "Gerencia cobranÃ§as e pagamentos com profissionalismo",
-            icon: "ðŸ’°",
-            promptBase: "VocÃª Ã© um assistente de cobranÃ§a profissional. Sua funÃ§Ã£o Ã© lembrar sobre pagamentos pendentes de forma educada e ajudar com dÃºvidas sobre faturas. Use um tom {tom_resposta} e seja firme mas respeitoso. {observacoes}",
+            nome: "Assistente de Cobrança",
+            descricao: "Gerencia cobranças e pagamentos com profissionalismo",
+            icon: "💰",
+            promptBase: "Você é um assistente de cobrança profissional. Sua função é lembrar sobre pagamentos pendentes de forma educada e ajudar com dúvidas sobre faturas. Use um tom {tom_resposta} e seja firme mas respeitoso. {observacoes}",
             permissoes: {
                 canSendInternalMessages: true,
                 canTransferToAgent: true,
@@ -304,9 +304,9 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             id: "feedback",
             tipo: "feedback",
             nome: "Coletor de Feedback",
-            descricao: "Coleta avaliaÃ§Ãµes e sugestÃµes dos clientes",
-            icon: "â­",
-            promptBase: "VocÃª Ã© um assistente de feedback. Sua funÃ§Ã£o Ã© coletar avaliaÃ§Ãµes, opiniÃµes e sugestÃµes dos clientes de forma amigÃ¡vel. Use um tom {tom_resposta} e incentive respostas honestas. {observacoes}",
+            descricao: "Coleta avaliações e sugestões dos clientes",
+            icon: "⭐",
+            promptBase: "Você é um assistente de feedback. Sua função é coletar avaliações, opiniões e sugestões dos clientes de forma amigável. Use um tom {tom_resposta} e incentive respostas honestas. {observacoes}",
             permissoes: {
                 canSendInternalMessages: true,
                 canTransferToAgent: false,
@@ -501,7 +501,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                     {({ touched, errors, isSubmitting, values }) => (
                         <Form style={{ width: "100%" }}>
                             <DialogContent dividers>
-                                {!promptId && (
+                                {!promptId && !isManualMode && (
                                     <>
                                         <div style={{ marginBottom: 16 }}>
                                             <h3 style={{ margin: "0 0 8px 0", fontSize: 18, fontWeight: 600 }}>
@@ -521,15 +521,18 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                                         : ""
                                                         }`}
                                                     onClick={() => {
-                                                        setSelectedTemplate(template);
-                                                        // Inicializar permissÃµes customizadas com as do template
-                                                        setCustomPermissions({ ...template.permissoes });
-                                                        if (template.tipo !== "personalizado") {
+                                                        if (template.id === "personalizado") {
+                                                            setIsManualMode(true);
+                                                            setSelectedTemplate(null);
+                                                        } else {
+                                                            setSelectedTemplate(template);
+                                                            setCustomPermissions({ ...template.permissoes });
                                                             setTemplateVariables({
                                                                 nome_agente: "",
                                                                 tom_resposta: "neutro",
                                                                 observacoes: ""
                                                             });
+                                                            setTemplateModalOpen(true);
                                                         }
                                                     }}
                                                 >
@@ -542,365 +545,10 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                             ))}
                                         </div>
 
-                                        {selectedTemplate && selectedTemplate.tipo !== "personalizado" && (
-                                            <>
-                                                <Field
-                                                    as={TextField}
-                                                    label="Nome do Agente"
-                                                    name="nome_agente"
-                                                    value={templateVariables.nome_agente}
-                                                    onChange={(e) => setTemplateVariables({
-                                                        ...templateVariables,
-                                                        nome_agente: e.target.value
-                                                    })}
-                                                    variant="outlined"
-                                                    margin="dense"
-                                                    fullWidth
-                                                />
-
-                                                <FormControl fullWidth margin="dense" variant="outlined">
-                                                    <InputLabel id="tom-resposta-label">Tom de Resposta</InputLabel>
-                                                    <Select
-                                                        labelId="tom-resposta-label"
-                                                        id="tom-resposta-select"
-                                                        value={templateVariables.tom_resposta}
-                                                        onChange={(e) => setTemplateVariables({
-                                                            ...templateVariables,
-                                                            tom_resposta: e.target.value
-                                                        })}
-                                                        label="Tom de Resposta"
-                                                    >
-                                                        <MenuItem value="formal">Formal</MenuItem>
-                                                        <MenuItem value="neutro">Neutro</MenuItem>
-                                                        <MenuItem value="informal">Informal</MenuItem>
-                                                    </Select>
-                                                </FormControl>
-
-                                                <Field
-                                                    as={TextField}
-                                                    label="ObservaÃ§Ãµes Adicionais"
-                                                    name="observacoes"
-                                                    value={templateVariables.observacoes}
-                                                    onChange={(e) => setTemplateVariables({
-                                                        ...templateVariables,
-                                                        observacoes: e.target.value
-                                                    })}
-                                                    variant="outlined"
-                                                    margin="dense"
-                                                    fullWidth
-                                                    multiline
-                                                    rows={3}
-                                                    helperText="ObservaÃ§Ãµes especÃ­ficas que serÃ£o adicionadas ao prompt base"
-                                                />
-
-                                                <FormControl fullWidth margin="dense" variant="outlined">
-                                                    <InputLabel id="provider-select-label">Provider</InputLabel>
-                                                    <Select
-                                                        labelId="provider-select-label"
-                                                        id="provider-select"
-                                                        value={selectedProvider}
-                                                        onChange={handleChangeProvider}
-                                                        label="Provider"
-                                                    >
-                                                        <MenuItem value="openai">OpenAI</MenuItem>
-                                                        <MenuItem value="gemini">Gemini</MenuItem>
-                                                    </Select>
-                                                </FormControl>
-
-                                                {selectedProvider === "openai" && (
-                                                    <FormControl fullWidth margin="dense" variant="outlined">
-                                                        <TextField
-                                                            label="API Key do OpenAI"
-                                                            value={apiKeyStatus.openai
-                                                                ? "âœ“ API Key configurada em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes"
-                                                                : "âš  API Key nÃ£o configurada"}
-                                                            variant="outlined"
-                                                            margin="dense"
-                                                            fullWidth
-                                                            disabled
-                                                            error={!apiKeyStatus.openai}
-                                                            helperText={apiKeyStatus.openai
-                                                                ? "A API Key serÃ¡ obtida das configuraÃ§Ãµes da empresa"
-                                                                : "Configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do OpenAI"}
-                                                        />
-                                                    </FormControl>
-                                                )}
-
-                                                {selectedProvider === "gemini" && (
-                                                    <FormControl fullWidth margin="dense" variant="outlined">
-                                                        <TextField
-                                                            label="API Key do Gemini"
-                                                            value={apiKeyStatus.gemini
-                                                                ? "âœ“ API Key configurada em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes"
-                                                                : "âš  API Key nÃ£o configurada"}
-                                                            variant="outlined"
-                                                            margin="dense"
-                                                            fullWidth
-                                                            disabled
-                                                            error={!apiKeyStatus.gemini}
-                                                            helperText={apiKeyStatus.gemini
-                                                                ? "A API Key serÃ¡ obtida das configuraÃ§Ãµes da empresa"
-                                                                : "Configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do Gemini"}
-                                                        />
-                                                    </FormControl>
-                                                )}
-
-                                                <div className={classes.permissionsSection}>
-                                                    <div className={classes.permissionsTitle}>
-                                                        PermissÃµes do Agente
-                                                    </div>
-                                                    <div className={classes.permissionsGrid}>
-                                                        <FormControlLabel
-                                                            control={
-                                                                <Checkbox
-                                                                    checked={customPermissions.canSendInternalMessages}
-                                                                    onChange={(e) => setCustomPermissions({
-                                                                        ...customPermissions,
-                                                                        canSendInternalMessages: e.target.checked
-                                                                    })}
-                                                                    color="primary"
-                                                                />
-                                                            }
-                                                            label="Enviar Mensagens Internas"
-                                                        />
-                                                        <FormControlLabel
-                                                            control={
-                                                                <Checkbox
-                                                                    checked={customPermissions.canTransferToAgent}
-                                                                    onChange={(e) => setCustomPermissions({
-                                                                        ...customPermissions,
-                                                                        canTransferToAgent: e.target.checked
-                                                                    })}
-                                                                    color="primary"
-                                                                />
-                                                            }
-                                                            label="Transferir para Agente"
-                                                        />
-                                                        <FormControlLabel
-                                                            control={
-                                                                <Checkbox
-                                                                    checked={customPermissions.canChangeTag}
-                                                                    onChange={(e) => setCustomPermissions({
-                                                                        ...customPermissions,
-                                                                        canChangeTag: e.target.checked
-                                                                    })}
-                                                                    color="primary"
-                                                                />
-                                                            }
-                                                            label="Alterar Tag"
-                                                        />
-                                                        <FormControlLabel
-                                                            control={
-                                                                <Checkbox
-                                                                    checked={customPermissions.permitirCriarAgendamentos}
-                                                                    onChange={(e) => setCustomPermissions({
-                                                                        ...customPermissions,
-                                                                        permitirCriarAgendamentos: e.target.checked
-                                                                    })}
-                                                                    color="primary"
-                                                                />
-                                                            }
-                                                            label="Criar Agendamentos"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </>
-                                        )}
-
-                                        {selectedTemplate && selectedTemplate.tipo === "personalizado" && (
-                                            <>
-                                                <Field
-                                                    as={TextField}
-                                                    label={i18n.t("promptModal.form.name")}
-                                                    name="name"
-                                                    error={touched.name && Boolean(errors.name)}
-                                                    helperText={touched.name && errors.name}
-                                                    variant="outlined"
-                                                    margin="dense"
-                                                    fullWidth
-                                                />
-                                                <FormControl fullWidth margin="dense" variant="outlined">
-                                                    <InputLabel id="provider-select-label">Provider</InputLabel>
-                                                    <Select
-                                                        labelId="provider-select-label"
-                                                        id="provider-select"
-                                                        value={selectedProvider}
-                                                        onChange={handleChangeProvider}
-                                                        label="Provider"
-                                                    >
-                                                        <MenuItem value="openai">OpenAI</MenuItem>
-                                                        <MenuItem value="gemini">Gemini</MenuItem>
-                                                    </Select>
-                                                </FormControl>
-                                                {selectedProvider === "openai" && (
-                                                    <FormControl fullWidth margin="dense" variant="outlined">
-                                                        <TextField
-                                                            label="API Key do OpenAI"
-                                                            value={apiKeyStatus.openai
-                                                                ? "âœ“ API Key configurada em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes"
-                                                                : "âš  API Key nÃ£o configurada"}
-                                                            variant="outlined"
-                                                            margin="dense"
-                                                            fullWidth
-                                                            disabled
-                                                            error={!apiKeyStatus.openai}
-                                                            helperText={apiKeyStatus.openai
-                                                                ? "A API Key serÃ¡ obtida das configuraÃ§Ãµes da empresa"
-                                                                : "Configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do OpenAI"}
-                                                        />
-                                                    </FormControl>
-                                                )}
-                                                {selectedProvider === "gemini" && (
-                                                    <FormControl fullWidth margin="dense" variant="outlined">
-                                                        <TextField
-                                                            label="API Key do Gemini"
-                                                            value={apiKeyStatus.gemini
-                                                                ? "âœ“ API Key configurada em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes"
-                                                                : "âš  API Key nÃ£o configurada"}
-                                                            variant="outlined"
-                                                            margin="dense"
-                                                            fullWidth
-                                                            disabled
-                                                            error={!apiKeyStatus.gemini}
-                                                            helperText={apiKeyStatus.gemini
-                                                                ? "A API Key serÃ¡ obtida das configuraÃ§Ãµes da empresa"
-                                                                : "Configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do Gemini"}
-                                                        />
-                                                    </FormControl>
-                                                )}
-                                                <Field
-                                                    as={TextField}
-                                                    label={i18n.t("promptModal.form.prompt")}
-                                                    name="prompt"
-                                                    error={touched.prompt && Boolean(errors.prompt)}
-                                                    helperText={touched.prompt && errors.prompt}
-                                                    variant="outlined"
-                                                    margin="dense"
-                                                    fullWidth
-                                                    rows={10}
-                                                    multiline={true}
-                                                />
-                                                <FormControlLabel
-                                                    control={
-                                                        <Field
-                                                            as={Checkbox}
-                                                            name="canSendInternalMessages"
-                                                            color="primary"
-                                                        />
-                                                    }
-                                                    label={i18n.t("promptModal.form.canSendInternalMessages")}
-                                                />
-
-                                                <FormControlLabel
-                                                    control={
-                                                        <Field
-                                                            as={Checkbox}
-                                                            name="canTransferToAgent"
-                                                            color="primary"
-                                                        />
-                                                    }
-                                                    label={i18n.t("promptModal.form.canTransferToAgent")}
-                                                />
-
-                                                <FormControlLabel
-                                                    control={
-                                                        <Field
-                                                            as={Checkbox}
-                                                            name="canChangeTag"
-                                                            color="primary"
-                                                        />
-                                                    }
-                                                    label={i18n.t("promptModal.form.canChangeTag")}
-                                                />
-
-                                                <FormControlLabel
-                                                    control={
-                                                        <Field
-                                                            as={Checkbox}
-                                                            name="permitirCriarAgendamentos"
-                                                            color="primary"
-                                                        />
-                                                    }
-                                                    label={i18n.t("promptModal.form.permitirCriarAgendamentos")}
-                                                />
-
-                                                <div className={classes.multFieldLine}>
-                                                    <FormControl fullWidth margin="dense" variant="outlined">
-                                                        <InputLabel id="model-select-label" shrink={!!selectedModel}>
-                                                            {i18n.t("promptModal.form.model")}
-                                                        </InputLabel>
-                                                        <Select
-                                                            labelId="model-select-label"
-                                                            id="model-select"
-                                                            value={selectedModel}
-                                                            onChange={handleChangeModel}
-                                                            displayEmpty={false}
-                                                        >
-                                                            {selectedProvider === "openai" ? (
-                                                                <>
-                                                                    <MenuItem value="gpt-3.5-turbo-1106">
-                                                                        GPT 3.5 turbo
-                                                                    </MenuItem>
-                                                                    <MenuItem value="gpt-4o-mini">
-                                                                        GPT 4.0 Mini
-                                                                    </MenuItem>
-                                                                    <MenuItem value="gpt-4o">
-                                                                        GPT 4.0
-                                                                    </MenuItem>
-                                                                </>
-                                                            ) : (
-                                                                <MenuItem value="gemini-2.5-flash">
-                                                                    Gemini 2.5 Flash
-                                                                </MenuItem>
-                                                            )}
-                                                        </Select>
-                                                    </FormControl>
-                                                    <Field
-                                                        as={TextField}
-                                                        label={i18n.t("promptModal.form.temperature")}
-                                                        name="temperature"
-                                                        error={touched.temperature && Boolean(errors.temperature)}
-                                                        helperText={touched.temperature && errors.temperature}
-                                                        variant="outlined"
-                                                        margin="dense"
-                                                        fullWidth
-                                                        type="number"
-                                                        inputProps={{
-                                                            step: "0.1",
-                                                            min: "0",
-                                                            max: "1"
-                                                        }}
-                                                    />
-                                                </div>
-
-                                                <div className={classes.multFieldLine}>
-                                                    <Field
-                                                        as={TextField}
-                                                        label={i18n.t("promptModal.form.max_tokens")}
-                                                        name="maxTokens"
-                                                        error={touched.maxTokens && Boolean(errors.maxTokens)}
-                                                        helperText={touched.maxTokens && errors.maxTokens}
-                                                        variant="outlined"
-                                                        margin="dense"
-                                                        fullWidth
-                                                    />
-                                                    <Field
-                                                        as={TextField}
-                                                        label={i18n.t("promptModal.form.max_messages")}
-                                                        name="maxMessages"
-                                                        error={touched.maxMessages && Boolean(errors.maxMessages)}
-                                                        helperText={touched.maxMessages && errors.maxMessages}
-                                                        variant="outlined"
-                                                        margin="dense"
-                                                        fullWidth
-                                                    />
-                                                </div>
-                                            </>
-                                        )}
                                     </>
                                 )}
 
-                                {promptId && (
+                                {(promptId || isManualMode) && (
                                     <>
                                         <Field
                                             as={TextField}
