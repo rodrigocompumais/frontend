@@ -7,21 +7,13 @@ import InputLabel from "@material-ui/core/InputLabel";
 import Select from "@material-ui/core/Select";
 import FormHelperText from "@material-ui/core/FormHelperText";
 import TextField from "@material-ui/core/TextField";
-import Title from "../Title";
-import Paper from "@material-ui/core/Paper";
-import Typography from "@material-ui/core/Typography";
-import useSettings from "../../hooks/useSettings";
-import { ToastContainer, toast } from 'react-toastify';
 import { makeStyles } from "@material-ui/core/styles";
 import { grey, blue } from "@material-ui/core/colors";
 import { Tabs, Tab } from "@material-ui/core";
-import Button from "@material-ui/core/Button";
-import CircularProgress from "@material-ui/core/CircularProgress";
 import { i18n } from "../../translate/i18n";
-import api from "../../services/api";
+import useSettings from "../../hooks/useSettings";
+import { toast } from 'react-toastify';
 
-//import 'react-toastify/dist/ReactToastify.css';
- 
 const useStyles = makeStyles((theme) => ({
   container: {
     paddingTop: theme.spacing(4),
@@ -44,8 +36,6 @@ const useStyles = makeStyles((theme) => ({
     "& .MuiTabs-flexContainer": {
       justifyContent: "center"
     }
-
-
   },
   paper: {
     padding: theme.spacing(2),
@@ -96,41 +86,16 @@ export default function Options(props) {
   const [loadingChatbotType, setLoadingChatbotType] = useState(false);
   const [loadingCheckMsgIsGroup, setCheckMsgIsGroup] = useState(false);
 
-
-  //const [ipixcType, setIpIxcType] = useState("");
-  //const [loadingIpIxcType, setLoadingIpIxcType] = useState(false);
-  //const [tokenixcType, setTokenIxcType] = useState("");
-  //const [loadingTokenIxcType, setLoadingTokenIxcType] = useState(false);
-
-  //const [ipmkauthType, setIpMkauthType] = useState("");
-  //const [loadingIpMkauthType, setLoadingIpMkauthType] = useState(false);
-  //const [clientidmkauthType, setClientIdMkauthType] = useState("");
-  //const [loadingClientIdMkauthType, setLoadingClientIdMkauthType] = useState(false);
-  //const [clientsecretmkauthType, setClientSecrectMkauthType] = useState("");
-  //const [loadingClientSecrectMkauthType, setLoadingClientSecrectMkauthType] = useState(false);
-
   const [asaasType, setAsaasType] = useState("");
   const [loadingAsaasType, setLoadingAsaasType] = useState(false);
 
-  const [geminiApiKey, setGeminiApiKey] = useState("");
-  const [loadingGeminiApiKey, setLoadingGeminiApiKey] = useState(false);
-  const [testingGeminiApiKey, setTestingGeminiApiKey] = useState(false);
-  
-  const [openaiApiKey, setOpenaiApiKey] = useState("");
-  const [loadingOpenaiApiKey, setLoadingOpenaiApiKey] = useState(false);
-  const [testingOpenaiApiKey, setTestingOpenaiApiKey] = useState(false);
-  
-  const [providerConfigs, setProviderConfigs] = useState(null);
-  const [loadingProviderConfigs, setLoadingProviderConfigs] = useState(false);
-  
   // recursos a mais da plw design
-
   const [SendGreetingAccepted, setSendGreetingAccepted] = useState("disabled");
   const [loadingSendGreetingAccepted, setLoadingSendGreetingAccepted] = useState(false);
-  
+
   const [SettingsTransfTicket, setSettingsTransfTicket] = useState("disabled");
   const [loadingSettingsTransfTicket, setLoadingSettingsTransfTicket] = useState(false);
-  
+
   const [sendGreetingMessageOneQueues, setSendGreetingMessageOneQueues] = useState("disabled");
   const [loadingSendGreetingMessageOneQueues, setLoadingSendGreetingMessageOneQueues] = useState(false);
 
@@ -154,96 +119,32 @@ export default function Options(props) {
       if (CheckMsgIsGroup) {
         setCheckMsgIsGroupType(CheckMsgIsGroup.value);
       }
-	  
-	  {/*PLW DESIGN SAUDAÇÃO*/}
+
       const SendGreetingAccepted = settings.find((s) => s.key === "sendGreetingAccepted");
       if (SendGreetingAccepted) {
         setSendGreetingAccepted(SendGreetingAccepted.value);
-      }	 
-	  {/*PLW DESIGN SAUDAÇÃO*/}	 
-	  
-	  {/*TRANSFERIR TICKET*/}	
-	  const SettingsTransfTicket = settings.find((s) => s.key === "sendMsgTransfTicket");
+      }
+
+      const SettingsTransfTicket = settings.find((s) => s.key === "sendMsgTransfTicket");
       if (SettingsTransfTicket) {
         setSettingsTransfTicket(SettingsTransfTicket.value);
       }
-	  {/*TRANSFERIR TICKET*/}
 
       const sendGreetingMessageOneQueues = settings.find((s) => s.key === "sendGreetingMessageOneQueues");
       if (sendGreetingMessageOneQueues) {
         setSendGreetingMessageOneQueues(sendGreetingMessageOneQueues.value)
-      }	  
-	  
+      }
+
       const chatbotType = settings.find((s) => s.key === "chatBotType");
       if (chatbotType) {
         setChatbotType(chatbotType.value);
       }
 
-	    {/*const ipixcType = settings.find((s) => s.key === "ipixc");
-      if (ipixcType) {
-        setIpIxcType(ipixcType.value);
-      }*/}
-
-      {/*const tokenixcType = settings.find((s) => s.key === "tokenixc");
-      if (tokenixcType) {
-        setTokenIxcType(tokenixcType.value);
-      }*/}
-
-      {/*const ipmkauthType = settings.find((s) => s.key === "ipmkauth");
-      if (ipmkauthType) {
-        setIpMkauthType(ipmkauthType.value);
-      }*/}
-
-     {/* const clientidmkauthType = settings.find((s) => s.key === "clientidmkauth");
-      if (clientidmkauthType) {
-        setClientIdMkauthType(clientidmkauthType.value);
-      }*/}
-
-      {/*const clientsecretmkauthType = settings.find((s) => s.key === "clientsecretmkauth");
-      if (clientsecretmkauthType) {
-        setClientSecrectMkauthType(clientsecretmkauthType.value);
-      }*/}
-
       const asaasType = settings.find((s) => s.key === "asaas");
       if (asaasType) {
         setAsaasType(asaasType.value);
       }
-
-      const geminiKey = settings.find((s) => s.key === "geminiApiKey");
-      if (geminiKey) {
-        setGeminiApiKey(geminiKey.value);
-      }
-
-      const openaiKey = settings.find((s) => s.key === "openaiApiKey");
-      if (openaiKey) {
-        setOpenaiApiKey(openaiKey.value);
-      }
-      
     }
-    
-    // Carregar configurações de providers se ambas as chaves estiverem configuradas
-    const loadProviderConfigurations = async () => {
-      try {
-        const geminiKey = settings.find((s) => s.key === "geminiApiKey");
-        const openaiKey = settings.find((s) => s.key === "openaiApiKey");
-        
-        if (geminiKey?.value && openaiKey?.value) {
-          setLoadingProviderConfigs(true);
-          try {
-            const { data } = await api.get("/ai/providers/config");
-            setProviderConfigs(data);
-          } catch (err) {
-            console.error("Erro ao carregar configurações de providers:", err);
-          } finally {
-            setLoadingProviderConfigs(false);
-          }
-        }
-      } catch (err) {
-        console.error("Erro:", err);
-      }
-    };
-    
-    loadProviderConfigurations();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
 
@@ -257,15 +158,15 @@ export default function Options(props) {
     toast.success(i18n.t("settings.options.toasts.success"));
     setLoadingUserRating(false);
   }
-  
-    async function handleSendGreetingMessageOneQueues(value) {
+
+  async function handleSendGreetingMessageOneQueues(value) {
     setSendGreetingMessageOneQueues(value);
     setLoadingSendGreetingMessageOneQueues(true);
     await update({
       key: "sendGreetingMessageOneQueues",
       value,
     });
-	toast.success(i18n.t("settings.options.toasts.success"));
+    toast.success(i18n.t("settings.options.toasts.success"));
     setLoadingSendGreetingMessageOneQueues(false);
   }
 
@@ -276,7 +177,6 @@ export default function Options(props) {
       key: "scheduleType",
       value,
     });
-    //toast.success("Oraçãpeo atualizada com sucesso.");
     toast.success(i18n.t("settings.options.toasts.success"), {
       position: "top-right",
       autoClose: 2000,
@@ -285,7 +185,7 @@ export default function Options(props) {
       pauseOnHover: false,
       draggable: true,
       theme: "light",
-      });
+    });
     setLoadingScheduleType(false);
     if (typeof scheduleTypeChanged === "function") {
       scheduleTypeChanged(value);
@@ -323,12 +223,8 @@ export default function Options(props) {
     });
     toast.success(i18n.t("settings.options.toasts.success"));
     setCheckMsgIsGroup(false);
-    /*     if (typeof scheduleTypeChanged === "function") {
-          scheduleTypeChanged(value);
-        } */
   }
-  
-  {/*NOVO CÓDIGO*/}  
+
   async function handleSendGreetingAccepted(value) {
     setSendGreetingAccepted(value);
     setLoadingSendGreetingAccepted(true);
@@ -336,12 +232,9 @@ export default function Options(props) {
       key: "sendGreetingAccepted",
       value,
     });
-	toast.success(i18n.t("settings.options.toasts.success"));
+    toast.success(i18n.t("settings.options.toasts.success"));
     setLoadingSendGreetingAccepted(false);
-  }  
-  
-  
-  {/*NOVO CÓDIGO*/}    
+  }
 
   async function handleSettingsTransfTicket(value) {
     setSettingsTransfTicket(value);
@@ -353,62 +246,7 @@ export default function Options(props) {
 
     toast.success(i18n.t("settings.options.toasts.success"));
     setLoadingSettingsTransfTicket(false);
-  } 
- 
- {/*async function handleChangeIPIxc(value) {
-    setIpIxcType(value);
-    setLoadingIpIxcType(true);
-    await update({
-      key: "ipixc",
-      value,
-    });
-    toast.success(i18n.t("settings.options.toasts.success"));
-    setLoadingIpIxcType(false);
   }
-
-   {/*async function handleChangeTokenIxc(value) {
-    setTokenIxcType(value);
-    setLoadingTokenIxcType(true);
-    await update({
-      key: "tokenixc",
-      value,
-    });
-    toast.success(i18n.t("settings.options.toasts.success"));
-    setLoadingTokenIxcType(false);
-  }
-
-  async function handleChangeIpMkauth(value) {
-    setIpMkauthType(value);
-    setLoadingIpMkauthType(true);
-    await update({
-      key: "ipmkauth",
-      value,
-    });
-    toast.success(i18n.t("settings.options.toasts.success"));
-    setLoadingIpMkauthType(false);
-  }
-
-  async function handleChangeClientIdMkauth(value) {
-    setClientIdMkauthType(value);
-    setLoadingClientIdMkauthType(true);
-    await update({
-      key: "clientidmkauth",
-      value,
-    });
-    toast.success(i18n.t("settings.options.toasts.success"));
-    setLoadingClientIdMkauthType(false);
-  }
-
-  async function handleChangeClientSecrectMkauth(value) {
-    setClientSecrectMkauthType(value);
-    setLoadingClientSecrectMkauthType(true);
-    await update({
-      key: "clientsecretmkauth",
-      value,
-    });
-    toast.success(i18n.t("settings.options.toasts.success"));
-    setLoadingClientSecrectMkauthType(false);
-  }*/}
 
   async function handleChangeAsaas(value) {
     setAsaasType(value);
@@ -421,114 +259,9 @@ export default function Options(props) {
     setLoadingAsaasType(false);
   }
 
-  async function handleGeminiApiKey(value) {
-    setGeminiApiKey(value);
-    setLoadingGeminiApiKey(true);
-    await update({
-      key: "geminiApiKey",
-      value,
-    });
-    toast.success(i18n.t("settings.options.toasts.success"));
-    setLoadingGeminiApiKey(false);
-  }
-
-  async function handleTestGeminiApiKey() {
-    if (!geminiApiKey || geminiApiKey.trim() === "") {
-      toast.error("Por favor, insira uma chave da API do Gemini antes de testar.");
-      return;
-    }
-
-    setTestingGeminiApiKey(true);
-    try {
-      const { data } = await api.get("/ai/test-key?provider=gemini");
-      if (data.valid) {
-        toast.success(data.message || "Chave da API do Gemini válida e funcionando!");
-      } else {
-        toast.error(data.message || "Chave da API do Gemini inválida.");
-      }
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || err.response?.data?.error || "Erro ao testar chave da API";
-      toast.error(errorMessage);
-    } finally {
-      setTestingGeminiApiKey(false);
-    }
-  }
-
-  async function handleOpenaiApiKey(value) {
-    setOpenaiApiKey(value);
-    setLoadingOpenaiApiKey(true);
-    await update({
-      key: "openaiApiKey",
-      value,
-    });
-    toast.success(i18n.t("settings.options.toasts.success"));
-    setLoadingOpenaiApiKey(false);
-    
-    // Recarregar configurações de providers se ambas chaves estiverem configuradas
-    setTimeout(() => {
-      if (value && geminiApiKey) {
-        loadProviderConfigurations();
-      }
-    }, 500);
-  }
-
-  async function handleTestOpenaiApiKey() {
-    if (!openaiApiKey || openaiApiKey.trim() === "") {
-      toast.error("Por favor, insira uma chave da API do OpenAI antes de testar.");
-      return;
-    }
-
-    setTestingOpenaiApiKey(true);
-    try {
-      const { data } = await api.get("/ai/test-key?provider=openai");
-      if (data.valid) {
-        toast.success(data.message || "Chave da API do OpenAI válida e funcionando!");
-      } else {
-        toast.error(data.message || "Chave da API do OpenAI inválida.");
-      }
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || err.response?.data?.error || "Erro ao testar chave da API";
-      toast.error(errorMessage);
-    } finally {
-      setTestingOpenaiApiKey(false);
-    }
-  }
-
-  const loadProviderConfigurations = async () => {
-    if (!geminiApiKey || !openaiApiKey) {
-      return;
-    }
-    
-    setLoadingProviderConfigs(true);
-    try {
-      const { data } = await api.get("/ai/providers/config");
-      setProviderConfigs(data);
-    } catch (err) {
-      console.error("Erro ao carregar configurações de providers:", err);
-    } finally {
-      setLoadingProviderConfigs(false);
-    }
-  };
-
-  async function handleProviderConfigChange(functionType, provider) {
-    try {
-      await api.post("/ai/providers/config", {
-        functionType,
-        provider
-      });
-      toast.success("Configuração de provider atualizada!");
-      loadProviderConfigurations();
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || err.response?.data?.error || "Erro ao atualizar configuração";
-      toast.error(errorMessage);
-    }
-  }
   return (
     <>
       <Grid spacing={3} container>
-        {/* <Grid xs={12} item>
-                    <Title>Configurações Gerais</Title>
-                </Grid> */}
         <Grid xs={12} sm={6} md={4} item>
           <FormControl className={classes.selectContainer}>
             <InputLabel id="ratings-label">{i18n.t("settings.options.fields.ratings.title")}</InputLabel>
@@ -621,15 +354,12 @@ export default function Options(props) {
               }}
             >
               <MenuItem value={"text"}>{i18n.t("settings.options.fields.chatbotType.text")}</MenuItem>
-			 {/*<MenuItem value={"button"}>Botão</MenuItem>*/}
-             {/*<MenuItem value={"list"}>Lista</MenuItem>*/}
             </Select>
             <FormHelperText>
               {loadingChatbotType && i18n.t("settings.options.updating")}
             </FormHelperText>
           </FormControl>
         </Grid>
-		{/* ENVIAR SAUDAÇÃO AO ACEITAR O TICKET */}
         <Grid xs={12} sm={6} md={4} item>
           <FormControl className={classes.selectContainer}>
             <InputLabel id="sendGreetingAccepted-label">
@@ -650,9 +380,7 @@ export default function Options(props) {
             </FormHelperText>
           </FormControl>
         </Grid>
-		{/* ENVIAR SAUDAÇÃO AO ACEITAR O TICKET */}
-		
-		{/* ENVIAR MENSAGEM DE TRANSFERENCIA DE SETOR/ATENDENTE */}
+
         <Grid xs={12} sm={6} md={4} item>
           <FormControl className={classes.selectContainer}>
             <InputLabel id="sendMsgTransfTicket-label">
@@ -673,8 +401,7 @@ export default function Options(props) {
             </FormHelperText>
           </FormControl>
         </Grid>
-		
-		{/* ENVIAR SAUDAÇÃO QUANDO HOUVER SOMENTE 1 FILA */}
+
         <Grid xs={12} sm={6} md={4} item>
           <FormControl className={classes.selectContainer}>
             <InputLabel id="sendGreetingMessageOneQueues-label">
@@ -695,275 +422,9 @@ export default function Options(props) {
             </FormHelperText>
           </FormControl>
         </Grid>
-		
       </Grid>
-      <Grid spacing={3} container>
-        <Tabs
-          indicatorColor="primary"
-          textColor="primary"
-          scrollButtons="on"
-          variant="scrollable"
-          className={classes.tab}
-          style={{
-            marginBottom: 20,
-            marginTop: 20
-          }}
-        >
-          <Tab
 
-            label={i18n.t("settings.options.tabs.integrations")} />
-
-        </Tabs>
-      </Grid>
       <Grid spacing={3} container style={{ marginBottom: 10 }}>
-        <Grid xs={12} sm={6} md={6} item>
-          <FormControl className={classes.selectContainer} style={{ width: "100%" }}>
-            <TextField
-              id="geminiApiKey"
-              name="geminiApiKey"
-              margin="dense"
-              label={i18n.t("settings.options.fields.geminiApiKey.title")}
-              variant="outlined"
-              type="password"
-              value={geminiApiKey}
-              onChange={async (e) => {
-                handleGeminiApiKey(e.target.value);
-              }}
-              placeholder={i18n.t("settings.options.fields.geminiApiKey.placeholder")}
-              style={{ marginBottom: 8 }}
-            />
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleTestGeminiApiKey}
-              disabled={testingGeminiApiKey || loadingGeminiApiKey || !geminiApiKey}
-              startIcon={testingGeminiApiKey ? <CircularProgress size={16} /> : null}
-              style={{ marginTop: 8 }}
-            >
-              {testingGeminiApiKey ? "Testando..." : "Testar Chave"}
-            </Button>
-            <FormHelperText>
-              {loadingGeminiApiKey && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-        <Grid xs={12} sm={6} md={6} item>
-          <Typography variant="body2" color="textSecondary">
-            {i18n.t("settings.options.fields.geminiApiKey.helper")}
-          </Typography>
-        </Grid>
-        <Grid xs={12} sm={6} md={6} item>
-          <FormControl className={classes.selectContainer} style={{ width: "100%" }}>
-            <TextField
-              id="openaiApiKey"
-              name="openaiApiKey"
-              margin="dense"
-              label={i18n.t("settings.options.fields.openaiApiKey.title")}
-              variant="outlined"
-              type="password"
-              value={openaiApiKey}
-              onChange={async (e) => {
-                handleOpenaiApiKey(e.target.value);
-              }}
-              placeholder={i18n.t("settings.options.fields.openaiApiKey.placeholder")}
-              style={{ marginBottom: 8 }}
-            />
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={handleTestOpenaiApiKey}
-              disabled={testingOpenaiApiKey || loadingOpenaiApiKey || !openaiApiKey}
-              startIcon={testingOpenaiApiKey ? <CircularProgress size={16} /> : null}
-              style={{ marginTop: 8 }}
-            >
-              {testingOpenaiApiKey ? "Testando..." : "Testar Chave"}
-            </Button>
-            <FormHelperText>
-              {loadingOpenaiApiKey && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-        <Grid xs={12} sm={6} md={6} item>
-          <Typography variant="body2" color="textSecondary">
-            {i18n.t("settings.options.fields.openaiApiKey.helper")}
-          </Typography>
-        </Grid>
-      </Grid>
-      
-      {/* Configuração de Providers - Mostrar apenas quando ambas chaves estiverem configuradas */}
-      {geminiApiKey && openaiApiKey && (
-        <>
-          <Grid spacing={3} container style={{ marginTop: 20, marginBottom: 10 }}>
-            <Grid xs={12} item>
-              <Typography variant="h6" style={{ marginBottom: 10 }}>
-                {i18n.t("settings.options.fields.aiProviderConfig.title")}
-              </Typography>
-              <Typography variant="body2" color="textSecondary" style={{ marginBottom: 20 }}>
-                {i18n.t("settings.options.fields.aiProviderConfig.helper")}
-              </Typography>
-            </Grid>
-            
-            {["summaries", "chat", "messageImprovement", "transcription", "campaigns"].map((functionType) => {
-              const functionLabels = {
-                summaries: i18n.t("settings.options.fields.aiProviderConfig.summaries"),
-                chat: i18n.t("settings.options.fields.aiProviderConfig.chat"),
-                messageImprovement: i18n.t("settings.options.fields.aiProviderConfig.messageImprovement"),
-                transcription: i18n.t("settings.options.fields.aiProviderConfig.transcription"),
-                campaigns: i18n.t("settings.options.fields.aiProviderConfig.campaigns")
-              };
-              
-              const currentProvider = providerConfigs?.configured?.[functionType] || "gemini";
-              
-              return (
-                <Grid xs={12} sm={6} md={4} item key={functionType}>
-                  <FormControl className={classes.selectContainer} style={{ width: "100%" }}>
-                    <InputLabel id={`provider-${functionType}-label`}>
-                      {functionLabels[functionType]}
-                    </InputLabel>
-                    <Select
-                      labelId={`provider-${functionType}-label`}
-                      value={currentProvider}
-                      onChange={(e) => handleProviderConfigChange(functionType, e.target.value)}
-                    >
-                      <MenuItem value="gemini">Gemini</MenuItem>
-                      <MenuItem value="openai">OpenAI</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-              );
-            })}
-          </Grid>
-        </>
-      )}
-      
-      {/*-----------------IXC DESATIVADO 4.6.5-----------------*/}
-      {/*<Grid spacing={3} container
-        style={{ marginBottom: 10 }}>
-        <Tabs
-          indicatorColor="primary"
-          textColor="primary"
-          scrollButtons="on"
-          variant="scrollable"
-          className={classes.tab}
-        >
-          <Tab
-
-            label="IXC" />
-
-        </Tabs>
-        <Grid xs={12} sm={6} md={6} item>
-          <FormControl className={classes.selectContainer}>
-            <TextField
-              id="ipixc"
-              name="ipixc"
-              margin="dense"
-              label="IP do IXC"
-              variant="outlined"
-              value={ipixcType}
-              onChange={async (e) => {
-                handleChangeIPIxc(e.target.value);
-              }}
-            >
-            </TextField>
-            <FormHelperText>
-              {loadingIpIxcType && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-        <Grid xs={12} sm={6} md={6} item>
-          <FormControl className={classes.selectContainer}>
-            <TextField
-              id="tokenixc"
-              name="tokenixc"
-              margin="dense"
-              label="Token do IXC"
-              variant="outlined"
-              value={tokenixcType}
-              onChange={async (e) => {
-                handleChangeTokenIxc(e.target.value);
-              }}
-            >
-            </TextField>
-            <FormHelperText>
-              {loadingTokenIxcType && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-      </Grid>*/}
-      {/*-----------------MK-AUTH DESATIVADO 4.6.5-----------------*/}
-      {/*<Grid spacing={3} container
-        style={{ marginBottom: 10 }}>
-        <Tabs
-          indicatorColor="primary"
-          textColor="primary"
-          scrollButtons="on"
-          variant="scrollable"
-          className={classes.tab}
-        >
-          <Tab label="MK-AUTH" />
-
-        </Tabs>
-        <Grid xs={12} sm={12} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <TextField
-              id="ipmkauth"
-              name="ipmkauth"
-              margin="dense"
-              label="Ip Mk-Auth"
-              variant="outlined"
-              value={ipmkauthType}
-              onChange={async (e) => {
-                handleChangeIpMkauth(e.target.value);
-              }}
-            >
-            </TextField>
-            <FormHelperText>
-              {loadingIpMkauthType && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-        <Grid xs={12} sm={12} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <TextField
-              id="clientidmkauth"
-              name="clientidmkauth"
-              margin="dense"
-              label="Client Id"
-              variant="outlined"
-              value={clientidmkauthType}
-              onChange={async (e) => {
-                handleChangeClientIdMkauth(e.target.value);
-              }}
-            >
-            </TextField>
-            <FormHelperText>
-              {loadingClientIdMkauthType && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-        <Grid xs={12} sm={12} md={4} item>
-          <FormControl className={classes.selectContainer}>
-            <TextField
-              id="clientsecretmkauth"
-              name="clientsecretmkauth"
-              margin="dense"
-              label="Client Secret"
-              variant="outlined"
-              value={clientsecretmkauthType}
-              onChange={async (e) => {
-                handleChangeClientSecrectMkauth(e.target.value);
-              }}
-            >
-            </TextField>
-            <FormHelperText>
-              {loadingClientSecrectMkauthType && i18n.t("settings.options.updating")}
-            </FormHelperText>
-          </FormControl>
-        </Grid>
-      </Grid>*/}
-      {/*-----------------ASAAS-----------------*/}
-      <Grid spacing={3} container
-        style={{ marginBottom: 10 }}>
         <Tabs
           indicatorColor="primary"
           textColor="primary"
@@ -972,7 +433,6 @@ export default function Options(props) {
           className={classes.tab}
         >
           <Tab label="ASAAS" />
-
         </Tabs>
         <Grid xs={12} sm={12} md={12} item>
           <FormControl className={classes.selectContainer}>

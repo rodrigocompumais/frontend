@@ -11,6 +11,7 @@ import CompaniesManager from "../../components/CompaniesManager";
 import PlansManager from "../../components/PlansManager";
 import HelpsManager from "../../components/HelpsManager";
 import Options from "../../components/Settings/Options";
+import OptionsAI from "../../components/Settings/OptionsAI";
 
 import { i18n } from "../../translate/i18n.js";
 import { toast } from "react-toastify";
@@ -101,34 +102,34 @@ const SettingsCustom = () => {
   }, []);
 
   const handleTabChange = (event, newValue) => {
-      async function findData() {
-        setLoading(true);
-        try {
-          const companyId = localStorage.getItem("companyId");
-          const company = await find(companyId);
-          const settingList = await getAllSettings();
-          setCompany(company);
-          setSchedules(company.schedules);
-          setSettings(settingList);
-  
-          if (Array.isArray(settingList)) {
-            const scheduleType = settingList.find(
-              (d) => d.key === "scheduleType"
-            );
-            if (scheduleType) {
-              setSchedulesEnabled(scheduleType.value === "company");
-            }
+    async function findData() {
+      setLoading(true);
+      try {
+        const companyId = localStorage.getItem("companyId");
+        const company = await find(companyId);
+        const settingList = await getAllSettings();
+        setCompany(company);
+        setSchedules(company.schedules);
+        setSettings(settingList);
+
+        if (Array.isArray(settingList)) {
+          const scheduleType = settingList.find(
+            (d) => d.key === "scheduleType"
+          );
+          if (scheduleType) {
+            setSchedulesEnabled(scheduleType.value === "company");
           }
-  
-          const user = await getCurrentUserInfo();
-          setCurrentUser(user);
-        } catch (e) {
-          toast.error(e);
         }
-        setLoading(false);
+
+        const user = await getCurrentUserInfo();
+        setCurrentUser(user);
+      } catch (e) {
+        toast.error(e);
       }
-      findData();
-      // eslint-disable-next-line react-hooks/exhaustive-deps
+      setLoading(false);
+    }
+    findData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
 
     setTab(newValue);
   };
@@ -165,6 +166,7 @@ const SettingsCustom = () => {
           className={classes.tab}
         >
           <Tab label={i18n.t("settings.tabs.options")} value={"options"} />
+          <Tab label="Inteligência Artificial" value={"ai"} />
           {schedulesEnabled && <Tab label={i18n.t("settings.tabs.schedules")} value={"schedules"} />}
           {isSuper() ? <Tab label={i18n.t("settings.tabs.companies")} value={"companies"} /> : null}
           {isSuper() ? <Tab label={i18n.t("settings.tabs.plans")} value={"plans"} /> : null}
@@ -225,6 +227,9 @@ const SettingsCustom = () => {
                 setSchedulesEnabled(value === "company")
               }
             />
+          </TabPanel>
+          <TabPanel className={classes.container} value={tab} name={"ai"}>
+            <OptionsAI settings={settings} />
           </TabPanel>
         </Paper>
       </Paper>
