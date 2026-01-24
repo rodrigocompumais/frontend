@@ -288,6 +288,12 @@ const Ticket = () => {
         onClose={() => setScheduleModalOpen(false)}
         contact={contact}
       />
+      <IframeModal
+        open={iframeModalOpen}
+        onClose={() => setIframeModalOpen(false)}
+        url={iframeUrl}
+        title="Gerar Ticket Externo"
+      />
       {ticket.id && (
         <QuickActionsMenu
           onTaskClick={() => setTaskModalOpen(true)}
