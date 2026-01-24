@@ -24,6 +24,7 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { TagsDropdown } from "../TagsDropdown";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
+import IframeModal from "../IframeModal";
 
 const drawerWidth = 320;
 
@@ -78,6 +79,8 @@ const Ticket = () => {
   const [taskModalOpen, setTaskModalOpen] = useState(false);
   const [quickMessageModalOpen, setQuickMessageModalOpen] = useState(false);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [iframeModalOpen, setIframeModalOpen] = useState(false);
+  const [iframeUrl, setIframeUrl] = useState("");
 
   const socketManager = useContext(SocketContext);
 
@@ -215,8 +218,8 @@ const Ticket = () => {
 
       const url = `${baseUrl}?${params.toString()}`;
 
-      // Abrir em nova guia
-      window.open(url, "_blank");
+      setIframeUrl(url);
+      setIframeModalOpen(true);
     } catch (err) {
       console.error("Erro ao gerar ticket:", err);
       toastError(err);
@@ -236,8 +239,8 @@ const Ticket = () => {
           isGroup={ticket.isGroup}
           onAiHandlersReady={setAiHandlers}
         ></MessagesList>
-        <MessageInput 
-          ticketId={ticket.id} 
+        <MessageInput
+          ticketId={ticket.id}
           ticketStatus={ticket.status}
           onAnalyzeChat={aiHandlers?.handleAnalyzeChat}
           onSummarizeAudios={aiHandlers?.handleSummarizeAudios}
