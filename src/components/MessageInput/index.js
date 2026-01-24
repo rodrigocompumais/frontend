@@ -19,7 +19,10 @@ import ClearIcon from "@material-ui/icons/Clear";
 import MicIcon from "@material-ui/icons/Mic";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
-import { FormControlLabel, Switch } from "@material-ui/core";
+import { FormControlLabel, Switch, Dialog, DialogContent, Box, Typography } from "@material-ui/core";
+import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import ChevronRightIcon from "@material-ui/icons/ChevronRight";
+import VisibilityIcon from "@material-ui/icons/Visibility";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -160,6 +163,93 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		color: "#6bcbef",
 		fontWeight: 500,
+	},
+	previewModal: {
+		"& .MuiDialog-paper": {
+			maxWidth: "90vw",
+			maxHeight: "90vh",
+			backgroundColor: "rgba(0, 0, 0, 0.95)",
+			borderRadius: theme.spacing(2),
+		},
+	},
+	previewModalContent: {
+		position: "relative",
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		padding: theme.spacing(2),
+		minHeight: "400px",
+		maxHeight: "80vh",
+	},
+	previewImage: {
+		maxWidth: "100%",
+		maxHeight: "80vh",
+		objectFit: "contain",
+		borderRadius: theme.spacing(1),
+	},
+	previewNavButton: {
+		position: "absolute",
+		top: "50%",
+		transform: "translateY(-50%)",
+		backgroundColor: "rgba(255, 255, 255, 0.2)",
+		color: "#FFFFFF",
+		zIndex: 10,
+		"&:hover": {
+			backgroundColor: "rgba(255, 255, 255, 0.3)",
+		},
+		"&:disabled": {
+			opacity: 0.3,
+		},
+	},
+	previewNavButtonLeft: {
+		left: theme.spacing(2),
+	},
+	previewNavButtonRight: {
+		right: theme.spacing(2),
+	},
+	previewIndicators: {
+		display: "flex",
+		justifyContent: "center",
+		gap: theme.spacing(1),
+		padding: theme.spacing(2),
+		backgroundColor: "rgba(0, 0, 0, 0.5)",
+	},
+	previewIndicator: {
+		width: "8px",
+		height: "8px",
+		borderRadius: "50%",
+		backgroundColor: "rgba(255, 255, 255, 0.4)",
+		cursor: "pointer",
+		transition: "all 0.3s",
+		"&.active": {
+			backgroundColor: "#FFFFFF",
+			width: "24px",
+			borderRadius: "4px",
+		},
+	},
+	previewImageInfo: {
+		position: "absolute",
+		bottom: theme.spacing(2),
+		left: theme.spacing(2),
+		right: theme.spacing(2),
+		backgroundColor: "rgba(0, 0, 0, 0.7)",
+		color: "#FFFFFF",
+		padding: theme.spacing(1, 2),
+		borderRadius: theme.spacing(1),
+		textAlign: "center",
+	},
+	previewButton: {
+		display: "flex",
+		alignItems: "center",
+		gap: theme.spacing(1),
+		padding: theme.spacing(1, 2),
+		borderRadius: theme.spacing(1),
+		backgroundColor: theme.palette.primary.main,
+		color: "#FFFFFF",
+		cursor: "pointer",
+		"&:hover": {
+			backgroundColor: theme.palette.primary.dark,
+		},
 	},
 }));
 
