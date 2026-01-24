@@ -131,7 +131,7 @@ const useStyles = makeStyles(theme => ({
     },
 }));
 
-// Schema serÃ¡ criado dinamicamente baseado no provider
+// Schema será criado dinamicamente baseado no provider
 const getPromptSchema = (provider) => {
     const baseSchema = {
         name: Yup.string().min(5, i18n.t("promptModal.formErrors.name.short")).max(100, i18n.t("promptModal.formErrors.name.long")).required(i18n.t("promptModal.formErrors.name.required")),
@@ -142,8 +142,8 @@ const getPromptSchema = (provider) => {
         maxMessages: Yup.number().required(i18n.t("promptModal.formErrors.maxMessages.required"))
     };
 
-    // NÃ£o validar apiKey aqui - serÃ¡ validado nas Settings
-    // queueId agora Ã© opcional
+    // Não validar apiKey aqui - será validado nas Settings
+    // queueId agora é opcional
     return Yup.object().shape(baseSchema);
 };
 
@@ -187,7 +187,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
 
     const [prompt, setPrompt] = useState(initialState);
 
-    // Templates built-in com mais opÃ§Ãµes de agentes
+    // Templates built-in com mais opções de agentes
     const builtInTemplates = [
         {
             id: "personalizado",
@@ -387,14 +387,14 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const handleChangeModel = (e) => {
         const newModel = e.target.value;
         setSelectedModel(newModel);
-        // Atualizar tambÃ©m no estado do prompt para sincronizar com Formik
+        // Atualizar também no estado do prompt para sincronizar com Formik
         setPrompt(prev => ({ ...prev, model: newModel }));
     };
 
     const handleChangeProvider = (e) => {
         const newProvider = e.target.value;
         setSelectedProvider(newProvider);
-        // Se mudar para Gemini, resetar modelo para o padrÃ£o do Gemini
+        // Se mudar para Gemini, resetar modelo para o padrão do Gemini
         let defaultModel;
         if (newProvider === "gemini") {
             defaultModel = "gemini-2.5-flash";
@@ -402,7 +402,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             defaultModel = "gpt-3.5-turbo-1106";
         }
         setSelectedModel(defaultModel);
-        // Atualizar tambÃ©m no estado do prompt
+        // Atualizar também no estado do prompt
         setPrompt(prev => ({ ...prev, provider: newProvider, model: defaultModel }));
     };
 
@@ -508,7 +508,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                                 Escolha o tipo de agente
                                             </h3>
                                             <p style={{ margin: 0, fontSize: 14, color: "#666" }}>
-                                                Selecione um template prÃ©-definido ou crie um prompt personalizado
+                                                Selecione um template pré-definido ou crie um prompt personalizado
                                             </p>
                                         </div>
 
@@ -578,16 +578,16 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                                 <TextField
                                                     label="API Key do OpenAI"
                                                     value={apiKeyStatus.openai
-                                                        ? "âœ“ API Key configurada em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes"
-                                                        : "âš  API Key nÃ£o configurada"}
+                                                        ? "✓ API Key configurada em Configurações → Integrações"
+                                                        : "⚠ API Key não configurada"}
                                                     variant="outlined"
                                                     margin="dense"
                                                     fullWidth
                                                     disabled
                                                     error={!apiKeyStatus.openai}
                                                     helperText={apiKeyStatus.openai
-                                                        ? "A API Key serÃ¡ obtida das configuraÃ§Ãµes da empresa"
-                                                        : "Configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do OpenAI"}
+                                                        ? "A API Key será obtida das configurações da empresa"
+                                                        : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
                                                 />
                                             </FormControl>
                                         )}
@@ -596,16 +596,16 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                                 <TextField
                                                     label="API Key do Gemini"
                                                     value={apiKeyStatus.gemini
-                                                        ? "âœ“ API Key configurada em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes"
-                                                        : "âš  API Key nÃ£o configurada"}
+                                                        ? "✓ API Key configurada em Configurações → Integrações"
+                                                        : "⚠ API Key não configurada"}
                                                     variant="outlined"
                                                     margin="dense"
                                                     fullWidth
                                                     disabled
                                                     error={!apiKeyStatus.gemini}
                                                     helperText={apiKeyStatus.gemini
-                                                        ? "A API Key serÃ¡ obtida das configuraÃ§Ãµes da empresa"
-                                                        : "Configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do Gemini"}
+                                                        ? "A API Key será obtida das configurações da empresa"
+                                                        : "Configure a API Key em Configurações → Integrações → Chave da API do Gemini"}
                                                 />
                                             </FormControl>
                                         )}
