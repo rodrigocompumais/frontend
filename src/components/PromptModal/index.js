@@ -144,10 +144,10 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                         canChangeTag: data.canChangeTag === true,
                         permitirCriarAgendamentos: data.permitirCriarAgendamentos === true
                     });
-                    
+
                     setSelectedModel(data.model || "gpt-3.5-turbo-1106");
                     setSelectedProvider(data.provider || "openai");
-                } catch (err) { 
+                } catch (err) {
                     toastError(err);
                 }
             }
@@ -159,7 +159,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                 const { data } = await api.get("/settings");
                 const geminiKey = data.find(s => s.key === "geminiApiKey");
                 const openaiKey = data.find(s => s.key === "openaiApiKey");
-                
+
                 setApiKeyStatus({
                     gemini: !!geminiKey?.value,
                     openai: !!openaiKey?.value
@@ -243,7 +243,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             );
             return;
         }
-        
+
         if (selectedProvider === "gemini" && !apiKeyStatus.gemini) {
             toast.error(
                 "Para usar Gemini, configure a API Key em Configurações → Integrações → Chave da API do Gemini"
@@ -251,12 +251,12 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             return;
         }
 
-        const promptData = { 
-            ...values, 
+        const promptData = {
+            ...values,
             model: selectedModel,
             provider: selectedProvider
         };
-        
+
         // Não enviar apiKey - será buscada das Settings
         delete promptData.apiKey;
         try {
@@ -420,16 +420,16 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                                     <FormControl fullWidth margin="dense" variant="outlined">
                                                         <TextField
                                                             label="API Key do OpenAI"
-                                                            value={apiKeyStatus.openai 
-                                                                ? "✓ API Key configurada em Configurações → Integrações" 
+                                                            value={apiKeyStatus.openai
+                                                                ? "✓ API Key configurada em Configurações → Integrações"
                                                                 : "⚠ API Key não configurada"}
                                                             variant="outlined"
                                                             margin="dense"
                                                             fullWidth
                                                             disabled
                                                             error={!apiKeyStatus.openai}
-                                                            helperText={apiKeyStatus.openai 
-                                                                ? "A API Key será obtida das configurações da empresa" 
+                                                            helperText={apiKeyStatus.openai
+                                                                ? "A API Key será obtida das configurações da empresa"
                                                                 : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
                                                         />
                                                     </FormControl>
@@ -439,16 +439,16 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                                     <FormControl fullWidth margin="dense" variant="outlined">
                                                         <TextField
                                                             label="API Key do Gemini"
-                                                            value={apiKeyStatus.gemini 
-                                                                ? "✓ API Key configurada em Configurações → Integrações" 
+                                                            value={apiKeyStatus.gemini
+                                                                ? "✓ API Key configurada em Configurações → Integrações"
                                                                 : "⚠ API Key não configurada"}
                                                             variant="outlined"
                                                             margin="dense"
                                                             fullWidth
                                                             disabled
                                                             error={!apiKeyStatus.gemini}
-                                                            helperText={apiKeyStatus.gemini 
-                                                                ? "A API Key será obtida das configurações da empresa" 
+                                                            helperText={apiKeyStatus.gemini
+                                                                ? "A API Key será obtida das configurações da empresa"
                                                                 : "Configure a API Key em Configurações → Integrações → Chave da API do Gemini"}
                                                         />
                                                     </FormControl>
@@ -496,182 +496,184 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                             margin="dense"
                                             fullWidth
                                         />
-                                <FormControl fullWidth margin="dense" variant="outlined">
-                                    <InputLabel id="provider-select-label">Provider</InputLabel>
-                                    <Select
-                                        labelId="provider-select-label"
-                                        id="provider-select"
-                                        value={selectedProvider}
-                                        onChange={handleChangeProvider}
-                                        label="Provider"
-                                    >
-                                        <MenuItem value="openai">OpenAI</MenuItem>
-                                        <MenuItem value="gemini">Gemini</MenuItem>
-                                    </Select>
-                                </FormControl>
-                                {selectedProvider === "openai" && (
-                                    <FormControl fullWidth margin="dense" variant="outlined">
-                                        <TextField
-                                            label="API Key do OpenAI"
-                                            value={apiKeyStatus.openai 
-                                                ? "✓ API Key configurada em Configurações → Integrações" 
-                                                : "⚠ API Key não configurada"}
+                                        <FormControl fullWidth margin="dense" variant="outlined">
+                                            <InputLabel id="provider-select-label">Provider</InputLabel>
+                                            <Select
+                                                labelId="provider-select-label"
+                                                id="provider-select"
+                                                value={selectedProvider}
+                                                onChange={handleChangeProvider}
+                                                label="Provider"
+                                            >
+                                                <MenuItem value="openai">OpenAI</MenuItem>
+                                                <MenuItem value="gemini">Gemini</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                        {selectedProvider === "openai" && (
+                                            <FormControl fullWidth margin="dense" variant="outlined">
+                                                <TextField
+                                                    label="API Key do OpenAI"
+                                                    value={apiKeyStatus.openai
+                                                        ? "✓ API Key configurada em Configurações → Integrações"
+                                                        : "⚠ API Key não configurada"}
+                                                    variant="outlined"
+                                                    margin="dense"
+                                                    fullWidth
+                                                    disabled
+                                                    error={!apiKeyStatus.openai}
+                                                    helperText={apiKeyStatus.openai
+                                                        ? "A API Key será obtida das configurações da empresa"
+                                                        : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
+                                                />
+                                            </FormControl>
+                                        )}
+                                        {selectedProvider === "gemini" && (
+                                            <FormControl fullWidth margin="dense" variant="outlined">
+                                                <TextField
+                                                    label="API Key do Gemini"
+                                                    value={apiKeyStatus.gemini
+                                                        ? "✓ API Key configurada em Configurações → Integrações"
+                                                        : "⚠ API Key não configurada"}
+                                                    variant="outlined"
+                                                    margin="dense"
+                                                    fullWidth
+                                                    disabled
+                                                    error={!apiKeyStatus.gemini}
+                                                    helperText={apiKeyStatus.gemini
+                                                        ? "A API Key será obtida das configurações da empresa"
+                                                        : "Configure a API Key em Configurações → Integrações → Chave da API do Gemini"}
+                                                />
+                                            </FormControl>
+                                        )}
+                                        <Field
+                                            as={TextField}
+                                            label={i18n.t("promptModal.form.prompt")}
+                                            name="prompt"
+                                            error={touched.prompt && Boolean(errors.prompt)}
+                                            helperText={touched.prompt && errors.prompt}
                                             variant="outlined"
                                             margin="dense"
                                             fullWidth
-                                            disabled
-                                            error={!apiKeyStatus.openai}
-                                            helperText={apiKeyStatus.openai 
-                                                ? "A API Key será obtida das configurações da empresa" 
-                                                : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
+                                            rows={10}
+                                            multiline={true}
                                         />
-                                    </FormControl>
+                                        <FormControlLabel
+                                            control={
+                                                <Field
+                                                    as={Checkbox}
+                                                    name="canSendInternalMessages"
+                                                    color="primary"
+                                                />
+                                            }
+                                            label={i18n.t("promptModal.form.canSendInternalMessages")}
+                                        />
+
+                                        <FormControlLabel
+                                            control={
+                                                <Field
+                                                    as={Checkbox}
+                                                    name="canTransferToAgent"
+                                                    color="primary"
+                                                />
+                                            }
+                                            label={i18n.t("promptModal.form.canTransferToAgent")}
+                                        />
+
+                                        <FormControlLabel
+                                            control={
+                                                <Field
+                                                    as={Checkbox}
+                                                    name="canChangeTag"
+                                                    color="primary"
+                                                />
+                                            }
+                                            label={i18n.t("promptModal.form.canChangeTag")}
+                                        />
+
+                                        <FormControlLabel
+                                            control={
+                                                <Field
+                                                    as={Checkbox}
+                                                    name="permitirCriarAgendamentos"
+                                                    color="primary"
+                                                />
+                                            }
+                                            label={i18n.t("promptModal.form.permitirCriarAgendamentos")}
+                                        />
+
+                                        <div className={classes.multFieldLine}>
+                                            <FormControl fullWidth margin="dense" variant="outlined">
+                                                <InputLabel id="model-select-label" shrink={!!selectedModel}>
+                                                    {i18n.t("promptModal.form.model")}
+                                                </InputLabel>
+                                                <Select
+                                                    labelId="model-select-label"
+                                                    id="model-select"
+                                                    value={selectedModel}
+                                                    onChange={handleChangeModel}
+                                                    displayEmpty={false}
+                                                >
+                                                    {selectedProvider === "openai" ? (
+                                                        <>
+                                                            <MenuItem value="gpt-3.5-turbo-1106">
+                                                                GPT 3.5 turbo
+                                                            </MenuItem>
+                                                            <MenuItem value="gpt-4o-mini">
+                                                                GPT 4.0 Mini
+                                                            </MenuItem>
+                                                            <MenuItem value="gpt-4o">
+                                                                GPT 4.0
+                                                            </MenuItem>
+                                                        </>
+                                                    ) : (
+                                                        <MenuItem value="gemini-2.5-flash">
+                                                            Gemini 2.5 Flash
+                                                        </MenuItem>
+                                                    )}
+                                                </Select>
+                                            </FormControl>
+                                            <Field
+                                                as={TextField}
+                                                label={i18n.t("promptModal.form.temperature")}
+                                                name="temperature"
+                                                error={touched.temperature && Boolean(errors.temperature)}
+                                                helperText={touched.temperature && errors.temperature}
+                                                variant="outlined"
+                                                margin="dense"
+                                                fullWidth
+                                                type="number"
+                                                inputProps={{
+                                                    step: "0.1",
+                                                    min: "0",
+                                                    max: "1"
+                                                }}
+                                            />
+                                        </div>
+
+                                        <div className={classes.multFieldLine}>
+                                            <Field
+                                                as={TextField}
+                                                label={i18n.t("promptModal.form.max_tokens")}
+                                                name="maxTokens"
+                                                error={touched.maxTokens && Boolean(errors.maxTokens)}
+                                                helperText={touched.maxTokens && errors.maxTokens}
+                                                variant="outlined"
+                                                margin="dense"
+                                                fullWidth
+                                            />
+                                            <Field
+                                                as={TextField}
+                                                label={i18n.t("promptModal.form.max_messages")}
+                                                name="maxMessages"
+                                                error={touched.maxMessages && Boolean(errors.maxMessages)}
+                                                helperText={touched.maxMessages && errors.maxMessages}
+                                                variant="outlined"
+                                                margin="dense"
+                                                fullWidth
+                                            />
+                                        </div>
+                                    </>
                                 )}
-                                {selectedProvider === "gemini" && (
-                                    <FormControl fullWidth margin="dense" variant="outlined">
-                                        <TextField
-                                            label="API Key do Gemini"
-                                            value={apiKeyStatus.gemini 
-                                                ? "✓ API Key configurada em Configurações → Integrações" 
-                                                : "⚠ API Key não configurada"}
-                                            variant="outlined"
-                                            margin="dense"
-                                            fullWidth
-                                            disabled
-                                            error={!apiKeyStatus.gemini}
-                                            helperText={apiKeyStatus.gemini 
-                                                ? "A API Key será obtida das configurações da empresa" 
-                                                : "Configure a API Key em Configurações → Integrações → Chave da API do Gemini"}
-                                        />
-                                    </FormControl>
-                                )}
-                                <Field
-                                    as={TextField}
-                                    label={i18n.t("promptModal.form.prompt")}
-                                    name="prompt"
-                                    error={touched.prompt && Boolean(errors.prompt)}
-                                    helperText={touched.prompt && errors.prompt}
-                                    variant="outlined"
-                                    margin="dense"
-                                    fullWidth
-                                    rows={10}
-                                    multiline={true}
-                                />
-                                <FormControlLabel
-                                    control={
-                                        <Field
-                                            as={Checkbox}
-                                            name="canSendInternalMessages"
-                                            color="primary"
-                                        />
-                                    }
-                                    label={i18n.t("promptModal.form.canSendInternalMessages")}
-                                />
-                                
-                                <FormControlLabel
-                                    control={
-                                        <Field
-                                            as={Checkbox}
-                                            name="canTransferToAgent"
-                                            color="primary"
-                                        />
-                                    }
-                                    label={i18n.t("promptModal.form.canTransferToAgent")}
-                                />
-                                
-                                <FormControlLabel
-                                    control={
-                                        <Field
-                                            as={Checkbox}
-                                            name="canChangeTag"
-                                            color="primary"
-                                        />
-                                    }
-                                    label={i18n.t("promptModal.form.canChangeTag")}
-                                />
-                                
-                                <FormControlLabel
-                                    control={
-                                        <Field
-                                            as={Checkbox}
-                                            name="permitirCriarAgendamentos"
-                                            color="primary"
-                                        />
-                                    }
-                                    label={i18n.t("promptModal.form.permitirCriarAgendamentos")}
-                                />
-                                
-                                <div className={classes.multFieldLine}>
-                                    <FormControl fullWidth margin="dense" variant="outlined">
-                                        <InputLabel id="model-select-label" shrink={!!selectedModel}>
-                                            {i18n.t("promptModal.form.model")}
-                                        </InputLabel>
-                                        <Select
-                                            labelId="model-select-label"
-                                            id="model-select"
-                                            value={selectedModel}
-                                            onChange={handleChangeModel}
-                                            displayEmpty={false}
-                                        >
-                                            {selectedProvider === "openai" ? (
-                                                <>
-                                                    <MenuItem value="gpt-3.5-turbo-1106">
-                                                        GPT 3.5 turbo
-                                                    </MenuItem>
-                                                    <MenuItem value="gpt-4o-mini">
-                                                        GPT 4.0 Mini
-                                                    </MenuItem>
-                                                    <MenuItem value="gpt-4o">
-                                                        GPT 4.0
-                                                    </MenuItem>
-                                                </>
-                                            ) : (
-                                                <MenuItem value="gemini-2.5-flash">
-                                                    Gemini 2.5 Flash
-                                                </MenuItem>
-                                            )}
-                                        </Select>
-                                    </FormControl>
-                                    <Field
-                                        as={TextField}
-                                        label={i18n.t("promptModal.form.temperature")}
-                                        name="temperature"
-                                        error={touched.temperature && Boolean(errors.temperature)}
-                                        helperText={touched.temperature && errors.temperature}
-                                        variant="outlined"
-                                        margin="dense"
-                                        fullWidth
-                                        type="number"
-                                        inputProps={{
-                                            step: "0.1",
-                                            min: "0",
-                                            max: "1"
-                                        }}
-                                    />
-                                </div>
-                                
-                                <div className={classes.multFieldLine}>
-                                    <Field
-                                        as={TextField}
-                                        label={i18n.t("promptModal.form.max_tokens")}
-                                        name="maxTokens"
-                                        error={touched.maxTokens && Boolean(errors.maxTokens)}
-                                        helperText={touched.maxTokens && errors.maxTokens}
-                                        variant="outlined"
-                                        margin="dense"
-                                        fullWidth
-                                    />
-                                    <Field
-                                        as={TextField}
-                                        label={i18n.t("promptModal.form.max_messages")}
-                                        name="maxMessages"
-                                        error={touched.maxMessages && Boolean(errors.maxMessages)}
-                                        helperText={touched.maxMessages && errors.maxMessages}
-                                        variant="outlined"
-                                        margin="dense"
-                                        fullWidth
-                                    />
-                                </div>
                             </DialogContent>
                             <DialogActions>
                                 <Button
