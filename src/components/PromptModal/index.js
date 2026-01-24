@@ -206,7 +206,118 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                 permitirCriarAgendamentos: false
             }
         },
-        // ... (lines 205-317 omitted for brevity, logic remains same)
+        {
+            id: "atendimento",
+            tipo: "atendimento",
+            nome: "Atendimento ao Cliente",
+            descricao: "Agente especializado em atender clientes com cordialidade e eficiência",
+            icon: "👤",
+            promptBase: "Você é um assistente de atendimento ao cliente profissional e cordial. Sua missão é ajudar os clientes de forma clara, educada e eficiente. Sempre mantenha um tom {tom_resposta} e seja prestativo. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: true,
+                canChangeTag: true,
+                permitirCriarAgendamentos: false
+            }
+        },
+        {
+            id: "vendas",
+            tipo: "vendas",
+            nome: "Consultor de Vendas",
+            descricao: "Agente focado em converter leads e fechar vendas com persuasão",
+            icon: "💼",
+            promptBase: "Você é um consultor de vendas experiente e persuasivo. Seu objetivo é entender as necessidades do cliente e apresentar soluções que agreguem valor. Use um tom {tom_resposta} e seja convincente sem ser invasivo. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: true,
+                canChangeTag: true,
+                permitirCriarAgendamentos: true
+            }
+        },
+        {
+            id: "suporte",
+            tipo: "suporte",
+            nome: "Suporte Técnico",
+            descricao: "Especialista em resolver problemas técnicos e orientar usuários",
+            icon: "🔧",
+            promptBase: "Você é um especialista em suporte técnico. Sua função é diagnosticar problemas, fornecer soluções claras e orientar os usuários passo a passo. Mantenha um tom {tom_resposta} e seja paciente e didático. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: true,
+                canChangeTag: true,
+                permitirCriarAgendamentos: false
+            }
+        },
+        {
+            id: "agendador",
+            tipo: "agendador",
+            nome: "Agendador de Compromissos",
+            descricao: "Gerencia agendamentos e organiza compromissos automaticamente",
+            icon: "📅",
+            promptBase: "Você é um assistente de agendamentos. Sua função é ajudar a marcar, remarcar e gerenciar compromissos de forma organizada. Use um tom {tom_resposta} e seja preciso com datas e horários. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: false,
+                canChangeTag: true,
+                permitirCriarAgendamentos: true
+            }
+        },
+        {
+            id: "faq",
+            tipo: "faq",
+            nome: "Respondedor de FAQ",
+            descricao: "Responde perguntas frequentes de forma rápida e precisa",
+            icon: "❓",
+            promptBase: "Você é um assistente especializado em responder perguntas frequentes. Forneça respostas claras, diretas e precisas. Use um tom {tom_resposta} e seja objetivo. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: false,
+                canTransferToAgent: true,
+                canChangeTag: false,
+                permitirCriarAgendamentos: false
+            }
+        },
+        {
+            id: "triagem",
+            tipo: "triagem",
+            nome: "Triagem Inteligente",
+            descricao: "Classifica e direciona conversas para os setores corretos",
+            icon: "🎯",
+            promptBase: "Você é um assistente de triagem. Sua função é entender a necessidade do cliente e direcioná-lo para o setor ou pessoa adequada. Use um tom {tom_resposta} e seja eficiente na classificação. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: true,
+                canChangeTag: true,
+                permitirCriarAgendamentos: false
+            }
+        },
+        {
+            id: "cobranca",
+            tipo: "cobranca",
+            nome: "Assistente de Cobrança",
+            descricao: "Gerencia cobranças e pagamentos com profissionalismo",
+            icon: "💰",
+            promptBase: "Você é um assistente de cobrança profissional. Sua função é lembrar sobre pagamentos pendentes de forma educada e ajudar com dúvidas sobre faturas. Use um tom {tom_resposta} e seja firme mas respeitoso. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: true,
+                canChangeTag: true,
+                permitirCriarAgendamentos: false
+            }
+        },
+        {
+            id: "feedback",
+            tipo: "feedback",
+            nome: "Coletor de Feedback",
+            descricao: "Coleta avaliações e sugestões dos clientes",
+            icon: "⭐",
+            promptBase: "Você é um assistente de feedback. Sua função é coletar avaliações, opiniões e sugestões dos clientes de forma amigável. Use um tom {tom_resposta} e incentive respostas honestas. {observacoes}",
+            permissoes: {
+                canSendInternalMessages: true,
+                canTransferToAgent: false,
+                canChangeTag: true,
+                permitirCriarAgendamentos: false
+            }
+        }
     ];
 
     const convertToBoolean = (value) => {
