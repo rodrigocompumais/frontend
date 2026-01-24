@@ -685,26 +685,19 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                                 <Select
                                                     labelId="model-select-label"
                                                     id="model-select"
-                                                    value={selectedModel}
-                                                    onChange={handleChangeModel}
+                                                    value={values.model}
+                                                    onChange={(e) => {
+                                                        setFieldValue("model", e.target.value);
+                                                        setSelectedModel(e.target.value);
+                                                    }}
                                                     displayEmpty={false}
                                                 >
-                                                    {selectedProvider === "openai" ? (
-                                                        <>
-                                                            <MenuItem value="gpt-3.5-turbo-1106">
-                                                                GPT 3.5 turbo
-                                                            </MenuItem>
-                                                            <MenuItem value="gpt-4o-mini">
-                                                                GPT 4.0 Mini
-                                                            </MenuItem>
-                                                            <MenuItem value="gpt-4o">
-                                                                GPT 4.0
-                                                            </MenuItem>
-                                                        </>
-                                                    ) : (
-                                                        <MenuItem value="gemini-2.5-flash">
-                                                            Gemini 2.5 Flash
-                                                        </MenuItem>
+                                                    {selectedProvider === "openai" ? [
+                                                        <MenuItem key="gpt-3.5-turbo-1106" value="gpt-3.5-turbo-1106">GPT 3.5 turbo</MenuItem>,
+                                                        <MenuItem key="gpt-4o-mini" value="gpt-4o-mini">GPT 4.0 Mini</MenuItem>,
+                                                        <MenuItem key="gpt-4o" value="gpt-4o">GPT 4.0</MenuItem>
+                                                    ] : (
+                                                        <MenuItem value="gemini-2.5-flash">Gemini 2.5 Flash</MenuItem>
                                                     )}
                                                 </Select>
                                             </FormControl>
