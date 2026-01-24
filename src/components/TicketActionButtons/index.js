@@ -75,6 +75,17 @@ const TicketActionButtons = ({ ticket }) => {
 			)}
 			{ticket.status === "open" && (
 				<>
+					{ticket.userId !== user?.id && (
+						<ButtonWithSpinner
+							loading={loading}
+							size="small"
+							variant="contained"
+							color="primary"
+							onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+						>
+							Assumir
+						</ButtonWithSpinner>
+					)}
 					<ButtonWithSpinner
 						loading={loading}
 						startIcon={<Replay />}
@@ -103,29 +114,29 @@ const TicketActionButtons = ({ ticket }) => {
 					/>
 				</>
 			)}
-		{ticket.status === "pending" && (
-			<>
-				<ButtonWithSpinner
-					loading={loading}
-					size="small"
-					variant="outlined"
-					color="secondary"
-					onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
-					style={{ marginRight: 8 }}
-				>
-					Rejeitar
-				</ButtonWithSpinner>
-				<ButtonWithSpinner
-					loading={loading}
-					size="small"
-					variant="contained"
-					color="primary"
-					onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
-				>
-					{i18n.t("messagesList.header.buttons.accept")}
-				</ButtonWithSpinner>
-			</>
-		)}
+			{ticket.status === "pending" && (
+				<>
+					<ButtonWithSpinner
+						loading={loading}
+						size="small"
+						variant="outlined"
+						color="secondary"
+						onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
+						style={{ marginRight: 8 }}
+					>
+						Rejeitar
+					</ButtonWithSpinner>
+					<ButtonWithSpinner
+						loading={loading}
+						size="small"
+						variant="contained"
+						color="primary"
+						onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+					>
+						{i18n.t("messagesList.header.buttons.accept")}
+					</ButtonWithSpinner>
+				</>
+			)}
 		</div>
 	);
 };

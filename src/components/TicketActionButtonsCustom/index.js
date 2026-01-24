@@ -17,6 +17,7 @@ import UndoRoundedIcon from '@material-ui/icons/UndoRounded';
 import Tooltip from '@material-ui/core/Tooltip';
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
 import CloseIcon from '@material-ui/icons/Close';
+import PanToolIcon from '@material-ui/icons/PanTool';
 import { TagsDropdown } from "../TagsDropdown";
 
 
@@ -88,8 +89,8 @@ const useStyles = makeStyles(theme => ({
 		transition: "all 0.3s ease",
 		"&:hover": {
 			borderColor: theme.palette.primary.main,
-			backgroundColor: theme.palette.type === "dark" 
-				? "rgba(14, 165, 233, 0.1)" 
+			backgroundColor: theme.palette.type === "dark"
+				? "rgba(14, 165, 233, 0.1)"
 				: "rgba(14, 165, 233, 0.05)",
 			transform: "translateY(-1px)",
 		},
@@ -99,8 +100,8 @@ const useStyles = makeStyles(theme => ({
 		padding: theme.spacing(1),
 		transition: "all 0.2s ease",
 		"&:hover": {
-			backgroundColor: theme.palette.type === "dark" 
-				? "rgba(255, 255, 255, 0.1)" 
+			backgroundColor: theme.palette.type === "dark"
+				? "rgba(255, 255, 255, 0.1)"
 				: "rgba(0, 0, 0, 0.08)",
 			transform: "scale(1.1)",
 		},
@@ -111,8 +112,8 @@ const useStyles = makeStyles(theme => ({
 		color: theme.palette.text.secondary,
 		transition: "all 0.2s ease",
 		"&:hover": {
-			backgroundColor: theme.palette.type === "dark" 
-				? "rgba(255, 255, 255, 0.1)" 
+			backgroundColor: theme.palette.type === "dark"
+				? "rgba(255, 255, 255, 0.1)"
 				: "rgba(0, 0, 0, 0.08)",
 			color: theme.palette.text.primary,
 			transform: "scale(1.1)",
@@ -190,8 +191,22 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 			{ticket.status === "open" && (
 				<>
 					<TagsDropdown ticket={ticket} />
+					{ticket.userId !== user?.id && (
+						<Tooltip title="Assumir Atendimento">
+							<ButtonWithSpinner
+								loading={loading}
+								startIcon={<PanToolIcon />}
+								size="small"
+								onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+								variant="contained"
+								className={classes.acceptButton}
+							>
+								Assumir
+							</ButtonWithSpinner>
+						</Tooltip>
+					)}
 					<Tooltip title={i18n.t("messagesList.header.buttons.return")}>
-						<IconButton 
+						<IconButton
 							onClick={e => handleUpdateTicketStatus(e, "pending", null)}
 							className={classes.returnIconButton}
 						>
@@ -208,7 +223,7 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 							{i18n.t("messagesList.header.buttons.resolve")}
 						</Button>
 					</Tooltip>
-					<IconButton 
+					<IconButton
 						onClick={handleOpenTicketOptionsMenu}
 						className={classes.iconButton}
 					>
@@ -222,29 +237,29 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 					/>
 				</>
 			)}
-		{ticket.status === "pending" && (
-			<>
-				<TagsDropdown ticket={ticket} />
-				<ButtonWithSpinner
-					loading={loading}
-					startIcon={<CloseIcon />}
-					onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
-					className={classes.rejectButton}
-					variant="outlined"
-				>
-					Rejeitar
-				</ButtonWithSpinner>
-				<ButtonWithSpinner
-					loading={loading}
-					startIcon={<PlayArrowIcon />}
-					onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
-					className={classes.acceptButton}
-					variant="contained"
-				>
-					{i18n.t("messagesList.header.buttons.accept")}
-				</ButtonWithSpinner>
-			</>
-		)}
+			{ticket.status === "pending" && (
+				<>
+					<TagsDropdown ticket={ticket} />
+					<ButtonWithSpinner
+						loading={loading}
+						startIcon={<CloseIcon />}
+						onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
+						className={classes.rejectButton}
+						variant="outlined"
+					>
+						Rejeitar
+					</ButtonWithSpinner>
+					<ButtonWithSpinner
+						loading={loading}
+						startIcon={<PlayArrowIcon />}
+						onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+						className={classes.acceptButton}
+						variant="contained"
+					>
+						{i18n.t("messagesList.header.buttons.accept")}
+					</ButtonWithSpinner>
+				</>
+			)}
 		</div>
 	);
 };
