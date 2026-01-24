@@ -18,6 +18,7 @@ import { MenuItem, FormControl, InputLabel, Select, Menu, Grid, FormControlLabel
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import TemplateConfigModal from "./TemplateConfigModal";
 
 const useStyles = makeStyles(theme => ({
     root: {
@@ -165,6 +166,9 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         canChangeTag: false,
         permitirCriarAgendamentos: false
     });
+    const [templateModalOpen, setTemplateModalOpen] = useState(false);
+    const [useCustomAgentName, setUseCustomAgentName] = useState(false);
+
 
     const initialState = {
         name: "",
