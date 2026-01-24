@@ -339,10 +339,10 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                         maxTokens: data.maxTokens || 100,
                         temperature: data.temperature !== undefined ? data.temperature : 1,
                         maxMessages: data.maxMessages || 10,
-                        canSendInternalMessages: data.canSendInternalMessages === true,
-                        canTransferToAgent: data.canTransferToAgent === true,
-                        canChangeTag: data.canChangeTag === true,
-                        permitirCriarAgendamentos: data.permitirCriarAgendamentos === true
+                        canSendInternalMessages: ["true", "1", 1, true].includes(data.canSendInternalMessages),
+                        canTransferToAgent: ["true", "1", 1, true].includes(data.canTransferToAgent),
+                        canChangeTag: ["true", "1", 1, true].includes(data.canChangeTag),
+                        permitirCriarAgendamentos: ["true", "1", 1, true].includes(data.permitirCriarAgendamentos)
                     });
 
                     setSelectedModel(data.model || "gpt-3.5-turbo-1106");
@@ -439,14 +439,14 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         // Verificar se hÃ¡ API key configurada para o provider selecionado
         if (selectedProvider === "openai" && !apiKeyStatus.openai) {
             toast.error(
-                "Para usar OpenAI, configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do OpenAI"
+                "Para usar OpenAI, configure a API Key em Configurações â†’ Integrações â†’ Chave da API do OpenAI"
             );
             return;
         }
 
         if (selectedProvider === "gemini" && !apiKeyStatus.gemini) {
             toast.error(
-                "Para usar Gemini, configure a API Key em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes â†’ Chave da API do Gemini"
+                "Para usar Gemini, configure a API Key em Configurações â†’ Integrações â†’ Chave da API do Gemini"
             );
             return;
         }
@@ -457,7 +457,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             provider: selectedProvider
         };
 
-        // NÃ£o enviar apiKey - serÃ¡ buscada das Settings
+        // NÃ£o enviar apiKey - será buscada das Settings
         delete promptData.apiKey;
         try {
             if (promptId) {
@@ -791,3 +791,4 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
 };
 
 export default PromptModal;
+
