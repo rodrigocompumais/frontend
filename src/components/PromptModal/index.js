@@ -439,10 +439,12 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             maxMessages: 10,
             maxTokens: 100,
             temperature: 1,
-            variables: {
-                ...templateVariables,
-                permitir_criar_agendamentos: selectedTemplate.tipo === "agendador"
-            }
+            variables: templateVariables,
+            canSendInternalMessages: customPermissions.canSendInternalMessages,
+            canTransferToAgent: customPermissions.canTransferToAgent,
+            canChangeTag: customPermissions.canChangeTag,
+            permitirCriarAgendamentos: customPermissions.permitirCriarAgendamentos,
+            businessHours: customPermissions.businessHours
         };
 
         try {

@@ -287,6 +287,42 @@ const TemplateConfigModal = ({
                             label="Criar Agendamentos"
                         />
                     </div>
+                    {customPermissions.permitirCriarAgendamentos && (
+                        <div style={{ marginTop: 16, padding: 16, border: '1px solid #eee', borderRadius: 8 }}>
+                            <div style={{ marginBottom: 8, fontWeight: 'bold' }}>Horário de Funcionamento</div>
+                            <TextField
+                                label="Segunda a Sexta"
+                                value={customPermissions.businessHours?.mondayToFriday || "09:00 - 18:00"}
+                                onChange={(e) => setCustomPermissions({
+                                    ...customPermissions,
+                                    businessHours: {
+                                        ...customPermissions.businessHours,
+                                        mondayToFriday: e.target.value
+                                    }
+                                })}
+                                variant="outlined"
+                                margin="dense"
+                                fullWidth
+                                helperText="Ex: 09:00 - 18:00"
+                            />
+                            <TextField
+                                label="Sábado e Domingo"
+                                value={customPermissions.businessHours?.saturdayAndSunday || "09:00 - 13:00"}
+                                onChange={(e) => setCustomPermissions({
+                                    ...customPermissions,
+                                    businessHours: {
+                                        ...customPermissions.businessHours,
+                                        saturdayAndSunday: e.target.value
+                                    }
+                                })}
+                                variant="outlined"
+                                margin="dense"
+                                fullWidth
+                                helperText="Ex: 09:00 - 13:00 ou Fechado"
+                            />
+                        </div>
+                    )}
+
                 </div>
             </DialogContent>
             <DialogActions>
@@ -306,7 +342,7 @@ const TemplateConfigModal = ({
                     {isSubmitting ? <CircularProgress size={24} /> : "Criar Agente"}
                 </Button>
             </DialogActions>
-        </Dialog>
+        </Dialog >
     );
 };
 
