@@ -108,6 +108,8 @@ const useStyles = makeStyles((theme) => ({
     flex: "none",
     backgroundColor: theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider || "rgba(0, 0, 0, 0.12)"}`,
+    width: "100%",
+    display: "flex",
   },
   subTab: {
     minWidth: 120,
@@ -152,10 +154,14 @@ const TicketsManager = () => {
         const { data } = await api.get("/settings");
         const setting = data.find((s) => s.key === "CheckMsgIsGroup");
         if (setting) {
-          setCheckMsgIsGroup(setting.value || "enabled");
+          const value = setting.value || "enabled";
+          setCheckMsgIsGroup(value);
+        } else {
+          setCheckMsgIsGroup("enabled");
         }
       } catch (err) {
         toastError(err);
+        setCheckMsgIsGroup("enabled");
       }
     };
     fetchSetting();
