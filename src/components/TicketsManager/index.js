@@ -110,7 +110,10 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: theme.palette.background.paper,
     borderBottom: `1px solid ${theme.palette.divider || "rgba(0, 0, 0, 0.12)"}`,
     width: "100%",
-    display: "flex",
+    minHeight: 48,
+    display: "block",
+    position: "relative",
+    zIndex: 1,
   },
   subTab: {
     minWidth: 120,
@@ -169,10 +172,8 @@ const TicketsManager = () => {
   }, []);
 
   useEffect(() => {
-    if (checkMsgIsGroup === "disabled") {
-      setOpenCount(conversationsCount + groupsCount);
-    }
-  }, [conversationsCount, groupsCount, checkMsgIsGroup]);
+    setOpenCount(conversationsCount + groupsCount);
+  }, [conversationsCount, groupsCount]);
 
   const handleSearch = (e) => {
     const searchedTerm = e.target.value.toLowerCase();
@@ -307,80 +308,64 @@ const TicketsManager = () => {
       </Paper>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={true}>
         <TagsFilter onFiltered={handleSelectedTags} />
-        {checkMsgIsGroup === "disabled" && (
-          <Paper elevation={0} square className={classes.subTabsContainer}>
-            <Tabs
-              value={subTab}
-              onChange={handleChangeSubTab}
-              variant="fullWidth"
-              indicatorColor="primary"
-              textColor="primary"
-            >
-              <Tab
-                value="conversas"
-                label={
-                  <Badge
-                    className={classes.badge}
-                    badgeContent={conversationsCount}
-                    overlap="rectangular"
-                    color="secondary"
-                  >
-                    {i18n.t("tickets.tabs.subTabs.conversations")}
-                  </Badge>
-                }
-                className={classes.subTab}
-              />
-              <Tab
-                value="grupos"
-                label={
-                  <Badge
-                    className={classes.badge}
-                    badgeContent={groupsCount}
-                    overlap="rectangular"
-                    color="secondary"
-                  >
-                    {i18n.t("tickets.tabs.subTabs.groups")}
-                  </Badge>
-                }
-                className={classes.subTab}
-              />
-            </Tabs>
-          </Paper>
-        )}
+        <Paper elevation={0} square className={classes.subTabsContainer}>
+          <Tabs
+            value={subTab}
+            onChange={handleChangeSubTab}
+            variant="fullWidth"
+            indicatorColor="primary"
+            textColor="primary"
+          >
+            <Tab
+              value="conversas"
+              label={
+                <Badge
+                  className={classes.badge}
+                  badgeContent={conversationsCount}
+                  overlap="rectangular"
+                  color="secondary"
+                >
+                  {i18n.t("tickets.tabs.subTabs.conversations")}
+                </Badge>
+              }
+              className={classes.subTab}
+            />
+            <Tab
+              value="grupos"
+              label={
+                <Badge
+                  className={classes.badge}
+                  badgeContent={groupsCount}
+                  overlap="rectangular"
+                  color="secondary"
+                >
+                  {i18n.t("tickets.tabs.subTabs.groups")}
+                </Badge>
+              }
+              className={classes.subTab}
+            />
+          </Tabs>
+        </Paper>
         <Paper className={classes.ticketsWrapper}>
-          {checkMsgIsGroup === "disabled" ? (
-            <>
-              {subTab === "conversas" && (
-                <TicketsList
-                  status="open"
-                  showAll={showAllTickets}
-                  selectedQueueIds={selectedQueueIds}
-                  updateCount={(val) => setConversationsCount(val)}
-                  filterIsGroup={false}
-                  style={applyPanelStyle("open")}
-                />
-              )}
-              {subTab === "grupos" && (
-                <TicketsList
-                  status="open"
-                  showAll={showAllTickets}
-                  selectedQueueIds={selectedQueueIds}
-                  updateCount={(val) => setGroupsCount(val)}
-                  filterIsGroup={true}
-                  style={applyPanelStyle("open")}
-                />
-              )}
-            </>
-          ) : (
-            <>
-              <TicketsList
-                status="open"
-                showAll={showAllTickets}
-                selectedQueueIds={selectedQueueIds}
-                updateCount={(val) => setOpenCount(val)}
-                style={applyPanelStyle("open")}
-              />
-            </>
+          {subTab === "conversas" && (
+            <TicketsList
+              status="open"
+              showAll={showAllTickets}
+              selectedQueueIds={selectedQueueIds}
+              updateCount={(val) => setConversationsCount(val)}
+              filterIsGroup={false}
+              style={applyPanelStyle("open")}
+            />
+          )}
+          {subTab === "grupos" && (
+            <TicketsList
+              status="open"
+              showAll={showAllTickets}
+              selectedQueueIds={selectedQueueIds}
+              updateCount={(val) => setGroupsCount(val)}
+              filterIsGroup={true}
+              style={applyPanelStyle("open")}
+            />
           )}
           <TicketsList
             status="pending"
