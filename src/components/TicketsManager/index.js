@@ -28,6 +28,8 @@ import TicketsQueueSelect from "../TicketsQueueSelect";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import usePendingTicketNotification from "../../hooks/usePendingTicketNotification";
+import api from "../../services/api";
+import toastError from "../../errors/toastError";
 
 const useStyles = makeStyles((theme) => ({
   ticketsWrapper: {
@@ -102,6 +104,15 @@ const useStyles = makeStyles((theme) => ({
     padding: "10px",
     borderBottom: "2px solid rgba(0, 0, 0, .12)",
   },
+  subTabsContainer: {
+    flex: "none",
+    backgroundColor: theme.palette.background.paper,
+    borderBottom: `1px solid ${theme.palette.divider || "rgba(0, 0, 0, 0.12)"}`,
+  },
+  subTab: {
+    minWidth: 120,
+    textTransform: "none",
+  },
 }));
 
 const TicketsManager = () => {
@@ -117,6 +128,10 @@ const TicketsManager = () => {
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
   const [selectedTags, setSelectedTags] = useState([]);
+  const [checkMsgIsGroup, setCheckMsgIsGroup] = useState("enabled");
+  const [subTab, setSubTab] = useState("conversas");
+  const [conversationsCount, setConversationsCount] = useState(0);
+  const [groupsCount, setGroupsCount] = useState(0);
 
   // Hook para notificação sonora de tickets pendentes
   usePendingTicketNotification();
@@ -129,7 +144,28 @@ const TicketsManager = () => {
       setShowAllTickets(true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, []);
+
+  useEffect(() => {
+    const fetchSetting = async () => {
+      try {
+        const { data } = await api.get("/settings");
+        const setting = data.find((s) => s.key === "CheckMsgIsGroup");
+        if (setting) {
+          setCheckMsgIsGroup(setting.value || "enabled");
+        }
+      } catch (err) {
+        toastError(err);
+      }
+    };
+    fetchSetting();
+  }, []);
+
+  useEffect(() => {
+    if (checkMsgIsGroup === "disabled") {
+      setOpenCount(conversationsCount + groupsCount);
+    }
+  }, [conversationsCount, groupsCount, checkMsgIsGroup]);
 
   const handleSearch = (e) => {
     const searchedTerm = e.target.value.toLowerCase();
@@ -151,6 +187,10 @@ const TicketsManager = () => {
 
   const handleChangeTab = (e, newValue) => {
     setTab(newValue);
+  };
+
+  const handleChangeSubTab = (e, newValue) => {
+    setSubTab(newValue);
   };
 
   const applyPanelStyle = (status) => {
@@ -259,15 +299,82 @@ const TicketsManager = () => {
         />
       </Paper>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={true}>
-      <TagsFilter onFiltered={handleSelectedTags} />
+        <TagsFilter onFiltered={handleSelectedTags} />
+        {checkMsgIsGroup === "disabled" && (
+          <Paper elevation={0} square className={classes.subTabsContainer}>
+            <Tabs
+              value={subTab}
+              onChange={handleChangeSubTab}
+              variant="fullWidth"
+              indicatorColor="primary"
+              textColor="primary"
+            >
+              <Tab
+                value="conversas"
+                label={
+                  <Badge
+                    className={classes.badge}
+                    badgeContent={conversationsCount}
+                    overlap="rectangular"
+                    color="secondary"
+                  >
+                    {i18n.t("tickets.tabs.subTabs.conversations")}
+                  </Badge>
+                }
+                className={classes.subTab}
+              />
+              <Tab
+                value="grupos"
+                label={
+                  <Badge
+                    className={classes.badge}
+                    badgeContent={groupsCount}
+                    overlap="rectangular"
+                    color="secondary"
+                  >
+                    {i18n.t("tickets.tabs.subTabs.groups")}
+                  </Badge>
+                }
+                className={classes.subTab}
+              />
+            </Tabs>
+          </Paper>
+        )}
         <Paper className={classes.ticketsWrapper}>
-          <TicketsList
-            status="open"
-            showAll={showAllTickets}
-            selectedQueueIds={selectedQueueIds}
-            updateCount={(val) => setOpenCount(val)}
-            style={applyPanelStyle("open")}
-          />
+          {checkMsgIsGroup === "disabled" ? (
+            <>
+              {subTab === "conversas" && (
+                <TicketsList
+                  status="open"
+                  showAll={showAllTickets}
+                  selectedQueueIds={selectedQueueIds}
+                  updateCount={(val) => setConversationsCount(val)}
+                  filterIsGroup={false}
+                  style={applyPanelStyle("open")}
+                />
+              )}
+              {subTab === "grupos" && (
+                <TicketsList
+                  status="open"
+                  showAll={showAllTickets}
+                  selectedQueueIds={selectedQueueIds}
+                  updateCount={(val) => setGroupsCount(val)}
+                  filterIsGroup={true}
+                  style={applyPanelStyle("open")}
+                />
+              )}
+            </>
+          ) : (
+            <>
+              <TicketsList
+                status="open"
+                showAll={showAllTickets}
+                selectedQueueIds={selectedQueueIds}
+                updateCount={(val) => setOpenCount(val)}
+                style={applyPanelStyle("open")}
+              />
+            </>
+          )}
           <TicketsList
             status="pending"
             selectedQueueIds={selectedQueueIds}

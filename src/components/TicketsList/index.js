@@ -167,6 +167,7 @@ const TicketsList = (props) => {
 		updateCount,
 		style,
 		tags,
+		filterIsGroup,
 	} = props;
 	const classes = useStyles();
 	const history = useHistory();
@@ -180,7 +181,7 @@ const TicketsList = (props) => {
 	useEffect(() => {
 		dispatch({ type: "RESET" });
 		setPageNumber(1);
-	}, [status, searchParam, dispatch, showAll, selectedQueueIds, tags]);
+	}, [status, searchParam, dispatch, showAll, selectedQueueIds, tags, filterIsGroup]);
 
 	const { tickets, hasMore, loading } = useTickets({
 		pageNumber,
@@ -227,27 +228,38 @@ const TicketsList = (props) => {
 	useEffect(() => {
 
 		const queueIds = queues.map((q) => q.id);
-		const filteredTickets = tickets.filter((t) => queueIds.indexOf(t.queueId) > -1);
+		let filteredTickets = tickets.filter((t) => queueIds.indexOf(t.queueId) > -1);
 		const getSettingValue = key => {
-			const { value } = settings.find(s => s.key === key);
-			return value;
+			const setting = settings.find(s => s.key === key);
+			return setting ? setting.value : null;
 		};
 		const allticket = user.allTicket === 'enabled';
 
-
-
-
-		// Função para identificação liberação da settings 
-		if (profile === "admin" || allticket) {
-			dispatch({ type: "LOAD_TICKETS", payload: tickets });
-		} else {
-			dispatch({ type: "LOAD_TICKETS", payload: filteredTickets });
+		// Aplicar filtro de grupos se especificado
+		if (filterIsGroup !== undefined) {
+			filteredTickets = filteredTickets.filter((t) => 
+				filterIsGroup ? t.isGroup === true : t.isGroup === false
+			);
 		}
 
+		// Função para identificação liberação da settings 
+		let ticketsToLoad = [];
+		if (profile === "admin" || allticket) {
+			ticketsToLoad = tickets;
+		} else {
+			ticketsToLoad = filteredTickets;
+		}
 
+		// Aplicar filtro de grupos se especificado (para admin/allticket também)
+		if (filterIsGroup !== undefined) {
+			ticketsToLoad = ticketsToLoad.filter((t) => 
+				filterIsGroup ? t.isGroup === true : t.isGroup === false
+			);
+		}
 
+		dispatch({ type: "LOAD_TICKETS", payload: ticketsToLoad });
 
-	}, [tickets, status, searchParam, queues, profile]);
+	}, [tickets, status, searchParam, queues, profile, filterIsGroup, settings]);
 
 	useEffect(() => {
 		const socket = openSocket();

@@ -762,6 +762,10 @@ const messages = {
 					open: { title: "Open" },
 					closed: { title: "Resolved" },
 					search: { title: "Search" },
+					subTabs: {
+						conversations: "Conversations",
+						groups: "Groups",
+					},
 				},
 				search: {
 					placeholder: "Search tickets and messages",

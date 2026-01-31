@@ -833,6 +833,10 @@ const messages = {
           open: { title: "Abertas" },
           closed: { title: "Resolvidos" },
           search: { title: "Busca" },
+          subTabs: {
+            conversations: "Conversas",
+            groups: "Grupos",
+          },
         },
         search: {
           placeholder: "Buscar atendimento e mensagens",
