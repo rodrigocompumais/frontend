@@ -239,37 +239,6 @@ const TicketsList = (props) => {
 			ticketsToLoad = filteredTickets;
 		}
 
-		// Função helper para identificar se um ticket é grupo
-		const isTicketGroup = (ticket) => {
-			// Verificar campo isGroup do ticket (boolean, string, número)
-			if (ticket.isGroup === true || ticket.isGroup === "true" || ticket.isGroup === 1 || ticket.isGroup === "1") {
-				return true;
-			}
-			
-			// Verificar campo isGroup do contato
-			if (ticket.contact) {
-				if (ticket.contact.isGroup === true || ticket.contact.isGroup === "true" || ticket.contact.isGroup === 1 || ticket.contact.isGroup === "1") {
-					return true;
-				}
-				
-				// Verificar se o número do contato contém @g.us (formato WhatsApp de grupo)
-				// Exemplo: '120363419655140753@g.us'
-				if (ticket.contact.number) {
-					const numberStr = String(ticket.contact.number);
-					if (numberStr.includes("@g.us") || numberStr.endsWith("g.us") || numberStr.includes("g.us")) {
-						return true;
-					}
-				}
-			}
-			
-			// Verificar se há groupContact (indica que é grupo)
-			if (ticket.groupContact) {
-				return true;
-			}
-			
-			return false;
-		};
-
 		// Aplicar filtro de grupos se especificado
 		if (filterIsGroup !== undefined) {
 			ticketsToLoad = ticketsToLoad.filter((t) => {
@@ -295,6 +264,12 @@ const TicketsList = (props) => {
 		const notBelongsToUserQueues = (ticket) =>
 			ticket.queueId && selectedQueueIds.indexOf(ticket.queueId) === -1;
 
+		const matchesGroupFilter = (ticket) => {
+			if (filterIsGroup === undefined) return true;
+			const isGroupTicket = isTicketGroup(ticket);
+			return filterIsGroup ? isGroupTicket : !isGroupTicket;
+		};
+
 		socket.on("ready", () => {
 			if (status) {
 				socket.emit("joinTickets", status);
@@ -312,10 +287,16 @@ const TicketsList = (props) => {
 			}
 
 			if (data.action === "update" && shouldUpdateTicket(data.ticket)) {
-				dispatch({
-					type: "UPDATE_TICKET",
-					payload: data.ticket,
-				});
+				// Aplicar filtro de grupos antes de atualizar
+				if (matchesGroupFilter(data.ticket)) {
+					dispatch({
+						type: "UPDATE_TICKET",
+						payload: data.ticket,
+					});
+				} else {
+					// Se não corresponde ao filtro, remover o ticket
+					dispatch({ type: "DELETE_TICKET", payload: data.ticket.id });
+				}
 			}
 
 			if (data.action === "update" && notBelongsToUserQueues(data.ticket)) {
@@ -329,10 +310,13 @@ const TicketsList = (props) => {
 
 		socket.on("appMessage", (data) => {
 			if (data.action === "create" && shouldUpdateTicket(data.ticket)) {
-				dispatch({
-					type: "UPDATE_TICKET_UNREAD_MESSAGES",
-					payload: data.ticket,
-				});
+				// Aplicar filtro de grupos antes de atualizar
+				if (matchesGroupFilter(data.ticket)) {
+					dispatch({
+						type: "UPDATE_TICKET_UNREAD_MESSAGES",
+						payload: data.ticket,
+					});
+				}
 			}
 		});
 
@@ -348,7 +332,44 @@ const TicketsList = (props) => {
 		return () => {
 			socket.disconnect();
 		};
-	}, [status, showAll, user, selectedQueueIds]);
+	}, [status, showAll, user, selectedQueueIds, filterIsGroup]);
+
+	// Função helper para identificar se um ticket é grupo (extraída para uso em múltiplos lugares)
+	const isTicketGroup = (ticket) => {
+		// Verificar campo isGroup do ticket (boolean, string, número)
+		if (ticket.isGroup === true || ticket.isGroup === "true" || ticket.isGroup === 1 || ticket.isGroup === "1") {
+			return true;
+		}
+		
+		// Verificar campo isGroup do contato
+		if (ticket.contact) {
+			if (ticket.contact.isGroup === true || ticket.contact.isGroup === "true" || ticket.contact.isGroup === 1 || ticket.contact.isGroup === "1") {
+				return true;
+			}
+			
+			// Verificar se o número do contato contém @g.us (formato WhatsApp de grupo)
+			// Exemplo: '120363419655140753@g.us'
+			if (ticket.contact.number) {
+				const numberStr = String(ticket.contact.number).trim();
+				// Verificar se termina com @g.us (formato padrão do WhatsApp)
+				if (numberStr.endsWith("@g.us") || numberStr.includes("@g.us")) {
+					return true;
+				}
+				// Verificar se contém g.us (caso o formato seja diferente)
+				if (numberStr.includes("g.us")) {
+					return true;
+				}
+			}
+		}
+		
+		// Verificar se há groupContact (indica que é grupo)
+		if (ticket.groupContact) {
+			return true;
+		}
+		
+		return false;
+	};
+
 
 	useEffect(() => {
 		if (typeof updateCount === "function") {

@@ -42,11 +42,20 @@ const useStyles = makeStyles((theme) => ({
     borderTopRightRadius: 0,
     borderBottomRightRadius: 0,
   },
+  mainContainer: {
+    position: "relative",
+    display: "flex",
+    height: "100%",
+    flexDirection: "column",
+    overflow: "hidden",
+  },
   tabPanelContent: {
     display: "flex",
     flexDirection: "column",
-    height: "100%",
+    flex: 1,
+    minHeight: 0,
     overflow: "hidden",
+    position: "relative",
   },
 
   tabsHeader: {
@@ -117,11 +126,9 @@ const useStyles = makeStyles((theme) => ({
     borderBottom: `1px solid ${theme.palette.divider || "rgba(0, 0, 0, 0.12)"}`,
     width: "100%",
     minHeight: 48,
-    display: "flex !important",
+    display: "block",
     position: "relative",
-    zIndex: 1,
-    visibility: "visible !important",
-    opacity: "1 !important",
+    zIndex: 10,
   },
   subTab: {
     minWidth: 120,
@@ -216,7 +223,7 @@ const TicketsManager = () => {
   };
 
   return (
-    <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper}>
+    <Paper elevation={0} variant="outlined" className={classes.mainContainer}>
       <NewTicketModal
         modalOpen={newTicketModalOpen}
         onClose={(e) => setNewTicketModalOpen(false)}
@@ -319,7 +326,6 @@ const TicketsManager = () => {
           elevation={0} 
           square 
           className={classes.subTabsContainer}
-          style={{ display: "flex", visibility: "visible", opacity: 1 }}
         >
           <Tabs
             value={subTab}
@@ -361,7 +367,7 @@ const TicketsManager = () => {
       )}
       <TabPanel value={tab} name="open" className={classes.tabPanelContent} keepMounted={true}>
         <TagsFilter onFiltered={handleSelectedTags} />
-        <Paper className={classes.ticketsWrapper} style={{ flex: 1, minHeight: 0 }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
           {subTab === "conversas" && (
             <TicketsList
               status="open"
@@ -382,13 +388,7 @@ const TicketsManager = () => {
               style={applyPanelStyle("open")}
             />
           )}
-          <TicketsList
-            status="pending"
-            selectedQueueIds={selectedQueueIds}
-            updateCount={(val) => setPendingCount(val)}
-            style={applyPanelStyle("pending")}
-          />
-        </Paper>
+        </div>
       </TabPanel>
 
       <TabPanel value={tab} name="pending" className={classes.ticketsWrapper} keepMounted={true}>
