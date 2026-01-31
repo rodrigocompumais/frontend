@@ -239,16 +239,42 @@ const TicketsList = (props) => {
 			ticketsToLoad = filteredTickets;
 		}
 
+		// Função helper para identificar se um ticket é grupo
+		const isTicketGroup = (ticket) => {
+			// Verificar campo isGroup do ticket (boolean, string, número)
+			if (ticket.isGroup === true || ticket.isGroup === "true" || ticket.isGroup === 1 || ticket.isGroup === "1") {
+				return true;
+			}
+			
+			// Verificar campo isGroup do contato
+			if (ticket.contact) {
+				if (ticket.contact.isGroup === true || ticket.contact.isGroup === "true" || ticket.contact.isGroup === 1 || ticket.contact.isGroup === "1") {
+					return true;
+				}
+				
+				// Verificar se o número do contato contém @g.us (formato WhatsApp de grupo)
+				if (ticket.contact.number && (ticket.contact.number.includes("@g.us") || ticket.contact.number.includes("g.us"))) {
+					return true;
+				}
+			}
+			
+			// Verificar se há groupContact (indica que é grupo)
+			if (ticket.groupContact) {
+				return true;
+			}
+			
+			return false;
+		};
+
 		// Aplicar filtro de grupos se especificado
 		if (filterIsGroup !== undefined) {
+			const beforeFilter = ticketsToLoad.length;
 			ticketsToLoad = ticketsToLoad.filter((t) => {
-				// Verificar se é grupo de múltiplas formas
-				const isGroupTicket = t.isGroup === true || 
-					t.isGroup === "true" || 
-					t.isGroup === 1 ||
-					(t.contact && (t.contact.isGroup === true || t.contact.isGroup === "true" || t.contact.isGroup === 1));
+				const isGroupTicket = isTicketGroup(t);
 				return filterIsGroup ? isGroupTicket : !isGroupTicket;
 			});
+			const afterFilter = ticketsToLoad.length;
+			console.log(`Filtro aplicado: filterIsGroup=${filterIsGroup}, antes=${beforeFilter}, depois=${afterFilter}`);
 		}
 
 		dispatch({ type: "LOAD_TICKETS", payload: ticketsToLoad });
