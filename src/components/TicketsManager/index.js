@@ -42,6 +42,12 @@ const useStyles = makeStyles((theme) => ({
     borderTopRightRadius: 0,
     borderBottomRightRadius: 0,
   },
+  tabPanelContent: {
+    display: "flex",
+    flexDirection: "column",
+    height: "100%",
+    overflow: "hidden",
+  },
 
   tabsHeader: {
     flex: "none",
@@ -111,9 +117,11 @@ const useStyles = makeStyles((theme) => ({
     borderBottom: `1px solid ${theme.palette.divider || "rgba(0, 0, 0, 0.12)"}`,
     width: "100%",
     minHeight: 48,
-    display: "block",
+    display: "flex !important",
     position: "relative",
     zIndex: 1,
+    visibility: "visible !important",
+    opacity: "1 !important",
   },
   subTab: {
     minWidth: 120,
@@ -306,9 +314,13 @@ const TicketsManager = () => {
           onChange={(values) => setSelectedQueueIds(values)}
         />
       </Paper>
-      <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={true}>
-        <TagsFilter onFiltered={handleSelectedTags} />
-        <Paper elevation={0} square className={classes.subTabsContainer}>
+      {tab === "open" && (
+        <Paper 
+          elevation={0} 
+          square 
+          className={classes.subTabsContainer}
+          style={{ display: "flex", visibility: "visible", opacity: 1 }}
+        >
           <Tabs
             value={subTab}
             onChange={handleChangeSubTab}
@@ -346,7 +358,10 @@ const TicketsManager = () => {
             />
           </Tabs>
         </Paper>
-        <Paper className={classes.ticketsWrapper}>
+      )}
+      <TabPanel value={tab} name="open" className={classes.tabPanelContent} keepMounted={true}>
+        <TagsFilter onFiltered={handleSelectedTags} />
+        <Paper className={classes.ticketsWrapper} style={{ flex: 1, minHeight: 0 }}>
           {subTab === "conversas" && (
             <TicketsList
               status="open"
