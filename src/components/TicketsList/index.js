@@ -229,18 +229,7 @@ const TicketsList = (props) => {
 
 		const queueIds = queues.map((q) => q.id);
 		let filteredTickets = tickets.filter((t) => queueIds.indexOf(t.queueId) > -1);
-		const getSettingValue = key => {
-			const setting = settings.find(s => s.key === key);
-			return setting ? setting.value : null;
-		};
 		const allticket = user.allTicket === 'enabled';
-
-		// Aplicar filtro de grupos se especificado
-		if (filterIsGroup !== undefined) {
-			filteredTickets = filteredTickets.filter((t) => 
-				filterIsGroup ? t.isGroup === true : t.isGroup === false
-			);
-		}
 
 		// Função para identificação liberação da settings 
 		let ticketsToLoad = [];
@@ -250,16 +239,21 @@ const TicketsList = (props) => {
 			ticketsToLoad = filteredTickets;
 		}
 
-		// Aplicar filtro de grupos se especificado (para admin/allticket também)
+		// Aplicar filtro de grupos se especificado
 		if (filterIsGroup !== undefined) {
-			ticketsToLoad = ticketsToLoad.filter((t) => 
-				filterIsGroup ? t.isGroup === true : t.isGroup === false
-			);
+			ticketsToLoad = ticketsToLoad.filter((t) => {
+				// Verificar se é grupo de múltiplas formas
+				const isGroupTicket = t.isGroup === true || 
+					t.isGroup === "true" || 
+					t.isGroup === 1 ||
+					(t.contact && (t.contact.isGroup === true || t.contact.isGroup === "true" || t.contact.isGroup === 1));
+				return filterIsGroup ? isGroupTicket : !isGroupTicket;
+			});
 		}
 
 		dispatch({ type: "LOAD_TICKETS", payload: ticketsToLoad });
 
-	}, [tickets, status, searchParam, queues, profile, filterIsGroup, settings]);
+	}, [tickets, status, searchParam, queues, profile, filterIsGroup, user.allTicket]);
 
 	useEffect(() => {
 		const socket = openSocket();
