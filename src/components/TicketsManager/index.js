@@ -157,13 +157,10 @@ const TicketsManager = () => {
         if (setting) {
           const value = setting.value || "enabled";
           setCheckMsgIsGroup(value);
-          console.log("CheckMsgIsGroup carregado:", value, "Sub-abas devem aparecer:", value === "disabled");
         } else {
-          console.log("CheckMsgIsGroup não encontrado, usando padrão: enabled");
           setCheckMsgIsGroup("enabled");
         }
       } catch (err) {
-        console.error("Erro ao buscar CheckMsgIsGroup:", err);
         toastError(err);
         setCheckMsgIsGroup("enabled");
       }
@@ -310,7 +307,6 @@ const TicketsManager = () => {
       </Paper>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={true}>
         <TagsFilter onFiltered={handleSelectedTags} />
-        {console.log("Renderizando TabPanel open - checkMsgIsGroup:", checkMsgIsGroup, "tab:", tab, "deve mostrar sub-abas:", checkMsgIsGroup === "disabled" && tab === "open")}
         {checkMsgIsGroup === "disabled" && (
           <Paper elevation={0} square className={classes.subTabsContainer}>
             <Tabs

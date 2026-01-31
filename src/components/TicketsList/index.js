@@ -253,8 +253,12 @@ const TicketsList = (props) => {
 				}
 				
 				// Verificar se o número do contato contém @g.us (formato WhatsApp de grupo)
-				if (ticket.contact.number && (ticket.contact.number.includes("@g.us") || ticket.contact.number.includes("g.us"))) {
-					return true;
+				// Exemplo: '120363419655140753@g.us'
+				if (ticket.contact.number) {
+					const numberStr = String(ticket.contact.number);
+					if (numberStr.includes("@g.us") || numberStr.endsWith("g.us") || numberStr.includes("g.us")) {
+						return true;
+					}
 				}
 			}
 			
@@ -268,13 +272,10 @@ const TicketsList = (props) => {
 
 		// Aplicar filtro de grupos se especificado
 		if (filterIsGroup !== undefined) {
-			const beforeFilter = ticketsToLoad.length;
 			ticketsToLoad = ticketsToLoad.filter((t) => {
 				const isGroupTicket = isTicketGroup(t);
 				return filterIsGroup ? isGroupTicket : !isGroupTicket;
 			});
-			const afterFilter = ticketsToLoad.length;
-			console.log(`Filtro aplicado: filterIsGroup=${filterIsGroup}, antes=${beforeFilter}, depois=${afterFilter}`);
 		}
 
 		dispatch({ type: "LOAD_TICKETS", payload: ticketsToLoad });
