@@ -920,14 +920,6 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
                     borderLeftColor: isGroup ? borderColor : "transparent",
                   }}
                 >
-                  {isGroup && userName && (
-                    <span 
-                      className={classes.companyUserName}
-                      style={{ color: borderColor }}
-                    >
-                      {userName}
-                    </span>
-                  )}
                   {message.isDeleted && (
                     <Block
                       color="disabled"
