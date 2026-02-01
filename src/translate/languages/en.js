@@ -1719,6 +1719,9 @@ const messages = {
         deletedMessage: "Essa mensagem foi apagada pelo contato",
         edited: "Editada",
         saudation: "Diga olá para seu novo contato!",
+        translation: {
+          badge: "Traduzido",
+        },
       },
       messagesInput: {
         placeholderOpen: "Digite uma mensagem",
