@@ -355,50 +355,6 @@ const TicketsManagerTabs = () => {
             className={classes.tab}
           />
         </Tabs>
-        {/* Sub-abas para a aba "Abertos" */}
-        {tab === "open" && (
-          <Tabs
-            value={subTab}
-            onChange={handleChangeSubTab}
-            variant="fullWidth"
-            indicatorColor="primary"
-            textColor="primary"
-            style={{ borderTop: `1px solid rgba(0, 0, 0, 0.12)` }}
-          >
-            <Tab
-              value="conversations"
-              label={
-                <Badge
-                  badgeContent={conversationsCount > 0 ? conversationsCount : 0}
-                  color="primary"
-                  className={classes.badge}
-                  invisible={conversationsCount === 0}
-                >
-                  <Typography variant="body2" style={{ paddingLeft: 8 }}>
-                    {i18n.t("tickets.tabs.subTabs.conversations")}
-                  </Typography>
-                </Badge>
-              }
-              className={classes.tab}
-            />
-            <Tab
-              value="groups"
-              label={
-                <Badge
-                  badgeContent={groupsCount > 0 ? groupsCount : 0}
-                  color="primary"
-                  className={classes.badge}
-                  invisible={groupsCount === 0}
-                >
-                  <Typography variant="body2" style={{ paddingLeft: 8 }}>
-                    {i18n.t("tickets.tabs.subTabs.groups")}
-                  </Typography>
-                </Badge>
-              }
-              className={classes.tab}
-            />
-          </Tabs>
-        )}
         {tab === "search" && (
           <Box display="flex" alignItems="center" style={{ marginLeft: "auto", paddingRight: 8 }}>
             <SearchIcon fontSize="small" style={{ marginRight: 4 }} />
@@ -416,6 +372,51 @@ const TicketsManagerTabs = () => {
           </Box>
         )}
       </Paper>
+      {/* Sub-abas para a aba "Abertos" */}
+      {tab === "open" && (
+        <Paper elevation={0} square className={classes.tabsInternal}>
+          <Tabs
+            value={subTab}
+            onChange={handleChangeSubTab}
+            variant="fullWidth"
+            indicatorColor="primary"
+            textColor="primary"
+          >
+            <Tab
+              value="conversations"
+              label={
+                <Badge
+                  badgeContent={conversationsCount > 0 ? conversationsCount : 0}
+                  color="primary"
+                  className={classes.badge}
+                  invisible={conversationsCount === 0}
+                >
+                  <Typography variant="body2">
+                    {i18n.t("tickets.tabs.subTabs.conversations")}
+                  </Typography>
+                </Badge>
+              }
+              className={classes.internalTab}
+            />
+            <Tab
+              value="groups"
+              label={
+                <Badge
+                  badgeContent={groupsCount > 0 ? groupsCount : 0}
+                  color="primary"
+                  className={classes.badge}
+                  invisible={groupsCount === 0}
+                >
+                  <Typography variant="body2">
+                    {i18n.t("tickets.tabs.subTabs.groups")}
+                  </Typography>
+                </Badge>
+              }
+              className={classes.internalTab}
+            />
+          </Tabs>
+        </Paper>
+      )}
       <Paper square elevation={0} className={classes.ticketOptionsBox}>
         {tab === "search" ? (
           <div className={classes.serachInputWrapper}>
