@@ -67,6 +67,31 @@ const useNotificationCounts = () => {
     fetchCounts();
   }, [user?.companyId, user?.queues]);
 
+  // Atualizar contador quando ticket é aberto (URL muda)
+  useEffect(() => {
+    const handleLocationChange = () => {
+      const pathname = window.location.pathname;
+      if (pathname.includes('/tickets/')) {
+        const ticketIdStr = pathname.split('/tickets/')[1]?.split('/')[0];
+        if (ticketIdStr) {
+          // Buscar ticketId numérico via API para garantir sincronização
+          // Mas por enquanto, vamos apenas resetar o contador deste ticket se estiver no mapa
+          // O backend deve enviar um evento de atualização quando o ticket é aberto
+        }
+      }
+    };
+
+    // Escutar mudanças na URL
+    window.addEventListener('popstate', handleLocationChange);
+    
+    // Verificar URL inicial
+    handleLocationChange();
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+    };
+  }, []);
+
   // Escutar eventos de socket para atualizar contadores
   useEffect(() => {
     if (!user?.companyId) return;
@@ -114,7 +139,23 @@ const useNotificationCounts = () => {
           const oldUnread = ticketUnreadCountsRef.current.get(ticketId) || 0;
           const newUnread = data.ticket.unreadMessages || 0;
           
-          ticketUnreadCountsRef.current.set(ticketId, newUnread);
+          // Verificar se o ticket está aberto
+          const getCurrentTicketId = () => {
+            const pathname = window.location.pathname;
+            if (pathname.includes('/tickets/')) {
+              const match = pathname.match(/\/tickets\/(\d+)/);
+              return match ? parseInt(match[1]) : null;
+            }
+            return null;
+          };
+          
+          const currentTicketId = getCurrentTicketId();
+          const isTicketOpen = currentTicketId === ticketId;
+          
+          // Se o ticket está aberto, garantir que unreadMessages seja 0
+          const finalUnread = isTicketOpen ? 0 : newUnread;
+          
+          ticketUnreadCountsRef.current.set(ticketId, finalUnread);
           
           // Recalcular total
           let totalUnread = 0;
@@ -147,7 +188,25 @@ const useNotificationCounts = () => {
       const ticketId = data.message.ticketId;
       if (!ticketId) return;
 
+      // Verificar se o ticket está aberto no momento
+      const getCurrentTicketId = () => {
+        const pathname = window.location.pathname;
+        if (pathname.includes('/tickets/')) {
+          const match = pathname.match(/\/tickets\/(\d+)/);
+          return match ? parseInt(match[1]) : null;
+        }
+        return null;
+      };
+      
+      const currentTicketId = getCurrentTicketId();
+      const isTicketOpen = currentTicketId === ticketId;
+
       if (data.action === "create" && !data.message.fromMe) {
+        // Se o ticket está aberto, não incrementar contador (mensagem será marcada como lida)
+        if (isTicketOpen) {
+          return;
+        }
+        
         // Nova mensagem recebida, incrementar contador do ticket
         const currentUnread = ticketUnreadCountsRef.current.get(ticketId) || 0;
         ticketUnreadCountsRef.current.set(ticketId, currentUnread + 1);

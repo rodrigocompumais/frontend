@@ -137,10 +137,19 @@ const reducer = (state, action) => {
 
   if (action.type === "UPDATE_TICKET") {
     const ticket = action.payload;
+    const isOpenTicket = action.isOpenTicket || false; // Indica se o ticket está aberto no momento
 
     const ticketIndex = state.findIndex((t) => t.id === ticket.id);
     if (ticketIndex !== -1) {
+      const oldTicket = state[ticketIndex];
       state[ticketIndex] = ticket;
+      
+      // Reposicionar se:
+      // 1. Tem mensagens não lidas, OU
+      // 2. O ticket está aberto (mesmo que unreadMessages seja 0, pois pode ter sido marcado como lido)
+      if (ticket.unreadMessages > 0 || isOpenTicket) {
+        state.unshift(state.splice(ticketIndex, 1)[0]);
+      }
     } else {
       state.unshift(ticket);
     }
@@ -150,10 +159,13 @@ const reducer = (state, action) => {
 
   if (action.type === "UPDATE_TICKET_UNREAD_MESSAGES") {
     const ticket = action.payload;
+    const isOpenTicket = action.isOpenTicket || false;
 
     const ticketIndex = state.findIndex((t) => t.id === ticket.id);
     if (ticketIndex !== -1) {
       state[ticketIndex] = ticket;
+      // Sempre reposicionar quando recebe nova mensagem, mesmo que o ticket esteja aberto
+      // Isso garante que tickets abertos com novas mensagens sejam reposicionados
       state.unshift(state.splice(ticketIndex, 1)[0]);
     } else {
       state.unshift(ticket);
@@ -287,9 +299,24 @@ const TicketsListCustom = (props) => {
       }
 
       if (data.action === "update" && shouldUpdateTicket(data.ticket) && data.ticket.status === status) {
+        // Verificar se o ticket está aberto (comparando com ticketId da URL)
+        // Usar uma função helper para obter o ticketId atual da URL
+        const getCurrentTicketId = () => {
+          const pathname = window.location.pathname;
+          if (pathname.includes('/tickets/')) {
+            const match = pathname.match(/\/tickets\/(\d+)/);
+            return match ? parseInt(match[1]) : null;
+          }
+          return null;
+        };
+        
+        const currentTicketId = getCurrentTicketId();
+        const isOpenTicket = currentTicketId === data.ticket.id;
+        
         dispatch({
           type: "UPDATE_TICKET",
           payload: data.ticket,
+          isOpenTicket: isOpenTicket,
         });
       }
 
@@ -321,9 +348,23 @@ const TicketsListCustom = (props) => {
       }
 
       if (data.action === "create" && shouldUpdateTicket(data.ticket) && ( status === undefined || data.ticket.status === status)) {
+        // Verificar se o ticket está aberto (comparando com ticketId da URL)
+        const getCurrentTicketId = () => {
+          const pathname = window.location.pathname;
+          if (pathname.includes('/tickets/')) {
+            const match = pathname.match(/\/tickets\/(\d+)/);
+            return match ? parseInt(match[1]) : null;
+          }
+          return null;
+        };
+        
+        const currentTicketId = getCurrentTicketId();
+        const isOpenTicket = currentTicketId === data.ticket.id;
+        
         dispatch({
           type: "UPDATE_TICKET_UNREAD_MESSAGES",
           payload: data.ticket,
+          isOpenTicket: isOpenTicket,
         });
       }
     };
