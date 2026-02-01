@@ -1603,8 +1603,8 @@ const messages = {
         ERR_QUEUE_COLOR_ALREADY_EXISTS: "Este color ya está en uso, elija otro.",
         ERR_WAPP_GREETING_REQUIRED: "El mensaje de saludo es obligatorio cuando hay más de una cola.",
       },
-    }
-  }
+    },
+  },
 };
 
 export { messages };
