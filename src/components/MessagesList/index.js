@@ -242,6 +242,16 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: "bold",
   },
 
+  internalSignature: {
+    display: "block",
+    fontSize: "0.75rem",
+    fontStyle: "italic",
+    color: "#856404",
+    marginTop: 8,
+    paddingTop: 8,
+    borderTop: "1px dashed #ffc107",
+  },
+
   messageMedia: {
     objectFit: "cover",
     width: 250,
@@ -828,6 +838,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
         }
 
         if (!message.fromMe) {
+          // Mensagens recebidas (clientes)
           return (
             <React.Fragment key={message.id}>
               {renderDailyTimestamps(message, index)}
@@ -879,68 +890,129 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
             </React.Fragment>
           );
         } else {
-          // Mensagem fromMe (enviada pela empresa)
-          const userIdentifier = message.participant || message.contactId?.toString() || "default";
-          const backgroundColor = isGroup ? generateColorFromString(userIdentifier) : "#dcf8c6";
-          const borderColor = isGroup ? generateBorderColor(backgroundColor) : "transparent";
-          const userName = isGroup ? getCompanyUserName(message) : null;
+          // Mensagens fromMe (enviadas pela empresa) em GRUPOS
+          // Cada número/participant diferente recebe uma cor diferente
+          if (isGroup && message.participant) {
+            const userIdentifier = message.participant;
+            const backgroundColor = generateColorFromString(userIdentifier);
+            const borderColor = generateBorderColor(backgroundColor);
 
-          return (
-            <React.Fragment key={message.id}>
-              {renderDailyTimestamps(message, index)}
-              {renderNumberTicket(message, index)}
-              {renderMessageDivider(message, index)}
-              <div 
-                className={classes.messageRight}
-                style={{ 
-                  backgroundColor: backgroundColor,
-                }}
-              >
-                <IconButton
-                  variant="contained"
-                  size="small"
-                  id="messageActionsButton"
-                  disabled={message.isDeleted}
-                  className={classes.messageActionsButton}
-                  onClick={(e) => handleOpenMessageOptionsMenu(e, message)}
-                >
-                  <ExpandMore />
-                </IconButton>
-                {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
-                  //|| message.mediaType === "multi_vcard" 
-                ) && checkMessageMedia(message)}
-                <div
-                  className={clsx(classes.textContentItem, {
-                    [classes.textContentItemDeleted]: message.isDeleted,
-					[classes.textContentItemEdited]: message.isEdited,
-                    [classes.messageInternal]: message.isInternal,
-                    [classes.messageRightCompanyUser]: isGroup,
-                  })}
-                  style={{
-                    borderLeftColor: isGroup ? borderColor : "transparent",
+            return (
+              <React.Fragment key={message.id}>
+                {renderDailyTimestamps(message, index)}
+                {renderNumberTicket(message, index)}
+                {renderMessageDivider(message, index)}
+                <div 
+                  className={classes.messageLeft}
+                  style={{ 
+                    backgroundColor: backgroundColor,
                   }}
                 >
-                  {message.isDeleted && (
-                    <Block
-                      color="disabled"
-                      fontSize="small"
-                      className={classes.deletedIcon}
-                    />
-                  )}
-                  {message.isInternal && (
-                    <span className={classes.internalBadge}>🔒 INTERNA</span>
-                  )}
-                  {message.quotedMsg && renderQuotedMessage(message)}
-                  <MarkdownWrapper>{(message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD"))) ? null : message.body}</MarkdownWrapper>
-                  <span className={classes.timestamp}>
-				    {message.isEdited && <span>{i18n.t("messagesList.edited")}</span>}
-                    {format(parseISO(message.createdAt), "HH:mm")}
-                    {!message.isInternal && renderMessageAck(message)}
-                  </span>
+                  <IconButton
+                    variant="contained"
+                    size="small"
+                    id="messageActionsButton"
+                    disabled={message.isDeleted}
+                    className={classes.messageActionsButton}
+                    onClick={(e) => handleOpenMessageOptionsMenu(e, message)}
+                  >
+                    <ExpandMore />
+                  </IconButton>
+                  {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
+                    //|| message.mediaType === "multi_vcard" 
+                  ) && checkMessageMedia(message)}
+                  <div
+                    className={clsx(classes.textContentItem, {
+                      [classes.textContentItemDeleted]: message.isDeleted,
+                      [classes.textContentItemEdited]: message.isEdited,
+                      [classes.messageInternal]: message.isInternal,
+                      [classes.messageRightCompanyUser]: true,
+                    })}
+                    style={{
+                      borderLeftColor: borderColor,
+                    }}
+                  >
+                    {message.isDeleted && (
+                      <Block
+                        color="disabled"
+                        fontSize="small"
+                        className={classes.deletedIcon}
+                      />
+                    )}
+                    {message.isInternal && (
+                      <span className={classes.internalBadge}>🔒 INTERNA</span>
+                    )}
+                    {message.quotedMsg && renderQuotedMessage(message)}
+                    <MarkdownWrapper>{(message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD"))) ? null : message.body}</MarkdownWrapper>
+                    {message.isInternal && ticket?.user?.name && (
+                      <div className={classes.internalSignature}>
+                        — {ticket.user.name}
+                      </div>
+                    )}
+                    <span className={classes.timestamp}>
+                      {message.isEdited && <span>{i18n.t("messagesList.edited")}</span>}
+                      {format(parseISO(message.createdAt), "HH:mm")}
+                      {!message.isInternal && renderMessageAck(message)}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </React.Fragment>
-          );
+              </React.Fragment>
+            );
+          } else {
+            // Mensagens fromMe em conversas individuais (comportamento padrão - direita, verde)
+            return (
+              <React.Fragment key={message.id}>
+                {renderDailyTimestamps(message, index)}
+                {renderNumberTicket(message, index)}
+                {renderMessageDivider(message, index)}
+                <div className={classes.messageRight}>
+                  <IconButton
+                    variant="contained"
+                    size="small"
+                    id="messageActionsButton"
+                    disabled={message.isDeleted}
+                    className={classes.messageActionsButton}
+                    onClick={(e) => handleOpenMessageOptionsMenu(e, message)}
+                  >
+                    <ExpandMore />
+                  </IconButton>
+                  {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
+                    //|| message.mediaType === "multi_vcard" 
+                  ) && checkMessageMedia(message)}
+                  <div
+                    className={clsx(classes.textContentItem, {
+                      [classes.textContentItemDeleted]: message.isDeleted,
+                      [classes.textContentItemEdited]: message.isEdited,
+                      [classes.messageInternal]: message.isInternal,
+                    })}
+                  >
+                    {message.isDeleted && (
+                      <Block
+                        color="disabled"
+                        fontSize="small"
+                        className={classes.deletedIcon}
+                      />
+                    )}
+                    {message.isInternal && (
+                      <span className={classes.internalBadge}>🔒 INTERNA</span>
+                    )}
+                    {message.quotedMsg && renderQuotedMessage(message)}
+                    <MarkdownWrapper>{(message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD"))) ? null : message.body}</MarkdownWrapper>
+                    {message.isInternal && ticket?.user?.name && (
+                      <div className={classes.internalSignature}>
+                        — {ticket.user.name}
+                      </div>
+                    )}
+                    <span className={classes.timestamp}>
+                      {message.isEdited && <span>{i18n.t("messagesList.edited")}</span>}
+                      {format(parseISO(message.createdAt), "HH:mm")}
+                      {!message.isInternal && renderMessageAck(message)}
+                    </span>
+                  </div>
+                </div>
+              </React.Fragment>
+            );
+          }
         }
       });
       return viewMessagesList;
