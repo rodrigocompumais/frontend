@@ -1383,6 +1383,10 @@ const messages = {
               analyze: "Analizar Conversación",
               transcribe: "Transcripción de Audio",
               suggest: "Sugerir Respuesta",
+              compuchat: "COMPUCHAT (Panel)",
+              compuchatHelper: "Proveedor para el chat inteligente del panel",
+              translation: "Traducción de Mensajes",
+              translationHelper: "Proveedor para traducción automática de mensajes",
             },
             companyLanguage: {
               title: "Idioma de la Empresa",
