@@ -1,5 +1,5 @@
-const messages = {
-  es: {
+﻿const messages = {
+  pt: {
     translations: {
       selectLanguage: "Selecione um idioma",
       signup: {
@@ -1877,3 +1877,4 @@ const messages = {
 };
 
 export { messages };
+

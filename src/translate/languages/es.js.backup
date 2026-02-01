@@ -1,5 +1,5 @@
 const messages = {
-  es: {
+  pt: {
     translations: {
       selectLanguage: "Selecione um idioma",
       signup: {
