@@ -602,11 +602,28 @@ const AiChatFloating = () => {
             {messages.length === 0 ? (
               <Box className={classes.emptyState}>
                 <GeminiIcon size={48} className={classes.faviconIconLarge} />
-                <Typography variant="body1" gutterBottom>
+                <Typography variant="body1" gutterBottom style={{ fontWeight: 600, marginBottom: 16 }}>
                   Olá! Sou o Compuchat, seu assistente inteligente.
                 </Typography>
-                <Typography variant="body2" color="textSecondary">
-                  Pergunte sobre atendimentos, estatísticas, conversas e muito mais.
+                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16, lineHeight: 1.6 }}>
+                  Estou aqui para ajudar você com dúvidas sobre o sistema e fornecer informações em tempo real sobre atendimentos, estatísticas e muito mais.
+                </Typography>
+                <Box style={{ backgroundColor: "rgba(14, 165, 233, 0.1)", padding: 12, borderRadius: 8, marginTop: 8 }}>
+                  <Typography variant="body2" style={{ fontWeight: 600, marginBottom: 8, color: "#0EA5E9" }}>
+                    💡 O que eu posso fazer:
+                  </Typography>
+                  <Typography variant="body2" color="textSecondary" style={{ fontSize: "0.85rem", lineHeight: 1.8 }}>
+                    ✅ Responder perguntas sobre como usar o sistema<br/>
+                    ✅ Informar sobre atendimentos e conversas<br/>
+                    ✅ Mostrar estatísticas e métricas em tempo real<br/>
+                    ✅ Explicar funcionalidades e configurações<br/>
+                    ✅ Ajudar com dúvidas sobre tickets, filas, contatos<br/>
+                    ✅ Orientar sobre campanhas, flows e formulários<br/>
+                    ✅ E muito mais!
+                  </Typography>
+                </Box>
+                <Typography variant="body2" color="textSecondary" style={{ marginTop: 16, fontSize: "0.8rem", fontStyle: "italic" }}>
+                  Digite sua pergunta abaixo para começar...
                 </Typography>
               </Box>
             ) : (
