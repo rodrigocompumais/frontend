@@ -1397,9 +1397,8 @@ const messages = {
             },
           },
           disabled: "Deshabilitado",
-            active: "Activo",
-            enabled: "Habilitado",
-          },
+          active: "Activo",
+          enabled: "Habilitado",
           updating: "Actualizando...",
           tabs: {
             integrations: "INTEGRACIONES",
@@ -1499,6 +1498,9 @@ const messages = {
         deletedMessage: "Este mensaje fue borrado por el contacto",
         edited: "Editado",
         saudation: "¡Saluda a tu nuevo contacto!",
+        translation: {
+          badge: "Traducido",
+        },
       },
       messagesInput: {
         placeholderOpen: "Escribe un mensaje",
