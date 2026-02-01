@@ -53,27 +53,7 @@ export default function OptionsAI(props) {
             }
         }
 
-        const loadProviderConfigurations = async () => {
-            try {
-                const geminiKey = settings.find((s) => s.key === "geminiApiKey");
-                const openaiKey = settings.find((s) => s.key === "openaiApiKey");
-
-                if (geminiKey?.value && openaiKey?.value) {
-                    setLoadingProviderConfigs(true);
-                    try {
-                        const { data } = await api.get("/ai/providers/config");
-                        setProviderConfigs(data);
-                    } catch (err) {
-                        console.error("Erro ao carregar configurações de providers:", err);
-                    } finally {
-                        setLoadingProviderConfigs(false);
-                    }
-                }
-            } catch (err) {
-                console.error("Erro:", err);
-            }
-        };
-
+        // Carregar configurações quando settings mudar
         loadProviderConfigurations();
     }, [settings]);
 
@@ -86,6 +66,11 @@ export default function OptionsAI(props) {
         });
         toast.success(i18n.t("settings.options.toasts.success"));
         setLoadingGeminiApiKey(false);
+        
+        // Recarregar configurações após salvar a chave
+        setTimeout(() => {
+            loadProviderConfigurations();
+        }, 500);
     }
 
     async function handleTestGeminiApiKey() {
@@ -120,10 +105,9 @@ export default function OptionsAI(props) {
         toast.success(i18n.t("settings.options.toasts.success"));
         setLoadingOpenaiApiKey(false);
 
+        // Recarregar configurações após salvar a chave
         setTimeout(() => {
-            if (value && geminiApiKey) {
-                loadProviderConfigurations();
-            }
+            loadProviderConfigurations();
         }, 500);
     }
 
@@ -150,16 +134,24 @@ export default function OptionsAI(props) {
     }
 
     const loadProviderConfigurations = async () => {
-        if (!geminiApiKey || !openaiApiKey) {
+        // Verificar se ambas as chaves estão configuradas
+        const geminiKey = settings?.find((s) => s.key === "geminiApiKey");
+        const openaiKey = settings?.find((s) => s.key === "openaiApiKey");
+
+        if (!geminiKey?.value || !openaiKey?.value) {
+            setProviderConfigs(null);
             return;
         }
 
         setLoadingProviderConfigs(true);
         try {
             const { data } = await api.get("/ai/providers/config");
+            // O backend retorna { available: {...}, configured: {...} }
             setProviderConfigs(data);
         } catch (err) {
             console.error("Erro ao carregar configurações de providers:", err);
+            toast.error("Erro ao carregar configurações de providers");
+            setProviderConfigs(null);
         } finally {
             setLoadingProviderConfigs(false);
         }
@@ -167,8 +159,17 @@ export default function OptionsAI(props) {
 
     async function handleProviderConfigChange(functionType, provider) {
         try {
+            // Mapear os tipos do frontend para os tipos do backend
+            const functionTypeMap = {
+                "analyze": "chat",           // Analisar conversa -> Chat
+                "transcribe": "transcription", // Transcrição -> Transcription
+                "suggest": "messageImprovement" // Sugerir resposta -> Message Improvement
+            };
+
+            const backendFunctionType = functionTypeMap[functionType] || functionType;
+
             await api.post("/ai/providers/config", {
-                functionType,
+                functionType: backendFunctionType,
                 provider
             });
             toast.success("Configuração de provider atualizada!");
@@ -284,7 +285,7 @@ export default function OptionsAI(props) {
                                     </InputLabel>
                                     <Select
                                         labelId="provider-analyze-label"
-                                        value={providerConfigs.analyze || "openai"}
+                                        value={providerConfigs.configured?.chat || "gemini"}
                                         onChange={(e) => handleProviderConfigChange("analyze", e.target.value)}
                                     >
                                         <MenuItem value="openai">OpenAI</MenuItem>
@@ -301,7 +302,7 @@ export default function OptionsAI(props) {
                                     </InputLabel>
                                     <Select
                                         labelId="provider-transcribe-label"
-                                        value={providerConfigs.transcribe || "openai"}
+                                        value={providerConfigs.configured?.transcription || "gemini"}
                                         onChange={(e) => handleProviderConfigChange("transcribe", e.target.value)}
                                     >
                                         <MenuItem value="openai">OpenAI (Whisper)</MenuItem>
@@ -318,7 +319,7 @@ export default function OptionsAI(props) {
                                     </InputLabel>
                                     <Select
                                         labelId="provider-suggest-label"
-                                        value={providerConfigs.suggest || "openai"}
+                                        value={providerConfigs.configured?.messageImprovement || "gemini"}
                                         onChange={(e) => handleProviderConfigChange("suggest", e.target.value)}
                                     >
                                         <MenuItem value="openai">OpenAI</MenuItem>
