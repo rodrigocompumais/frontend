@@ -38,6 +38,8 @@ import ChatAIButton from "../ChatAIButton";
 import ChatAIModal from "../ChatAIModal";
 import AudioTranscriptionModal from "../AudioTranscriptionModal";
 import { toast } from "react-toastify";
+import useMessageTranslation from "../../hooks/useMessageTranslation";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const useStyles = makeStyles((theme) => ({
   messagesListWrapper: {
@@ -314,6 +316,16 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: "inherit",
     padding: 10,
   },
+
+  translationBadge: {
+    display: "block",
+    fontSize: "0.7rem",
+    color: theme.palette.text.secondary,
+    fontStyle: "italic",
+    marginTop: 4,
+    marginBottom: 2,
+    opacity: 0.8,
+  },
 }));
 
 const reducer = (state, action) => {
@@ -393,6 +405,28 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
   const [transcriptionError, setTranscriptionError] = useState(null);
 
   const socketManager = useContext(SocketContext);
+  const { user, companyLanguage: authCompanyLanguage } = useContext(AuthContext);
+
+  // Usar idioma do contexto, ou buscar via API como fallback
+  const [companyLanguage, setCompanyLanguage] = useState(authCompanyLanguage || "pt");
+
+  useEffect(() => {
+    if (authCompanyLanguage) {
+      setCompanyLanguage(authCompanyLanguage);
+    } else {
+      // Fallback: buscar da API
+      const fetchCompanyLanguage = async () => {
+        try {
+          const { data } = await api.get("/translation/company-language");
+          setCompanyLanguage(data.language || "pt");
+        } catch (err) {
+          console.error("Erro ao buscar idioma da empresa:", err);
+          // Usar padrão pt
+        }
+      };
+      fetchCompanyLanguage();
+    }
+  }, [authCompanyLanguage]);
 
   // Função para gerar cor consistente baseada em uma string (contactId ou participant)
   const generateColorFromString = (str) => {
@@ -801,6 +835,207 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
     );
   };
 
+  // Componente auxiliar para renderizar mensagem com tradução
+  const MessageWithTranslation = ({ message, index, fromMe }) => {
+    const { translation, loading: translationLoading } = useMessageTranslation(
+      message,
+      companyLanguage,
+      !message.isDeleted && message.body && message.body.trim().length >= 10
+    );
+
+    const displayText = translation?.translatedText || message.body;
+    const showTranslationBadge = translation?.translatedText && translation?.translationNeeded;
+
+    if (fromMe) {
+      // Mensagens enviadas (empresa)
+      if (isGroup && message.participant) {
+        const userIdentifier = message.participant;
+        const backgroundColor = generateColorFromString(userIdentifier);
+        const borderColor = generateBorderColor(backgroundColor);
+
+        return (
+          <React.Fragment key={message.id}>
+            {renderDailyTimestamps(message, index)}
+            {renderNumberTicket(message, index)}
+            {renderMessageDivider(message, index)}
+            <div 
+              className={classes.messageLeft}
+              style={{ 
+                backgroundColor: backgroundColor,
+              }}
+            >
+              <IconButton
+                variant="contained"
+                size="small"
+                id="messageActionsButton"
+                disabled={message.isDeleted}
+                className={classes.messageActionsButton}
+                onClick={(e) => handleOpenMessageOptionsMenu(e, message)}
+              >
+                <ExpandMore />
+              </IconButton>
+              {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
+              ) && checkMessageMedia(message)}
+              <div
+                className={clsx(classes.textContentItem, {
+                  [classes.textContentItemDeleted]: message.isDeleted,
+                  [classes.textContentItemEdited]: message.isEdited,
+                  [classes.messageInternal]: message.isInternal,
+                  [classes.messageRightCompanyUser]: true,
+                })}
+                style={{
+                  borderLeftColor: borderColor,
+                }}
+              >
+                {message.isDeleted && (
+                  <Block
+                    color="disabled"
+                    fontSize="small"
+                    className={classes.deletedIcon}
+                  />
+                )}
+                {message.quotedMsg && renderQuotedMessage(message)}
+                <MarkdownWrapper>
+                  {(message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD"))) ? null : displayText}
+                </MarkdownWrapper>
+                {showTranslationBadge && (
+                  <span className={classes.translationBadge}>
+                    {i18n.t("messagesList.translation.badge")}
+                  </span>
+                )}
+                {message.isInternal && (
+                  <span className={classes.internalBadge}>
+                    🔒 INTERNA {ticket.user?.name ? `(${ticket.user.name})` : ""}
+                  </span>
+                )}
+                <span className={classes.timestamp}>
+                  {message.isEdited && <span>{i18n.t("messagesList.edited")} </span>}
+                  {format(parseISO(message.createdAt), "HH:mm")}
+                  {renderMessageAck(message)}
+                </span>
+              </div>
+            </div>
+          </React.Fragment>
+        );
+      } else {
+        // Mensagens fromMe normais (não em grupo)
+        return (
+          <React.Fragment key={message.id}>
+            {renderDailyTimestamps(message, index)}
+            {renderNumberTicket(message, index)}
+            {renderMessageDivider(message, index)}
+            <div className={clsx(classes.messageRight, {
+              [classes.messageInternal]: message.isInternal,
+            })}>
+              <IconButton
+                variant="contained"
+                size="small"
+                id="messageActionsButton"
+                disabled={message.isDeleted}
+                className={classes.messageActionsButton}
+                onClick={(e) => handleOpenMessageOptionsMenu(e, message)}
+              >
+                <ExpandMore />
+              </IconButton>
+              {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
+              ) && checkMessageMedia(message)}
+              <div
+                className={clsx(classes.textContentItem, {
+                  [classes.textContentItemDeleted]: message.isDeleted,
+                  [classes.textContentItemEdited]: message.isEdited,
+                })}
+              >
+                {message.isDeleted && (
+                  <Block
+                    color="disabled"
+                    fontSize="small"
+                    className={classes.deletedIcon}
+                  />
+                )}
+                {message.quotedMsg && renderQuotedMessage(message)}
+                <MarkdownWrapper>
+                  {(message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD"))) ? null : displayText}
+                </MarkdownWrapper>
+                {showTranslationBadge && (
+                  <span className={classes.translationBadge}>
+                    {i18n.t("messagesList.translation.badge")}
+                  </span>
+                )}
+                {message.isInternal && (
+                  <span className={classes.internalBadge}>
+                    🔒 INTERNA {ticket.user?.name ? `(${ticket.user.name})` : ""}
+                  </span>
+                )}
+                <span className={classes.timestamp}>
+                  {message.isEdited && <span>{i18n.t("messagesList.edited")} </span>}
+                  {format(parseISO(message.createdAt), "HH:mm")}
+                  {renderMessageAck(message)}
+                </span>
+              </div>
+            </div>
+          </React.Fragment>
+        );
+      }
+    } else {
+      // Mensagens recebidas (clientes)
+      return (
+        <React.Fragment key={message.id}>
+          {renderDailyTimestamps(message, index)}
+          {renderNumberTicket(message, index)}
+          {renderMessageDivider(message, index)}
+          <div className={classes.messageLeft}>
+            <IconButton
+              variant="contained"
+              size="small"
+              id="messageActionsButton"
+              disabled={message.isDeleted}
+              className={classes.messageActionsButton}
+              onClick={(e) => handleOpenMessageOptionsMenu(e, message)}
+            >
+              <ExpandMore />
+            </IconButton>
+            {isGroup && (
+              <span className={classes.messageContactName}>
+                {message.contact?.name}
+              </span>
+            )}
+
+            {message.isDeleted && (
+              <div>
+                <span className={"message-deleted"}>
+                  {i18n.t("messagesList.deletedMessage")} &nbsp;
+                  <Block
+                    color="error"
+                    fontSize="small"
+                    className={classes.deletedIcon}
+                  />
+                </span>
+              </div>
+            )}
+
+            {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
+            ) && checkMessageMedia(message)}
+            <div className={classes.textContentItem}>
+              {message.quotedMsg && renderQuotedMessage(message)}
+              <MarkdownWrapper>
+                {(message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD"))) ? null : displayText}
+              </MarkdownWrapper>
+              {showTranslationBadge && (
+                <span className={classes.translationBadge}>
+                  {i18n.t("messagesList.translation.badge")}
+                </span>
+              )}
+              <span className={classes.timestamp}>
+                {message.isEdited && <span>{i18n.t("messagesList.edited")} </span>}
+                {format(parseISO(message.createdAt), "HH:mm")}
+              </span>
+            </div>
+          </div>
+        </React.Fragment>
+      );
+    }
+  };
+
   const renderMessages = () => {
     if (messagesList.length > 0) {
       const viewMessagesList = messagesList.map((message, index) => {
@@ -839,56 +1074,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
 
         if (!message.fromMe) {
           // Mensagens recebidas (clientes)
-          return (
-            <React.Fragment key={message.id}>
-              {renderDailyTimestamps(message, index)}
-              {renderNumberTicket(message, index)}
-              {renderMessageDivider(message, index)}
-              <div className={classes.messageLeft}>
-                <IconButton
-                  variant="contained"
-                  size="small"
-                  id="messageActionsButton"
-                  disabled={message.isDeleted}
-                  className={classes.messageActionsButton}
-                  onClick={(e) => handleOpenMessageOptionsMenu(e, message)}
-                >
-                  <ExpandMore />
-                </IconButton>
-                {isGroup && (
-                  <span className={classes.messageContactName}>
-                    {message.contact?.name}
-                  </span>
-                )}
-
-                {/* aviso de mensagem apagado pelo contato */}
-                {message.isDeleted && (
-                  <div>
-                    <span className={"message-deleted"}
-                    >{i18n.t("messagesList.deletedMessage")} &nbsp;
-                      <Block
-                        color="error"
-                        fontSize="small"
-                        className={classes.deletedIcon}
-                      />
-                    </span>
-                  </div>
-                )}
-
-                {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
-                  //|| message.mediaType === "multi_vcard" 
-                ) && checkMessageMedia(message)}
-                <div className={classes.textContentItem}>
-                  {message.quotedMsg && renderQuotedMessage(message)}
-                  <MarkdownWrapper>{(message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD"))) ? null : message.body}</MarkdownWrapper>
-                  <span className={classes.timestamp}>
-				    {message.isEdited && <span>Editada </span>}
-                    {format(parseISO(message.createdAt), "HH:mm")}
-                  </span>
-                </div>
-              </div>
-            </React.Fragment>
-          );
+          return <MessageWithTranslation key={message.id} message={message} index={index} fromMe={false} />;
         } else {
           // Mensagens fromMe (enviadas pela empresa) em GRUPOS
           // Cada número/participant diferente recebe uma cor diferente

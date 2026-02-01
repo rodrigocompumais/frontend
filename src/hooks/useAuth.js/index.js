@@ -14,6 +14,7 @@ const useAuth = () => {
   const [isAuth, setIsAuth] = useState(false);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState({});
+  const [companyLanguage, setCompanyLanguage] = useState("pt");
 
   api.interceptors.request.use(
     (config) => {
@@ -114,6 +115,19 @@ const useAuth = () => {
           api.defaults.headers.Authorization = `Bearer ${data.token}`;
           setIsAuth(true);
           setUser(data.user);
+          
+          // Carregar idioma da empresa
+          if (data.user?.company?.language) {
+            setCompanyLanguage(data.user.company.language);
+          } else {
+            // Buscar das configurações se não estiver no company
+            try {
+              const { data: langData } = await api.get("/translation/company-language");
+              setCompanyLanguage(langData.language || "pt");
+            } catch (err) {
+              console.error("Erro ao buscar idioma:", err);
+            }
+          }
         } catch (err) {
           toastError(err);
         }
@@ -177,6 +191,19 @@ const useAuth = () => {
       setUser(data.user);
       setIsAuth(true);
       
+      // Carregar idioma da empresa no login
+      if (data.user?.company?.language) {
+        setCompanyLanguage(data.user.company.language);
+      } else {
+        // Buscar das configurações
+        try {
+          const { data: langData } = await api.get("/translation/company-language");
+          setCompanyLanguage(langData.language || "pt");
+        } catch (err) {
+          console.error("Erro ao buscar idioma:", err);
+        }
+      }
+      
       if (before === true) {
         toast.success(i18n.t("auth.toasts.success"));
         if (Math.round(dias) < 5 && Math.round(dias) > 0) {
@@ -236,6 +263,7 @@ const useAuth = () => {
     isAuth,
     user,
     loading,
+    companyLanguage,
     handleLogin,
     handleLogout,
     getCurrentUserInfo,

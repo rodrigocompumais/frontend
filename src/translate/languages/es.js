@@ -1384,6 +1384,13 @@ const messages = {
               transcribe: "Transcripción de Audio",
               suggest: "Sugerir Respuesta",
             },
+            companyLanguage: {
+              title: "Idioma de la Empresa",
+              helper: "Seleccione el idioma preferido para la atención. Los mensajes en otros idiomas se traducirán automáticamente.",
+              portuguese: "Portugués",
+              english: "Inglés",
+              spanish: "Español",
+            },
             disabled: "Deshabilitado",
             active: "Activo",
             enabled: "Habilitado",

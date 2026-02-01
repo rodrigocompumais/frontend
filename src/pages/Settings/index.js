@@ -11,6 +11,7 @@ import api from "../../services/api";
 import { i18n } from "../../translate/i18n.js";
 import toastError from "../../errors/toastError";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import OptionsLanguage from "../../components/Settings/OptionsLanguage";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -145,6 +146,9 @@ const Settings = () => {
             </option>
           </Select>
         </Paper>
+        
+        {/* Configuração de Idioma da Empresa */}
+        <OptionsLanguage settings={settings} />
       </Container>
     </div>
   );

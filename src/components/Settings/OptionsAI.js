@@ -11,6 +11,7 @@ import CircularProgress from "@material-ui/core/CircularProgress";
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import { Select, MenuItem, InputLabel, FormHelperText } from "@material-ui/core";
+import OptionsLanguage from "./OptionsLanguage";
 
 const useStyles = makeStyles((theme) => ({
     container: {
@@ -327,10 +328,57 @@ export default function OptionsAI(props) {
                                     </Select>
                                 </FormControl>
                             </Grid>
+
+                            {/* COMPUCHAT (Chat Inteligente do Dashboard) */}
+                            <Grid xs={12} sm={6} md={4} item>
+                                <FormControl className={classes.selectContainer}>
+                                    <InputLabel id="provider-compuchat-label">
+                                        COMPUCHAT (Dashboard)
+                                    </InputLabel>
+                                    <Select
+                                        labelId="provider-compuchat-label"
+                                        value={providerConfigs.configured?.chat || "gemini"}
+                                        onChange={(e) => handleProviderConfigChange("analyze", e.target.value)}
+                                    >
+                                        <MenuItem value="openai">OpenAI</MenuItem>
+                                        <MenuItem value="gemini">Gemini</MenuItem>
+                                    </Select>
+                                    <FormHelperText>
+                                        Provider para o chat inteligente do dashboard
+                                    </FormHelperText>
+                                </FormControl>
+                            </Grid>
+
+                            {/* Tradução */}
+                            <Grid xs={12} sm={6} md={4} item>
+                                <FormControl className={classes.selectContainer}>
+                                    <InputLabel id="provider-translation-label">
+                                        Tradução de Mensagens
+                                    </InputLabel>
+                                    <Select
+                                        labelId="provider-translation-label"
+                                        value={providerConfigs.configured?.chat || "gemini"}
+                                        onChange={(e) => handleProviderConfigChange("analyze", e.target.value)}
+                                    >
+                                        <MenuItem value="openai">OpenAI</MenuItem>
+                                        <MenuItem value="gemini">Gemini</MenuItem>
+                                    </Select>
+                                    <FormHelperText>
+                                        Provider para tradução automática de mensagens
+                                    </FormHelperText>
+                                </FormControl>
+                            </Grid>
                         </Grid>
                     ) : null}
                 </>
             )}
+
+            {/* Configuração de Idioma da Empresa */}
+            <Grid spacing={3} container style={{ marginTop: 30 }}>
+                <Grid xs={12} item>
+                    <OptionsLanguage settings={settings} />
+                </Grid>
+            </Grid>
         </>
     );
 }
