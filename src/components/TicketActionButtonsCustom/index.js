@@ -174,55 +174,10 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 
 	return (
 		<div className={classes.actionButtons}>
-			{ticket.status === "closed" && (
+			{/* Não exibir botões de ação em grupos */}
+			{ticket.isGroup ? (
 				<>
-					<TagsDropdown ticket={ticket} />
-					<ButtonWithSpinner
-						loading={loading}
-						startIcon={<Replay />}
-						onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
-						className={classes.reopenButton}
-						variant="outlined"
-					>
-						{i18n.t("messagesList.header.buttons.reopen")}
-					</ButtonWithSpinner>
-				</>
-			)}
-			{ticket.status === "open" && (
-				<>
-					<TagsDropdown ticket={ticket} />
-					{ticket.userId !== user?.id && (
-						<Tooltip title="Assumir Atendimento">
-							<ButtonWithSpinner
-								loading={loading}
-								startIcon={<PanToolIcon />}
-								size="small"
-								onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
-								variant="contained"
-								className={classes.acceptButton}
-							>
-								Assumir
-							</ButtonWithSpinner>
-						</Tooltip>
-					)}
-					<Tooltip title={i18n.t("messagesList.header.buttons.return")}>
-						<IconButton
-							onClick={e => handleUpdateTicketStatus(e, "pending", null)}
-							className={classes.returnIconButton}
-						>
-							<UndoRoundedIcon />
-						</IconButton>
-					</Tooltip>
-					<Tooltip title={i18n.t("messagesList.header.buttons.resolve")}>
-						<Button
-							onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
-							className={classes.resolveButton}
-							startIcon={<CheckCircleIcon />}
-							disabled={loading}
-						>
-							{i18n.t("messagesList.header.buttons.resolve")}
-						</Button>
-					</Tooltip>
+					{/* Apenas menu de opções para grupos */}
 					<IconButton
 						onClick={handleOpenTicketOptionsMenu}
 						className={classes.iconButton}
@@ -236,28 +191,94 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 						handleClose={handleCloseTicketOptionsMenu}
 					/>
 				</>
-			)}
-			{ticket.status === "pending" && (
+			) : (
 				<>
-					<TagsDropdown ticket={ticket} />
-					<ButtonWithSpinner
-						loading={loading}
-						startIcon={<CloseIcon />}
-						onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
-						className={classes.rejectButton}
-						variant="outlined"
-					>
-						Rejeitar
-					</ButtonWithSpinner>
-					<ButtonWithSpinner
-						loading={loading}
-						startIcon={<PlayArrowIcon />}
-						onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
-						className={classes.acceptButton}
-						variant="contained"
-					>
-						{i18n.t("messagesList.header.buttons.accept")}
-					</ButtonWithSpinner>
+					{ticket.status === "closed" && (
+						<>
+							<TagsDropdown ticket={ticket} />
+							<ButtonWithSpinner
+								loading={loading}
+								startIcon={<Replay />}
+								onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+								className={classes.reopenButton}
+								variant="outlined"
+							>
+								{i18n.t("messagesList.header.buttons.reopen")}
+							</ButtonWithSpinner>
+						</>
+					)}
+					{ticket.status === "open" && (
+						<>
+							<TagsDropdown ticket={ticket} />
+							{ticket.userId !== user?.id && (
+								<Tooltip title="Assumir Atendimento">
+									<ButtonWithSpinner
+										loading={loading}
+										startIcon={<PanToolIcon />}
+										size="small"
+										onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+										variant="contained"
+										className={classes.acceptButton}
+									>
+										Assumir
+									</ButtonWithSpinner>
+								</Tooltip>
+							)}
+							<Tooltip title={i18n.t("messagesList.header.buttons.return")}>
+								<IconButton
+									onClick={e => handleUpdateTicketStatus(e, "pending", null)}
+									className={classes.returnIconButton}
+								>
+									<UndoRoundedIcon />
+								</IconButton>
+							</Tooltip>
+							<Tooltip title={i18n.t("messagesList.header.buttons.resolve")}>
+								<Button
+									onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
+									className={classes.resolveButton}
+									startIcon={<CheckCircleIcon />}
+									disabled={loading}
+								>
+									{i18n.t("messagesList.header.buttons.resolve")}
+								</Button>
+							</Tooltip>
+							<IconButton
+								onClick={handleOpenTicketOptionsMenu}
+								className={classes.iconButton}
+							>
+								<MoreVert />
+							</IconButton>
+							<TicketOptionsMenu
+								ticket={ticket}
+								anchorEl={anchorEl}
+								menuOpen={ticketOptionsMenuOpen}
+								handleClose={handleCloseTicketOptionsMenu}
+							/>
+						</>
+					)}
+					{ticket.status === "pending" && (
+						<>
+							<TagsDropdown ticket={ticket} />
+							<ButtonWithSpinner
+								loading={loading}
+								startIcon={<CloseIcon />}
+								onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
+								className={classes.rejectButton}
+								variant="outlined"
+							>
+								Rejeitar
+							</ButtonWithSpinner>
+							<ButtonWithSpinner
+								loading={loading}
+								startIcon={<PlayArrowIcon />}
+								onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+								className={classes.acceptButton}
+								variant="contained"
+							>
+								{i18n.t("messagesList.header.buttons.accept")}
+							</ButtonWithSpinner>
+						</>
+					)}
 				</>
 			)}
 		</div>

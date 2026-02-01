@@ -63,46 +63,10 @@ const TicketActionButtons = ({ ticket }) => {
 
 	return (
 		<div className={classes.actionButtons}>
-			{ticket.status === "closed" && (
-				<ButtonWithSpinner
-					loading={loading}
-					startIcon={<Replay />}
-					size="small"
-					onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
-				>
-					{i18n.t("messagesList.header.buttons.reopen")}
-				</ButtonWithSpinner>
-			)}
-			{ticket.status === "open" && (
+			{/* Não exibir botões de ação em grupos */}
+			{ticket.isGroup ? (
 				<>
-					{ticket.userId !== user?.id && (
-						<ButtonWithSpinner
-							loading={loading}
-							size="small"
-							variant="contained"
-							color="primary"
-							onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
-						>
-							Assumir
-						</ButtonWithSpinner>
-					)}
-					<ButtonWithSpinner
-						loading={loading}
-						startIcon={<Replay />}
-						size="small"
-						onClick={e => handleUpdateTicketStatus(e, "pending", null)}
-					>
-						{i18n.t("messagesList.header.buttons.return")}
-					</ButtonWithSpinner>
-					<ButtonWithSpinner
-						loading={loading}
-						size="small"
-						variant="contained"
-						color="primary"
-						onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
-					>
-						{i18n.t("messagesList.header.buttons.resolve")}
-					</ButtonWithSpinner>
+					{/* Apenas menu de opções para grupos */}
 					<IconButton onClick={handleOpenTicketOptionsMenu}>
 						<MoreVert />
 					</IconButton>
@@ -113,28 +77,82 @@ const TicketActionButtons = ({ ticket }) => {
 						handleClose={handleCloseTicketOptionsMenu}
 					/>
 				</>
-			)}
-			{ticket.status === "pending" && (
+			) : (
 				<>
-					<ButtonWithSpinner
-						loading={loading}
-						size="small"
-						variant="outlined"
-						color="secondary"
-						onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
-						style={{ marginRight: 8 }}
-					>
-						Rejeitar
-					</ButtonWithSpinner>
-					<ButtonWithSpinner
-						loading={loading}
-						size="small"
-						variant="contained"
-						color="primary"
-						onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
-					>
-						{i18n.t("messagesList.header.buttons.accept")}
-					</ButtonWithSpinner>
+					{ticket.status === "closed" && (
+						<ButtonWithSpinner
+							loading={loading}
+							startIcon={<Replay />}
+							size="small"
+							onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+						>
+							{i18n.t("messagesList.header.buttons.reopen")}
+						</ButtonWithSpinner>
+					)}
+					{ticket.status === "open" && (
+						<>
+							{ticket.userId !== user?.id && (
+								<ButtonWithSpinner
+									loading={loading}
+									size="small"
+									variant="contained"
+									color="primary"
+									onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+								>
+									Assumir
+								</ButtonWithSpinner>
+							)}
+							<ButtonWithSpinner
+								loading={loading}
+								startIcon={<Replay />}
+								size="small"
+								onClick={e => handleUpdateTicketStatus(e, "pending", null)}
+							>
+								{i18n.t("messagesList.header.buttons.return")}
+							</ButtonWithSpinner>
+							<ButtonWithSpinner
+								loading={loading}
+								size="small"
+								variant="contained"
+								color="primary"
+								onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
+							>
+								{i18n.t("messagesList.header.buttons.resolve")}
+							</ButtonWithSpinner>
+							<IconButton onClick={handleOpenTicketOptionsMenu}>
+								<MoreVert />
+							</IconButton>
+							<TicketOptionsMenu
+								ticket={ticket}
+								anchorEl={anchorEl}
+								menuOpen={ticketOptionsMenuOpen}
+								handleClose={handleCloseTicketOptionsMenu}
+							/>
+						</>
+					)}
+					{ticket.status === "pending" && (
+						<>
+							<ButtonWithSpinner
+								loading={loading}
+								size="small"
+								variant="outlined"
+								color="secondary"
+								onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
+								style={{ marginRight: 8 }}
+							>
+								Rejeitar
+							</ButtonWithSpinner>
+							<ButtonWithSpinner
+								loading={loading}
+								size="small"
+								variant="contained"
+								color="primary"
+								onClick={e => handleUpdateTicketStatus(e, "open", user?.id)}
+							>
+								{i18n.t("messagesList.header.buttons.accept")}
+							</ButtonWithSpinner>
+						</>
+					)}
 				</>
 			)}
 		</div>

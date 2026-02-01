@@ -110,10 +110,22 @@ const useStyles = makeStyles(theme => ({
 
 	ticketOptionsBox: {
 		display: "flex",
-		justifyContent: "flex-end",
+		justifyContent: "space-between",
 		alignItems: "center",
 		background: theme.palette.optionsBackground,
 		padding: theme.spacing(1),
+		gap: theme.spacing(1),
+		minHeight: 56,
+	},
+
+	subTabsContainer: {
+		flex: 1,
+		maxWidth: "50%",
+	},
+
+	actionButtonsContainer: {
+		display: "flex",
+		alignItems: "center",
 		gap: theme.spacing(1),
 	},
 
@@ -374,49 +386,51 @@ const TicketsManagerTabs = () => {
       </Paper>
       <Paper square elevation={0} className={classes.ticketOptionsBox}>
         {tab === "open" && (
-          <Tabs
-            value={subTab}
-            onChange={handleChangeSubTab}
-            indicatorColor="primary"
-            textColor="primary"
-            style={{ marginRight: "auto" }}
-          >
-            <Tab
-              value="conversations"
-              label={
-                <Badge
-                  badgeContent={conversationsCount > 0 ? conversationsCount : 0}
-                  color="primary"
-                  className={classes.badge}
-                  invisible={conversationsCount === 0}
-                >
-                  <Typography variant="caption">
-                    {i18n.t("tickets.tabs.subTabs.conversations")}
-                  </Typography>
-                </Badge>
-              }
-              style={{ minWidth: 90, textTransform: "none" }}
-            />
-            <Tab
-              value="groups"
-              label={
-                <Badge
-                  badgeContent={groupsCount > 0 ? groupsCount : 0}
-                  color="primary"
-                  className={classes.badge}
-                  invisible={groupsCount === 0}
-                >
-                  <Typography variant="caption">
-                    {i18n.t("tickets.tabs.subTabs.groups")}
-                  </Typography>
-                </Badge>
-              }
-              style={{ minWidth: 90, textTransform: "none" }}
-            />
-          </Tabs>
+          <div className={classes.subTabsContainer}>
+            <Tabs
+              value={subTab}
+              onChange={handleChangeSubTab}
+              indicatorColor="primary"
+              textColor="primary"
+              variant="fullWidth"
+            >
+              <Tab
+                value="conversations"
+                label={
+                  <Badge
+                    badgeContent={conversationsCount > 0 ? conversationsCount : 0}
+                    color="primary"
+                    className={classes.badge}
+                    invisible={conversationsCount === 0}
+                  >
+                    <Typography variant="caption" style={{ fontWeight: 500 }}>
+                      {i18n.t("tickets.tabs.subTabs.conversations")}
+                    </Typography>
+                  </Badge>
+                }
+                style={{ minWidth: 90, textTransform: "none" }}
+              />
+              <Tab
+                value="groups"
+                label={
+                  <Badge
+                    badgeContent={groupsCount > 0 ? groupsCount : 0}
+                    color="primary"
+                    className={classes.badge}
+                    invisible={groupsCount === 0}
+                  >
+                    <Typography variant="caption" style={{ fontWeight: 500 }}>
+                      {i18n.t("tickets.tabs.subTabs.groups")}
+                    </Typography>
+                  </Badge>
+                }
+                style={{ minWidth: 90, textTransform: "none" }}
+              />
+            </Tabs>
+          </div>
         )}
         {tab === "search" ? (
-          <div className={classes.serachInputWrapper}>
+          <div className={classes.serachInputWrapper} style={{ flex: 1, maxWidth: "none" }}>
             <SearchIcon className={classes.searchIcon} />
             <InputBase
               className={classes.searchInput}
@@ -427,12 +441,11 @@ const TicketsManagerTabs = () => {
             />
           </div>
         ) : (
-          <>
+          <div className={classes.actionButtonsContainer}>
             <IconButton
               color="primary"
               onClick={() => setNewTicketModalOpen(true)}
               size="small"
-              style={{ marginRight: 8 }}
             >
               <AddIcon />
             </IconButton>
@@ -443,6 +456,8 @@ const TicketsManagerTabs = () => {
             >
               <FilterListIcon />
             </IconButton>
+          </div>
+        )}
             <Menu
               anchorEl={filterMenuAnchor}
               open={filterMenuOpen}

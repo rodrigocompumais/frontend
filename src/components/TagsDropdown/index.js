@@ -156,6 +156,11 @@ export function TagsDropdown({ ticket }) {
 	const menuOpen = Boolean(anchorEl);
 	const hasTags = selecteds && selecteds.length > 0;
 
+	// Não exibir tags em grupos
+	if (ticket?.isGroup) {
+		return null;
+	}
+
 	return (
 		<>
 			<IconButton
