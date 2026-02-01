@@ -158,6 +158,42 @@ const reducer = (state, action) => {
 	}
 };
 
+// Função helper para identificar se um ticket é grupo (definida antes do componente para uso em múltiplos lugares)
+const isTicketGroup = (ticket) => {
+	// Verificar campo isGroup do ticket (boolean, string, número)
+	if (ticket.isGroup === true || ticket.isGroup === "true" || ticket.isGroup === 1 || ticket.isGroup === "1") {
+		return true;
+	}
+	
+	// Verificar campo isGroup do contato
+	if (ticket.contact) {
+		if (ticket.contact.isGroup === true || ticket.contact.isGroup === "true" || ticket.contact.isGroup === 1 || ticket.contact.isGroup === "1") {
+			return true;
+		}
+		
+		// Verificar se o número do contato contém @g.us (formato WhatsApp de grupo)
+		// Exemplo: '120363419655140753@g.us'
+		if (ticket.contact.number) {
+			const numberStr = String(ticket.contact.number).trim();
+			// Verificar se termina com @g.us (formato padrão do WhatsApp)
+			if (numberStr.endsWith("@g.us") || numberStr.includes("@g.us")) {
+				return true;
+			}
+			// Verificar se contém g.us (caso o formato seja diferente)
+			if (numberStr.includes("g.us")) {
+				return true;
+			}
+		}
+	}
+	
+	// Verificar se há groupContact (indica que é grupo)
+	if (ticket.groupContact) {
+		return true;
+	}
+	
+	return false;
+};
+
 const TicketsList = (props) => {
 	const {
 		status,
@@ -333,42 +369,6 @@ const TicketsList = (props) => {
 			socket.disconnect();
 		};
 	}, [status, showAll, user, selectedQueueIds, filterIsGroup]);
-
-	// Função helper para identificar se um ticket é grupo (extraída para uso em múltiplos lugares)
-	const isTicketGroup = (ticket) => {
-		// Verificar campo isGroup do ticket (boolean, string, número)
-		if (ticket.isGroup === true || ticket.isGroup === "true" || ticket.isGroup === 1 || ticket.isGroup === "1") {
-			return true;
-		}
-		
-		// Verificar campo isGroup do contato
-		if (ticket.contact) {
-			if (ticket.contact.isGroup === true || ticket.contact.isGroup === "true" || ticket.contact.isGroup === 1 || ticket.contact.isGroup === "1") {
-				return true;
-			}
-			
-			// Verificar se o número do contato contém @g.us (formato WhatsApp de grupo)
-			// Exemplo: '120363419655140753@g.us'
-			if (ticket.contact.number) {
-				const numberStr = String(ticket.contact.number).trim();
-				// Verificar se termina com @g.us (formato padrão do WhatsApp)
-				if (numberStr.endsWith("@g.us") || numberStr.includes("@g.us")) {
-					return true;
-				}
-				// Verificar se contém g.us (caso o formato seja diferente)
-				if (numberStr.includes("g.us")) {
-					return true;
-				}
-			}
-		}
-		
-		// Verificar se há groupContact (indica que é grupo)
-		if (ticket.groupContact) {
-			return true;
-		}
-		
-		return false;
-	};
 
 
 	useEffect(() => {
