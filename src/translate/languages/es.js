@@ -1362,6 +1362,28 @@ const messages = {
             sendGreetingMessageOneQueues: {
               title: "Enviar saludo cuando haya solo 1 cola",
             },
+            geminiApiKey: {
+              title: "Gemini API Key",
+              placeholder: "Ingrese su clave de API Gemini",
+              helper: "Use su clave de API Gemini (modelo gratuito) para activar los resúmenes de IA en el panel.",
+            },
+            openaiApiKey: {
+              title: "OpenAI API Key",
+              placeholder: "Ingrese su clave de API OpenAI",
+              helper: "Use su clave de API OpenAI para activar funciones de IA. Configure al menos una API Key (Gemini u OpenAI).",
+            },
+            aiProviderConfig: {
+              title: "Configuración de Proveedores de IA",
+              helper: "Cuando ambas claves estén configuradas, puede elegir qué proveedor usar para cada funcionalidad.",
+              summaries: "Resúmenes",
+              chat: "Chat Inteligente",
+              messageImprovement: "Mejora de Mensajes",
+              transcription: "Transcripción de Audio",
+              campaigns: "Generación de Campañas",
+              analyze: "Analizar Conversación",
+              transcribe: "Transcripción de Audio",
+              suggest: "Sugerir Respuesta",
+            },
             disabled: "Deshabilitado",
             active: "Activo",
             enabled: "Habilitado",

@@ -1394,13 +1394,35 @@ const messages = {
 						sendMsgTransfTicket: {
 							title: "Send message on Queue/agent transfer",
 						},
-						sendGreetingMessageOneQueues: {
-							title: "Send greeting when there's only 1 queue",
-						},
-						disabled: "Disabled",
-						active: "Active",
-						enabled: "Enabled",
+					sendGreetingMessageOneQueues: {
+						title: "Send greeting when there's only 1 queue",
 					},
+					geminiApiKey: {
+						title: "Gemini API Key",
+						placeholder: "Enter your Gemini API key",
+						helper: "Use your Gemini API key (free model) to enable AI summaries on the dashboard.",
+					},
+					openaiApiKey: {
+						title: "OpenAI API Key",
+						placeholder: "Enter your OpenAI API key",
+						helper: "Use your OpenAI API key to enable AI features. Configure at least one API Key (Gemini or OpenAI).",
+					},
+					aiProviderConfig: {
+						title: "AI Provider Configuration",
+						helper: "When both keys are configured, you can choose which provider to use for each functionality.",
+						summaries: "Summaries",
+						chat: "Smart Chat",
+						messageImprovement: "Message Improvement",
+						transcription: "Audio Transcription",
+						campaigns: "Campaign Generation",
+						analyze: "Analyze Conversation",
+						transcribe: "Audio Transcription",
+						suggest: "Suggest Response",
+					},
+					disabled: "Disabled",
+					active: "Active",
+					enabled: "Enabled",
+				},
 					updating: "Updating...",
 					tabs: {
 						integrations: "INTEGRATIONS",
