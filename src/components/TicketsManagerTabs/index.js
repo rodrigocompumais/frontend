@@ -372,15 +372,14 @@ const TicketsManagerTabs = () => {
           </Box>
         )}
       </Paper>
-      {/* Sub-abas para a aba "Abertos" */}
-      {tab === "open" && (
-        <Paper elevation={0} square className={classes.tabsInternal}>
+      <Paper square elevation={0} className={classes.ticketOptionsBox}>
+        {tab === "open" && (
           <Tabs
             value={subTab}
             onChange={handleChangeSubTab}
-            variant="fullWidth"
             indicatorColor="primary"
             textColor="primary"
+            style={{ marginRight: "auto" }}
           >
             <Tab
               value="conversations"
@@ -391,12 +390,12 @@ const TicketsManagerTabs = () => {
                   className={classes.badge}
                   invisible={conversationsCount === 0}
                 >
-                  <Typography variant="body2">
+                  <Typography variant="caption">
                     {i18n.t("tickets.tabs.subTabs.conversations")}
                   </Typography>
                 </Badge>
               }
-              className={classes.internalTab}
+              style={{ minWidth: 90, textTransform: "none" }}
             />
             <Tab
               value="groups"
@@ -407,17 +406,15 @@ const TicketsManagerTabs = () => {
                   className={classes.badge}
                   invisible={groupsCount === 0}
                 >
-                  <Typography variant="body2">
+                  <Typography variant="caption">
                     {i18n.t("tickets.tabs.subTabs.groups")}
                   </Typography>
                 </Badge>
               }
-              className={classes.internalTab}
+              style={{ minWidth: 90, textTransform: "none" }}
             />
           </Tabs>
-        </Paper>
-      )}
-      <Paper square elevation={0} className={classes.ticketOptionsBox}>
+        )}
         {tab === "search" ? (
           <div className={classes.serachInputWrapper}>
             <SearchIcon className={classes.searchIcon} />
