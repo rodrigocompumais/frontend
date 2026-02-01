@@ -207,6 +207,7 @@ const TicketsManagerTabs = () => {
 
   const [searchParam, setSearchParam] = useState("");
   const [tab, setTab] = useState("open");
+  const [subTab, setSubTab] = useState("conversations"); // Sub-aba: "conversations" ou "groups"
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
   const [showAllTickets, setShowAllTickets] = useState(false);
   const searchInputRef = useRef();
@@ -215,6 +216,8 @@ const TicketsManagerTabs = () => {
 
   const [openCount, setOpenCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  const [conversationsCount, setConversationsCount] = useState(0);
+  const [groupsCount, setGroupsCount] = useState(0);
 
   // Hook para notificação sonora de tickets pendentes
   usePendingTicketNotification();
@@ -261,6 +264,14 @@ const TicketsManagerTabs = () => {
 
   const handleChangeTab = (e, newValue) => {
     setTab(newValue);
+    // Resetar sub-aba quando mudar de aba principal
+    if (newValue === "open") {
+      setSubTab("conversations");
+    }
+  };
+
+  const handleChangeSubTab = (e, newValue) => {
+    setSubTab(newValue);
   };
 
 
@@ -344,6 +355,50 @@ const TicketsManagerTabs = () => {
             className={classes.tab}
           />
         </Tabs>
+        {/* Sub-abas para a aba "Abertos" */}
+        {tab === "open" && (
+          <Tabs
+            value={subTab}
+            onChange={handleChangeSubTab}
+            variant="fullWidth"
+            indicatorColor="primary"
+            textColor="primary"
+            style={{ borderTop: `1px solid rgba(0, 0, 0, 0.12)` }}
+          >
+            <Tab
+              value="conversations"
+              label={
+                <Badge
+                  badgeContent={conversationsCount > 0 ? conversationsCount : 0}
+                  color="primary"
+                  className={classes.badge}
+                  invisible={conversationsCount === 0}
+                >
+                  <Typography variant="body2" style={{ paddingLeft: 8 }}>
+                    {i18n.t("tickets.tabs.subTabs.conversations")}
+                  </Typography>
+                </Badge>
+              }
+              className={classes.tab}
+            />
+            <Tab
+              value="groups"
+              label={
+                <Badge
+                  badgeContent={groupsCount > 0 ? groupsCount : 0}
+                  color="primary"
+                  className={classes.badge}
+                  invisible={groupsCount === 0}
+                >
+                  <Typography variant="body2" style={{ paddingLeft: 8 }}>
+                    {i18n.t("tickets.tabs.subTabs.groups")}
+                  </Typography>
+                </Badge>
+              }
+              className={classes.tab}
+            />
+          </Tabs>
+        )}
         {tab === "search" && (
           <Box display="flex" alignItems="center" style={{ marginLeft: "auto", paddingRight: 8 }}>
             <SearchIcon fontSize="small" style={{ marginRight: 4 }} />
@@ -465,12 +520,30 @@ const TicketsManagerTabs = () => {
         )}
       </Paper>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={true}>
-        <TicketsList
-          status="open"
-          showAll={showAllTickets}
-          selectedQueueIds={selectedQueueIds}
-          updateCount={(val) => setOpenCount(val)}
-        />
+        {subTab === "conversations" && (
+          <TicketsList
+            status="open"
+            showAll={showAllTickets}
+            selectedQueueIds={selectedQueueIds}
+            updateCount={(val) => {
+              setConversationsCount(val);
+              setOpenCount(val + groupsCount);
+            }}
+            filterIsGroup={false}
+          />
+        )}
+        {subTab === "groups" && (
+          <TicketsList
+            status="open"
+            showAll={showAllTickets}
+            selectedQueueIds={selectedQueueIds}
+            updateCount={(val) => {
+              setGroupsCount(val);
+              setOpenCount(conversationsCount + val);
+            }}
+            filterIsGroup={true}
+          />
+        )}
       </TabPanel>
       <TabPanel value={tab} name="pending" className={classes.ticketsWrapper} keepMounted={true}>
         <TicketsList

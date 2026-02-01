@@ -72,6 +72,39 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+// Função helper para identificar se um ticket é grupo
+const isTicketGroup = (ticket) => {
+  // Verificar campo isGroup do ticket (boolean, string, número)
+  if (ticket.isGroup === true || ticket.isGroup === "true" || ticket.isGroup === 1 || ticket.isGroup === "1") {
+    return true;
+  }
+  
+  // Verificar campo isGroup do contato
+  if (ticket.contact) {
+    if (ticket.contact.isGroup === true || ticket.contact.isGroup === "true" || ticket.contact.isGroup === 1 || ticket.contact.isGroup === "1") {
+      return true;
+    }
+    
+    // Verificar se o número do contato contém @g.us (formato WhatsApp de grupo)
+    if (ticket.contact.number) {
+      const numberStr = String(ticket.contact.number).trim();
+      if (numberStr.endsWith("@g.us") || numberStr.includes("@g.us")) {
+        return true;
+      }
+      if (numberStr.includes("g.us")) {
+        return true;
+      }
+    }
+  }
+  
+  // Verificar se há groupContact (indica que é grupo)
+  if (ticket.groupContact) {
+    return true;
+  }
+  
+  return false;
+};
+
 const reducer = (state, action) => {
   if (action.type === "LOAD_TICKETS") {
     const newTickets = action.payload;
@@ -163,6 +196,7 @@ const TicketsListCustom = (props) => {
     selectedQueueIds,
     updateCount,
     style,
+    filterIsGroup, // Novo prop para filtrar por grupo
   } = props;
   const classes = useStyles();
   const [pageNumber, setPageNumber] = useState(1);
@@ -175,7 +209,7 @@ const TicketsListCustom = (props) => {
   useEffect(() => {
     dispatch({ type: "RESET" });
     setPageNumber(1);
-  }, [status, searchParam, dispatch, showAll, tags, users, selectedQueueIds]);
+  }, [status, searchParam, dispatch, showAll, tags, users, selectedQueueIds, filterIsGroup]);
 
   const { tickets, hasMore, loading } = useTickets({
     pageNumber,
@@ -189,24 +223,49 @@ const TicketsListCustom = (props) => {
 
   useEffect(() => {
     const queueIds = queues.map((q) => q.id);
-    const filteredTickets = tickets.filter(
+    let filteredTickets = tickets.filter(
       (t) => queueIds.indexOf(t.queueId) > -1
     );
+
+    // Aplicar filtro de grupo se definido
+    if (filterIsGroup !== undefined) {
+      filteredTickets = filteredTickets.filter((t) => {
+        const ticketIsGroup = isTicketGroup(t);
+        return filterIsGroup ? ticketIsGroup : !ticketIsGroup;
+      });
+    }
 
     if (profile === "user") {
       dispatch({ type: "LOAD_TICKETS", payload: filteredTickets });
     } else {
-      dispatch({ type: "LOAD_TICKETS", payload: tickets });
+      // Para admin, também aplicar filtro de grupo nos tickets gerais
+      let ticketsToShow = tickets;
+      if (filterIsGroup !== undefined) {
+        ticketsToShow = tickets.filter((t) => {
+          const ticketIsGroup = isTicketGroup(t);
+          return filterIsGroup ? ticketIsGroup : !ticketIsGroup;
+        });
+      }
+      dispatch({ type: "LOAD_TICKETS", payload: ticketsToShow });
     }
-  }, [tickets, status, searchParam, queues, profile]);
+  }, [tickets, status, searchParam, queues, profile, filterIsGroup]);
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
-    const shouldUpdateTicket = (ticket) =>
-      (!ticket.userId || ticket.userId === user?.id || showAll) &&
-      (!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1);
+    const shouldUpdateTicket = (ticket) => {
+      const meetsQueueAndUser = (!ticket.userId || ticket.userId === user?.id || showAll) &&
+        (!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1);
+      
+      // Se há filtro de grupo, verificar também
+      if (filterIsGroup !== undefined && meetsQueueAndUser) {
+        const ticketIsGroup = isTicketGroup(ticket);
+        return filterIsGroup ? ticketIsGroup : !ticketIsGroup;
+      }
+      
+      return meetsQueueAndUser;
+    };
 
     const notBelongsToUserQueues = (ticket) =>
       ticket.queueId && selectedQueueIds.indexOf(ticket.queueId) === -1;
@@ -289,7 +348,7 @@ const TicketsListCustom = (props) => {
       socket.off(`company-${companyId}-appMessage`, handleAppMessage);
       socket.off(`company-${companyId}-contact`, handleContact);
     };
-  }, [status, showAll, user, selectedQueueIds, tags, users, profile, queues, socketManager]);
+  }, [status, showAll, user, selectedQueueIds, tags, users, profile, queues, socketManager, filterIsGroup]);
 
   useEffect(() => {
     if (typeof updateCount === "function" && status) {
