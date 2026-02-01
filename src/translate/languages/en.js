@@ -1615,10 +1615,9 @@ const messages = {
           },
         },
         disabled: "Desabilitado",
-            active: "Ativo",
-            enabled: "Habilitado",
-          },
-          updating: "Atualizando...",
+        active: "Ativo",
+        enabled: "Habilitado",
+        updating: "Atualizando...",
           tabs: {
             integrations: "INTEGRAÇÕES",
           },
