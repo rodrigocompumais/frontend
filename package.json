@@ -78,7 +78,7 @@
     },
     "scripts": {
         "start": "set NODE_OPTIONS=--openssl-legacy-provider && react-app-rewired start",
-        "build": "NODE_OPTIONS=--openssl-legacy-provider GENERATE_SOURCEMAP=false react-app-rewired build",
+        "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider GENERATE_SOURCEMAP=false react-app-rewired build",
         "builddev": "react-app-rewired build",
         "test": "react-app-rewired test",
         "eject": "react-scripts eject"
@@ -99,6 +99,7 @@
         ]
     },
     "devDependencies": {
+        "cross-env": "^10.1.0",
         "react-app-rewired": "^2.2.1"
     }
 }

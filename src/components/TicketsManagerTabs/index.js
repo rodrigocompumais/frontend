@@ -458,12 +458,12 @@ const TicketsManagerTabs = () => {
             </IconButton>
           </div>
         )}
-            <Menu
-              anchorEl={filterMenuAnchor}
-              open={filterMenuOpen}
-              onClose={handleCloseFilterMenu}
-              className={classes.filterMenu}
-            >
+        <Menu
+          anchorEl={filterMenuAnchor}
+          open={filterMenuOpen}
+          onClose={handleCloseFilterMenu}
+          className={classes.filterMenu}
+        >
               <Box className={classes.filterMenuSection}>
                 <Can
                   role={user.profile}
@@ -528,9 +528,7 @@ const TicketsManagerTabs = () => {
                   </Box>
                 </MenuItem>
               </Box>
-            </Menu>
-          </>
-        )}
+        </Menu>
       </Paper>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={true}>
         {subTab === "conversations" && (
