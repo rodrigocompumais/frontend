@@ -192,6 +192,20 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 500,
   },
 
+  // Estilos para mensagens internas da empresa em grupos
+  messageRightCompanyUser: {
+    borderLeft: "4px solid",
+    paddingLeft: "8px !important",
+  },
+
+  companyUserName: {
+    display: "block",
+    fontSize: "0.75rem",
+    fontWeight: 600,
+    marginBottom: 2,
+    opacity: 0.9,
+  },
+
   textContentItem: {
     overflowWrap: "break-word",
     padding: "3px 80px 6px 6px",
@@ -369,6 +383,68 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
   const [transcriptionError, setTranscriptionError] = useState(null);
 
   const socketManager = useContext(SocketContext);
+
+  // Função para gerar cor consistente baseada em uma string (contactId ou participant)
+  const generateColorFromString = (str) => {
+    if (!str) return "#dcf8c6"; // Cor padrão
+    
+    // Hash simples da string para gerar um número
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Paleta de cores agradáveis para mensagens
+    const colors = [
+      "#D1F2EB", // Verde claro
+      "#D6EAF8", // Azul claro
+      "#FCF3CF", // Amarelo claro
+      "#F9E79F", // Dourado claro
+      "#D5F4E6", // Menta
+      "#E8DAEF", // Roxo claro
+      "#FADBD8", // Rosa claro
+      "#F5CBA7", // Laranja claro
+      "#AED6F1", // Azul céu
+      "#ABEBC6", // Verde suave
+      "#F8BBD0", // Rosa suave
+      "#DCEDC8", // Verde limão
+      "#FFF9C4", // Amarelo suave
+      "#E1BEE7", // Lavanda
+      "#FFCCBC", // Pêssego
+    ];
+    
+    const index = Math.abs(hash) % colors.length;
+    return colors[index];
+  };
+
+  // Função para gerar cor da borda (mais escura) baseada na cor de fundo
+  const generateBorderColor = (backgroundColor) => {
+    // Converte hex para RGB e escurece
+    const hex = backgroundColor.replace("#", "");
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // Escurece 30%
+    const darken = (val) => Math.max(0, Math.floor(val * 0.7));
+    
+    return `rgb(${darken(r)}, ${darken(g)}, ${darken(b)})`;
+  };
+
+  // Função para extrair nome do usuário da empresa
+  const getCompanyUserName = (message) => {
+    // Tentar pegar o nome do participant ou do contato
+    if (message.participant) {
+      // Para grupos, o participant pode ter o número do telefone
+      // Formato: 5511999999999@s.whatsapp.net
+      const phone = message.participant.split("@")[0];
+      return phone.slice(-4); // Últimos 4 dígitos
+    }
+    if (message.contact?.name) {
+      return message.contact.name;
+    }
+    return "Equipe";
+  };
 
   useEffect(() => {
     dispatch({ type: "RESET" });
@@ -803,12 +879,23 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
             </React.Fragment>
           );
         } else {
+          // Mensagem fromMe (enviada pela empresa)
+          const userIdentifier = message.participant || message.contactId?.toString() || "default";
+          const backgroundColor = isGroup ? generateColorFromString(userIdentifier) : "#dcf8c6";
+          const borderColor = isGroup ? generateBorderColor(backgroundColor) : "transparent";
+          const userName = isGroup ? getCompanyUserName(message) : null;
+
           return (
             <React.Fragment key={message.id}>
               {renderDailyTimestamps(message, index)}
               {renderNumberTicket(message, index)}
               {renderMessageDivider(message, index)}
-              <div className={classes.messageRight}>
+              <div 
+                className={classes.messageRight}
+                style={{ 
+                  backgroundColor: backgroundColor,
+                }}
+              >
                 <IconButton
                   variant="contained"
                   size="small"
@@ -827,8 +914,20 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
                     [classes.textContentItemDeleted]: message.isDeleted,
 					[classes.textContentItemEdited]: message.isEdited,
                     [classes.messageInternal]: message.isInternal,
+                    [classes.messageRightCompanyUser]: isGroup,
                   })}
+                  style={{
+                    borderLeftColor: isGroup ? borderColor : "transparent",
+                  }}
                 >
+                  {isGroup && userName && (
+                    <span 
+                      className={classes.companyUserName}
+                      style={{ color: borderColor }}
+                    >
+                      {userName}
+                    </span>
+                  )}
                   {message.isDeleted && (
                     <Block
                       color="disabled"
