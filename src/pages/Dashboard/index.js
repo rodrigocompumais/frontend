@@ -58,6 +58,8 @@ import FilterDropdown from "../../components/Dashboard/FilterDropdown";
 import LineChartComponent from "../../components/Dashboard/LineChartComponent";
 import PieChartComponent from "../../components/Dashboard/PieChartComponent";
 import BarChartComponent from "../../components/Dashboard/BarChartComponent";
+import MarkdownWrapper from "../../components/MarkdownWrapper";
+import Divider from "@material-ui/core/Divider";
 import { isArray } from "lodash";
 
 import useDashboard from "../../hooks/useDashboard";
@@ -187,6 +189,51 @@ const useStyles = makeStyles((theme) => ({
     overflowY: "auto",
     ...theme.scrollbarStyles,
   },
+  summaryBox: {
+    backgroundColor: theme.palette.type === "dark" 
+      ? "rgba(255, 255, 255, 0.03)" 
+      : "rgba(0, 0, 0, 0.02)",
+    borderRadius: theme.spacing(1.5),
+    padding: theme.spacing(3),
+    marginBottom: theme.spacing(2),
+  },
+  summarySection: {
+    marginBottom: theme.spacing(3),
+    "&:last-child": {
+      marginBottom: 0,
+    },
+  },
+  summaryTitle: {
+    fontWeight: 600,
+    fontSize: "1.1rem",
+    marginBottom: theme.spacing(1.5),
+    color: theme.palette.primary.main,
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+  },
+  summaryParagraph: {
+    marginBottom: theme.spacing(1.5),
+    lineHeight: 1.7,
+    color: theme.palette.text.primary,
+  },
+  summaryList: {
+    paddingLeft: theme.spacing(3),
+    marginBottom: theme.spacing(1.5),
+  },
+  summaryListItem: {
+    marginBottom: theme.spacing(0.75),
+    lineHeight: 1.6,
+  },
+  summaryHighlight: {
+    backgroundColor: theme.palette.type === "dark"
+      ? "rgba(14, 165, 233, 0.15)"
+      : "rgba(14, 165, 233, 0.08)",
+    padding: theme.spacing(1.5),
+    borderRadius: theme.spacing(1),
+    borderLeft: `3px solid ${theme.palette.primary.main}`,
+    marginBottom: theme.spacing(2),
+  },
   summaryHeader: {
     display: "flex",
     justifyContent: "space-between",
@@ -228,7 +275,197 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(6),
     gap: theme.spacing(2),
   },
+  summaryBox: {
+    backgroundColor: theme.palette.type === "dark" 
+      ? "rgba(255, 255, 255, 0.03)" 
+      : "rgba(0, 0, 0, 0.02)",
+    borderRadius: theme.spacing(1.5),
+    padding: theme.spacing(3),
+    marginBottom: theme.spacing(2),
+  },
+  summarySection: {
+    marginBottom: theme.spacing(3),
+    "&:last-child": {
+      marginBottom: 0,
+    },
+  },
+  summaryTitle: {
+    fontWeight: 600,
+    fontSize: "1.1rem",
+    marginBottom: theme.spacing(1.5),
+    color: theme.palette.primary.main,
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+  },
+  summaryParagraph: {
+    marginBottom: theme.spacing(1.5),
+    lineHeight: 1.7,
+    color: theme.palette.text.primary,
+  },
+  summaryList: {
+    paddingLeft: theme.spacing(3),
+    marginBottom: theme.spacing(1.5),
+  },
+  summaryListItem: {
+    marginBottom: theme.spacing(0.75),
+    lineHeight: 1.6,
+  },
+  summaryHighlight: {
+    backgroundColor: theme.palette.type === "dark"
+      ? "rgba(14, 165, 233, 0.15)"
+      : "rgba(14, 165, 233, 0.08)",
+    padding: theme.spacing(1.5),
+    borderRadius: theme.spacing(1),
+    borderLeft: `3px solid ${theme.palette.primary.main}`,
+    marginBottom: theme.spacing(2),
+  },
 }));
+
+// Componente para formatar o resumo de forma mais visual
+const FormattedSummary = ({ text, classes }) => {
+  if (!text) return null;
+
+  // Dividir o texto em linhas
+  const lines = text.split('\n').filter(line => line.trim());
+  const sections = [];
+  let currentParagraph = [];
+  let currentList = [];
+  
+  lines.forEach((line, index) => {
+    const trimmed = line.trim();
+    
+    // Detectar títulos markdown (# ## ###)
+    if (trimmed.match(/^#{1,3}\s+/)) {
+      if (currentList.length > 0) {
+        sections.push({ type: "list", content: currentList });
+        currentList = [];
+      }
+      if (currentParagraph.length > 0) {
+        sections.push({ type: "paragraph", content: currentParagraph.join(' ') });
+        currentParagraph = [];
+      }
+      sections.push({ type: "title", content: trimmed.replace(/^#+\s*/, '') });
+    }
+    // Detectar separadores
+    else if (trimmed.match(/^={3,}$/) || trimmed.match(/^-{3,}$/)) {
+      if (currentList.length > 0) {
+        sections.push({ type: "list", content: currentList });
+        currentList = [];
+      }
+      if (currentParagraph.length > 0) {
+        sections.push({ type: "paragraph", content: currentParagraph.join(' ') });
+        currentParagraph = [];
+      }
+      sections.push({ type: "divider" });
+    }
+    // Detectar listas (- • ou números)
+    else if (trimmed.match(/^[-•*]\s/) || trimmed.match(/^\d+[\.\)]\s/)) {
+      if (currentParagraph.length > 0) {
+        sections.push({ type: "paragraph", content: currentParagraph.join(' ') });
+        currentParagraph = [];
+      }
+      currentList.push(trimmed.replace(/^[-•*]\s*/, '').replace(/^\d+[\.\)]\s*/, ''));
+    }
+    // Detectar subtítulos (negrito ou linha que termina com :)
+    else if (trimmed.match(/^\*\*.*\*\*$/) || (trimmed.endsWith(':') && trimmed.length < 100)) {
+      if (currentList.length > 0) {
+        sections.push({ type: "list", content: currentList });
+        currentList = [];
+      }
+      if (currentParagraph.length > 0) {
+        sections.push({ type: "paragraph", content: currentParagraph.join(' ') });
+        currentParagraph = [];
+      }
+      sections.push({ type: "subtitle", content: trimmed });
+    }
+    // Linha vazia - finalizar parágrafo ou lista
+    else if (trimmed === '') {
+      if (currentList.length > 0) {
+        sections.push({ type: "list", content: currentList });
+        currentList = [];
+      }
+      if (currentParagraph.length > 0) {
+        sections.push({ type: "paragraph", content: currentParagraph.join(' ') });
+        currentParagraph = [];
+      }
+    }
+    // Texto normal
+    else {
+      if (currentList.length > 0) {
+        sections.push({ type: "list", content: currentList });
+        currentList = [];
+      }
+      currentParagraph.push(trimmed);
+    }
+  });
+  
+  // Finalizar últimos elementos
+  if (currentList.length > 0) {
+    sections.push({ type: "list", content: currentList });
+  }
+  if (currentParagraph.length > 0) {
+    sections.push({ type: "paragraph", content: currentParagraph.join(' ') });
+  }
+
+  return (
+    <Box style={{ padding: 8 }}>
+      {sections.map((section, index) => {
+        if (section.type === "title") {
+          return (
+            <Box key={index} className={classes.summarySection}>
+              <Typography variant="h6" className={classes.summaryTitle}>
+                {section.content}
+              </Typography>
+            </Box>
+          );
+        } else if (section.type === "subtitle") {
+          return (
+            <Box key={index} className={classes.summarySection}>
+              <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 12, marginTop: 16, color: "#0EA5E9" }}>
+                <MarkdownWrapper>{section.content}</MarkdownWrapper>
+              </Typography>
+            </Box>
+          );
+        } else if (section.type === "list") {
+          return (
+            <Box key={index} className={classes.summarySection}>
+              <Box component="ul" className={classes.summaryList} style={{ marginTop: 8, marginBottom: 16 }}>
+                {section.content.map((item, itemIndex) => (
+                  <li key={itemIndex} className={classes.summaryListItem}>
+                    <MarkdownWrapper>{item}</MarkdownWrapper>
+                  </li>
+                ))}
+              </Box>
+            </Box>
+          );
+        } else if (section.type === "divider") {
+          return <Divider key={index} style={{ margin: "16px 0" }} />;
+        } else {
+          // Parágrafo normal
+          const content = section.content;
+          const isHighlight = content.match(/(importante|destaque|atenção|recomenda|sugestão|conclusão)/i);
+          
+          if (isHighlight) {
+            return (
+              <Box key={index} className={classes.summaryHighlight}>
+                <MarkdownWrapper>{content}</MarkdownWrapper>
+              </Box>
+            );
+          }
+          
+          return (
+            <Box key={index} className={classes.summarySection}>
+              <Typography variant="body1" className={classes.summaryParagraph}>
+                <MarkdownWrapper>{content}</MarkdownWrapper>
+              </Typography>
+            </Box>
+          );
+        }
+      })}
+    </Box>
+  );
+};
 
 const Dashboard = () => {
   const classes = useStyles();
@@ -887,9 +1124,15 @@ const Dashboard = () => {
                 </Typography>
               </Box>
             ) : (
-              <Typography className={classes.summaryContent}>
-                {summaryText || "Nenhum resumo disponível."}
-              </Typography>
+              <Box style={{ maxHeight: "60vh", overflowY: "auto", ...classes.scrollbarStyles }}>
+                {summaryText ? (
+                  <FormattedSummary text={summaryText} classes={classes} />
+                ) : (
+                  <Typography variant="body2" color="textSecondary" style={{ textAlign: "center", padding: 24 }}>
+                    Nenhum resumo disponível.
+                  </Typography>
+                )}
+              </Box>
             )}
           </DialogContent>
           <DialogActions>
