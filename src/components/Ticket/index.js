@@ -25,6 +25,7 @@ import { TagsDropdown } from "../TagsDropdown";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
 import IframeModal from "../IframeModal";
+import { useLocalStorage } from "../../hooks/useLocalStorage";
 
 const drawerWidth = 320;
 
@@ -81,6 +82,7 @@ const Ticket = () => {
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [iframeModalOpen, setIframeModalOpen] = useState(false);
   const [iframeUrl, setIframeUrl] = useState("");
+  const [realTimeTranslationEnabled, setRealTimeTranslationEnabled] = useLocalStorage("realTimeTranslationEnabled", true);
 
   const socketManager = useContext(SocketContext);
 
@@ -238,6 +240,7 @@ const Ticket = () => {
           ticketId={ticket.id}
           isGroup={ticket.isGroup}
           onAiHandlersReady={setAiHandlers}
+          realTimeTranslationEnabled={realTimeTranslationEnabled}
         ></MessagesList>
         <MessageInput
           ticketId={ticket.id}
@@ -261,7 +264,11 @@ const Ticket = () => {
       >
         <TicketHeader loading={loading}>
           {renderTicketInfo()}
-          <TicketActionButtons ticket={ticket} />
+          <TicketActionButtons 
+            ticket={ticket} 
+            realTimeTranslationEnabled={realTimeTranslationEnabled}
+            onToggleTranslation={() => setRealTimeTranslationEnabled(!realTimeTranslationEnabled)}
+          />
         </TicketHeader>
         <ReplyMessageProvider>{renderMessagesList()}</ReplyMessageProvider>
       </Paper>

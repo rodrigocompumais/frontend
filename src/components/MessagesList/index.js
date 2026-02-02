@@ -374,7 +374,7 @@ const reducer = (state, action) => {
   }
 };
 
-const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
+const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTranslationEnabled = true }) => {
   const classes = useStyles();
 
   const [messagesList, dispatch] = useReducer(reducer, []);
@@ -840,7 +840,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady }) => {
     const { translation, loading: translationLoading } = useMessageTranslation(
       message,
       companyLanguage,
-      !message.isDeleted && message.body && message.body.trim().length >= 10
+      realTimeTranslationEnabled && !message.isDeleted && message.body && message.body.trim().length >= 10
     );
 
     const displayText = translation?.translatedText || message.body;

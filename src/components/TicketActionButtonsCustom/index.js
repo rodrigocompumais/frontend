@@ -18,6 +18,7 @@ import Tooltip from '@material-ui/core/Tooltip';
 import PlayArrowIcon from '@material-ui/icons/PlayArrow';
 import CloseIcon from '@material-ui/icons/Close';
 import PanToolIcon from '@material-ui/icons/PanTool';
+import TranslateIcon from '@material-ui/icons/Translate';
 import { TagsDropdown } from "../TagsDropdown";
 
 
@@ -131,7 +132,7 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const TicketActionButtonsCustom = ({ ticket }) => {
+const TicketActionButtonsCustom = ({ ticket, realTimeTranslationEnabled = true, onToggleTranslation }) => {
 	const classes = useStyles();
 	const history = useHistory();
 	const [anchorEl, setAnchorEl] = useState(null);
@@ -174,6 +175,18 @@ const TicketActionButtonsCustom = ({ ticket }) => {
 
 	return (
 		<div className={classes.actionButtons}>
+			{/* Botão de tradução em tempo real */}
+			<Tooltip title={realTimeTranslationEnabled ? "Desativar Tradução em Tempo Real" : "Ativar Tradução em Tempo Real"}>
+				<IconButton
+					onClick={onToggleTranslation}
+					className={classes.iconButton}
+					color={realTimeTranslationEnabled ? "primary" : "default"}
+					size="small"
+				>
+					<TranslateIcon />
+				</IconButton>
+			</Tooltip>
+			
 			{/* Não exibir botões de ação em grupos */}
 			{ticket.isGroup ? (
 				<>
