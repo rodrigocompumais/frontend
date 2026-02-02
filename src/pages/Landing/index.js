@@ -13,6 +13,15 @@ import {
   CardContent,
   Chip,
   CircularProgress,
+  AppBar,
+  Toolbar,
+  IconButton,
+  Menu,
+  MenuItem,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
 } from "@material-ui/core";
 
 import ChatIcon from "@material-ui/icons/Chat";
@@ -35,6 +44,12 @@ import VerifiedUserIcon from "@material-ui/icons/VerifiedUser";
 import SpeedIcon from "@material-ui/icons/Speed";
 import CreditCardIcon from "@material-ui/icons/CreditCard";
 import ArrowForwardIcon from "@material-ui/icons/ArrowForward";
+import MenuIcon from "@material-ui/icons/Menu";
+import CloseIcon from "@material-ui/icons/Close";
+import CancelIcon from "@material-ui/icons/Cancel";
+import TranslateIcon from "@material-ui/icons/Translate";
+import DescriptionIcon from "@material-ui/icons/Description";
+import LocalOfferIcon from "@material-ui/icons/LocalOffer";
 import ScrollReveal from "scrollreveal";
 
 import { Link as RouterLink, useHistory } from "react-router-dom";
@@ -53,6 +68,93 @@ const useStyles = makeStyles((theme) => ({
     position: "relative",
     overflow: "hidden",
     fontFamily: "'Inter', sans-serif",
+  },
+
+  // ===== TOP NAVIGATION MENU =====
+  topNav: {
+    position: "fixed",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    background: "rgba(10, 10, 15, 0.95)",
+    backdropFilter: "blur(20px)",
+    borderBottom: "1px solid rgba(0, 217, 255, 0.1)",
+    transition: "all 0.3s ease",
+    boxShadow: "0 2px 10px rgba(0, 0, 0, 0.3)",
+  },
+  topNavToolbar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: theme.spacing(1, 2),
+  },
+  topNavLogo: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontWeight: 700,
+    fontSize: "1.5rem",
+    background: "linear-gradient(135deg, #00D9FF, #22C55E)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    textDecoration: "none",
+  },
+  topNavLinks: {
+    display: "flex",
+    gap: theme.spacing(3),
+    alignItems: "center",
+    [theme.breakpoints.down("md")]: {
+      display: "none",
+    },
+  },
+  topNavLink: {
+    color: "rgba(226, 232, 240, 0.9)",
+    textDecoration: "none",
+    fontFamily: "'Inter', sans-serif",
+    fontSize: "0.95rem",
+    fontWeight: 500,
+    transition: "color 0.3s ease",
+    cursor: "pointer",
+    "&:hover": {
+      color: "#00D9FF",
+    },
+  },
+  topNavActions: {
+    display: "flex",
+    gap: theme.spacing(1),
+    alignItems: "center",
+    [theme.breakpoints.down("md")]: {
+      display: "none",
+    },
+  },
+  topNavMenuButton: {
+    display: "none",
+    [theme.breakpoints.down("md")]: {
+      display: "block",
+    },
+  },
+  mobileDrawer: {
+    "& .MuiDrawer-paper": {
+      background: "rgba(10, 10, 15, 0.98)",
+      backdropFilter: "blur(20px)",
+      width: 280,
+      padding: theme.spacing(2),
+    },
+  },
+  mobileDrawerHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: theme.spacing(2),
+  },
+  mobileDrawerLink: {
+    color: "rgba(226, 232, 240, 0.9)",
+    textDecoration: "none",
+    padding: theme.spacing(1.5),
+    borderRadius: 8,
+    "&:hover": {
+      background: "rgba(0, 217, 255, 0.1)",
+      color: "#00D9FF",
+    },
   },
   
   // ===== HERO SECTION =====
@@ -386,12 +488,69 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     height: "100%",
   },
+  planIcon: {
+    fontSize: 48,
+    marginBottom: theme.spacing(2),
+    background: "linear-gradient(135deg, #00D9FF, #22C55E)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    display: "flex",
+    justifyContent: "center",
+  },
   planName: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontWeight: 700,
     fontSize: "1.5rem",
     marginBottom: theme.spacing(1),
     color: "#F9FAFB",
+    textAlign: "center",
+  },
+  planTagline: {
+    fontFamily: "'Inter', sans-serif",
+    fontSize: "0.95rem",
+    color: "rgba(148, 163, 184, 0.9)",
+    marginBottom: theme.spacing(2),
+    fontStyle: "italic",
+    textAlign: "center",
+  },
+  planUsers: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontSize: "1.1rem",
+    fontWeight: 700,
+    color: "#00D9FF",
+    marginBottom: theme.spacing(3),
+    textAlign: "center",
+  },
+  featuresContainer: {
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(3),
+    flexGrow: 1,
+  },
+  featureRow: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    marginBottom: theme.spacing(1),
+    fontSize: "0.9rem",
+  },
+  checkIcon: {
+    color: "#22C55E",
+    fontSize: "1.2rem",
+    minWidth: 20,
+  },
+  crossIcon: {
+    color: "rgba(100, 116, 139, 0.5)",
+    fontSize: "1.2rem",
+    minWidth: 20,
+  },
+  featureIncluded: {
+    color: "rgba(226, 232, 240, 0.9)",
+    fontFamily: "'Inter', sans-serif",
+  },
+  featureExcluded: {
+    color: "rgba(100, 116, 139, 0.5)",
+    textDecoration: "line-through",
+    fontFamily: "'Inter', sans-serif",
   },
   planPrice: {
     marginBottom: theme.spacing(3),
@@ -447,10 +606,29 @@ const useStyles = makeStyles((theme) => ({
     background: "linear-gradient(135deg, #00D9FF, #22C55E)",
     color: "#0A0A0F",
     transition: "all 0.3s ease",
+    width: "100%",
     "&:hover": {
       background: "linear-gradient(135deg, #00E5FF, #2DD881)",
       transform: "scale(1.05)",
       boxShadow: "0 10px 30px -10px rgba(0, 217, 255, 0.5)",
+    },
+  },
+  proposalButtonOutline: {
+    marginTop: "auto",
+    padding: theme.spacing(1.75, 4),
+    borderRadius: 14,
+    fontFamily: "'Inter', sans-serif",
+    fontWeight: 600,
+    fontSize: "1rem",
+    textTransform: "none",
+    background: "transparent",
+    color: "#00D9FF",
+    border: "2px solid #00D9FF",
+    width: "100%",
+    transition: "all 0.3s ease",
+    "&:hover": {
+      background: "rgba(0, 217, 255, 0.1)",
+      borderColor: "#00E5FF",
     },
   },
   featuredBadge: {
@@ -539,13 +717,75 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+// Todas as funcionalidades possíveis
+const ALL_FEATURES = [
+  { id: 'whatsapp-qr', name: 'WhatsApp QR Code', alwaysIncluded: true },
+  { id: 'ai-teams', name: 'Equipes de I.A.', requires: 'useOpenAi' },
+  { id: 'departments', name: 'Multi-Departamentos', dynamic: (plan) => plan.queues > 1 ? 'Multi-Departamentos' : '1 Departamento' },
+  { id: 'control', name: 'Gestão de Controle', alwaysIncluded: true },
+  { id: 'reports', name: 'Relatórios & Dashboard', alwaysIncluded: true },
+  { id: 'internal-chat', name: 'Chat Interno', requires: 'useInternalChat' },
+  { id: 'multi-connections', name: 'Multi-Conexões', dynamic: (plan) => plan.connections > 1 ? 'Multi-Conexões' : '1 Conexão' },
+  { id: 'tags', name: 'Etiquetas de Controle', alwaysIncluded: true },
+  { id: 'contacts', name: 'Contatos', alwaysIncluded: true },
+  { id: 'quick-replies', name: 'Respostas Rápidas', alwaysIncluded: true },
+  { id: 'whatsapp-api', name: 'WhatsApp API Oficial', alwaysIncluded: true },
+  { id: 'unlimited-leads', name: 'Leads ilimitados', alwaysIncluded: true },
+  { id: 'integrations', name: 'API de Integrações', requires: 'useIntegrations' },
+  { id: 'ai', name: 'Inteligência Artificial', requires: 'useOpenAi' },
+  { id: 'proactive-ai', name: 'I.A. Proativa', requires: 'useOpenAi', minUsers: 16 },
+  { id: 'ai-auditors', name: 'Auditores de I.A.', requires: 'useOpenAi', minUsers: 30 },
+  { id: 'multisender', name: 'MultiSender - Envio em Massa', requires: 'useCampaigns' },
+  { id: 'kanban', name: 'Kanban', requires: 'useKanban' },
+  { id: 'schedules', name: 'Agendamentos', requires: 'useSchedules' },
+  { id: 'forms', name: 'Formulários Customizados', alwaysIncluded: true },
+  { id: 'translation', name: 'Tradução em Tempo Real', alwaysIncluded: true },
+  { id: 'flowbuilder', name: 'Flowbuilder Visual', alwaysIncluded: true },
+];
+
+// Função helper para verificar se funcionalidade está incluída
+const isFeatureIncluded = (feature, plan) => {
+  if (feature.alwaysIncluded) return true;
+  if (feature.requires && !plan[feature.requires]) return false;
+  if (feature.minUsers && plan.users < feature.minUsers) return false;
+  return true;
+};
+
+// Função helper para obter nome da funcionalidade
+const getFeatureName = (feature, plan) => {
+  if (feature.dynamic) return feature.dynamic(plan);
+  return feature.name;
+};
+
+// Função para obter ícone do plano baseado no índice
+const getPlanIcon = (index, total) => {
+  if (index === 0) return <EmojiObjectsIcon style={{ fontSize: 48 }} />;
+  if (index === 1) return <FlashOnIcon style={{ fontSize: 48 }} />;
+  if (index === 2) return <TrendingUpIcon style={{ fontSize: 48 }} />;
+  if (index >= 3) return <LocalOfferIcon style={{ fontSize: 48 }} />;
+  return <StarIcon style={{ fontSize: 48 }} />;
+};
+
+// Função para obter tagline do plano baseado no índice
+const getPlanTagline = (index, total) => {
+  const taglines = [
+    "Perfeito para pequenos negócios começarem",
+    "Ideal para empresas em crescimento",
+    "Para empresas que buscam mais produtividade",
+    "Solução completa e personalizada"
+  ];
+  return taglines[Math.min(index, taglines.length - 1)] || "Plano personalizado para seu negócio";
+};
+
 const Landing = () => {
   const classes = useStyles();
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down("sm"));
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const history = useHistory();
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Fetch planos da API
   useEffect(() => {
@@ -589,6 +829,34 @@ const Landing = () => {
     history.push(`/signup?planId=${plan.id}`);
   };
 
+  // Função para scroll suave para seções
+  const scrollToSection = (sectionId) => {
+    // Pequeno delay para garantir que o DOM está pronto
+    setTimeout(() => {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        const offset = 80; // Altura do menu fixo
+        const elementPosition = element.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - offset;
+
+        window.scrollTo({
+          top: offsetPosition,
+          behavior: "smooth"
+        });
+        setMobileMenuOpen(false);
+      }
+    }, 100);
+  };
+
+  // Função para solicitar proposta personalizada
+  const handleRequestProposal = (planId = null) => {
+    if (planId) {
+      history.push(`/proposta-personalizada?planId=${planId}`);
+    } else {
+      history.push("/proposta-personalizada");
+    }
+  };
+
   // Formatar valor para moeda brasileira
   const formatCurrency = (value) => {
     if (!value && value !== 0) return "Consulte";
@@ -628,10 +896,160 @@ const Landing = () => {
 
   return (
     <div className={classes.root}>
+      {/* ===== TOP NAVIGATION MENU ===== */}
+      <AppBar position="fixed" className={classes.topNav} elevation={0}>
+        <Toolbar className={classes.topNavToolbar}>
+          <Typography
+            component={RouterLink}
+            to="/"
+            className={classes.topNavLogo}
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+          >
+            Compuchat
+          </Typography>
+
+          <Box className={classes.topNavLinks}>
+            <Typography
+              className={classes.topNavLink}
+              onClick={() => scrollToSection("hero")}
+            >
+              Início
+            </Typography>
+            <Typography
+              className={classes.topNavLink}
+              onClick={() => scrollToSection("features")}
+            >
+              Funcionalidades
+            </Typography>
+            <Typography
+              className={classes.topNavLink}
+              onClick={() => scrollToSection("ai-features")}
+            >
+              Recursos IA
+            </Typography>
+            <Typography
+              className={classes.topNavLink}
+              onClick={() => scrollToSection("translation")}
+            >
+              Tradução
+            </Typography>
+            <Typography
+              className={classes.topNavLink}
+              onClick={() => scrollToSection("forms")}
+            >
+              Formulários
+            </Typography>
+            <Typography
+              className={classes.topNavLink}
+              onClick={() => scrollToSection("plans")}
+            >
+              Planos
+            </Typography>
+          </Box>
+
+          <Box className={classes.topNavActions}>
+            <Button
+              component={RouterLink}
+              to="/login"
+              className={classes.secondaryCta}
+              style={{ padding: "8px 20px", fontSize: "0.9rem" }}
+            >
+              Login
+            </Button>
+            <Button
+              component={RouterLink}
+              to="/signup?free=true"
+              className={classes.primaryCta}
+              style={{ padding: "8px 20px", fontSize: "0.9rem" }}
+            >
+              Começar Grátis
+            </Button>
+          </Box>
+
+          <IconButton
+            className={classes.topNavMenuButton}
+            onClick={() => setMobileMenuOpen(true)}
+            style={{ color: "#F9FAFB" }}
+          >
+            <MenuIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+
+      {/* Mobile Drawer */}
+      <Drawer
+        anchor="right"
+        open={mobileMenuOpen}
+        onClose={() => setMobileMenuOpen(false)}
+        className={classes.mobileDrawer}
+      >
+        <Box className={classes.mobileDrawerHeader}>
+          <Typography
+            component={RouterLink}
+            to="/"
+            className={classes.topNavLogo}
+            onClick={() => {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+              setMobileMenuOpen(false);
+            }}
+          >
+            Compuchat
+          </Typography>
+          <IconButton
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ color: "#F9FAFB" }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </Box>
+        <List>
+          <ListItem button onClick={() => scrollToSection("hero")}>
+            <ListItemText primary="Início" />
+          </ListItem>
+          <ListItem button onClick={() => scrollToSection("features")}>
+            <ListItemText primary="Funcionalidades" />
+          </ListItem>
+          <ListItem button onClick={() => scrollToSection("ai-features")}>
+            <ListItemText primary="Recursos IA" />
+          </ListItem>
+          <ListItem button onClick={() => scrollToSection("translation")}>
+            <ListItemText primary="Tradução" />
+          </ListItem>
+          <ListItem button onClick={() => scrollToSection("forms")}>
+            <ListItemText primary="Formulários" />
+          </ListItem>
+          <ListItem button onClick={() => scrollToSection("plans")}>
+            <ListItemText primary="Planos" />
+          </ListItem>
+          <ListItem>
+            <Button
+              component={RouterLink}
+              to="/login"
+              fullWidth
+              className={classes.secondaryCta}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Login
+            </Button>
+          </ListItem>
+          <ListItem>
+            <Button
+              component={RouterLink}
+              to="/signup?free=true"
+              fullWidth
+              className={classes.primaryCta}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Começar Grátis
+            </Button>
+          </ListItem>
+        </List>
+      </Drawer>
+
       <ParticlesBackground />
       
       {/* ===== HERO SECTION ===== */}
-      <Container maxWidth="lg" className={`${classes.hero} sr-hero`}>
+      <Container maxWidth="lg" id="hero" className={`${classes.hero} sr-hero`} style={{ scrollMarginTop: '80px' }}>
         <Grid container spacing={6} alignItems="center">
           <Grid item xs={12} md={6}>
             <Box className={classes.heroContent}>
@@ -685,7 +1103,7 @@ const Landing = () => {
 
 
       {/* ===== AI FEATURES SECTION ===== */}
-      <Box className={classes.aiSection}>
+      <Box id="ai-features" className={classes.aiSection} style={{ scrollMarginTop: '80px' }}>
         <Container maxWidth="lg">
           <Box display="flex" flexDirection="column" alignItems="center">
             <Box className={classes.aiSectionBadge}>
@@ -729,7 +1147,7 @@ const Landing = () => {
       </Box>
 
       {/* ===== FEATURES SECTION ===== */}
-      <Box className={classes.section}>
+      <Box id="features" className={classes.section} style={{ scrollMarginTop: '80px' }}>
         <Container maxWidth="lg">
           <Typography variant="h3" className={`${classes.sectionTitle} sr-section-title`}>
             Tudo que você precisa para um atendimento moderno
@@ -807,8 +1225,156 @@ const Landing = () => {
         </Container>
       </Box>
 
+      {/* ===== TRANSLATION SECTION ===== */}
+      <Box id="translation" className={classes.section} style={{ scrollMarginTop: '80px' }}>
+        <Container maxWidth="lg">
+          <Box display="flex" flexDirection="column" alignItems="center">
+            <Box className={classes.aiSectionBadge}>
+              <TranslateIcon style={{ fontSize: 16, color: "#00D9FF" }} />
+              <Typography className={classes.aiSectionBadgeText}>
+                Tradução em Tempo Real
+              </Typography>
+            </Box>
+            
+            <Typography variant="h3" className={`${classes.sectionTitle} sr-section-title`}>
+              Atenda clientes em qualquer idioma
+            </Typography>
+            
+            <Typography className={classes.sectionSubtitle}>
+              Traduza mensagens automaticamente em tempo real durante o atendimento. 
+              Quebre barreiras linguísticas e expanda seu negócio globalmente.
+            </Typography>
+          </Box>
+          
+          <Grid container spacing={4} className={classes.cardGrid}>
+            <Grid item xs={12} md={4}>
+              <Card className={`${classes.featureCard} sr-card`}>
+                <CardContent>
+                  <Box className={classes.featureIconWrapper}>
+                    <TranslateIcon />
+                  </Box>
+                  <Typography className={classes.featureTitle}>
+                    Tradução Automática
+                  </Typography>
+                  <Typography className={classes.featureDescription}>
+                    Mensagens são traduzidas automaticamente para o idioma configurado da sua empresa, 
+                    permitindo atendimento fluido em múltiplos idiomas.
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Card className={`${classes.featureCard} sr-card`}>
+                <CardContent>
+                  <Box className={classes.featureIconWrapper}>
+                    <SpeedIcon />
+                  </Box>
+                  <Typography className={classes.featureTitle}>
+                    Em Tempo Real
+                  </Typography>
+                  <Typography className={classes.featureDescription}>
+                    Traduções instantâneas durante a conversa, sem atrasos ou interrupções. 
+                    Cache inteligente para respostas mais rápidas.
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Card className={`${classes.featureCard} sr-card`}>
+                <CardContent>
+                  <Box className={classes.featureIconWrapper}>
+                    <PeopleIcon />
+                  </Box>
+                  <Typography className={classes.featureTitle}>
+                    Atendimento Multilíngue
+                  </Typography>
+                  <Typography className={classes.featureDescription}>
+                    Atenda clientes de diferentes países sem precisar de tradutores. 
+                    Sua equipe foca no que importa: resolver problemas.
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* ===== FORMS SECTION ===== */}
+      <Box id="forms" className={classes.section} style={{ scrollMarginTop: '80px' }}>
+        <Container maxWidth="lg">
+          <Box display="flex" flexDirection="column" alignItems="center">
+            <Box className={classes.aiSectionBadge}>
+              <DescriptionIcon style={{ fontSize: 16, color: "#00D9FF" }} />
+              <Typography className={classes.aiSectionBadgeText}>
+                Formulários Customizados
+              </Typography>
+            </Box>
+            
+            <Typography variant="h3" className={`${classes.sectionTitle} sr-section-title`}>
+              Crie formulários poderosos sem código
+            </Typography>
+            
+            <Typography className={classes.sectionSubtitle}>
+              Construa formulários personalizados, colete dados estruturados e automatize 
+              processos de ponta a ponta com nosso construtor visual.
+            </Typography>
+          </Box>
+          
+          <Grid container spacing={4} className={classes.cardGrid}>
+            <Grid item xs={12} md={4}>
+              <Card className={`${classes.featureCard} sr-card`}>
+                <CardContent>
+                  <Box className={classes.featureIconWrapper}>
+                    <DescriptionIcon />
+                  </Box>
+                  <Typography className={classes.featureTitle}>
+                    Construtor Visual
+                  </Typography>
+                  <Typography className={classes.featureDescription}>
+                    Crie formulários arrastando e soltando campos. Suporte a múltiplos tipos 
+                    de campos: texto, seleção, upload, avaliação e muito mais.
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Card className={`${classes.featureCard} sr-card`}>
+                <CardContent>
+                  <Box className={classes.featureIconWrapper}>
+                    <ExtensionIcon />
+                  </Box>
+                  <Typography className={classes.featureTitle}>
+                    Integrações Automáticas
+                  </Typography>
+                  <Typography className={classes.featureDescription}>
+                    Cada submissão pode criar contatos, gerar tickets, enviar webhooks 
+                    ou disparar mensagens via WhatsApp automaticamente.
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+            <Grid item xs={12} md={4}>
+              <Card className={`${classes.featureCard} sr-card`}>
+                <CardContent>
+                  <Box className={classes.featureIconWrapper}>
+                    <TimelineIcon />
+                  </Box>
+                  <Typography className={classes.featureTitle}>
+                    Análise e Relatórios
+                  </Typography>
+                  <Typography className={classes.featureDescription}>
+                    Acompanhe conversões, visualize respostas em tempo real e exporte dados 
+                    para análise avançada. Dashboard completo de métricas.
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
+
       {/* ===== PLANS SECTION ===== */}
-      <Box className={classes.plansSection}>
+      <Box id="plans" className={classes.plansSection} style={{ scrollMarginTop: '80px' }}>
         <Container maxWidth="lg">
           <Typography variant="h3" className={`${classes.sectionTitle} sr-section-title`}>
             Escolha o plano ideal para o seu negócio
@@ -829,6 +1395,8 @@ const Landing = () => {
             <Grid container spacing={4} justifyContent="center">
               {plans.map((plan, index) => {
                 const isFeatured = index === Math.floor(plans.length / 2);
+                const planIcon = getPlanIcon(index, plans.length);
+                const planTagline = getPlanTagline(index, plans.length);
                 
                 return (
                   <Grid item xs={12} sm={6} md={4} key={plan.id}>
@@ -844,8 +1412,20 @@ const Landing = () => {
                         />
                       )}
                       <Box className={classes.planCardContent}>
+                        <Box className={classes.planIcon}>
+                          {planIcon}
+                        </Box>
+                        
                         <Typography className={classes.planName}>
                           {plan.name}
+                        </Typography>
+                        
+                        <Typography className={classes.planTagline}>
+                          {planTagline}
+                        </Typography>
+                        
+                        <Typography className={classes.planUsers}>
+                          {plan.users || 0} Usuários + Gestor
                         </Typography>
                         
                         <Box className={classes.planPrice}>
@@ -857,54 +1437,34 @@ const Landing = () => {
                           </Typography>
                         </Box>
 
-                        <ul className={classes.planFeaturesList}>
-                          <li className={classes.planFeatureItem}>
-                            <CheckCircleIcon className={classes.planFeatureIcon} />
-                            <span><strong>{plan.users || 0}</strong> Usuário(s)</span>
-                          </li>
-                          <li className={classes.planFeatureItem}>
-                            <CheckCircleIcon className={classes.planFeatureIcon} />
-                            <span><strong>{plan.connections || 0}</strong> Conexão(ões) WhatsApp</span>
-                          </li>
-                          <li className={classes.planFeatureItem}>
-                            <CheckCircleIcon className={classes.planFeatureIcon} />
-                            <span><strong>{plan.queues || 0}</strong> Fila(s)</span>
-                          </li>
-                          
-                          <li className={`${classes.planFeatureItem} ${!plan.useCampaigns ? classes.planFeatureDisabled : ""}`}>
-                            <CheckCircleIcon className={classes.planFeatureIcon} />
-                            <span>Campanhas</span>
-                          </li>
-                          <li className={`${classes.planFeatureItem} ${!plan.useSchedules ? classes.planFeatureDisabled : ""}`}>
-                            <CheckCircleIcon className={classes.planFeatureIcon} />
-                            <span>Agendamentos</span>
-                          </li>
-                          <li className={`${classes.planFeatureItem} ${!plan.useInternalChat ? classes.planFeatureDisabled : ""}`}>
-                            <CheckCircleIcon className={classes.planFeatureIcon} />
-                            <span>Chat Interno</span>
-                          </li>
-                          <li className={`${classes.planFeatureItem} ${!plan.useKanban ? classes.planFeatureDisabled : ""}`}>
-                            <CheckCircleIcon className={classes.planFeatureIcon} />
-                            <span>Kanban</span>
-                          </li>
-                          <li className={`${classes.planFeatureItem} ${!plan.useOpenAi ? classes.planFeatureDisabled : ""}`}>
-                            <CheckCircleIcon className={classes.planFeatureIcon} />
-                            <span>Recursos de IA</span>
-                          </li>
-                          <li className={`${classes.planFeatureItem} ${!plan.useIntegrations ? classes.planFeatureDisabled : ""}`}>
-                            <CheckCircleIcon className={classes.planFeatureIcon} />
-                            <span>Integrações</span>
-                          </li>
-                        </ul>
+                        <Box className={classes.featuresContainer}>
+                          {ALL_FEATURES.map((feature) => {
+                            const isIncluded = isFeatureIncluded(feature, plan);
+                            const featureName = getFeatureName(feature, plan);
+                            
+                            return (
+                              <Box key={feature.id} className={classes.featureRow}>
+                                {isIncluded ? (
+                                  <CheckCircleIcon className={classes.checkIcon} />
+                                ) : (
+                                  <CancelIcon className={classes.crossIcon} />
+                                )}
+                                <Typography className={isIncluded ? classes.featureIncluded : classes.featureExcluded}>
+                                  {featureName}
+                                </Typography>
+                              </Box>
+                            );
+                          })}
+                        </Box>
 
                         <Button
                           variant="contained"
-                          className={classes.planCta}
-                          onClick={() => handleAcquirePlan(plan)}
+                          className={isFeatured ? classes.planCta : classes.proposalButtonOutline}
+                          onClick={() => handleRequestProposal(plan.id)}
                           endIcon={<ArrowForwardIcon />}
                           fullWidth
                         >
-                          ADQUIRIR AGORA
+                          SOLICITAR PROPOSTA
                         </Button>
                       </Box>
                     </Card>

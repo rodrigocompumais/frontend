@@ -47,6 +47,7 @@ import CampaignsPhrase from "../pages/CampaignsPhrase";
 import FlowBuilder from "../pages/FlowBuilder";
 import FlowBuilderConfig from "../pages/FlowBuilderConfig";
 import Landing from "../pages/Landing";
+import CustomProposalForm from "../pages/Landing/CustomProposalForm";
 import Forms from "../pages/Forms";
 import FormBuilder from "../pages/Forms/FormBuilder";
 import PublicForm from "../pages/Forms/PublicForm";
@@ -72,6 +73,7 @@ const Routes = () => {
           <TicketsContextProvider>
             <Switch>
             <Route exact path="/" component={Landing} />
+            <Route exact path="/proposta-personalizada" component={CustomProposalForm} isPublic={true} />
             <Route exact path="/f/:slug" component={PublicForm} isPublic={true} />
             <Route exact path="/login" component={Login} />
             <Route exact path="/signup" component={Signup} />
