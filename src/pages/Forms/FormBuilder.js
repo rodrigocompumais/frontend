@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useHistory, useParams } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -128,6 +128,8 @@ const FormBuilder = () => {
   const [fieldModalOpen, setFieldModalOpen] = useState(false);
   const [editingField, setEditingField] = useState(null);
   const [newOption, setNewOption] = useState("");
+  const formLoadedRef = useRef(false);
+  const currentIdRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -168,13 +170,50 @@ const FormBuilder = () => {
   });
 
   useEffect(() => {
-    if (isEdit && id) {
-      loadForm();
+    // Se o ID mudou, resetar a flag
+    if (currentIdRef.current !== id) {
+      formLoadedRef.current = false;
+      currentIdRef.current = id;
     }
+    
+    if (isEdit && id && !formLoadedRef.current) {
+      loadForm();
+    } else if (!isEdit) {
+      // Reset quando não for edição
+      formLoadedRef.current = false;
+      setFormData({
+        name: "",
+        description: "",
+        isActive: true,
+        primaryColor: "#1976d2",
+        secondaryColor: "#424242",
+        logoPosition: "top",
+        logoUrl: "",
+        successMessage: "Obrigado! Sua resposta foi enviada com sucesso.",
+        successRedirectUrl: "",
+        requireAuth: false,
+        allowMultipleSubmissions: false,
+        isAnonymous: false,
+        createContact: false,
+        createTicket: false,
+        sendWebhook: false,
+        webhookUrl: "",
+        fields: [],
+        settings: {
+          formType: "normal",
+          quotationItems: [],
+          whatsAppMessage: "",
+        },
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const loadForm = async () => {
+    if (formLoadedRef.current || loading || !id) return; // Evitar múltiplas chamadas
+    
     setLoading(true);
+    formLoadedRef.current = true; // Marcar como carregado antes da chamada para evitar duplicação
     try {
       const { data } = await api.get(`/forms/${id}`);
       // Filtrar campos automáticos (nome e telefone) da visualização
@@ -207,6 +246,7 @@ const FormBuilder = () => {
         },
       });
     } catch (err) {
+      formLoadedRef.current = false; // Reset em caso de erro
       toastError(err);
       history.push("/forms");
     } finally {
