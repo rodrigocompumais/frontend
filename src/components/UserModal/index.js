@@ -22,6 +22,14 @@ import Switch from "@material-ui/core/Switch";
 import Avatar from "@material-ui/core/Avatar";
 import IconButton from "@material-ui/core/IconButton";
 import PhotoCameraIcon from "@material-ui/icons/PhotoCamera";
+import Typography from "@material-ui/core/Typography";
+import Divider from "@material-ui/core/Divider";
+import List from "@material-ui/core/List";
+import ListItem from "@material-ui/core/ListItem";
+import ListItemText from "@material-ui/core/ListItemText";
+import ListItemAvatar from "@material-ui/core/ListItemAvatar";
+import PhoneIcon from "@material-ui/icons/Phone";
+import EmailIcon from "@material-ui/icons/Email";
 
 import { i18n } from "../../translate/i18n";
 
@@ -77,6 +85,23 @@ const useStyles = makeStyles(theme => ({
 	avatarButton: {
 		marginTop: theme.spacing(1),
 	},
+	contactsSection: {
+		marginTop: theme.spacing(2),
+	},
+	contactsList: {
+		maxHeight: 300,
+		overflowY: "auto",
+		...theme.scrollbarStyles,
+	},
+	contactItem: {
+		paddingLeft: theme.spacing(1),
+		paddingRight: theme.spacing(1),
+	},
+	noContacts: {
+		padding: theme.spacing(2),
+		textAlign: "center",
+		color: theme.palette.text.secondary,
+	},
 }));
 
 const UserSchema = Yup.object().shape({
@@ -107,6 +132,8 @@ const UserModal = ({ open, onClose, userId }) => {
 	const [whatsappId, setWhatsappId] = useState(false);
 	const [avatarFile, setAvatarFile] = useState(null);
 	const [avatarPreview, setAvatarPreview] = useState(null);
+	const [userContacts, setUserContacts] = useState([]);
+	const [loadingContacts, setLoadingContacts] = useState(false);
 	const { loading, whatsApps } = useWhatsApps();
 
 	useEffect(() => {
@@ -130,7 +157,23 @@ const UserModal = ({ open, onClose, userId }) => {
 			}
 		};
 
+		const fetchUserContacts = async () => {
+			if (!userId || !open) return;
+			setLoadingContacts(true);
+			try {
+				const { data } = await api.get(`/users/${userId}/contacts`);
+				setUserContacts(data.contacts || []);
+			} catch (err) {
+				toastError(err);
+			} finally {
+				setLoadingContacts(false);
+			}
+		};
+
 		fetchUser();
+		if (userId) {
+			fetchUserContacts();
+		}
 	}, [userId, open]);
 
 	const handleClose = () => {
@@ -138,6 +181,7 @@ const UserModal = ({ open, onClose, userId }) => {
 		setUser(initialState);
 		setAvatarFile(null);
 		setAvatarPreview(null);
+		setUserContacts([]);
 	};
 
 	const handleAvatarChange = (e) => {
@@ -407,6 +451,60 @@ const UserModal = ({ open, onClose, userId }) => {
 										/>
 									)}
 								/>
+
+								{userId && (
+									<div className={classes.contactsSection}>
+										<Divider style={{ marginTop: 16, marginBottom: 16 }} />
+										<Typography variant="subtitle2" gutterBottom>
+											Contatos Vinculados ({userContacts.length})
+										</Typography>
+										{loadingContacts ? (
+											<div className={classes.noContacts}>
+												<CircularProgress size={24} />
+											</div>
+										) : userContacts.length > 0 ? (
+											<List className={classes.contactsList} dense>
+												{userContacts.map((contact) => (
+													<ListItem key={contact.id} className={classes.contactItem}>
+														<ListItemAvatar>
+															<Avatar
+																src={contact.profilePicUrl}
+																alt={contact.name}
+															>
+																{contact.name?.charAt(0).toUpperCase()}
+															</Avatar>
+														</ListItemAvatar>
+														<ListItemText
+															primary={contact.name}
+															secondary={
+																<>
+																	{contact.number && (
+																		<span style={{ display: "flex", alignItems: "center", marginRight: 8 }}>
+																			<PhoneIcon fontSize="small" style={{ marginRight: 4 }} />
+																			{contact.number}
+																		</span>
+																	)}
+																	{contact.email && (
+																		<span style={{ display: "flex", alignItems: "center" }}>
+																			<EmailIcon fontSize="small" style={{ marginRight: 4 }} />
+																			{contact.email}
+																		</span>
+																	)}
+																</>
+															}
+														/>
+													</ListItem>
+												))}
+											</List>
+										) : (
+											<div className={classes.noContacts}>
+												<Typography variant="body2">
+													Nenhum contato vinculado a este usuário
+												</Typography>
+											</div>
+										)}
+									</div>
+								)}
 								
 							</DialogContent>
 							<DialogActions>
