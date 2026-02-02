@@ -1459,18 +1459,93 @@ const Landing = () => {
 
                         <Button
                           variant="contained"
-                          className={isFeatured ? classes.planCta : classes.proposalButtonOutline}
-                          onClick={() => handleRequestProposal(plan.id)}
+                          className={classes.planCta}
+                          onClick={() => handleAcquirePlan(plan)}
                           endIcon={<ArrowForwardIcon />}
                           fullWidth
                         >
-                          SOLICITAR PROPOSTA
+                          ADQUIRIR AGORA
                         </Button>
                       </Box>
                     </Card>
                   </Grid>
                 );
               })}
+              
+              {/* Card de Proposta Personalizada */}
+              <Grid item xs={12} sm={6} md={4}>
+                <Card 
+                  className={`${classes.planCard} ${classes.planCardFeatured} sr-plan-card`}
+                  style={{ border: "2px solid #00D9FF" }}
+                >
+                  <Chip
+                    icon={<StarIcon style={{ color: "#0A0A0F" }} />}
+                    label="Personalizado"
+                    className={classes.featuredBadge}
+                    size="small"
+                  />
+                  <Box className={classes.planCardContent}>
+                    <Box className={classes.planIcon}>
+                      <LocalOfferIcon style={{ fontSize: 48 }} />
+                    </Box>
+                    
+                    <Typography className={classes.planName}>
+                      Plano Personalizado
+                    </Typography>
+                    
+                    <Typography className={classes.planTagline}>
+                      Solicite uma proposta sob medida para sua empresa
+                    </Typography>
+                    
+                    <Typography className={classes.planUsers} style={{ marginBottom: 16 }}>
+                      Customizado
+                    </Typography>
+                    
+                    <Box className={classes.planPrice}>
+                      <Typography component="span" className={classes.planPriceValue}>
+                        Consulte
+                      </Typography>
+                    </Box>
+
+                    <Box className={classes.featuresContainer}>
+                      <Box className={classes.featureRow}>
+                        <CheckCircleIcon className={classes.checkIcon} />
+                        <Typography className={classes.featureIncluded}>
+                          Todos os recursos disponíveis
+                        </Typography>
+                      </Box>
+                      <Box className={classes.featureRow}>
+                        <CheckCircleIcon className={classes.checkIcon} />
+                        <Typography className={classes.featureIncluded}>
+                          Quantidade de usuários personalizada
+                        </Typography>
+                      </Box>
+                      <Box className={classes.featureRow}>
+                        <CheckCircleIcon className={classes.checkIcon} />
+                        <Typography className={classes.featureIncluded}>
+                          Suporte dedicado
+                        </Typography>
+                      </Box>
+                      <Box className={classes.featureRow}>
+                        <CheckCircleIcon className={classes.checkIcon} />
+                        <Typography className={classes.featureIncluded}>
+                          Implementação sob medida
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    <Button
+                      variant="contained"
+                      className={classes.proposalButtonOutline}
+                      onClick={() => handleRequestProposal()}
+                      endIcon={<ArrowForwardIcon />}
+                      fullWidth
+                    >
+                      SOLICITAR PROPOSTA
+                    </Button>
+                  </Box>
+                </Card>
+              </Grid>
             </Grid>
           )}
         </Container>
