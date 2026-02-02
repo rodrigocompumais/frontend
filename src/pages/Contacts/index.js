@@ -344,6 +344,9 @@ const Contacts = () => {
                 {i18n.t("contacts.table.email")}
               </TableCell>
               <TableCell align="center">
+                Usuário Responsável
+              </TableCell>
+              <TableCell align="center">
                 {i18n.t("contacts.table.actions")}
               </TableCell>
             </TableRow>
@@ -365,6 +368,9 @@ const Contacts = () => {
                   <TableCell>{contact.name}</TableCell>
                   <TableCell align="center">{contact.number}</TableCell>
                   <TableCell align="center">{contact.email}</TableCell>
+                  <TableCell align="center">
+                    {contact.user ? contact.user.name : "-"}
+                  </TableCell>
                   <TableCell align="center">
                     <IconButton
                       size="small"

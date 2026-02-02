@@ -16,6 +16,10 @@ import Typography from "@material-ui/core/Typography";
 import IconButton from "@material-ui/core/IconButton";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import CircularProgress from "@material-ui/core/CircularProgress";
+import MenuItem from "@material-ui/core/MenuItem";
+import Select from "@material-ui/core/Select";
+import FormControl from "@material-ui/core/FormControl";
+import InputLabel from "@material-ui/core/InputLabel";
 
 import { i18n } from "../../translate/i18n";
 
@@ -81,15 +85,38 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 		name: "",
 		number: "",
 		email: "",
+		userId: "",
 	};
 
 	const [contact, setContact] = useState(initialState);
+	const [users, setUsers] = useState([]);
+	const [loadingUsers, setLoadingUsers] = useState(false);
 
 	useEffect(() => {
 		return () => {
 			isMounted.current = false;
 		};
 	}, []);
+
+	useEffect(() => {
+		const fetchUsers = async () => {
+			setLoadingUsers(true);
+			try {
+				const { data } = await api.get("/users/list");
+				if (isMounted.current) {
+					setUsers(data);
+				}
+			} catch (err) {
+				toastError(err);
+			} finally {
+				setLoadingUsers(false);
+			}
+		};
+
+		if (open) {
+			fetchUsers();
+		}
+	}, [open]);
 
 	useEffect(() => {
 		const fetchContact = async () => {
@@ -108,6 +135,7 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 					setContact({
 						...data,
 						number: data.number,
+						userId: data.userId || "",
 					});
 				}
 			} catch (err) {
@@ -125,11 +153,17 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 
 	const handleSaveContact = async values => {
 		try {
+			// Converter userId vazio para null
+			const dataToSend = {
+				...values,
+				userId: values.userId === "" ? null : values.userId
+			};
+
 			if (contactId) {
-				await api.put(`/contacts/${contactId}`, values);
+				await api.put(`/contacts/${contactId}`, dataToSend);
 				handleClose();
 			} else {
-				const { data } = await api.post("/contacts", values);
+				const { data } = await api.post("/contacts", dataToSend);
 				if (onSave) {
 					onSave(data);
 				}
@@ -200,6 +234,29 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 										margin="dense"
 										variant="outlined"
 									/>
+								</div>
+								<div style={{ marginTop: 8 }}>
+									<FormControl fullWidth variant="outlined" margin="dense">
+										<InputLabel id="user-select-label">
+											Usuário Responsável
+										</InputLabel>
+										<Field
+											as={Select}
+											labelId="user-select-label"
+											name="userId"
+											label="Usuário Responsável"
+											disabled={loadingUsers}
+										>
+											<MenuItem value="">
+												<em>Nenhum</em>
+											</MenuItem>
+											{users.map((user) => (
+												<MenuItem key={user.id} value={user.id}>
+													{user.name}
+												</MenuItem>
+											))}
+										</Field>
+									</FormControl>
 								</div>
 								<Typography
 									style={{ marginBottom: 8, marginTop: 12 }}
