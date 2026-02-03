@@ -590,14 +590,46 @@ const MessageInputCustom = (props) => {
 
   const [signMessage, setSignMessage] = useLocalStorage("signOption", true);
 
+  // Salvar rascunho no localStorage quando o usuário digita (com debounce)
+  useEffect(() => {
+    if (!ticketId) return;
+    
+    const draftKey = `messageDraft_${ticketId}`;
+    const timeoutId = setTimeout(() => {
+      if (inputMessage.trim()) {
+        localStorage.setItem(draftKey, inputMessage);
+      } else {
+        // Se a mensagem estiver vazia, remover o rascunho
+        localStorage.removeItem(draftKey);
+      }
+    }, 500); // Debounce de 500ms
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [inputMessage, ticketId]);
+
   useEffect(() => {
     inputRef.current.focus();
   }, [replyingMessage]);
 
+  // Carregar rascunho quando o ticketId muda
   useEffect(() => {
+    if (ticketId) {
+      const draftKey = `messageDraft_${ticketId}`;
+      const savedDraft = localStorage.getItem(draftKey);
+      if (savedDraft) {
+        setInputMessage(savedDraft);
+      } else {
+        setInputMessage("");
+      }
+    } else {
+      setInputMessage("");
+    }
+    
     inputRef.current.focus();
     return () => {
-      setInputMessage("");
+      // Não limpar o rascunho aqui, apenas limpar outros estados
       setShowEmoji(false);
       // Limpar preview URLs antes de limpar medias
       previewUrlsRef.current.forEach((url) => {
@@ -780,6 +812,12 @@ const MessageInputCustom = (props) => {
       formData.append("fromMe", true);
 
       await api.post(`/messages/${ticketId}`, formData);
+      
+      // Limpar rascunho após enviar áudio via quick message com sucesso
+      if (ticketId) {
+        const draftKey = `messageDraft_${ticketId}`;
+        localStorage.removeItem(draftKey);
+      }
     } catch (err) {
       toastError(err);
       setLoading(false);
@@ -822,6 +860,12 @@ const MessageInputCustom = (props) => {
 
     try {
       await api.post(`/messages/${ticketId}`, formData);
+      
+      // Limpar rascunho após enviar mídia com sucesso
+      if (ticketId) {
+        const draftKey = `messageDraft_${ticketId}`;
+        localStorage.removeItem(draftKey);
+      }
     } catch (err) {
       toastError(err);
     }
@@ -857,6 +901,12 @@ const MessageInputCustom = (props) => {
     try {
       await api.post(`/messages/${ticketId}`, message);
       setIsInternalMessage(false); // Reset após enviar
+      
+      // Limpar rascunho após enviar mensagem com sucesso
+      if (ticketId) {
+        const draftKey = `messageDraft_${ticketId}`;
+        localStorage.removeItem(draftKey);
+      }
     } catch (err) {
       toastError(err);
     }
@@ -897,6 +947,12 @@ const MessageInputCustom = (props) => {
       formData.append("fromMe", true);
 
       await api.post(`/messages/${ticketId}`, formData);
+      
+      // Limpar rascunho após enviar áudio com sucesso
+      if (ticketId) {
+        const draftKey = `messageDraft_${ticketId}`;
+        localStorage.removeItem(draftKey);
+      }
     } catch (err) {
       toastError(err);
     }
