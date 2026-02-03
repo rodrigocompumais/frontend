@@ -927,6 +927,112 @@ const Dashboard = () => {
           </Grid>
         </Grid>
 
+        {/* AI Tokens Section */}
+        <Typography className={classes.sectionTitle}>
+          🤖 Status das APIs de IA
+        </Typography>
+        <Grid container spacing={2} className={classes.secondaryStats}>
+          <Grid item xs={12} sm={6} md={6}>
+            <Paper 
+              elevation={2} 
+              style={{ 
+                padding: 16, 
+                backgroundColor: extendedData.geminiTokens?.available 
+                  ? (extendedData.geminiTokens?.quotaExceeded ? "#FEF3C7" : "#D1FAE5") 
+                  : "#FEE2E2",
+                borderLeft: `4px solid ${
+                  extendedData.geminiTokens?.available 
+                    ? (extendedData.geminiTokens?.quotaExceeded ? "#F59E0B" : "#22C55E") 
+                    : "#EF4444"
+                }`
+              }}
+            >
+              <Box style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                <GeminiIcon style={{ fontSize: 24 }} />
+                <Typography variant="h6" style={{ fontWeight: 600, flex: 1 }}>
+                  Gemini API
+                </Typography>
+                <Chip
+                  label={extendedData.geminiTokens?.available 
+                    ? (extendedData.geminiTokens?.quotaExceeded ? "Quota Excedida" : "Disponível") 
+                    : "Indisponível"}
+                  size="small"
+                  style={{
+                    backgroundColor: extendedData.geminiTokens?.available 
+                      ? (extendedData.geminiTokens?.quotaExceeded ? "#F59E0B" : "#22C55E") 
+                      : "#EF4444",
+                    color: "#FFFFFF",
+                    fontWeight: 600
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" color="textSecondary" style={{ marginTop: 4 }}>
+                {extendedData.geminiTokens?.error || 
+                 (extendedData.geminiTokens?.available 
+                   ? (extendedData.geminiTokens?.quotaExceeded 
+                       ? "A quota da API foi excedida. Verifique seu plano." 
+                       : "API funcionando normalmente")
+                   : "API não configurada ou indisponível")}
+              </Typography>
+              {extendedData.geminiTokens?.tokensRemaining !== undefined && (
+                <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 4 }}>
+                  Tokens restantes: {extendedData.geminiTokens.tokensRemaining.toLocaleString()}
+                </Typography>
+              )}
+            </Paper>
+          </Grid>
+
+          <Grid item xs={12} sm={6} md={6}>
+            <Paper 
+              elevation={2} 
+              style={{ 
+                padding: 16, 
+                backgroundColor: extendedData.openAITokens?.available 
+                  ? (extendedData.openAITokens?.quotaExceeded ? "#FEF3C7" : "#D1FAE5") 
+                  : "#FEE2E2",
+                borderLeft: `4px solid ${
+                  extendedData.openAITokens?.available 
+                    ? (extendedData.openAITokens?.quotaExceeded ? "#F59E0B" : "#22C55E") 
+                    : "#EF4444"
+                }`
+              }}
+            >
+              <Box style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                <ExtensionIcon style={{ fontSize: 24 }} />
+                <Typography variant="h6" style={{ fontWeight: 600, flex: 1 }}>
+                  OpenAI API
+                </Typography>
+                <Chip
+                  label={extendedData.openAITokens?.available 
+                    ? (extendedData.openAITokens?.quotaExceeded ? "Quota Excedida" : "Disponível") 
+                    : "Indisponível"}
+                  size="small"
+                  style={{
+                    backgroundColor: extendedData.openAITokens?.available 
+                      ? (extendedData.openAITokens?.quotaExceeded ? "#F59E0B" : "#22C55E") 
+                      : "#EF4444",
+                    color: "#FFFFFF",
+                    fontWeight: 600
+                  }}
+                />
+              </Box>
+              <Typography variant="body2" color="textSecondary" style={{ marginTop: 4 }}>
+                {extendedData.openAITokens?.error || 
+                 (extendedData.openAITokens?.available 
+                   ? (extendedData.openAITokens?.quotaExceeded 
+                       ? "A quota da API foi excedida. Verifique seu plano." 
+                       : "API funcionando normalmente")
+                   : "API não configurada ou indisponível")}
+              </Typography>
+              {extendedData.openAITokens?.tokensRemaining !== undefined && (
+                <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 4 }}>
+                  Tokens restantes: {extendedData.openAITokens.tokensRemaining.toLocaleString()}
+                </Typography>
+              )}
+            </Paper>
+          </Grid>
+        </Grid>
+
         {/* Charts Section */}
         <Typography className={classes.sectionTitle}>
           📊 Análises e Gráficos
