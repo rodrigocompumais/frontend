@@ -974,10 +974,17 @@ const Dashboard = () => {
                        : "API funcionando normalmente")
                    : "API não configurada ou indisponível")}
               </Typography>
-              {extendedData.geminiTokens?.tokensRemaining !== undefined && (
-                <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 4 }}>
-                  Tokens restantes: {extendedData.geminiTokens.tokensRemaining.toLocaleString()}
-                </Typography>
+              {extendedData.geminiTokens?.tokensUsed !== undefined && (
+                <Box style={{ marginTop: 8 }}>
+                  <Typography variant="caption" color="textSecondary" style={{ display: "block" }}>
+                    Tokens usados (última chamada): <strong>{extendedData.geminiTokens.tokensUsed.toLocaleString()}</strong>
+                  </Typography>
+                  {extendedData.geminiTokens?.tokensTotal !== undefined && (
+                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 2 }}>
+                      Tokens restantes: <strong>{extendedData.geminiTokens.tokensRemaining?.toLocaleString() || "N/A"}</strong> / {extendedData.geminiTokens.tokensTotal.toLocaleString()}
+                    </Typography>
+                  )}
+                </Box>
               )}
             </Paper>
           </Grid>
@@ -1024,10 +1031,17 @@ const Dashboard = () => {
                        : "API funcionando normalmente")
                    : "API não configurada ou indisponível")}
               </Typography>
-              {extendedData.openAITokens?.tokensRemaining !== undefined && (
-                <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 4 }}>
-                  Tokens restantes: {extendedData.openAITokens.tokensRemaining.toLocaleString()}
-                </Typography>
+              {extendedData.openAITokens?.tokensUsed !== undefined && (
+                <Box style={{ marginTop: 8 }}>
+                  <Typography variant="caption" color="textSecondary" style={{ display: "block" }}>
+                    Tokens usados (última chamada): <strong>{extendedData.openAITokens.tokensUsed.toLocaleString()}</strong>
+                  </Typography>
+                  {extendedData.openAITokens?.tokensTotal !== undefined && (
+                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 2 }}>
+                      Tokens restantes: <strong>{extendedData.openAITokens.tokensRemaining?.toLocaleString() || "N/A"}</strong> / {extendedData.openAITokens.tokensTotal.toLocaleString()}
+                    </Typography>
+                  )}
+                </Box>
               )}
             </Paper>
           </Grid>
