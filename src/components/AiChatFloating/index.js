@@ -25,7 +25,6 @@ import { toast } from "react-toastify";
 import toastError from "../../errors/toastError";
 
 const STORAGE_KEY = "ai_chat_messages";
-const STORAGE_KEY_POSITION = "ai_chat_floating_position";
 const MAX_STORED_MESSAGES = 50;
 
 const useStyles = makeStyles((theme) => ({
@@ -38,9 +37,6 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "flex-end",
     gap: theme.spacing(2),
     userSelect: "none",
-  },
-  containerDragging: {
-    transition: "none",
   },
   containerIdle: {
     transition: "all 0.3s ease",
@@ -300,12 +296,9 @@ const AiChatFloating = () => {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const containerRef = useRef(null);
-  const [position, setPosition] = useState({ x: null, y: null });
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [openUpward, setOpenUpward] = useState(false);
 
-  // Carregar mensagens e posição do localStorage ao iniciar
+  // Carregar mensagens do localStorage ao iniciar
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
@@ -318,27 +311,7 @@ const AiChatFloating = () => {
     } catch (err) {
       console.warn("Erro ao carregar mensagens do cache:", err);
     }
-
-    // Carregar posição
-    try {
-      const storedPos = localStorage.getItem(STORAGE_KEY_POSITION);
-      if (storedPos) {
-        const parsed = JSON.parse(storedPos);
-        setPosition(parsed);
-      }
-    } catch (err) {
-      console.warn("Erro ao carregar posição:", err);
-    }
   }, []);
-
-  // Salvar posição no localStorage
-  const savePosition = (pos) => {
-    try {
-      localStorage.setItem(STORAGE_KEY_POSITION, JSON.stringify(pos));
-    } catch (err) {
-      console.warn("Erro ao salvar posição:", err);
-    }
-  };
 
   // Salvar mensagens no localStorage quando mudam
   useEffect(() => {
@@ -459,65 +432,8 @@ const AiChatFloating = () => {
     });
   };
 
-  // Handlers de drag
-  const handleMouseDown = (e) => {
-    if (e.button !== 0 || open) return; // Apenas botão esquerdo e só quando fechado
-    // Verificar se o clique foi no FAB principal, não no painel do chat
-    const target = e.target.closest('[class*="MuiFab-root"]');
-    if (!target) return;
-    
-    e.preventDefault();
-    setIsDragging(true);
-    const rect = containerRef.current?.getBoundingClientRect();
-    if (rect) {
-      const currentX = position.x !== null ? position.x : window.innerWidth - rect.width - 24;
-      const currentY = position.y !== null ? position.y : window.innerHeight - rect.height - 24;
-      setDragStart({
-        x: e.clientX - currentX,
-        y: e.clientY - currentY,
-      });
-    }
-  };
 
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDragging || dragStart.x === undefined || dragStart.y === undefined || open) return;
-      
-      const newX = e.clientX - dragStart.x;
-      const newY = e.clientY - dragStart.y;
-      
-      // Limitar dentro da viewport
-      const maxX = window.innerWidth - 56;
-      const maxY = window.innerHeight - 56;
-      const minX = 0;
-      const minY = 0;
-      
-      const clampedX = Math.max(minX, Math.min(maxX, newX));
-      const clampedY = Math.max(minY, Math.min(maxY, newY));
-      
-      const newPosition = { x: clampedX, y: clampedY };
-      setPosition(newPosition);
-      savePosition(newPosition);
-    };
-
-    const handleMouseUp = () => {
-      if (isDragging) {
-        setIsDragging(false);
-      }
-    };
-
-    if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isDragging, dragStart, open]);
-
-  // Calcular se deve abrir para cima baseado na posição
+  // Calcular se deve abrir para cima baseado na posição fixa
   useEffect(() => {
     if (!open) return;
     
@@ -526,14 +442,8 @@ const AiChatFloating = () => {
       const margin = 100; // Margem de segurança
       const threshold = chatHeight + margin;
       
-      let currentY;
-      if (position.y !== null) {
-        currentY = position.y;
-      } else {
-        // Posição padrão (bottom: 24)
-        currentY = window.innerHeight - 56 - 24; // altura do FAB + bottom
-      }
-      
+      // Posição fixa (bottom: 24)
+      const currentY = window.innerHeight - 56 - 24; // altura do FAB + bottom
       const spaceBelow = window.innerHeight - currentY - 56; // espaço abaixo do botão
       const shouldOpenUpward = spaceBelow < threshold;
       
@@ -546,23 +456,19 @@ const AiChatFloating = () => {
     return () => {
       window.removeEventListener("resize", calculateOpenDirection);
     };
-  }, [open, position]);
+  }, [open]);
 
   const containerStyle = {
-    left: position.x !== null ? position.x : undefined,
-    top: position.y !== null ? position.y : undefined,
-    bottom: position.y === null ? 24 : undefined,
-    right: position.x === null ? 24 : undefined,
-    cursor: !open && isDragging ? "grabbing" : !open ? "grab" : "default",
+    bottom: 24,
+    right: 24,
     flexDirection: open && openUpward ? "column-reverse" : "column",
   };
 
   return (
     <Box 
       ref={containerRef} 
-      className={`${classes.container} ${isDragging && !open ? classes.containerDragging : classes.containerIdle}`} 
-      style={containerStyle} 
-      onMouseDown={handleMouseDown}
+      className={`${classes.container} ${classes.containerIdle}`} 
+      style={containerStyle}
     >
       {/* Painel do Chat */}
       <Collapse in={open} timeout={300}>
