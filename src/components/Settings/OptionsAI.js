@@ -39,6 +39,16 @@ export default function OptionsAI(props) {
     const [providerConfigs, setProviderConfigs] = useState(null);
     const [loadingProviderConfigs, setLoadingProviderConfigs] = useState(false);
 
+    // Configurações do Chat IA
+    const [chatConfig, setChatConfig] = useState({
+        temperature: 0.3,
+        maxHistoryMessages: 10,
+        maxTokens: 4096,
+        topP: 0.95
+    });
+    const [loadingChatConfig, setLoadingChatConfig] = useState(false);
+    const [savingChatConfig, setSavingChatConfig] = useState(false);
+
     const { update } = useSettings();
 
     useEffect(() => {
@@ -56,7 +66,34 @@ export default function OptionsAI(props) {
 
         // Carregar configurações quando settings mudar
         loadProviderConfigurations();
+        loadChatConfig();
     }, [settings]);
+
+    const loadChatConfig = async () => {
+        setLoadingChatConfig(true);
+        try {
+            const { data } = await api.get("/ai/chat/config");
+            setChatConfig(data);
+        } catch (err) {
+            console.error("Erro ao carregar configurações do chat:", err);
+            // Usar valores padrão se houver erro
+        } finally {
+            setLoadingChatConfig(false);
+        }
+    };
+
+    const handleSaveChatConfig = async () => {
+        setSavingChatConfig(true);
+        try {
+            await api.post("/ai/chat/config", chatConfig);
+            toast.success("Configurações do chat salvas com sucesso!");
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || err.response?.data?.error || "Erro ao salvar configurações";
+            toast.error(errorMessage);
+        } finally {
+            setSavingChatConfig(false);
+        }
+    };
 
     async function handleGeminiApiKey(value) {
         setGeminiApiKey(value);
@@ -371,6 +408,124 @@ export default function OptionsAI(props) {
                         </Grid>
                     ) : null}
                 </>
+            )}
+
+            {/* Configuração do Chat IA (Compuchat) */}
+            <Grid spacing={3} container style={{ marginTop: 30, marginBottom: 10 }}>
+                <Grid xs={12} item>
+                    <Typography variant="h6" style={{ marginBottom: 10 }}>
+                        Configurações do Chat IA (Compuchat)
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" style={{ marginBottom: 20 }}>
+                        Configure a temperatura, quantidade de contexto e outros parâmetros do chat inteligente do dashboard.
+                    </Typography>
+                </Grid>
+            </Grid>
+
+            {loadingChatConfig ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: 20 }}>
+                    <CircularProgress />
+                </div>
+            ) : (
+                <Grid spacing={3} container>
+                    {/* Temperatura */}
+                    <Grid xs={12} sm={6} md={3} item>
+                        <FormControl className={classes.selectContainer} style={{ width: "100%" }}>
+                            <TextField
+                                id="chatTemperature"
+                                name="chatTemperature"
+                                margin="dense"
+                                label="Temperatura"
+                                variant="outlined"
+                                type="number"
+                                inputProps={{ min: 0, max: 2, step: 0.1 }}
+                                value={chatConfig.temperature}
+                                onChange={(e) => {
+                                    const value = parseFloat(e.target.value) || 0;
+                                    setChatConfig({ ...chatConfig, temperature: Math.max(0, Math.min(2, value)) });
+                                }}
+                                helperText="Controla a criatividade (0.0-2.0). Valores menores = mais focado, maiores = mais criativo."
+                            />
+                        </FormControl>
+                    </Grid>
+
+                    {/* Histórico de Mensagens */}
+                    <Grid xs={12} sm={6} md={3} item>
+                        <FormControl className={classes.selectContainer} style={{ width: "100%" }}>
+                            <TextField
+                                id="chatMaxHistoryMessages"
+                                name="chatMaxHistoryMessages"
+                                margin="dense"
+                                label="Histórico de Mensagens"
+                                variant="outlined"
+                                type="number"
+                                inputProps={{ min: 0, max: 100, step: 1 }}
+                                value={chatConfig.maxHistoryMessages}
+                                onChange={(e) => {
+                                    const value = parseInt(e.target.value, 10) || 0;
+                                    setChatConfig({ ...chatConfig, maxHistoryMessages: Math.max(0, Math.min(100, value)) });
+                                }}
+                                helperText="Quantidade de mensagens anteriores a considerar (0-100)."
+                            />
+                        </FormControl>
+                    </Grid>
+
+                    {/* Max Tokens */}
+                    <Grid xs={12} sm={6} md={3} item>
+                        <FormControl className={classes.selectContainer} style={{ width: "100%" }}>
+                            <TextField
+                                id="chatMaxTokens"
+                                name="chatMaxTokens"
+                                margin="dense"
+                                label="Máximo de Tokens"
+                                variant="outlined"
+                                type="number"
+                                inputProps={{ min: 100, max: 32000, step: 100 }}
+                                value={chatConfig.maxTokens}
+                                onChange={(e) => {
+                                    const value = parseInt(e.target.value, 10) || 4096;
+                                    setChatConfig({ ...chatConfig, maxTokens: Math.max(100, Math.min(32000, value)) });
+                                }}
+                                helperText="Limite máximo de tokens na resposta (100-32000)."
+                            />
+                        </FormControl>
+                    </Grid>
+
+                    {/* Top P */}
+                    <Grid xs={12} sm={6} md={3} item>
+                        <FormControl className={classes.selectContainer} style={{ width: "100%" }}>
+                            <TextField
+                                id="chatTopP"
+                                name="chatTopP"
+                                margin="dense"
+                                label="Top P"
+                                variant="outlined"
+                                type="number"
+                                inputProps={{ min: 0, max: 1, step: 0.05 }}
+                                value={chatConfig.topP}
+                                onChange={(e) => {
+                                    const value = parseFloat(e.target.value) || 0.95;
+                                    setChatConfig({ ...chatConfig, topP: Math.max(0, Math.min(1, value)) });
+                                }}
+                                helperText="Nucleus sampling (0.0-1.0). Controla diversidade das respostas."
+                            />
+                        </FormControl>
+                    </Grid>
+
+                    {/* Botão Salvar */}
+                    <Grid xs={12} item>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={handleSaveChatConfig}
+                            disabled={savingChatConfig}
+                            startIcon={savingChatConfig ? <CircularProgress size={16} /> : null}
+                            style={{ marginTop: 8 }}
+                        >
+                            {savingChatConfig ? "Salvando..." : "Salvar Configurações do Chat"}
+                        </Button>
+                    </Grid>
+                </Grid>
             )}
 
             {/* Configuração de Idioma da Empresa */}
