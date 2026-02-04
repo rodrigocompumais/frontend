@@ -1538,11 +1538,12 @@ const messages = {
         success: "Configurações salvas com sucesso.",
         title: "Configurações",
         tabs: {
-          options: "Opções",
-          schedules: "Horários",
-          companies: "Empresas",
-          plans: "Planos",
-          helps: "Ajuda",
+          options: "Options",
+          schedules: "Schedules",
+          companies: "Companies",
+          plans: "Plans",
+          helps: "Help",
+          integrations: "Integrations",
         },
         options: {
           toasts: {
@@ -1645,9 +1646,7 @@ const messages = {
           active: "Ativo",
           enabled: "Habilitado",
           updating: "Atualizando...",
-          tabs: {
-            integrations: "INTEGRAÇÕES",
-          },
+
         },
         helps: {
           toasts: {
