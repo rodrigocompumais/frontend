@@ -166,7 +166,7 @@ const SettingsCustom = () => {
           className={classes.tab}
         >
           <Tab label={i18n.t("settings.tabs.options")} value={"options"} />
-          <Tab label="Inteligência Artificial" value={"ai"} />
+          <Tab label={i18n.t("settings.tabs.ai")} value={"ai"} />
           {schedulesEnabled && <Tab label={i18n.t("settings.tabs.schedules")} value={"schedules"} />}
           {isSuper() ? <Tab label={i18n.t("settings.tabs.companies")} value={"companies"} /> : null}
           {isSuper() ? <Tab label={i18n.t("settings.tabs.plans")} value={"plans"} /> : null}

@@ -86,9 +86,9 @@ export default function OptionsAI(props) {
         setSavingChatConfig(true);
         try {
             await api.post("/ai/chat/config", chatConfig);
-            toast.success("Configurações do chat salvas com sucesso!");
+            toast.success(i18n.t("settings.options.chatConfig.saveSuccess"));
         } catch (err) {
-            const errorMessage = err.response?.data?.message || err.response?.data?.error || "Erro ao salvar configurações";
+            const errorMessage = err.response?.data?.message || err.response?.data?.error || i18n.t("settings.options.apiKeys.configError");
             toast.error(errorMessage);
         } finally {
             setSavingChatConfig(false);
@@ -113,7 +113,7 @@ export default function OptionsAI(props) {
 
     async function handleTestGeminiApiKey() {
         if (!geminiApiKey || geminiApiKey.trim() === "") {
-            toast.error("Por favor, insira uma chave da API do Gemini antes de testar.");
+            toast.error(i18n.t("settings.options.apiKeys.testGeminiError"));
             return;
         }
 
@@ -121,12 +121,12 @@ export default function OptionsAI(props) {
         try {
             const { data } = await api.get("/ai/test-key?provider=gemini");
             if (data.valid) {
-                toast.success(data.message || "Chave da API do Gemini válida e funcionando!");
+                toast.success(data.message || i18n.t("settings.options.apiKeys.testSuccess"));
             } else {
-                toast.error(data.message || "Chave da API do Gemini inválida.");
+                toast.error(data.message || i18n.t("settings.options.apiKeys.testError"));
             }
         } catch (err) {
-            const errorMessage = err.response?.data?.message || err.response?.data?.error || "Erro ao testar chave da API";
+            const errorMessage = err.response?.data?.message || err.response?.data?.error || i18n.t("settings.options.apiKeys.testApiError");
             toast.error(errorMessage);
         } finally {
             setTestingGeminiApiKey(false);
@@ -151,7 +151,7 @@ export default function OptionsAI(props) {
 
     async function handleTestOpenaiApiKey() {
         if (!openaiApiKey || openaiApiKey.trim() === "") {
-            toast.error("Por favor, insira uma chave da API do OpenAI antes de testar.");
+            toast.error(i18n.t("settings.options.apiKeys.testOpenaiError"));
             return;
         }
 
@@ -159,12 +159,12 @@ export default function OptionsAI(props) {
         try {
             const { data } = await api.get("/ai/test-key?provider=openai");
             if (data.valid) {
-                toast.success(data.message || "Chave da API do OpenAI válida e funcionando!");
+                toast.success(data.message || i18n.t("settings.options.apiKeys.testSuccess"));
             } else {
-                toast.error(data.message || "Chave da API do OpenAI inválida.");
+                toast.error(data.message || i18n.t("settings.options.apiKeys.testError"));
             }
         } catch (err) {
-            const errorMessage = err.response?.data?.message || err.response?.data?.error || "Erro ao testar chave da API";
+            const errorMessage = err.response?.data?.message || err.response?.data?.error || i18n.t("settings.options.apiKeys.testApiError");
             toast.error(errorMessage);
         } finally {
             setTestingOpenaiApiKey(false);
@@ -188,7 +188,7 @@ export default function OptionsAI(props) {
             setProviderConfigs(data);
         } catch (err) {
             console.error("Erro ao carregar configurações de providers:", err);
-            toast.error("Erro ao carregar configurações de providers");
+            toast.error(i18n.t("settings.options.apiKeys.providersError"));
             setProviderConfigs(null);
         } finally {
             setLoadingProviderConfigs(false);
@@ -210,10 +210,10 @@ export default function OptionsAI(props) {
                 functionType: backendFunctionType,
                 provider
             });
-            toast.success("Configuração de provider atualizada!");
+            toast.success(i18n.t("settings.options.apiKeys.configUpdated"));
             loadProviderConfigurations();
         } catch (err) {
-            const errorMessage = err.response?.data?.message || err.response?.data?.error || "Erro ao atualizar configuração";
+            const errorMessage = err.response?.data?.message || err.response?.data?.error || i18n.t("settings.options.apiKeys.configError");
             toast.error(errorMessage);
         }
     }
@@ -245,7 +245,7 @@ export default function OptionsAI(props) {
                             startIcon={testingGeminiApiKey ? <CircularProgress size={16} /> : null}
                             style={{ marginTop: 8 }}
                         >
-                            {testingGeminiApiKey ? "Testando..." : "Testar Chave"}
+                            {testingGeminiApiKey ? i18n.t("settings.options.apiKeys.testing") : i18n.t("settings.options.apiKeys.testButton")}
                         </Button>
                         <FormHelperText>
                             {loadingGeminiApiKey && i18n.t("settings.options.updating")}
@@ -281,7 +281,7 @@ export default function OptionsAI(props) {
                             startIcon={testingOpenaiApiKey ? <CircularProgress size={16} /> : null}
                             style={{ marginTop: 8 }}
                         >
-                            {testingOpenaiApiKey ? "Testando..." : "Testar Chave"}
+                            {testingOpenaiApiKey ? i18n.t("settings.options.apiKeys.testing") : i18n.t("settings.options.apiKeys.testButton")}
                         </Button>
                         <FormHelperText>
                             {loadingOpenaiApiKey && i18n.t("settings.options.updating")}
@@ -370,7 +370,7 @@ export default function OptionsAI(props) {
                             <Grid xs={12} sm={6} md={4} item>
                                 <FormControl className={classes.selectContainer}>
                                     <InputLabel id="provider-compuchat-label">
-                                        COMPUCHAT (Dashboard)
+                                        {i18n.t("settings.options.fields.aiProviderConfig.compuchat")}
                                     </InputLabel>
                                     <Select
                                         labelId="provider-compuchat-label"
@@ -381,7 +381,7 @@ export default function OptionsAI(props) {
                                         <MenuItem value="gemini">Gemini</MenuItem>
                                     </Select>
                                     <FormHelperText>
-                                        Provider para o chat inteligente do dashboard
+                                        {i18n.t("settings.options.fields.aiProviderConfig.compuchatHelper")}
                                     </FormHelperText>
                                 </FormControl>
                             </Grid>
@@ -390,7 +390,7 @@ export default function OptionsAI(props) {
                             <Grid xs={12} sm={6} md={4} item>
                                 <FormControl className={classes.selectContainer}>
                                     <InputLabel id="provider-translation-label">
-                                        Tradução de Mensagens
+                                        {i18n.t("settings.options.fields.aiProviderConfig.translation")}
                                     </InputLabel>
                                     <Select
                                         labelId="provider-translation-label"
@@ -401,7 +401,7 @@ export default function OptionsAI(props) {
                                         <MenuItem value="gemini">Gemini</MenuItem>
                                     </Select>
                                     <FormHelperText>
-                                        Provider para tradução automática de mensagens
+                                        {i18n.t("settings.options.fields.aiProviderConfig.translationHelper")}
                                     </FormHelperText>
                                 </FormControl>
                             </Grid>
@@ -414,10 +414,10 @@ export default function OptionsAI(props) {
             <Grid spacing={3} container style={{ marginTop: 30, marginBottom: 10 }}>
                 <Grid xs={12} item>
                     <Typography variant="h6" style={{ marginBottom: 10 }}>
-                        Configurações do Chat IA (Compuchat)
+                        {i18n.t("settings.options.chatConfig.title")}
                     </Typography>
                     <Typography variant="body2" color="textSecondary" style={{ marginBottom: 20 }}>
-                        Configure a temperatura, quantidade de contexto e outros parâmetros do chat inteligente do dashboard.
+                        {i18n.t("settings.options.chatConfig.helper")}
                     </Typography>
                 </Grid>
             </Grid>
@@ -435,7 +435,7 @@ export default function OptionsAI(props) {
                                 id="chatTemperature"
                                 name="chatTemperature"
                                 margin="dense"
-                                label="Temperatura"
+                                label={i18n.t("settings.options.chatConfig.temperature")}
                                 variant="outlined"
                                 type="number"
                                 inputProps={{ min: 0, max: 2, step: 0.1 }}
@@ -444,7 +444,7 @@ export default function OptionsAI(props) {
                                     const value = parseFloat(e.target.value) || 0;
                                     setChatConfig({ ...chatConfig, temperature: Math.max(0, Math.min(2, value)) });
                                 }}
-                                helperText="Controla a criatividade (0.0-2.0). Valores menores = mais focado, maiores = mais criativo."
+                                helperText={i18n.t("settings.options.chatConfig.temperatureHelper")}
                             />
                         </FormControl>
                     </Grid>
@@ -456,7 +456,7 @@ export default function OptionsAI(props) {
                                 id="chatMaxHistoryMessages"
                                 name="chatMaxHistoryMessages"
                                 margin="dense"
-                                label="Histórico de Mensagens"
+                                label={i18n.t("settings.options.chatConfig.maxHistoryMessages")}
                                 variant="outlined"
                                 type="number"
                                 inputProps={{ min: 0, max: 100, step: 1 }}
@@ -465,7 +465,7 @@ export default function OptionsAI(props) {
                                     const value = parseInt(e.target.value, 10) || 0;
                                     setChatConfig({ ...chatConfig, maxHistoryMessages: Math.max(0, Math.min(100, value)) });
                                 }}
-                                helperText="Quantidade de mensagens anteriores a considerar (0-100)."
+                                helperText={i18n.t("settings.options.chatConfig.maxHistoryMessagesHelper")}
                             />
                         </FormControl>
                     </Grid>
@@ -477,7 +477,7 @@ export default function OptionsAI(props) {
                                 id="chatMaxTokens"
                                 name="chatMaxTokens"
                                 margin="dense"
-                                label="Máximo de Tokens"
+                                label={i18n.t("settings.options.chatConfig.maxTokens")}
                                 variant="outlined"
                                 type="number"
                                 inputProps={{ min: 100, max: 32000, step: 100 }}
@@ -486,7 +486,7 @@ export default function OptionsAI(props) {
                                     const value = parseInt(e.target.value, 10) || 4096;
                                     setChatConfig({ ...chatConfig, maxTokens: Math.max(100, Math.min(32000, value)) });
                                 }}
-                                helperText="Limite máximo de tokens na resposta (100-32000)."
+                                helperText={i18n.t("settings.options.chatConfig.maxTokensHelper")}
                             />
                         </FormControl>
                     </Grid>
@@ -498,7 +498,7 @@ export default function OptionsAI(props) {
                                 id="chatTopP"
                                 name="chatTopP"
                                 margin="dense"
-                                label="Top P"
+                                label={i18n.t("settings.options.chatConfig.topP")}
                                 variant="outlined"
                                 type="number"
                                 inputProps={{ min: 0, max: 1, step: 0.05 }}
@@ -507,7 +507,7 @@ export default function OptionsAI(props) {
                                     const value = parseFloat(e.target.value) || 0.95;
                                     setChatConfig({ ...chatConfig, topP: Math.max(0, Math.min(1, value)) });
                                 }}
-                                helperText="Nucleus sampling (0.0-1.0). Controla diversidade das respostas."
+                                helperText={i18n.t("settings.options.chatConfig.topPHelper")}
                             />
                         </FormControl>
                     </Grid>
@@ -522,7 +522,7 @@ export default function OptionsAI(props) {
                             startIcon={savingChatConfig ? <CircularProgress size={16} /> : null}
                             style={{ marginTop: 8 }}
                         >
-                            {savingChatConfig ? "Salvando..." : "Salvar Configurações do Chat"}
+                            {savingChatConfig ? i18n.t("settings.options.chatConfig.saving") : i18n.t("settings.options.chatConfig.saveButton")}
                         </Button>
                     </Grid>
                 </Grid>

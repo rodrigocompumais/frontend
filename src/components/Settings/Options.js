@@ -432,7 +432,7 @@ export default function Options(props) {
           variant="scrollable"
           className={classes.tab}
         >
-          <Tab label="ASAAS" />
+          <Tab label={i18n.t("settings.options.asaas.tab")} />
         </Tabs>
         <Grid xs={12} sm={12} md={12} item>
           <FormControl className={classes.selectContainer}>
@@ -440,7 +440,7 @@ export default function Options(props) {
               id="asaas"
               name="asaas"
               margin="dense"
-              label="Token Asaas"
+              label={i18n.t("settings.options.asaas.tokenLabel")}
               variant="outlined"
               value={asaasType}
               onChange={async (e) => {
