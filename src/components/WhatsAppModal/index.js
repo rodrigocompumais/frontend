@@ -72,6 +72,16 @@ const SessionSchema = Yup.object().shape({
     then: Yup.string().required("App Name é obrigatório para Gupshup"),
     otherwise: Yup.string().nullable()
   }),
+  fbPageId: Yup.string().when("provider", {
+    is: (val) => val === "instagram",
+    then: Yup.string().required("ID da Página é obrigatório para Instagram"),
+    otherwise: Yup.string().nullable()
+  }),
+  facebookUserToken: Yup.string().when("provider", {
+    is: (val) => val === "instagram",
+    then: Yup.string().required("Token de Usuário Facebook é obrigatório para Instagram"),
+    otherwise: Yup.string().nullable()
+  }),
 });
 
 const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
@@ -88,6 +98,8 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
     provider: "baileys",
     gupshupApiKey: "",
     gupshupAppName: "",
+    fbPageId: "",
+    facebookUserToken: "",
     //timeSendQueue: 0,
     //sendIdQueue: 0,
     expiresInactiveMessage: "",
@@ -108,35 +120,35 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
   const [flowBuilders, setFlowBuilders] = useState([]);
   const [selectedFlowIdWelcome, setSelectedFlowIdWelcome] = useState(null);
   const [selectedFlowIdNotPhrase, setSelectedFlowIdNotPhrase] = useState(null);
-  
-    useEffect(() => {
-      const fetchSession = async () => {
-        if (!whatsAppId) return;
 
-        try {
-          
-          const { data } = await api.get(`whatsapp/${whatsAppId}?session=0`);
+  useEffect(() => {
+    const fetchSession = async () => {
+      if (!whatsAppId) return;
 
-          setWhatsApp(data);
-          setSelectedPrompt( data.promptId );
+      try {
+
+        const { data } = await api.get(`whatsapp/${whatsAppId}?session=0`);
+
+        setWhatsApp(data);
+        setSelectedPrompt(data.promptId);
         setSelectedIntegration(data.integrationId);
         setSelectedFlowIdWelcome(data.flowIdWelcome);
         setSelectedFlowIdNotPhrase(data.flowIdNotPhrase);
 
-          const whatsQueueIds = data.queues?.map((queue) => queue.id);
-          setSelectedQueueIds(whatsQueueIds);
-          setSelectedQueueId(data.transferQueueId);
-          
-          // Garantir que provider tenha valor padrão se não existir
-          if (!data.provider) {
-            setWhatsApp(prev => ({ ...prev, provider: "baileys" }));
-          }
-        } catch (err) {
-          toastError(err);
+        const whatsQueueIds = data.queues?.map((queue) => queue.id);
+        setSelectedQueueIds(whatsQueueIds);
+        setSelectedQueueId(data.transferQueueId);
+
+        // Garantir que provider tenha valor padrão se não existir
+        if (!data.provider) {
+          setWhatsApp(prev => ({ ...prev, provider: "baileys" }));
         }
-      };
-      fetchSession();
-    }, [whatsAppId]);
+      } catch (err) {
+        toastError(err);
+      }
+    };
+    fetchSession();
+  }, [whatsAppId]);
 
   useEffect(() => {
     (async () => {
@@ -144,10 +156,10 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
         const { data } = await api.get("/prompt");
         setPrompts(data.prompts);
 
-        const {data: dataIntegration} = await api.get("/queueIntegration");
+        const { data: dataIntegration } = await api.get("/queueIntegration");
         setIntegrations(dataIntegration.queueIntegrations);
 
-        const {data: dataFlowBuilder} = await api.get("/flowbuilder");
+        const { data: dataFlowBuilder } = await api.get("/flowbuilder");
         setFlowBuilders(Array.isArray(dataFlowBuilder?.flows) ? dataFlowBuilder.flows : []);
 
       } catch (err) {
@@ -169,8 +181,8 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
 
   const handleSaveWhatsApp = async (values) => {
     const whatsappData = {
-      ...values, 
-      queueIds: selectedQueueIds, 
+      ...values,
+      queueIds: selectedQueueIds,
       transferQueueId: selectedQueueId,
       promptId: selectedPrompt ? selectedPrompt : null,
       integrationId: selectedIntegration,
@@ -179,11 +191,25 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
     };
     delete whatsappData["queues"];
     delete whatsappData["session"];
-    
+
     // Se não for Gupshup, remover campos Gupshup
     if (whatsappData.provider !== "gupshup") {
       delete whatsappData["gupshupApiKey"];
       delete whatsappData["gupshupAppName"];
+    }
+
+    // Se for Instagram
+    if (whatsappData.provider === "instagram") {
+      whatsappData.type = "instagram";
+      // Mantém provider como "instagram" ou muda para algo que o backend espere como "graph_api" se necessário
+      // Por consistência com o CreateWhatsAppService que espera type="whatsapp" por padrão, vamos forçar aqui
+    } else {
+      whatsappData.type = "whatsapp";
+    }
+
+    if (whatsappData.provider !== "instagram") {
+      delete whatsappData["fbPageId"];
+      delete whatsappData["facebookUserToken"];
     }
 
     try {
@@ -218,7 +244,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
   const handleClose = () => {
     onClose();
     setWhatsApp(initialState);
-	  setSelectedQueueId(null);
+    setSelectedQueueId(null);
     setSelectedQueueIds([]);
   };
 
@@ -399,6 +425,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                   >
                     <MenuItem value="baileys">Baileys</MenuItem>
                     <MenuItem value="gupshup">Gupshup (API Oficial)</MenuItem>
+                    <MenuItem value="instagram">Instagram</MenuItem>
                   </Select>
                 </FormControl>
                 {values.provider === "gupshup" && (
@@ -429,6 +456,38 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                         required
                         error={touched.gupshupAppName && Boolean(errors.gupshupAppName)}
                         helperText={touched.gupshupAppName && errors.gupshupAppName}
+                      />
+                    </div>
+                  </>
+                )}
+                {values.provider === "instagram" && (
+                  <>
+                    <div>
+                      <Field
+                        as={TextField}
+                        label="ID da Página do Facebook"
+                        type="text"
+                        fullWidth
+                        name="fbPageId"
+                        variant="outlined"
+                        margin="dense"
+                        required
+                        error={touched.fbPageId && Boolean(errors.fbPageId)}
+                        helperText={touched.fbPageId && errors.fbPageId}
+                      />
+                    </div>
+                    <div>
+                      <Field
+                        as={TextField}
+                        label="Token de Usuário Facebook"
+                        type="text"
+                        fullWidth
+                        name="facebookUserToken"
+                        variant="outlined"
+                        margin="dense"
+                        required
+                        error={touched.facebookUserToken && Boolean(errors.facebookUserToken)}
+                        helperText={touched.facebookUserToken && errors.facebookUserToken}
                       />
                     </div>
                   </>
@@ -519,7 +578,7 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                     ))}
                   </Select>
                 </FormControl>
-                
+
                 {/* FlowBuilder - Fluxo de Boas-vindas */}
                 <FormControl
                   margin="dense"
@@ -615,34 +674,34 @@ const WhatsAppModal = ({ open, onClose, whatsAppId }) => {
                 <div>
                   <h3>{i18n.t("whatsappModal.form.queueRedirection")}</h3>
                   <p>{i18n.t("whatsappModal.form.queueRedirectionDesc")}</p>
-				<Grid container spacing={2}>
-                  <Grid item sm={6} >
-                    <Field
-                      fullWidth
-                      type="number"
-                      as={TextField}
-                      label={i18n.t("whatsappModal.form.timeToTransfer")}
-                      name="timeToTransfer"
-                      error={touched.timeToTransfer && Boolean(errors.timeToTransfer)}
-                      helperText={touched.timeToTransfer && errors.timeToTransfer}
-                      variant="outlined"
-                      margin="dense"
-                      className={classes.textField}
-                      InputLabelProps={{ shrink: values.timeToTransfer ? true : false }}
-                    />
+                  <Grid container spacing={2}>
+                    <Grid item sm={6} >
+                      <Field
+                        fullWidth
+                        type="number"
+                        as={TextField}
+                        label={i18n.t("whatsappModal.form.timeToTransfer")}
+                        name="timeToTransfer"
+                        error={touched.timeToTransfer && Boolean(errors.timeToTransfer)}
+                        helperText={touched.timeToTransfer && errors.timeToTransfer}
+                        variant="outlined"
+                        margin="dense"
+                        className={classes.textField}
+                        InputLabelProps={{ shrink: values.timeToTransfer ? true : false }}
+                      />
 
-                  </Grid>
+                    </Grid>
 
-                  <Grid item sm={6}>
-                    <QueueSelect
-                      selectedQueueIds={selectedQueueId}
-                      onChange={(selectedId) => {
-                        setSelectedQueueId(selectedId)
-                      }}
-                      multiple={false}
-                      title={i18n.t("whatsappModal.form.queue")}
-                    />
-                  </Grid>
+                    <Grid item sm={6}>
+                      <QueueSelect
+                        selectedQueueIds={selectedQueueId}
+                        onChange={(selectedId) => {
+                          setSelectedQueueId(selectedId)
+                        }}
+                        multiple={false}
+                        title={i18n.t("whatsappModal.form.queue")}
+                      />
+                    </Grid>
 
                   </Grid>
                   <Grid spacing={2} container>

@@ -25,6 +25,7 @@ import {
 	SignalCellular4Bar,
 	CropFree,
 	DeleteOutline,
+	Instagram
 } from "@material-ui/icons";
 
 import MainContainer from "../../components/MainContainer";
@@ -129,10 +130,10 @@ const Connections = () => {
 				// Se o status mudou para qrcode e há um QR code válido, abrir modal
 				if (whatsApp.status === "qrcode" && whatsApp.qrcode && whatsApp.qrcode.trim() !== "") {
 					// Verificar se não é um QR code inválido
-					if (!whatsApp.qrcode.includes('linktr.ee') && 
-					    !whatsApp.qrcode.includes('http://') && 
-					    !whatsApp.qrcode.includes('https://') &&
-					    !whatsApp.qrcode.startsWith('http')) {
+					if (!whatsApp.qrcode.includes('linktr.ee') &&
+						!whatsApp.qrcode.includes('http://') &&
+						!whatsApp.qrcode.includes('https://') &&
+						!whatsApp.qrcode.startsWith('http')) {
 						setSelectedWhatsApp(whatsApp);
 						setQrModalOpen(true);
 						toast.success("QR Code gerado com sucesso!");
@@ -287,17 +288,17 @@ const Connections = () => {
 				{(whatsApp.status === "CONNECTED" ||
 					whatsApp.status === "PAIRING" ||
 					whatsApp.status === "TIMEOUT") && (
-					<Button
-						size="small"
-						variant="outlined"
-						color="secondary"
-						onClick={() => {
-							handleOpenConfirmationModal("disconnect", whatsApp.id);
-						}}
-					>
-						{i18n.t("connections.buttons.disconnect")}
-					</Button>
-				)}
+						<Button
+							size="small"
+							variant="outlined"
+							color="secondary"
+							onClick={() => {
+								handleOpenConfirmationModal("disconnect", whatsApp.id);
+							}}
+						>
+							{i18n.t("connections.buttons.disconnect")}
+						</Button>
+					)}
 				{whatsApp.status === "OPENING" && (
 					<Button size="small" variant="outlined" disabled color="default">
 						{i18n.t("connections.buttons.connecting")}
@@ -428,7 +429,10 @@ const Connections = () => {
 								{whatsApps?.length > 0 &&
 									whatsApps.map(whatsApp => (
 										<TableRow key={whatsApp.id}>
-											<TableCell align="center">{whatsApp.name}</TableCell>
+											<TableCell align="center">
+												{whatsApp.type === 'instagram' && <Instagram style={{ marginRight: 5, color: '#E1306C' }} />}
+												{whatsApp.name}
+											</TableCell>
 											<TableCell align="center">
 												{renderStatusToolTips(whatsApp)}
 											</TableCell>
