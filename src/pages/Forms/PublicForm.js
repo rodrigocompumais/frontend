@@ -520,7 +520,7 @@ const PublicForm = () => {
 
   // Se for formulário de cardápio, renderizar componente específico
   if (form.settings?.formType === "cardapio") {
-    return <PublicMenuForm form={form} />;
+    return <PublicMenuForm form={form} slug={slug} />;
   }
 
   if (submitted) {

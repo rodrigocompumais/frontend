@@ -135,9 +135,12 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const PublicMenuForm = ({ form }) => {
+const PublicMenuForm = ({ form, slug: formSlug }) => {
   const classes = useStyles();
   const location = useLocation();
+  const { slug: urlSlug } = useParams();
+  // Usar slug do formulário, da prop ou da URL
+  const slug = form?.slug || formSlug || urlSlug;
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -152,8 +155,10 @@ const PublicMenuForm = ({ form }) => {
   const [orderData, setOrderData] = useState(null); // Dados do pedido para exibir na confirmação
 
   useEffect(() => {
-    loadProducts();
-  }, []);
+    if (form && slug) {
+      loadProducts();
+    }
+  }, [form, slug]);
 
   useEffect(() => {
     // Ler parâmetros da URL
@@ -182,24 +187,10 @@ const PublicMenuForm = ({ form }) => {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      // Buscar todos os produtos de cardápio (isMenuProduct = true)
-      let allProducts = [];
-      let pageNumber = 1;
-      let hasMore = true;
+      // Buscar produtos de cardápio via rota pública usando o slug do formulário
+      const { data } = await api.get(`/public/forms/${slug}/products`);
 
-      while (hasMore) {
-        const { data } = await api.get("/products", {
-          params: {
-            pageNumber,
-            isMenuProduct: true,
-          },
-        });
-
-        allProducts = [...allProducts, ...(data.products || [])];
-        hasMore = data.hasMore || false;
-        pageNumber++;
-      }
-
+      const allProducts = data.products || [];
       setProducts(allProducts);
 
       // Agrupar produtos por grupo
