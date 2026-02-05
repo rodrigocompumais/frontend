@@ -252,22 +252,47 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
     const newErrors = {};
     let isValid = true;
 
-    // Validar campos obrigatórios
-    const finalizeFields = form.settings?.finalizeFields || [];
+    // Validar que pelo menos um produto foi selecionado (validação mais importante)
+    if (Object.keys(selectedItems).length === 0) {
+      toast.error("Selecione pelo menos um produto");
+      isValid = false;
+    }
+
+    // Obter campos de finalizar da mesma forma que são renderizados
+    const allFormFields = form.fields || [];
+    const finalizeFields = allFormFields.filter(
+      (f) => !f.metadata?.isAutoField && f.order >= 2
+    );
+
+    // Validar campos obrigatórios de finalizar
     finalizeFields.forEach((field) => {
       if (field.isRequired) {
         const answer = answers[field.id];
-        if (!answer || (Array.isArray(answer) && answer.length === 0)) {
+        if (!answer || (Array.isArray(answer) && answer.length === 0) || (typeof answer === "string" && answer.trim() === "")) {
           newErrors[field.id] = `${field.label} é obrigatório`;
           isValid = false;
         }
       }
     });
 
-    // Validar que pelo menos um produto foi selecionado
-    if (Object.keys(selectedItems).length === 0) {
-      toast.error("Selecione pelo menos um produto");
-      isValid = false;
+    // Validar campos automáticos obrigatórios (nome e telefone)
+    const autoFields = form.fields?.filter(
+      (f) => f.metadata?.autoFieldType === "name" || f.metadata?.autoFieldType === "phone"
+    ) || [];
+    autoFields.forEach((field) => {
+      if (field.isRequired) {
+        const answer = answers[field.id];
+        if (!answer || (Array.isArray(answer) && answer.length === 0) || (typeof answer === "string" && answer.trim() === "")) {
+          newErrors[field.id] = `${field.label} é obrigatório`;
+          isValid = false;
+        }
+      }
+    });
+
+    // Se houver erros, mostrar toast
+    if (!isValid && Object.keys(newErrors).length > 0) {
+      const firstError = Object.values(newErrors)[0];
+      toast.error(firstError);
     }
 
     setErrors(newErrors);
@@ -275,11 +300,24 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
 
-    if (!validateForm()) {
+    console.log("[PublicMenuForm] handleSubmit chamado", { 
+      selectedItems: Object.keys(selectedItems).length, 
+      totalItems: getTotalItems(),
+      formId: form?.id 
+    });
+
+    const isValid = validateForm();
+    if (!isValid) {
+      console.log("[PublicMenuForm] Validação falhou");
       return;
     }
+
+    console.log("[PublicMenuForm] Validação passou, iniciando envio");
 
     setSubmitting(true);
 
@@ -802,6 +840,12 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
                   className={classes.submitButton}
                   disabled={submitting || getTotalItems() === 0}
                   style={{ backgroundColor: form.primaryColor }}
+                  onClick={(e) => {
+                    // Fallback: garantir que handleSubmit seja chamado
+                    if (!e.defaultPrevented) {
+                      handleSubmit(e);
+                    }
+                  }}
                 >
                   {submitting ? "Enviando..." : "Finalizar Pedido"}
                 </Button>
