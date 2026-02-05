@@ -37,6 +37,7 @@ import {
   Extension as ExtensionIcon,
   Security as SecurityIcon,
   Settings as SettingsIcon,
+  ShoppingCart as ShoppingCartIcon,
 } from '@material-ui/icons';
 import { Badge } from '@material-ui/core';
 import { i18n } from '../../translate/i18n';
@@ -278,6 +279,15 @@ const NavigationMenus = () => {
             <AssignmentIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.forms")} />
+        </MenuItem>
+        <MenuItem
+          className={classes.menuItem}
+          onClick={() => handleNavigate('/products', () => setGestaoAnchor(null))}
+        >
+          <ListItemIcon>
+            <ShoppingCartIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary="Produtos" />
         </MenuItem>
       </Menu>
 

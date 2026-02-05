@@ -29,6 +29,7 @@ import { Rating, Alert } from "@material-ui/lab";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import PublicMenuForm from "./PublicMenuForm";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -515,6 +516,11 @@ const PublicForm = () => {
         <Alert severity="error">Formulário não encontrado</Alert>
       </Box>
     );
+  }
+
+  // Se for formulário de cardápio, renderizar componente específico
+  if (form.settings?.formType === "cardapio") {
+    return <PublicMenuForm form={form} />;
   }
 
   if (submitted) {

@@ -55,6 +55,7 @@ import FormResponses from "../pages/Forms/FormResponses";
 import FormAnalytics from "../pages/Forms/FormAnalytics";
 import SubscriptionExpired from "../pages/SubscriptionExpired";
 import QuickAccessButtonsSettings from "../pages/QuickAccessButtonsSettings";
+import Products from "../pages/Products";
 
 const Routes = () => {
   const [showCampaigns, setShowCampaigns] = useState(false);
@@ -124,6 +125,7 @@ const Routes = () => {
                 <Route exact path="/helps" component={Helps} isPrivate />
                 <Route exact path="/users" component={Users} isPrivate />
                 <Route exact path="/files" component={Files} isPrivate />
+                <Route exact path="/products" component={Products} isPrivate />
                 <Route exact path="/prompts" component={Prompts} isPrivate />
                 <Route
                   exact

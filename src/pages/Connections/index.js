@@ -36,6 +36,7 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 
 import api from "../../services/api";
 import WhatsAppModal from "../../components/WhatsAppModal";
+import InstagramModal from "../../components/InstagramModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import QrcodeModal from "../../components/QrcodeModal";
 import { i18n } from "../../translate/i18n";
@@ -104,6 +105,7 @@ const Connections = () => {
 	const { whatsApps, loading } = useContext(WhatsAppsContext);
 	const socketManager = useContext(SocketContext);
 	const [whatsAppModalOpen, setWhatsAppModalOpen] = useState(false);
+	const [instagramModalOpen, setInstagramModalOpen] = useState(false);
 	const [qrModalOpen, setQrModalOpen] = useState(false);
 	const [selectedWhatsApp, setSelectedWhatsApp] = useState(null);
 	const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -128,7 +130,8 @@ const Connections = () => {
 			if (data.action === "update" && data.session) {
 				const whatsApp = data.session;
 				// Se o status mudou para qrcode e há um QR code válido, abrir modal
-				if (whatsApp.status === "qrcode" && whatsApp.qrcode && whatsApp.qrcode.trim() !== "") {
+				// Ignorar se for Instagram
+				if (whatsApp.status === "qrcode" && whatsApp.qrcode && whatsApp.qrcode.trim() !== "" && whatsApp.type !== "instagram") {
 					// Verificar se não é um QR code inválido
 					if (!whatsApp.qrcode.includes('linktr.ee') &&
 						!whatsApp.qrcode.includes('http://') &&
@@ -191,6 +194,16 @@ const Connections = () => {
 		setSelectedWhatsApp(null);
 	}, [setSelectedWhatsApp, setWhatsAppModalOpen]);
 
+	const handleOpenInstagramModal = () => {
+		setSelectedWhatsApp(null);
+		setInstagramModalOpen(true);
+	};
+
+	const handleCloseInstagramModal = useCallback(() => {
+		setInstagramModalOpen(false);
+		setSelectedWhatsApp(null);
+	}, [setSelectedWhatsApp, setInstagramModalOpen]);
+
 	const handleOpenQrModal = whatsApp => {
 		setSelectedWhatsApp(whatsApp);
 		setQrModalOpen(true);
@@ -203,7 +216,11 @@ const Connections = () => {
 
 	const handleEditWhatsApp = whatsApp => {
 		setSelectedWhatsApp(whatsApp);
-		setWhatsAppModalOpen(true);
+		if (whatsApp.type === "instagram") {
+			setInstagramModalOpen(true);
+		} else {
+			setWhatsAppModalOpen(true);
+		}
 	};
 
 	const handleOpenConfirmationModal = (action, whatsAppId) => {
@@ -251,7 +268,7 @@ const Connections = () => {
 	const renderActionButtons = whatsApp => {
 		return (
 			<>
-				{whatsApp.status === "qrcode" && (
+				{whatsApp.status === "qrcode" && whatsApp.type !== "instagram" && (
 					<Button
 						size="small"
 						variant="contained"
@@ -367,6 +384,11 @@ const Connections = () => {
 				onClose={handleCloseWhatsAppModal}
 				whatsAppId={!qrModalOpen && selectedWhatsApp?.id}
 			/>
+			<InstagramModal
+				open={instagramModalOpen}
+				onClose={handleCloseInstagramModal}
+				whatsAppId={!qrModalOpen && selectedWhatsApp?.id}
+			/>
 			<MainHeader>
 				<Title>{i18n.t("connections.title")}</Title>
 				<MainHeaderButtonsWrapper>
@@ -374,13 +396,23 @@ const Connections = () => {
 						role={user.profile}
 						perform="connections-page:addConnection"
 						yes={() => (
-							<Button
-								variant="contained"
-								color="primary"
-								onClick={handleOpenWhatsAppModal}
-							>
-								{i18n.t("connections.buttons.add")}
-							</Button>
+							<>
+								<Button
+									variant="contained"
+									color="primary"
+									onClick={handleOpenWhatsAppModal}
+								>
+									{i18n.t("connections.buttons.add")}
+								</Button>
+								<Button
+									variant="contained"
+									color="primary"
+									onClick={handleOpenInstagramModal}
+									style={{ marginLeft: '10px' }}
+								>
+									Adicionar Instagram
+								</Button>
+							</>
 						)}
 					/>
 				</MainHeaderButtonsWrapper>
@@ -485,7 +517,7 @@ const Connections = () => {
 					</TableBody>
 				</Table>
 			</Paper>
-		</MainContainer>
+		</MainContainer >
 	);
 };
 

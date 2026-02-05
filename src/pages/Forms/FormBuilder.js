@@ -41,6 +41,7 @@ import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper"
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
+import useWhatsApps from "../../hooks/useWhatsApps";
 
 import SaveIcon from "@material-ui/icons/Save";
 import ArrowBackIcon from "@material-ui/icons/ArrowBack";
@@ -130,6 +131,8 @@ const FormBuilder = () => {
   const [newOption, setNewOption] = useState("");
   const formLoadedRef = useRef(false);
   const currentIdRef = useRef(null);
+  const initializedRef = useRef(false);
+  const { whatsApps } = useWhatsApps();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -150,9 +153,12 @@ const FormBuilder = () => {
     webhookUrl: "",
     fields: [],
     settings: {
-      formType: "normal", // "normal" ou "quotation"
+      formType: "normal", // "normal", "quotation" ou "cardapio"
       quotationItems: [], // Array de { productName: string, quantity: number }
       whatsAppMessage: "", // Mensagem pré-definida para envio via WhatsApp
+      finalizeFields: [], // Campos customizados para aba finalizar do cardápio
+      whatsappId: null, // ID da conexão WhatsApp para envio de confirmação do pedido
+      averageDeliveryTime: "", // Tempo médio de entrega (ex: "30-45 minutos")
     },
   });
 
@@ -169,18 +175,22 @@ const FormBuilder = () => {
     conditionalRules: {},
   });
 
+
   useEffect(() => {
-    // Se o ID mudou, resetar a flag
-    if (currentIdRef.current !== id) {
+    // Se o ID mudou, resetar todas as flags
+    const idChanged = currentIdRef.current !== id;
+    if (idChanged) {
       formLoadedRef.current = false;
+      initializedRef.current = false;
       currentIdRef.current = id;
     }
     
     if (isEdit && id && !formLoadedRef.current) {
       loadForm();
-    } else if (!isEdit) {
-      // Reset quando não for edição
-      formLoadedRef.current = false;
+    } else if (!isEdit && !initializedRef.current) {
+      // Reset quando não for edição - apenas uma vez
+      initializedRef.current = true;
+      formLoadedRef.current = true;
       setFormData({
         name: "",
         description: "",
@@ -202,7 +212,10 @@ const FormBuilder = () => {
         settings: {
           formType: "normal",
           quotationItems: [],
+          finalizeFields: [],
           whatsAppMessage: "",
+          whatsappId: null,
+          averageDeliveryTime: "",
         },
       });
     }
@@ -216,6 +229,8 @@ const FormBuilder = () => {
     formLoadedRef.current = true; // Marcar como carregado antes da chamada para evitar duplicação
     try {
       const { data } = await api.get(`/forms/${id}`);
+      const isMenuForm = data.settings?.formType === "cardapio";
+      
       // Filtrar campos automáticos (nome e telefone) da visualização
       const customFields = (data.fields || []).filter(
         (field) => !field.metadata?.isAutoField
@@ -238,11 +253,11 @@ const FormBuilder = () => {
         createTicket: data.createTicket || false,
         sendWebhook: data.sendWebhook || false,
         webhookUrl: data.webhookUrl || "",
-        fields: customFields.sort((a, b) => a.order - b.order),
-        settings: data.settings || {
-          formType: "normal",
-          quotationItems: [],
-          whatsAppMessage: "",
+        fields: isMenuForm ? [] : customFields.sort((a, b) => a.order - b.order),
+        settings: {
+          ...data.settings,
+          finalizeFields: isMenuForm ? customFields.sort((a, b) => a.order - b.order) : (data.settings?.finalizeFields || []),
+          whatsappId: data.settings?.whatsappId || null,
         },
       });
     } catch (err) {
@@ -258,10 +273,11 @@ const FormBuilder = () => {
     setSaving(true);
     try {
       const isQuotation = formData.settings?.formType === "quotation";
+      const isMenuForm = formData.settings?.formType === "cardapio";
       
-      // Se for cotação, não enviar campos normais (ou enviar array vazio)
-      const fieldsToSend = isQuotation 
-        ? [] 
+      // Se for cotação ou cardápio, enviar campos customizados (finalizeFields para cardápio)
+      const fieldsToSend = isQuotation || isMenuForm
+        ? (isMenuForm ? (formData.settings?.finalizeFields || []) : [])
         : formData.fields.map((field, index) => ({
             ...field,
             order: index,
@@ -274,7 +290,9 @@ const FormBuilder = () => {
         settings: formData.settings || {
           formType: "normal",
           quotationItems: [],
+          finalizeFields: [],
           whatsAppMessage: "",
+          finalizeFields: [],
         },
       };
 
@@ -297,12 +315,16 @@ const FormBuilder = () => {
   const handleAddField = () => {
     setEditingField(null);
     setNewOption("");
+    // Se for cardápio, usar finalizeFields.length, senão usar fields.length
+    const currentOrder = isMenuForm 
+      ? (formData.settings?.finalizeFields?.length || 0)
+      : formData.fields.length;
     setFieldForm({
       label: "",
       fieldType: "text",
       placeholder: "",
       isRequired: false,
-      order: formData.fields.length,
+      order: currentOrder,
       options: [],
       helpText: "",
       hasConditional: false,
@@ -321,15 +343,45 @@ const FormBuilder = () => {
     });
     setFieldModalOpen(true);
   };
+  
+  const handleEditFinalizeField = (index) => {
+    const fields = formData.settings?.finalizeFields || [];
+    setEditingField(index);
+    setNewOption("");
+    setFieldForm({
+      ...fields[index],
+      options: fields[index].options || [],
+    });
+    setFieldModalOpen(true);
+  };
 
   const handleSaveField = () => {
-    const newFields = [...formData.fields];
-    if (editingField !== null) {
-      newFields[editingField] = { ...fieldForm, id: formData.fields[editingField].id };
+    if (isMenuForm) {
+      // Se for cardápio, salvar em finalizeFields
+      const finalizeFields = formData.settings?.finalizeFields || [];
+      const newFields = [...finalizeFields];
+      if (editingField !== null) {
+        newFields[editingField] = { ...fieldForm };
+      } else {
+        newFields.push({ ...fieldForm });
+      }
+      setFormData({
+        ...formData,
+        settings: {
+          ...formData.settings,
+          finalizeFields: newFields,
+        },
+      });
     } else {
-      newFields.push({ ...fieldForm });
+      // Se não for cardápio, salvar em fields normal
+      const newFields = [...formData.fields];
+      if (editingField !== null) {
+        newFields[editingField] = { ...fieldForm, id: formData.fields[editingField]?.id };
+      } else {
+        newFields.push({ ...fieldForm });
+      }
+      setFormData({ ...formData, fields: newFields });
     }
-    setFormData({ ...formData, fields: newFields });
     setFieldModalOpen(false);
     setEditingField(null);
   };
@@ -407,6 +459,7 @@ const FormBuilder = () => {
   };
 
   const isQuotationForm = formData.settings?.formType === "quotation";
+  const isMenuForm = formData.settings?.formType === "cardapio";
 
   return (
     <MainContainer>
@@ -560,6 +613,9 @@ const FormBuilder = () => {
                           quotationItems: e.target.value === "quotation" 
                             ? (formData.settings?.quotationItems || []) 
                             : [],
+                          finalizeFields: e.target.value === "cardapio"
+                            ? (formData.settings?.finalizeFields || [])
+                            : [],
                         },
                       })
                     }
@@ -567,6 +623,7 @@ const FormBuilder = () => {
                   >
                     <MenuItem value="normal">Normal</MenuItem>
                     <MenuItem value="quotation">Cotação</MenuItem>
+                    <MenuItem value="cardapio">Cardápio</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -684,6 +741,153 @@ const FormBuilder = () => {
                 <Typography variant="body2" color="textSecondary" style={{ marginTop: 16 }}>
                   * Para cada item, o respondente poderá preencher: Valor Unitário, Valor Total e Observações
                 </Typography>
+              </>
+            ) : isMenuForm ? (
+              <>
+                <Box
+                  display="flex"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  marginBottom={2}
+                >
+                  <Typography className={classes.sectionTitle}>
+                    Campos da Aba Finalizar
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={handleAddField}
+                  >
+                    Adicionar Campo
+                  </Button>
+                </Box>
+
+                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                  Estes campos aparecerão na aba "Finalizar" do formulário de cardápio, após o cliente selecionar os produtos.
+                </Typography>
+
+                <Grid container spacing={2} style={{ marginBottom: 24 }}>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel>Conexão WhatsApp para Envio</InputLabel>
+                      <Select
+                        value={formData.settings?.whatsappId || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            settings: {
+                              ...formData.settings,
+                              whatsappId: e.target.value ? Number(e.target.value) : null,
+                            },
+                          })
+                        }
+                        label="Conexão WhatsApp para Envio"
+                      >
+                        <MenuItem value="">
+                          <em>Usar conexão padrão</em>
+                        </MenuItem>
+                        {whatsApps
+                          .filter((w) => w.status === "CONNECTED")
+                          .map((whatsapp) => (
+                            <MenuItem key={whatsapp.id} value={whatsapp.id}>
+                              {whatsapp.name} {whatsapp.isDefault && "(Padrão)"}
+                            </MenuItem>
+                          ))}
+                      </Select>
+                    </FormControl>
+                    <Typography variant="caption" color="textSecondary" style={{ marginTop: 8, display: "block" }}>
+                      Selecione qual conexão WhatsApp será usada para enviar a confirmação do pedido. Se não selecionar, será usada a conexão padrão.
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      label="Tempo Médio de Entrega"
+                      placeholder="Ex: 30-45 minutos"
+                      value={formData.settings?.averageDeliveryTime || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            averageDeliveryTime: e.target.value,
+                          },
+                        })
+                      }
+                      helperText="Exibido na tela de confirmação do pedido"
+                    />
+                  </Grid>
+                </Grid>
+
+                {(!formData.settings?.finalizeFields ||
+                  formData.settings.finalizeFields.length === 0) && (
+                  <Box
+                    padding={4}
+                    textAlign="center"
+                    style={{
+                      border: `1px dashed #ccc`,
+                      borderRadius: 4,
+                    }}
+                  >
+                    <Typography color="textSecondary">
+                      Nenhum campo adicionado. Clique em "Adicionar Campo" para
+                      começar.
+                    </Typography>
+                  </Box>
+                )}
+
+                {formData.settings?.finalizeFields &&
+                  formData.settings.finalizeFields.length > 0 && (
+                    <Box>
+                      {formData.settings.finalizeFields.map((field, index) => (
+                        <Paper
+                          key={index}
+                          style={{
+                            padding: 16,
+                            marginBottom: 16,
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                          }}
+                        >
+                          <Box flex={1}>
+                            <Typography variant="subtitle1">
+                              {field.label || "Campo sem nome"}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              Tipo: {field.fieldType} |{" "}
+                              {field.isRequired ? "Obrigatório" : "Opcional"}
+                            </Typography>
+                          </Box>
+                          <Box>
+                            <IconButton
+                              onClick={() => handleEditFinalizeField(index)}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton
+                              onClick={() => {
+                                const fields = formData.settings?.finalizeFields || [];
+                                const newFields = fields.filter((_, i) => i !== index);
+                                setFormData({
+                                  ...formData,
+                                  settings: {
+                                    ...formData.settings,
+                                    finalizeFields: newFields,
+                                  },
+                                });
+                              }}
+                              color="secondary"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </Box>
+                        </Paper>
+                      ))}
+                    </Box>
+                  )}
               </>
             ) : (
               <>

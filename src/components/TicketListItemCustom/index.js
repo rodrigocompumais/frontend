@@ -28,6 +28,7 @@ import AndroidIcon from "@material-ui/icons/Android";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import ReplayIcon from "@material-ui/icons/Replay";
 import FolderIcon from "@material-ui/icons/Folder";
+import PhotoCameraIcon from "@material-ui/icons/PhotoCamera";
 import ContactAvatarModal from "../ContactAvatarModal";
 
 import { i18n } from "../../translate/i18n";
@@ -502,6 +503,30 @@ const TicketListItemCustom = ({ ticket }) => {
               <Box flex={1} minWidth={0} className={classes.contactNameWrapper}>
                 <Typography className={classes.contactName} noWrap>
                   {ticket.contact.name}
+                  {ticket.whatsapp?.type === "instagram" && (
+                    <Tooltip title="Instagram">
+                      <PhotoCameraIcon
+                        fontSize="small"
+                        style={{
+                          color: "#E4405F",
+                          marginLeft: 8,
+                          verticalAlign: "middle",
+                        }}
+                      />
+                    </Tooltip>
+                  )}
+                  {ticket.whatsapp?.type === "whatsapp" && (
+                    <Tooltip title="WhatsApp">
+                      <WhatsAppIcon
+                        fontSize="small"
+                        style={{
+                          color: green[600],
+                          marginLeft: 8,
+                          verticalAlign: "middle",
+                        }}
+                      />
+                    </Tooltip>
+                  )}
                   {ticket.chatbot && (
                     <Tooltip title={i18n.t("ticketsListItem.tooltip.chatbot")}>
                       <AndroidIcon
@@ -652,49 +677,55 @@ const TicketListItemCustom = ({ ticket }) => {
             },
           }}
         >
-          {ticket.queue && (
-            <Box className={classes.menuSection}>
-              <Typography className={classes.menuSectionTitle}>Fila</Typography>
-              <Box className={classes.menuQueue}>
-                <FolderIcon fontSize="small" style={{ color: ticket.queue?.color || "#7C7C7C" }} />
-                <Chip
-                  label={ticket.queue?.name || i18n.t("ticketsListItem.noQueue")}
-                  size="small"
-                  className={classes.queueChip}
-                  style={{
-                    backgroundColor: ticket.queue?.color || "#7C7C7C",
-                    color: "#FFFFFF",
-                  }}
-                />
+          {[
+            ticket.queue && (
+              <Box key="queue" className={classes.menuSection}>
+                <Typography className={classes.menuSectionTitle}>Fila</Typography>
+                <Box className={classes.menuQueue}>
+                  <FolderIcon fontSize="small" style={{ color: ticket.queue?.color || "#7C7C7C" }} />
+                  <Chip
+                    label={ticket.queue?.name || i18n.t("ticketsListItem.noQueue")}
+                    size="small"
+                    className={classes.queueChip}
+                    style={{
+                      backgroundColor: ticket.queue?.color || "#7C7C7C",
+                      color: "#FFFFFF",
+                    }}
+                  />
+                </Box>
               </Box>
-            </Box>
-          )}
-          {whatsAppName && (
-            <Box className={classes.menuSection}>
-              <Typography className={classes.menuSectionTitle}>
-                Conexão WhatsApp
-              </Typography>
-              <Box className={classes.menuWhatsApp}>
-                <WhatsAppIcon fontSize="small" style={{ color: green[600] }} />
-                <Typography variant="body2">{whatsAppName}</Typography>
+            ),
+            whatsAppName && (
+              <Box key="whatsapp" className={classes.menuSection}>
+                <Typography className={classes.menuSectionTitle}>
+                  {ticket.whatsapp?.type === "instagram" ? "Conexão Instagram" : "Conexão WhatsApp"}
+                </Typography>
+                <Box className={classes.menuWhatsApp}>
+                  {ticket.whatsapp?.type === "instagram" ? (
+                    <PhotoCameraIcon fontSize="small" style={{ color: "#E4405F" }} />
+                  ) : (
+                    <WhatsAppIcon fontSize="small" style={{ color: green[600] }} />
+                  )}
+                  <Typography variant="body2">{whatsAppName}</Typography>
+                </Box>
               </Box>
-            </Box>
-          )}
-          {tag && tag.length > 0 && (
-            <Box className={classes.menuSection}>
-              <Typography className={classes.menuSectionTitle}>Tags</Typography>
-              <Box className={classes.menuTags}>
-                {tag.map((tagItem) => (
-                  <ContactTag tag={tagItem} key={`ticket-tag-${ticket.id}-${tagItem.id}`} />
-                ))}
+            ),
+            tag && tag.length > 0 && (
+              <Box key="tags" className={classes.menuSection}>
+                <Typography className={classes.menuSectionTitle}>Tags</Typography>
+                <Box className={classes.menuTags}>
+                  {tag.map((tagItem) => (
+                    <ContactTag tag={tagItem} key={`ticket-tag-${ticket.id}-${tagItem.id}`} />
+                  ))}
+                </Box>
               </Box>
-            </Box>
-          )}
-          {(!ticket.queue && !whatsAppName && (!tag || tag.length === 0)) && (
-            <MenuItem className={classes.menuItem} disabled>
-              Nenhuma informação adicional
-            </MenuItem>
-          )}
+            ),
+            (!ticket.queue && !whatsAppName && (!tag || tag.length === 0)) && (
+              <MenuItem key="empty" className={classes.menuItem} disabled>
+                Nenhuma informação adicional
+              </MenuItem>
+            )
+          ].filter(Boolean)}
         </Menu>
       </ListItem>
       <Divider variant="inset" component="li" />

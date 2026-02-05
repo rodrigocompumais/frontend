@@ -37,6 +37,7 @@ import {
   SettingsOutlined as SettingsOutlinedIcon,
   ExpandLess,
   ExpandMore,
+  ShoppingCart as ShoppingCartIcon,
 } from '@material-ui/icons';
 import { Badge } from '@material-ui/core';
 import { i18n } from '../../translate/i18n';
@@ -216,6 +217,12 @@ const MobileNavigationMenu = () => {
                 <LocalOfferIcon />
               </ListItemIcon>
               <ListItemText primary={i18n.t("mainDrawer.listItems.tags")} />
+            </ListItem>
+            <ListItem button onClick={() => handleNavigate('/products')}>
+              <ListItemIcon>
+                <ShoppingCartIcon />
+              </ListItemIcon>
+              <ListItemText primary="Produtos" />
             </ListItem>
 
             {(showCampaigns || showOpenAi) && (
