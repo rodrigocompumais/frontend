@@ -30,6 +30,8 @@ import { Rating, Alert } from "@material-ui/lab";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import PublicMenuForm from "./PublicMenuForm";
+import { isFieldVisible } from "../../utils/formUtils";
+import { getFormAppearanceStyles, FONT_IMPORTS } from "../../utils/formAppearanceStyles";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -39,19 +41,13 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "flex-start",
     padding: theme.spacing(3),
-    backgroundColor: theme.palette.type === "dark" ? "#121212" : "#f5f5f5",
   },
   container: {
-    maxWidth: 600,
     width: "100%",
     marginTop: theme.spacing(4),
     marginBottom: theme.spacing(4),
   },
-  formPaper: {
-    padding: theme.spacing(4),
-    borderRadius: theme.spacing(2),
-    boxShadow: theme.shadows[3],
-  },
+  formPaper: {},
   header: {
     textAlign: "center",
     marginBottom: theme.spacing(4),
@@ -62,10 +58,8 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
   },
   title: {
-    fontSize: "1.75rem",
     fontWeight: 600,
     marginBottom: theme.spacing(1),
-    color: theme.palette.text.primary,
   },
   description: {
     color: theme.palette.text.secondary,
@@ -125,6 +119,17 @@ const PublicForm = () => {
   useEffect(() => {
     loadForm();
   }, [slug]);
+
+  useEffect(() => {
+    const font = form?.settings?.appearance?.fontFamily;
+    if (font && font !== "inherit" && FONT_IMPORTS[font]) {
+      const link = document.createElement("link");
+      link.href = FONT_IMPORTS[font];
+      link.rel = "stylesheet";
+      document.head.appendChild(link);
+      return () => document.head.removeChild(link);
+    }
+  }, [form?.settings?.appearance?.fontFamily]);
 
   const loadForm = async () => {
     try {
@@ -216,8 +221,10 @@ const PublicForm = () => {
 
   const validateForm = () => {
     const newErrors = {};
+    const sortedFields = (form.fields || []).sort((a, b) => a.order - b.order);
     
-    (form.fields || []).forEach((field) => {
+    sortedFields.forEach((field) => {
+      if (!isFieldVisible(field, answers, sortedFields)) return;
       if (field.isRequired) {
         const answer = answers[field.id];
         if (
@@ -352,7 +359,7 @@ const PublicForm = () => {
         return (
           <TextField
             fullWidth
-            variant="outlined"
+            variant={fieldVariant}
             type={field.fieldType === "email" ? "email" : field.fieldType === "number" ? "number" : "text"}
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
@@ -370,7 +377,7 @@ const PublicForm = () => {
         return (
           <TextField
             fullWidth
-            variant="outlined"
+            variant={fieldVariant}
             multiline
             rows={4}
             value={value}
@@ -383,7 +390,7 @@ const PublicForm = () => {
 
       case "select":
         return (
-          <FormControl fullWidth variant="outlined" error={hasError}>
+          <FormControl fullWidth variant={fieldVariant} error={hasError}>
             <InputLabel>{field.placeholder || "Selecione..."}</InputLabel>
             <Select
               value={value}
@@ -457,7 +464,7 @@ const PublicForm = () => {
         return (
           <TextField
             fullWidth
-            variant="outlined"
+            variant={fieldVariant}
             type="date"
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
@@ -491,7 +498,7 @@ const PublicForm = () => {
         return (
           <TextField
             fullWidth
-            variant="outlined"
+            variant={fieldVariant}
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             placeholder={field.placeholder}
@@ -543,17 +550,15 @@ const PublicForm = () => {
   }
 
   const sortedFields = (form.fields || []).sort((a, b) => a.order - b.order);
+  const appStyles = getFormAppearanceStyles(form);
+  const fieldVariant = appStyles.fieldVariant || "outlined";
 
   return (
-    <Box className={classes.root}>
-      <Box className={classes.container}>
+    <Box className={classes.root} style={appStyles.rootStyle}>
+      <Box className={classes.container} style={appStyles.containerStyle}>
         <Paper
           className={classes.formPaper}
-          style={{
-            backgroundColor: form.primaryColor
-              ? `${form.primaryColor}05`
-              : undefined,
-          }}
+          style={appStyles.formPaperStyle}
         >
           {form.logoUrl && (
             <Box
@@ -579,7 +584,7 @@ const PublicForm = () => {
           <Box className={classes.header}>
             <Typography
               className={classes.title}
-              style={{ color: form.primaryColor || undefined }}
+              style={appStyles.titleStyle}
             >
               {form.name}
             </Typography>
@@ -591,17 +596,20 @@ const PublicForm = () => {
           </Box>
 
           <form onSubmit={handleSubmit}>
-            {sortedFields.map((field) => (
-              <Box key={field.id} className={classes.fieldContainer}>
-                <Typography className={classes.fieldLabel}>
-                  {field.label}
-                  {field.isRequired && (
-                    <span className={classes.required}>*</span>
-                  )}
-                </Typography>
-                {renderField(field)}
-              </Box>
-            ))}
+            {sortedFields.map((field) => {
+              if (!isFieldVisible(field, answers, sortedFields)) return null;
+              return (
+                <Box key={field.id} className={classes.fieldContainer}>
+                  <Typography className={classes.fieldLabel}>
+                    {field.label}
+                    {field.isRequired && (
+                      <span className={classes.required}>*</span>
+                    )}
+                  </Typography>
+                  {renderField(field)}
+                </Box>
+              );
+            })}
 
             {/* Renderizar tabela de itens de cotação se for formulário de cotação */}
             {form.settings?.formType === "quotation" && quotationItems.length > 0 && (
@@ -710,9 +718,7 @@ const PublicForm = () => {
               fullWidth
               className={classes.submitButton}
               disabled={submitting}
-              style={{
-                backgroundColor: form.primaryColor || undefined,
-              }}
+              style={appStyles.submitButtonStyle}
             >
               {submitting ? (
                 <>

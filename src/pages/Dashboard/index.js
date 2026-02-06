@@ -64,7 +64,12 @@ import { isArray } from "lodash";
 
 import useDashboard from "../../hooks/useDashboard";
 import useContacts from "../../hooks/useContacts";
+import useCompanyModules from "../../hooks/useCompanyModules";
 import api from "../../services/api";
+
+import RestaurantIcon from "@material-ui/icons/Restaurant";
+import QueueIcon from "@material-ui/icons/Queue";
+import HistoryIcon from "@material-ui/icons/History";
 
 import { isEmpty } from "lodash";
 import moment from "moment";
@@ -494,7 +499,9 @@ const Dashboard = () => {
   const [tasksLoading, setTasksLoading] = useState(false);
   const { find } = useDashboard();
   const { count: contactsCount } = useContacts({});
+  const { hasLanchonetes } = useCompanyModules();
   const history = useHistory();
+  const [ordersStats, setOrdersStats] = useState({ pedidosHoje: 0, pedidosEmAndamento: 0, pedidosConfirmados: 0, firstCardapioFormId: null });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -553,13 +560,23 @@ const Dashboard = () => {
         setPendingTasks([]);
       }
 
+      // Fetch orders stats quando módulo lanchonetes ativo
+      if (hasLanchonetes) {
+        try {
+          const { data: ordersData } = await api.get("/dashboard/orders-stats");
+          setOrdersStats(ordersData || { pedidosHoje: 0, pedidosEmAndamento: 0, pedidosConfirmados: 0, firstCardapioFormId: null });
+        } catch (err) {
+          setOrdersStats({ pedidosHoje: 0, pedidosEmAndamento: 0, pedidosConfirmados: 0, firstCardapioFormId: null });
+        }
+      }
+
       setLastUpdate(new Date());
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
     } finally {
       setLoading(false);
     }
-  }, [period, dateFrom, dateTo, find]);
+  }, [period, dateFrom, dateTo, find, hasLanchonetes]);
 
   useEffect(() => {
     fetchData();
@@ -895,6 +912,79 @@ const Dashboard = () => {
               subtext="aguardando"
             />
           </Grid>
+
+          {hasLanchonetes && (
+            <>
+              <Grid item xs={6} sm={4} md={3}>
+                <MiniStatCard
+                  title="Pedidos Hoje"
+                  value={ordersStats.pedidosHoje || 0}
+                  icon={RestaurantIcon}
+                  color="#F59E0B"
+                  subtext="cardápio"
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <MiniStatCard
+                  title="Pedidos Em Andamento"
+                  value={ordersStats.pedidosEmAndamento || 0}
+                  icon={QueueIcon}
+                  color="#F59E0B"
+                  subtext="novo + confirmado + em preparo"
+                />
+              </Grid>
+              <Grid item xs={6} sm={4} md={3}>
+                <MiniStatCard
+                  title="Pedidos Confirmados"
+                  value={ordersStats.pedidosConfirmados || 0}
+                  icon={CheckCircleIcon}
+                  color="#22C55E"
+                  subtext="status confirmado"
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <Box display="flex" gap={2} flexWrap="wrap" marginTop={1}>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    startIcon={<AssignmentIcon />}
+                    onClick={() => history.push("/pedidos")}
+                    style={{ textTransform: "none" }}
+                  >
+                    Kanban de Pedidos
+                  </Button>
+                  {ordersStats.firstCardapioFormId && (
+                    <>
+                      <Button
+                        variant="outlined"
+                        startIcon={<QueueIcon />}
+                        onClick={() => history.push(`/forms/${ordersStats.firstCardapioFormId}/fila-pedidos`)}
+                        style={{ textTransform: "none" }}
+                      >
+                        Fila de Pedidos
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        startIcon={<HistoryIcon />}
+                        onClick={() => history.push(`/forms/${ordersStats.firstCardapioFormId}/historico-pedidos`)}
+                        style={{ textTransform: "none" }}
+                      >
+                        Histórico de Pedidos
+                      </Button>
+                    </>
+                  )}
+                  <Button
+                    variant="outlined"
+                    startIcon={<RestaurantIcon />}
+                    onClick={() => history.push("/forms")}
+                    style={{ textTransform: "none" }}
+                  >
+                    Formulários
+                  </Button>
+                </Box>
+              </Grid>
+            </>
+          )}
 
           <Grid item xs={6} sm={4} md={3}>
             <MiniStatCard

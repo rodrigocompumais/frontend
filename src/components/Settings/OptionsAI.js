@@ -86,9 +86,9 @@ export default function OptionsAI(props) {
         setSavingChatConfig(true);
         try {
             await api.post("/ai/chat/config", chatConfig);
-            toast.success(i18n.t("settings.options.chatConfig.saveSuccess"));
+            toast.success(i18n.t("settings.options.fields.chatConfig.saveSuccess"));
         } catch (err) {
-            const errorMessage = err.response?.data?.message || err.response?.data?.error || i18n.t("settings.options.apiKeys.configError");
+            const errorMessage = err.response?.data?.message || err.response?.data?.error || i18n.t("settings.options.fields.apiKeys.configError");
             toast.error(errorMessage);
         } finally {
             setSavingChatConfig(false);
@@ -113,7 +113,7 @@ export default function OptionsAI(props) {
 
     async function handleTestGeminiApiKey() {
         if (!geminiApiKey || geminiApiKey.trim() === "") {
-            toast.error(i18n.t("settings.options.apiKeys.testGeminiError"));
+            toast.error(i18n.t("settings.options.fields.apiKeys.testGeminiError"));
             return;
         }
 
@@ -121,12 +121,12 @@ export default function OptionsAI(props) {
         try {
             const { data } = await api.get("/ai/test-key?provider=gemini");
             if (data.valid) {
-                toast.success(data.message || i18n.t("settings.options.apiKeys.testSuccess"));
+                toast.success(data.message || i18n.t("settings.options.fields.apiKeys.testSuccess"));
             } else {
-                toast.error(data.message || i18n.t("settings.options.apiKeys.testError"));
+                toast.error(data.message || i18n.t("settings.options.fields.apiKeys.testError"));
             }
         } catch (err) {
-            const errorMessage = err.response?.data?.message || err.response?.data?.error || i18n.t("settings.options.apiKeys.testApiError");
+            const errorMessage = err.response?.data?.message || err.response?.data?.error || i18n.t("settings.options.fields.apiKeys.testApiError");
             toast.error(errorMessage);
         } finally {
             setTestingGeminiApiKey(false);
@@ -151,7 +151,7 @@ export default function OptionsAI(props) {
 
     async function handleTestOpenaiApiKey() {
         if (!openaiApiKey || openaiApiKey.trim() === "") {
-            toast.error(i18n.t("settings.options.apiKeys.testOpenaiError"));
+            toast.error(i18n.t("settings.options.fields.apiKeys.testOpenaiError"));
             return;
         }
 
@@ -159,12 +159,12 @@ export default function OptionsAI(props) {
         try {
             const { data } = await api.get("/ai/test-key?provider=openai");
             if (data.valid) {
-                toast.success(data.message || i18n.t("settings.options.apiKeys.testSuccess"));
+                toast.success(data.message || i18n.t("settings.options.fields.apiKeys.testSuccess"));
             } else {
-                toast.error(data.message || i18n.t("settings.options.apiKeys.testError"));
+                toast.error(data.message || i18n.t("settings.options.fields.apiKeys.testError"));
             }
         } catch (err) {
-            const errorMessage = err.response?.data?.message || err.response?.data?.error || i18n.t("settings.options.apiKeys.testApiError");
+            const errorMessage = err.response?.data?.message || err.response?.data?.error || i18n.t("settings.options.fields.apiKeys.testApiError");
             toast.error(errorMessage);
         } finally {
             setTestingOpenaiApiKey(false);
@@ -188,7 +188,7 @@ export default function OptionsAI(props) {
             setProviderConfigs(data);
         } catch (err) {
             console.error("Erro ao carregar configurações de providers:", err);
-            toast.error(i18n.t("settings.options.apiKeys.providersError"));
+            toast.error(i18n.t("settings.options.fields.apiKeys.providersError"));
             setProviderConfigs(null);
         } finally {
             setLoadingProviderConfigs(false);
@@ -210,10 +210,10 @@ export default function OptionsAI(props) {
                 functionType: backendFunctionType,
                 provider
             });
-            toast.success(i18n.t("settings.options.apiKeys.configUpdated"));
+            toast.success(i18n.t("settings.options.fields.apiKeys.configUpdated"));
             loadProviderConfigurations();
         } catch (err) {
-            const errorMessage = err.response?.data?.message || err.response?.data?.error || i18n.t("settings.options.apiKeys.configError");
+            const errorMessage = err.response?.data?.message || err.response?.data?.error || i18n.t("settings.options.fields.apiKeys.configError");
             toast.error(errorMessage);
         }
     }
@@ -245,7 +245,7 @@ export default function OptionsAI(props) {
                             startIcon={testingGeminiApiKey ? <CircularProgress size={16} /> : null}
                             style={{ marginTop: 8 }}
                         >
-                            {testingGeminiApiKey ? i18n.t("settings.options.apiKeys.testing") : i18n.t("settings.options.apiKeys.testButton")}
+                            {testingGeminiApiKey ? i18n.t("settings.options.fields.apiKeys.testing") : i18n.t("settings.options.fields.apiKeys.testButton")}
                         </Button>
                         <FormHelperText>
                             {loadingGeminiApiKey && i18n.t("settings.options.updating")}
@@ -281,7 +281,7 @@ export default function OptionsAI(props) {
                             startIcon={testingOpenaiApiKey ? <CircularProgress size={16} /> : null}
                             style={{ marginTop: 8 }}
                         >
-                            {testingOpenaiApiKey ? i18n.t("settings.options.apiKeys.testing") : i18n.t("settings.options.apiKeys.testButton")}
+                            {testingOpenaiApiKey ? i18n.t("settings.options.fields.apiKeys.testing") : i18n.t("settings.options.fields.apiKeys.testButton")}
                         </Button>
                         <FormHelperText>
                             {loadingOpenaiApiKey && i18n.t("settings.options.updating")}
@@ -414,10 +414,10 @@ export default function OptionsAI(props) {
             <Grid spacing={3} container style={{ marginTop: 30, marginBottom: 10 }}>
                 <Grid xs={12} item>
                     <Typography variant="h6" style={{ marginBottom: 10 }}>
-                        {i18n.t("settings.options.chatConfig.title")}
+                        {i18n.t("settings.options.fields.chatConfig.title")}
                     </Typography>
                     <Typography variant="body2" color="textSecondary" style={{ marginBottom: 20 }}>
-                        {i18n.t("settings.options.chatConfig.helper")}
+                        {i18n.t("settings.options.fields.chatConfig.helper")}
                     </Typography>
                 </Grid>
             </Grid>
@@ -435,7 +435,7 @@ export default function OptionsAI(props) {
                                 id="chatTemperature"
                                 name="chatTemperature"
                                 margin="dense"
-                                label={i18n.t("settings.options.chatConfig.temperature")}
+                                label={i18n.t("settings.options.fields.chatConfig.temperature")}
                                 variant="outlined"
                                 type="number"
                                 inputProps={{ min: 0, max: 2, step: 0.1 }}
@@ -444,7 +444,7 @@ export default function OptionsAI(props) {
                                     const value = parseFloat(e.target.value) || 0;
                                     setChatConfig({ ...chatConfig, temperature: Math.max(0, Math.min(2, value)) });
                                 }}
-                                helperText={i18n.t("settings.options.chatConfig.temperatureHelper")}
+                                helperText={i18n.t("settings.options.fields.chatConfig.temperatureHelper")}
                             />
                         </FormControl>
                     </Grid>
@@ -456,7 +456,7 @@ export default function OptionsAI(props) {
                                 id="chatMaxHistoryMessages"
                                 name="chatMaxHistoryMessages"
                                 margin="dense"
-                                label={i18n.t("settings.options.chatConfig.maxHistoryMessages")}
+                                label={i18n.t("settings.options.fields.chatConfig.maxHistoryMessages")}
                                 variant="outlined"
                                 type="number"
                                 inputProps={{ min: 0, max: 100, step: 1 }}
@@ -465,7 +465,7 @@ export default function OptionsAI(props) {
                                     const value = parseInt(e.target.value, 10) || 0;
                                     setChatConfig({ ...chatConfig, maxHistoryMessages: Math.max(0, Math.min(100, value)) });
                                 }}
-                                helperText={i18n.t("settings.options.chatConfig.maxHistoryMessagesHelper")}
+                                helperText={i18n.t("settings.options.fields.chatConfig.maxHistoryMessagesHelper")}
                             />
                         </FormControl>
                     </Grid>
@@ -477,7 +477,7 @@ export default function OptionsAI(props) {
                                 id="chatMaxTokens"
                                 name="chatMaxTokens"
                                 margin="dense"
-                                label={i18n.t("settings.options.chatConfig.maxTokens")}
+                                label={i18n.t("settings.options.fields.chatConfig.maxTokens")}
                                 variant="outlined"
                                 type="number"
                                 inputProps={{ min: 100, max: 32000, step: 100 }}
@@ -486,7 +486,7 @@ export default function OptionsAI(props) {
                                     const value = parseInt(e.target.value, 10) || 4096;
                                     setChatConfig({ ...chatConfig, maxTokens: Math.max(100, Math.min(32000, value)) });
                                 }}
-                                helperText={i18n.t("settings.options.chatConfig.maxTokensHelper")}
+                                helperText={i18n.t("settings.options.fields.chatConfig.maxTokensHelper")}
                             />
                         </FormControl>
                     </Grid>
@@ -498,7 +498,7 @@ export default function OptionsAI(props) {
                                 id="chatTopP"
                                 name="chatTopP"
                                 margin="dense"
-                                label={i18n.t("settings.options.chatConfig.topP")}
+                                label={i18n.t("settings.options.fields.chatConfig.topP")}
                                 variant="outlined"
                                 type="number"
                                 inputProps={{ min: 0, max: 1, step: 0.05 }}
@@ -507,7 +507,7 @@ export default function OptionsAI(props) {
                                     const value = parseFloat(e.target.value) || 0.95;
                                     setChatConfig({ ...chatConfig, topP: Math.max(0, Math.min(1, value)) });
                                 }}
-                                helperText={i18n.t("settings.options.chatConfig.topPHelper")}
+                                helperText={i18n.t("settings.options.fields.chatConfig.topPHelper")}
                             />
                         </FormControl>
                     </Grid>
@@ -522,7 +522,7 @@ export default function OptionsAI(props) {
                             startIcon={savingChatConfig ? <CircularProgress size={16} /> : null}
                             style={{ marginTop: 8 }}
                         >
-                            {savingChatConfig ? i18n.t("settings.options.chatConfig.saving") : i18n.t("settings.options.chatConfig.saveButton")}
+                            {savingChatConfig ? i18n.t("settings.options.fields.chatConfig.saving") : i18n.t("settings.options.fields.chatConfig.saveButton")}
                         </Button>
                     </Grid>
                 </Grid>

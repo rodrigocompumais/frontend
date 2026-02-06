@@ -292,7 +292,7 @@ export default function Options(props) {
                 handleScheduleType(e.target.value);
               }}
             >
-              <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.disabled")}</MenuItem>
+              <MenuItem value={"disabled"}>{i18n.t("settings.options.disabled")}</MenuItem>
               <MenuItem value={"queue"}>{i18n.t("settings.options.fields.expedientManager.queue")}</MenuItem>
               <MenuItem value={"company"}>{i18n.t("settings.options.fields.expedientManager.company")}</MenuItem>
             </Select>
@@ -313,8 +313,8 @@ export default function Options(props) {
                 handleGroupType(e.target.value);
               }}
             >
-              <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.disabled")}</MenuItem>
-              <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.active")}</MenuItem>
+              <MenuItem value={"disabled"}>{i18n.t("settings.options.disabled")}</MenuItem>
+              <MenuItem value={"enabled"}>{i18n.t("settings.options.active")}</MenuItem>
             </Select>
             <FormHelperText>
               {loadingCheckMsgIsGroup && i18n.t("settings.options.updating")}
@@ -372,8 +372,8 @@ export default function Options(props) {
                 handleSendGreetingAccepted(e.target.value);
               }}
             >
-              <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.disabled")}</MenuItem>
-              <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.enabled")}</MenuItem>
+              <MenuItem value={"disabled"}>{i18n.t("settings.options.disabled")}</MenuItem>
+              <MenuItem value={"enabled"}>{i18n.t("settings.options.enabled")}</MenuItem>
             </Select>
             <FormHelperText>
               {loadingSendGreetingAccepted && i18n.t("settings.options.updating")}
@@ -393,8 +393,8 @@ export default function Options(props) {
                 handleSettingsTransfTicket(e.target.value);
               }}
             >
-              <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.disabled")}</MenuItem>
-              <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.enabled")}</MenuItem>
+              <MenuItem value={"disabled"}>{i18n.t("settings.options.disabled")}</MenuItem>
+              <MenuItem value={"enabled"}>{i18n.t("settings.options.enabled")}</MenuItem>
             </Select>
             <FormHelperText>
               {loadingSettingsTransfTicket && i18n.t("settings.options.updating")}
@@ -414,8 +414,8 @@ export default function Options(props) {
                 handleSendGreetingMessageOneQueues(e.target.value);
               }}
             >
-              <MenuItem value={"disabled"}>{i18n.t("settings.options.fields.disabled")}</MenuItem>
-              <MenuItem value={"enabled"}>{i18n.t("settings.options.fields.enabled")}</MenuItem>
+              <MenuItem value={"disabled"}>{i18n.t("settings.options.disabled")}</MenuItem>
+              <MenuItem value={"enabled"}>{i18n.t("settings.options.enabled")}</MenuItem>
             </Select>
             <FormHelperText>
               {loadingSendGreetingMessageOneQueues && i18n.t("settings.options.updating")}
@@ -432,7 +432,7 @@ export default function Options(props) {
           variant="scrollable"
           className={classes.tab}
         >
-          <Tab label={i18n.t("settings.options.asaas.tab")} />
+          <Tab label={i18n.t("settings.options.fields.asaas.tab")} />
         </Tabs>
         <Grid xs={12} sm={12} md={12} item>
           <FormControl className={classes.selectContainer}>
@@ -440,7 +440,7 @@ export default function Options(props) {
               id="asaas"
               name="asaas"
               margin="dense"
-              label={i18n.t("settings.options.asaas.tokenLabel")}
+              label={i18n.t("settings.options.fields.asaas.tokenLabel")}
               variant="outlined"
               value={asaasType}
               onChange={async (e) => {

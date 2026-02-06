@@ -38,10 +38,14 @@ import BarChartIcon from "@material-ui/icons/BarChart";
 import SearchIcon from "@material-ui/icons/Search";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import CancelIcon from "@material-ui/icons/Cancel";
+import GetAppIcon from "@material-ui/icons/GetApp";
+import PublishIcon from "@material-ui/icons/Publish";
 
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import { format } from "date-fns";
+import useCompanyModules from "../../hooks/useCompanyModules";
+import AssignmentIcon from "@material-ui/icons/Assignment";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
@@ -75,6 +79,7 @@ const Forms = () => {
   const classes = useStyles();
   const history = useHistory();
   const { user } = useContext(AuthContext);
+  const { hasLanchonetes } = useCompanyModules();
 
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
@@ -83,6 +88,8 @@ const Forms = () => {
   const [selectedForm, setSelectedForm] = useState(null);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [searchParam, setSearchParam] = useState("");
+  const [importing, setImporting] = useState(false);
+  const importInputRef = React.useRef(null);
 
   useEffect(() => {
     setPageNumber(1);
@@ -121,6 +128,10 @@ const Forms = () => {
 
   const handleViewAnalytics = (formId) => {
     history.push(`/forms/${formId}/analytics`);
+  };
+
+  const handleViewPedidos = (formId) => {
+    history.push(`/pedidos?formId=${formId}`);
   };
 
   const handleDeleteForm = (form) => {
@@ -162,11 +173,76 @@ const Forms = () => {
     window.open(`/f/${form.slug}`, "_blank");
   };
 
+  const handleExportForm = async (form) => {
+    try {
+      const { data } = await api.get(`/forms/${form.id}/export`);
+      const blob = new Blob([JSON.stringify(data, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `form-${(form.name || "formulario").replace(/[^a-z0-9]/gi, "-")}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Formulário exportado com sucesso!");
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
+  const handleImportForm = () => {
+    if (importInputRef.current) importInputRef.current.click();
+  };
+
+  const handleImportFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!data.name) {
+        toast.error("Arquivo inválido: campo 'name' é obrigatório");
+        return;
+      }
+      await api.post("/forms/import", data);
+      toast.success("Formulário importado com sucesso!");
+      fetchForms();
+    } catch (err) {
+      if (err.response?.data?.message) {
+        toast.error(err.response.data.message);
+      } else {
+        toastError(err);
+      }
+    } finally {
+      setImporting(false);
+      e.target.value = "";
+    }
+  };
+
   return (
     <MainContainer>
       <MainHeader>
         <Title>{i18n.t("forms.title")}</Title>
         <MainHeaderButtonsWrapper>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".json"
+            style={{ display: "none" }}
+            onChange={handleImportFileChange}
+          />
+          <Button
+            variant="outlined"
+            onClick={handleImportForm}
+            disabled={importing}
+            startIcon={<PublishIcon />}
+            style={{ borderRadius: 8, textTransform: "none", marginRight: 8 }}
+          >
+            {importing ? "Importando..." : "Importar"}
+          </Button>
           <Can
             role={user.profile}
             perform="forms:create"
@@ -328,6 +404,16 @@ const Forms = () => {
                           <BarChartIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
+                      {hasLanchonetes && form.settings?.formType === "cardapio" && (
+                        <Tooltip title="Ver Pedidos">
+                          <IconButton
+                            size="small"
+                            onClick={() => handleViewPedidos(form.id)}
+                          >
+                            <AssignmentIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
                       <Tooltip title={i18n.t("forms.actions.edit")}>
                         <IconButton
                           size="small"
@@ -342,6 +428,14 @@ const Forms = () => {
                           onClick={() => handleDuplicateForm(form.id)}
                         >
                           <FileCopyIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Exportar">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleExportForm(form)}
+                        >
+                          <GetAppIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                       <Tooltip title={i18n.t("forms.actions.delete")}>

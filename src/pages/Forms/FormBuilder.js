@@ -42,6 +42,7 @@ import toastError from "../../errors/toastError";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import useWhatsApps from "../../hooks/useWhatsApps";
+import useCompanyModules from "../../hooks/useCompanyModules";
 
 import SaveIcon from "@material-ui/icons/Save";
 import ArrowBackIcon from "@material-ui/icons/ArrowBack";
@@ -133,6 +134,8 @@ const FormBuilder = () => {
   const currentIdRef = useRef(null);
   const initializedRef = useRef(false);
   const { whatsApps } = useWhatsApps();
+  const { hasLanchonetes } = useCompanyModules();
+  const [printDevices, setPrintDevices] = useState([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -158,7 +161,23 @@ const FormBuilder = () => {
       whatsAppMessage: "", // Mensagem pré-definida para envio via WhatsApp
       finalizeFields: [], // Campos customizados para aba finalizar do cardápio
       whatsappId: null, // ID da conexão WhatsApp para envio de confirmação do pedido
+      printDeviceId: null, // ID do dispositivo de impressão para impressão de pedidos
+      autoConfirmMinutes: 0, // Avançar novo->confirmado após X minutos (0=desativado)
       averageDeliveryTime: "", // Tempo médio de entrega (ex: "30-45 minutos")
+      appearance: {
+        fontFamily: "inherit",
+        borderRadius: "12",
+        backgroundColor: "",
+        backgroundStyle: "solid",
+        pageBackground: "",
+        boxShadow: "medium",
+        fieldStyle: "outlined",
+        fieldBorderRadius: "8",
+        buttonStyle: "rounded",
+        maxWidth: "600",
+        titleSize: "default",
+        spacing: "default",
+      },
     },
   });
 
@@ -175,6 +194,18 @@ const FormBuilder = () => {
     conditionalRules: {},
   });
 
+
+  useEffect(() => {
+    const fetchPrintDevices = async () => {
+      try {
+        const { data } = await api.get("/print-devices");
+        setPrintDevices(data || []);
+      } catch (err) {
+        console.error("Erro ao carregar dispositivos de impressão:", err);
+      }
+    };
+    fetchPrintDevices();
+  }, []);
 
   useEffect(() => {
     // Se o ID mudou, resetar todas as flags
@@ -215,7 +246,22 @@ const FormBuilder = () => {
           finalizeFields: [],
           whatsAppMessage: "",
           whatsappId: null,
+          printDeviceId: null,
           averageDeliveryTime: "",
+          appearance: {
+            fontFamily: "inherit",
+            borderRadius: "12",
+            backgroundColor: "",
+            backgroundStyle: "solid",
+            pageBackground: "default",
+            boxShadow: "medium",
+            fieldStyle: "outlined",
+            fieldBorderRadius: "8",
+            buttonStyle: "rounded",
+            maxWidth: "600",
+            titleSize: "default",
+            spacing: "default",
+          },
         },
       });
     }
@@ -235,7 +281,11 @@ const FormBuilder = () => {
       const customFields = (data.fields || []).filter(
         (field) => !field.metadata?.isAutoField
       );
-      
+      // Evitar duplicação de campos (por id)
+      const uniqueFields = customFields.filter(
+        (f, i, arr) => !f.id || arr.findIndex((x) => x.id === f.id) === i
+      );
+
       setFormData({
         name: data.name || "",
         description: data.description || "",
@@ -253,11 +303,12 @@ const FormBuilder = () => {
         createTicket: data.createTicket || false,
         sendWebhook: data.sendWebhook || false,
         webhookUrl: data.webhookUrl || "",
-        fields: isMenuForm ? [] : customFields.sort((a, b) => a.order - b.order),
+        fields: isMenuForm ? [] : uniqueFields.sort((a, b) => a.order - b.order),
         settings: {
           ...data.settings,
-          finalizeFields: isMenuForm ? customFields.sort((a, b) => a.order - b.order) : (data.settings?.finalizeFields || []),
+          finalizeFields: isMenuForm ? uniqueFields.sort((a, b) => a.order - b.order) : (data.settings?.finalizeFields || []),
           whatsappId: data.settings?.whatsappId || null,
+          printDeviceId: data.settings?.printDeviceId || null,
         },
       });
     } catch (err) {
@@ -269,6 +320,18 @@ const FormBuilder = () => {
     }
   };
 
+  const prepareFieldsForPayload = (fields) => {
+    return (fields || []).map((field, index) => {
+      const f = { ...field, order: index };
+      if (typeof f.conditionalFieldId === "string" && f.conditionalFieldId.startsWith("idx-")) {
+        const idx = parseInt(f.conditionalFieldId.replace("idx-", ""), 10);
+        delete f.conditionalFieldId;
+        f.conditionalFieldIndex = idx;
+      }
+      return f;
+    });
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -277,11 +340,8 @@ const FormBuilder = () => {
       
       // Se for cotação ou cardápio, enviar campos customizados (finalizeFields para cardápio)
       const fieldsToSend = isQuotation || isMenuForm
-        ? (isMenuForm ? (formData.settings?.finalizeFields || []) : [])
-        : formData.fields.map((field, index) => ({
-            ...field,
-            order: index,
-          }));
+        ? (isMenuForm ? prepareFieldsForPayload(formData.settings?.finalizeFields) : [])
+        : prepareFieldsForPayload(formData.fields);
 
       const payload = {
         ...formData,
@@ -461,8 +521,18 @@ const FormBuilder = () => {
   const isQuotationForm = formData.settings?.formType === "quotation";
   const isMenuForm = formData.settings?.formType === "cardapio";
 
+  const DEFAULT_ORDER_STAGES = [
+    { id: "novo", label: "Novo", color: "#6366F1" },
+    { id: "confirmado", label: "Confirmado", color: "#3B82F6" },
+    { id: "em_preparo", label: "Em preparo", color: "#F59E0B" },
+    { id: "pronto", label: "Pronto", color: "#22C55E" },
+    { id: "saiu_entrega", label: "Saiu para entrega", color: "#8B5CF6" },
+    { id: "entregue", label: "Entregue", color: "#10B981" },
+    { id: "cancelado", label: "Cancelado", color: "#6B7280" },
+  ];
+
   return (
-    <MainContainer>
+    <MainContainer usePaper={false}>
       <MainHeader>
         <Box display="flex" alignItems="center" gap={2}>
           <IconButton onClick={() => history.push("/forms")}>
@@ -623,7 +693,9 @@ const FormBuilder = () => {
                   >
                     <MenuItem value="normal">Normal</MenuItem>
                     <MenuItem value="quotation">Cotação</MenuItem>
-                    <MenuItem value="cardapio">Cardápio</MenuItem>
+                    {hasLanchonetes && (
+                      <MenuItem value="cardapio">Cardápio (Módulo Lanchonetes)</MenuItem>
+                    )}
                   </Select>
                 </FormControl>
               </Grid>
@@ -801,6 +873,36 @@ const FormBuilder = () => {
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel>Dispositivo de Impressão</InputLabel>
+                      <Select
+                        value={formData.settings?.printDeviceId || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            settings: {
+                              ...formData.settings,
+                              printDeviceId: e.target.value ? Number(e.target.value) : null,
+                            },
+                          })
+                        }
+                        label="Dispositivo de Impressão"
+                      >
+                        <MenuItem value="">
+                          <em>Nenhum (não imprimir)</em>
+                        </MenuItem>
+                        {printDevices.map((device) => (
+                          <MenuItem key={device.id} value={device.id}>
+                            {device.name || device.deviceId}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <Typography variant="caption" color="textSecondary" style={{ marginTop: 8, display: "block" }}>
+                      Selecione o dispositivo que imprimirá os pedidos. Configure em Configurações → API / Integração.
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
                     <TextField
                       fullWidth
                       variant="outlined"
@@ -819,7 +921,156 @@ const FormBuilder = () => {
                       helperText="Exibido na tela de confirmação do pedido"
                     />
                   </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      type="number"
+                      inputProps={{ min: 0, step: 1 }}
+                      label="Avançar para 'Confirmado' automaticamente após (minutos)"
+                      placeholder="0 = desativado"
+                      value={formData.settings?.autoConfirmMinutes ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value === "" ? 0 : parseInt(e.target.value, 10) || 0;
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            autoConfirmMinutes: val,
+                          },
+                        });
+                      }}
+                      helperText="0 = desativado. Pedidos em 'Novo' avançam automaticamente para 'Confirmado' após X minutos."
+                    />
+                  </Grid>
                 </Grid>
+
+                <Typography variant="subtitle2" style={{ marginTop: 24, marginBottom: 12 }}>
+                  Mensagens de notificação WhatsApp (ao alterar status do pedido)
+                </Typography>
+                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                  Deixe em branco para usar a mensagem padrão.
+                </Typography>
+                <Grid container spacing={2}>
+                  {[
+                    { key: "pronto", label: "Status: Pronto", placeholder: "Ex: Seu pedido está pronto para retirada!" },
+                    { key: "saiu_entrega", label: "Status: Saiu para entrega", placeholder: "Ex: Seu pedido saiu para entrega!" },
+                    { key: "entregue", label: "Status: Entregue", placeholder: "Ex: Obrigado! Seu pedido foi entregue." },
+                  ].map(({ key, label, placeholder }) => (
+                    <Grid item xs={12} key={key}>
+                      <TextField
+                        fullWidth
+                        variant="outlined"
+                        size="small"
+                        label={label}
+                        placeholder={placeholder}
+                        value={formData.settings?.orderStatusMessages?.[key] || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            settings: {
+                              ...formData.settings,
+                              orderStatusMessages: {
+                                ...(formData.settings?.orderStatusMessages || {}),
+                                [key]: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+
+                <Typography variant="subtitle2" style={{ marginTop: 24, marginBottom: 12 }}>
+                  Estágios do pedido (Kanban)
+                </Typography>
+                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                  Personalize os estágios exibidos no Kanban de pedidos. O ID deve ser único (ex: novo, em_preparo).
+                </Typography>
+                {((formData.settings?.orderStages?.length > 0)
+                  ? formData.settings.orderStages
+                  : DEFAULT_ORDER_STAGES
+                ).map((stage, idx) => (
+                  <Box key={stage.id || idx} display="flex" gap={2} alignItems="center" style={{ marginBottom: 8 }}>
+                    <TextField
+                      size="small"
+                      label="ID"
+                      value={stage.id || ""}
+                      onChange={(e) => {
+                        const stages = formData.settings?.orderStages || DEFAULT_ORDER_STAGES;
+                        const next = [...stages];
+                        next[idx] = { ...next[idx], id: e.target.value };
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, orderStages: next },
+                        });
+                      }}
+                      style={{ width: 120 }}
+                    />
+                    <TextField
+                      size="small"
+                      label="Label"
+                      value={stage.label || ""}
+                      onChange={(e) => {
+                        const stages = formData.settings?.orderStages || DEFAULT_ORDER_STAGES;
+                        const next = [...stages];
+                        next[idx] = { ...next[idx], label: e.target.value };
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, orderStages: next },
+                        });
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    <TextField
+                      size="small"
+                      label="Cor"
+                      type="color"
+                      value={stage.color || "#6366F1"}
+                      onChange={(e) => {
+                        const stages = formData.settings?.orderStages || DEFAULT_ORDER_STAGES;
+                        const next = [...stages];
+                        next[idx] = { ...next[idx], color: e.target.value };
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, orderStages: next },
+                        });
+                      }}
+                      InputProps={{ style: { height: 40, padding: 4 } }}
+                      style={{ width: 80 }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        const stages = (formData.settings?.orderStages || DEFAULT_ORDER_STAGES).filter((_, i) => i !== idx);
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, orderStages: stages },
+                        });
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                ))}
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    const stages = formData.settings?.orderStages || DEFAULT_ORDER_STAGES;
+                    setFormData({
+                      ...formData,
+                      settings: {
+                        ...formData.settings,
+                        orderStages: [...stages, { id: "novo_estagio", label: "Novo estágio", color: "#6B7280" }],
+                      },
+                    });
+                  }}
+                >
+                  Adicionar estágio
+                </Button>
 
                 {(!formData.settings?.finalizeFields ||
                   formData.settings.finalizeFields.length === 0) && (
@@ -843,7 +1094,7 @@ const FormBuilder = () => {
                     <Box>
                       {formData.settings.finalizeFields.map((field, index) => (
                         <Paper
-                          key={index}
+                          key={field.id ?? `finalize-${index}`}
                           style={{
                             padding: 16,
                             marginBottom: 16,
@@ -859,6 +1110,7 @@ const FormBuilder = () => {
                             <Typography variant="body2" color="textSecondary">
                               Tipo: {field.fieldType} |{" "}
                               {field.isRequired ? "Obrigatório" : "Opcional"}
+                              {field.hasConditional && " | Condicional"}
                             </Typography>
                           </Box>
                           <Box>
@@ -925,7 +1177,7 @@ const FormBuilder = () => {
                 )}
 
                 {formData.fields.map((field, index) => (
-                  <Paper key={index} className={classes.fieldItem}>
+                  <Paper key={field.id ?? `field-${index}`} className={classes.fieldItem}>
                     <Box className={classes.fieldHeader}>
                       <Box display="flex" alignItems="center">
                         <DragIndicatorIcon style={{ marginRight: 8 }} />
@@ -945,6 +1197,15 @@ const FormBuilder = () => {
                             label="Obrigatório"
                             size="small"
                             color="primary"
+                            className={classes.fieldTypeChip}
+                          />
+                        )}
+                        {field.hasConditional && (
+                          <Chip
+                            label="Condicional"
+                            size="small"
+                            color="secondary"
+                            variant="outlined"
                             className={classes.fieldTypeChip}
                           />
                         )}
@@ -979,7 +1240,7 @@ const FormBuilder = () => {
 
         {tabValue === 2 && (
           <Box className={classes.section} style={{ marginTop: 24 }}>
-            <Typography className={classes.sectionTitle}>Aparência</Typography>
+            <Typography className={classes.sectionTitle}>Cores e logo</Typography>
             <Grid container spacing={2}>
               <Grid item xs={12} md={6}>
                 <TextField
@@ -1032,6 +1293,278 @@ const FormBuilder = () => {
                     <MenuItem value="top">Topo</MenuItem>
                     <MenuItem value="center">Centro</MenuItem>
                     <MenuItem value="bottom">Rodapé</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+            </Grid>
+
+            <Typography className={classes.sectionTitle} style={{ marginTop: 32 }}>
+              Personalização visual
+            </Typography>
+            <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+              Ajuste a aparência do formulário para combinar com sua marca
+            </Typography>
+            <Grid container spacing={2}>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Fonte</InputLabel>
+                  <Select
+                    value={formData.settings?.appearance?.fontFamily || "inherit"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          appearance: {
+                            ...(formData.settings?.appearance || {}),
+                            fontFamily: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    label="Fonte"
+                  >
+                    <MenuItem value="inherit">Padrão do sistema</MenuItem>
+                    <MenuItem value="'Inter', sans-serif">Inter</MenuItem>
+                    <MenuItem value="'Poppins', sans-serif">Poppins</MenuItem>
+                    <MenuItem value="'Montserrat', sans-serif">Montserrat</MenuItem>
+                    <MenuItem value="'Open Sans', sans-serif">Open Sans</MenuItem>
+                    <MenuItem value="'Playfair Display', serif">Playfair Display</MenuItem>
+                    <MenuItem value="'Source Serif 4', serif">Source Serif 4</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Largura máxima</InputLabel>
+                  <Select
+                    value={formData.settings?.appearance?.maxWidth || "600"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          appearance: {
+                            ...(formData.settings?.appearance || {}),
+                            maxWidth: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    label="Largura máxima"
+                  >
+                    <MenuItem value="480">Compacto (480px)</MenuItem>
+                    <MenuItem value="560">Médio (560px)</MenuItem>
+                    <MenuItem value="600">Padrão (600px)</MenuItem>
+                    <MenuItem value="720">Amplo (720px)</MenuItem>
+                    <MenuItem value="900">Extra amplo (900px)</MenuItem>
+                    <MenuItem value="full">Largura total</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Bordas do card</InputLabel>
+                  <Select
+                    value={formData.settings?.appearance?.borderRadius || "12"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          appearance: {
+                            ...(formData.settings?.appearance || {}),
+                            borderRadius: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    label="Bordas do card"
+                  >
+                    <MenuItem value="0">Reto</MenuItem>
+                    <MenuItem value="8">Suave (8px)</MenuItem>
+                    <MenuItem value="12">Padrão (12px)</MenuItem>
+                    <MenuItem value="16">Arredondado (16px)</MenuItem>
+                    <MenuItem value="24">Bem arredondado (24px)</MenuItem>
+                    <MenuItem value="9999">Pílula</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Sombra</InputLabel>
+                  <Select
+                    value={formData.settings?.appearance?.boxShadow || "medium"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          appearance: {
+                            ...(formData.settings?.appearance || {}),
+                            boxShadow: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    label="Sombra"
+                  >
+                    <MenuItem value="none">Nenhuma</MenuItem>
+                    <MenuItem value="soft">Suave</MenuItem>
+                    <MenuItem value="medium">Média</MenuItem>
+                    <MenuItem value="strong">Forte</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Estilo dos campos</InputLabel>
+                  <Select
+                    value={formData.settings?.appearance?.fieldStyle || "outlined"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          appearance: {
+                            ...(formData.settings?.appearance || {}),
+                            fieldStyle: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    label="Estilo dos campos"
+                  >
+                    <MenuItem value="outlined">Contornado</MenuItem>
+                    <MenuItem value="filled">Preenchido</MenuItem>
+                    <MenuItem value="standard">Sublinhado</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Estilo do botão</InputLabel>
+                  <Select
+                    value={formData.settings?.appearance?.buttonStyle || "rounded"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          appearance: {
+                            ...(formData.settings?.appearance || {}),
+                            buttonStyle: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    label="Estilo do botão"
+                  >
+                    <MenuItem value="rounded">Arredondado</MenuItem>
+                    <MenuItem value="pill">Pílula</MenuItem>
+                    <MenuItem value="sharp">Reto</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Fundo do card</InputLabel>
+                  <Select
+                    value={formData.settings?.appearance?.backgroundStyle || "solid"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          appearance: {
+                            ...(formData.settings?.appearance || {}),
+                            backgroundStyle: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    label="Fundo do card"
+                  >
+                    <MenuItem value="solid">Sólido (cor primária clara)</MenuItem>
+                    <MenuItem value="white">Branco</MenuItem>
+                    <MenuItem value="gradient">Gradiente sutil</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Fundo da página</InputLabel>
+                  <Select
+                    value={formData.settings?.appearance?.pageBackground || "default"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          appearance: {
+                            ...(formData.settings?.appearance || {}),
+                            pageBackground: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    label="Fundo da página"
+                  >
+                    <MenuItem value="default">Cinza claro</MenuItem>
+                    <MenuItem value="white">Branco</MenuItem>
+                    <MenuItem value="dark">Escuro</MenuItem>
+                    <MenuItem value="gradient">Gradiente</MenuItem>
+                    <MenuItem value="pattern">Padrão sutil</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Tamanho do título</InputLabel>
+                  <Select
+                    value={formData.settings?.appearance?.titleSize || "default"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          appearance: {
+                            ...(formData.settings?.appearance || {}),
+                            titleSize: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    label="Tamanho do título"
+                  >
+                    <MenuItem value="small">Pequeno</MenuItem>
+                    <MenuItem value="default">Padrão</MenuItem>
+                    <MenuItem value="large">Grande</MenuItem>
+                  </Select>
+                </FormControl>
+              </Grid>
+              <Grid item xs={12} md={6}>
+                <FormControl fullWidth variant="outlined">
+                  <InputLabel>Espaçamento</InputLabel>
+                  <Select
+                    value={formData.settings?.appearance?.spacing || "default"}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        settings: {
+                          ...formData.settings,
+                          appearance: {
+                            ...(formData.settings?.appearance || {}),
+                            spacing: e.target.value,
+                          },
+                        },
+                      })
+                    }
+                    label="Espaçamento"
+                  >
+                    <MenuItem value="compact">Compacto</MenuItem>
+                    <MenuItem value="default">Padrão</MenuItem>
+                    <MenuItem value="relaxed">Amplo</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -1266,6 +1799,154 @@ const FormBuilder = () => {
                 }
                 variant="outlined"
               />
+            </Grid>
+
+            {/* Condições de exibição */}
+            <Grid item xs={12}>
+              <Divider style={{ margin: "16px 0" }} />
+              <Typography variant="subtitle2" style={{ marginBottom: 8, fontWeight: 600 }}>
+                Exibição condicional
+              </Typography>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={fieldForm.hasConditional || false}
+                    onChange={(e) =>
+                      setFieldForm({
+                        ...fieldForm,
+                        hasConditional: e.target.checked,
+                        conditionalFieldId: e.target.checked ? fieldForm.conditionalFieldId : null,
+                        conditionalRules: e.target.checked ? (fieldForm.conditionalRules || { operator: "equals", value: "" }) : {},
+                      })
+                    }
+                  />
+                }
+                label="Exibir este campo apenas quando outra resposta atender à condição"
+              />
+              {fieldForm.hasConditional && (() => {
+                const availableFields = isMenuForm
+                  ? (formData.settings?.finalizeFields || [])
+                  : formData.fields;
+                const fieldsBeforeCurrent = availableFields.filter((f, idx) =>
+                  editingField !== null ? idx < editingField : idx < availableFields.length
+                );
+                const getSourceField = () => {
+                  const id = fieldForm.conditionalFieldId;
+                  if (id == null || id === "") return null;
+                  const byId = availableFields.find((f) => f.id === id);
+                  if (byId) return byId;
+                  const byIdx = availableFields[Number(id)];
+                  return byIdx || null;
+                };
+                const sourceField = getSourceField();
+                const rules = fieldForm.conditionalRules || {};
+                const needsValue = !["isEmpty", "isNotEmpty", "isTrue", "isFalse"].includes(rules.operator);
+                const hasOptions = sourceField && ["select", "radio", "checkbox"].includes(sourceField.fieldType);
+                return (
+                  <Box style={{ marginTop: 16, padding: 16, backgroundColor: "rgba(0,0,0,0.03)", borderRadius: 8 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <FormControl fullWidth variant="outlined" size="small">
+                          <InputLabel>Campo que determina a visibilidade</InputLabel>
+                          <Select
+                            value={fieldForm.conditionalFieldId ?? ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const isIndex = typeof val === "string" && val.startsWith("idx-");
+                              setFieldForm({
+                                ...fieldForm,
+                                conditionalFieldId: val !== "" ? (isIndex ? val : (typeof val === "number" ? val : Number(val))) : null,
+                                conditionalFieldIndex: isIndex ? parseInt(val.replace("idx-", ""), 10) : undefined,
+                                conditionalRules: { ...rules, operator: rules.operator || "equals", value: rules.value ?? "" },
+                              });
+                            }}
+                            label="Campo que determina a visibilidade"
+                          >
+                            <MenuItem value="">
+                              <em>Selecione um campo</em>
+                            </MenuItem>
+                            {availableFields
+                              .filter((f, idx) => editingField === null || idx < editingField)
+                              .map((f, idx) => {
+                                const val = f.id != null ? f.id : `idx-${idx}`;
+                                return (
+                                  <MenuItem key={val} value={val}>
+                                    {f.label || `Campo ${idx + 1}`}
+                                  </MenuItem>
+                                );
+                              })}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      {fieldForm.conditionalFieldId != null && fieldForm.conditionalFieldId !== "" && (
+                        <>
+                          <Grid item xs={12} md={6}>
+                            <FormControl fullWidth variant="outlined" size="small">
+                              <InputLabel>Condição</InputLabel>
+                              <Select
+                                value={rules.operator || "equals"}
+                                onChange={(e) =>
+                                  setFieldForm({
+                                    ...fieldForm,
+                                    conditionalRules: { ...rules, operator: e.target.value, value: rules.value ?? "" },
+                                  })
+                                }
+                                label="Condição"
+                              >
+                                <MenuItem value="equals">é igual a</MenuItem>
+                                <MenuItem value="notEquals">é diferente de</MenuItem>
+                                <MenuItem value="contains">contém</MenuItem>
+                                <MenuItem value="isEmpty">está vazio</MenuItem>
+                                <MenuItem value="isNotEmpty">está preenchido</MenuItem>
+                                <MenuItem value="isTrue">é verdadeiro / está marcado</MenuItem>
+                                <MenuItem value="isFalse">é falso / não está marcado</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+                          {needsValue && (
+                            <Grid item xs={12} md={6}>
+                              {hasOptions ? (
+                                <FormControl fullWidth variant="outlined" size="small">
+                                  <InputLabel>Valor</InputLabel>
+                                  <Select
+                                    value={rules.value ?? ""}
+                                    onChange={(e) =>
+                                      setFieldForm({
+                                        ...fieldForm,
+                                        conditionalRules: { ...rules, value: e.target.value },
+                                      })
+                                    }
+                                    label="Valor"
+                                  >
+                                    {(sourceField.options || []).map((opt, i) => (
+                                      <MenuItem key={i} value={opt}>{opt}</MenuItem>
+                                    ))}
+                                  </Select>
+                                </FormControl>
+                              ) : (
+                                <TextField
+                                  fullWidth
+                                  size="small"
+                                  label="Valor"
+                                  variant="outlined"
+                                  value={rules.value ?? ""}
+                                  onChange={(e) =>
+                                    setFieldForm({
+                                      ...fieldForm,
+                                      conditionalRules: { ...rules, value: e.target.value },
+                                    })
+                                  }
+                                  placeholder='Ex: "Sim", "Não", texto específico'
+                                />
+                              )}
+                            </Grid>
+                          )}
+                        </>
+                      )}
+                    </Grid>
+                  </Box>
+                );
+              })()}
             </Grid>
           </Grid>
         </DialogContent>

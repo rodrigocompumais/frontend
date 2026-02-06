@@ -45,6 +45,7 @@ import { Can } from '../Can';
 import { AuthContext } from '../../context/Auth/AuthContext';
 import { WhatsAppsContext } from '../../context/WhatsApp/WhatsAppsContext';
 import usePlans from '../../hooks/usePlans';
+import useCompanyModules from '../../hooks/useCompanyModules';
 import useNotificationCounts from '../../hooks/useNotificationCounts';
 
 const useStyles = makeStyles((theme) => ({
@@ -87,6 +88,7 @@ const NavigationMenus = () => {
   const { user } = useContext(AuthContext);
   const { whatsApps } = useContext(WhatsAppsContext);
   const { getPlanCompany } = usePlans();
+  const { hasLanchonetes } = useCompanyModules();
   const { pendingTicketsCount, unreadMessagesCount, totalNotifications } = useNotificationCounts();
 
   // Estados para os dropdowns
@@ -280,15 +282,28 @@ const NavigationMenus = () => {
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.forms")} />
         </MenuItem>
-        <MenuItem
-          className={classes.menuItem}
-          onClick={() => handleNavigate('/products', () => setGestaoAnchor(null))}
-        >
-          <ListItemIcon>
-            <ShoppingCartIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Produtos" />
-        </MenuItem>
+        {hasLanchonetes && (
+          <>
+            <MenuItem
+              className={classes.menuItem}
+              onClick={() => handleNavigate('/products', () => setGestaoAnchor(null))}
+            >
+              <ListItemIcon>
+                <ShoppingCartIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Produtos" />
+            </MenuItem>
+            <MenuItem
+              className={classes.menuItem}
+              onClick={() => handleNavigate('/pedidos', () => setGestaoAnchor(null))}
+            >
+              <ListItemIcon>
+                <AssignmentIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Pedidos" />
+            </MenuItem>
+          </>
+        )}
       </Menu>
 
       {/* 3. AUTOMAÇÃO & IA */}

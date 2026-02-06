@@ -27,6 +27,7 @@ import ContactListItems from "../pages/ContactListItems/";
 import QuickMessages from "../pages/QuickMessages/";
 import Kanban from "../pages/Kanban";
 import { AuthProvider } from "../context/Auth/AuthContext";
+import ThemeWithModules from "../components/ThemeWithModules";
 import { TicketsContextProvider } from "../context/Tickets/TicketsContext";
 import { WhatsAppsProvider } from "../context/WhatsApp/WhatsAppsContext";
 import { TourProvider } from "../context/Tour/TourContext";
@@ -52,10 +53,13 @@ import Forms from "../pages/Forms";
 import FormBuilder from "../pages/Forms/FormBuilder";
 import PublicForm from "../pages/Forms/PublicForm";
 import FormResponses from "../pages/Forms/FormResponses";
+import OrderHistory from "../pages/Forms/OrderHistory";
+import OrderQueue from "../components/OrderQueue";
 import FormAnalytics from "../pages/Forms/FormAnalytics";
 import SubscriptionExpired from "../pages/SubscriptionExpired";
 import QuickAccessButtonsSettings from "../pages/QuickAccessButtonsSettings";
 import Products from "../pages/Products";
+import Pedidos from "../pages/Pedidos";
 
 const Routes = () => {
   const [showCampaigns, setShowCampaigns] = useState(false);
@@ -70,6 +74,7 @@ const Routes = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ThemeWithModules>
         <TourProvider>
           <TicketsContextProvider>
             <Switch>
@@ -88,6 +93,7 @@ const Routes = () => {
             <Route exact path="/subscription-expired" component={SubscriptionExpired} isPrivate allowExpired />
             <WhatsAppsProvider>
               <LoggedInLayout>
+                <Switch>
                 <Route exact path="/dashboard" component={Dashboard} isPrivate />
                 <Route
                   exact
@@ -147,6 +153,7 @@ const Routes = () => {
                   isPrivate
                 />
                 <Route exact path="/kanban" component={Kanban} isPrivate />
+                <Route exact path="/pedidos" component={Pedidos} isPrivate />
                 <Route
                   exact
                   path="/financeiro"
@@ -168,7 +175,7 @@ const Routes = () => {
                 />
                 <Route exact path="/chats/:id?" component={Chat} isPrivate />
                 {showCampaigns && (
-                  <>
+                  <Switch>
                     <Route
                       exact
                       path="/contact-lists"
@@ -244,18 +251,32 @@ const Routes = () => {
                     />
                     <Route
                       exact
+                      path="/forms/:formId/historico-pedidos"
+                      component={OrderHistory}
+                      isPrivate
+                    />
+                    <Route
+                      exact
+                      path="/forms/:formId/fila-pedidos"
+                      component={OrderQueue}
+                      isPrivate
+                    />
+                    <Route
+                      exact
                       path="/forms/:formId/analytics"
                       component={FormAnalytics}
                       isPrivate
                     />
-                  </>
+                  </Switch>
                 )}
+                </Switch>
               </LoggedInLayout>
             </WhatsAppsProvider>
           </Switch>
           <ToastContainer autoClose={3000} />
         </TicketsContextProvider>
         </TourProvider>
+        </ThemeWithModules>
       </AuthProvider>
     </BrowserRouter>
   );

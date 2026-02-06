@@ -5,6 +5,7 @@ import React, {
     useContext,
 } from "react";
 import { toast } from "react-toastify";
+import { useHistory } from "react-router-dom";
 
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
@@ -40,6 +41,7 @@ import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import useCompanyModules from "../../hooks/useCompanyModules";
 
 const useStyles = makeStyles((theme) => ({
     mainPaper: {
@@ -59,12 +61,30 @@ const useStyles = makeStyles((theme) => ({
         display: "flex",
         gap: theme.spacing(0.5),
     },
+    productImage: {
+        width: 40,
+        height: 40,
+        objectFit: "cover",
+        borderRadius: 4,
+    },
+    productImagePlaceholder: {
+        width: 40,
+        height: 40,
+        borderRadius: 4,
+        backgroundColor: theme.palette.action.hover,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: theme.palette.text.disabled,
+        fontSize: "0.75rem",
+    },
 }));
 
 const Products = () => {
     const classes = useStyles();
-
+    const history = useHistory();
     const { user } = useContext(AuthContext);
+    const { hasLanchonetes, loading: modulesLoading } = useCompanyModules();
 
     const [loading, setLoading] = useState(false);
     const [pageNumber, setPageNumber] = useState(1);
@@ -77,6 +97,7 @@ const Products = () => {
     const [productModalOpen, setProductModalOpen] = useState(false);
     const [groupsModalOpen, setGroupsModalOpen] = useState(false);
     const [filterMenuOnly, setFilterMenuOnly] = useState(false);
+    const [failedImages, setFailedImages] = useState(new Set());
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
@@ -203,8 +224,32 @@ const Products = () => {
         }).format(value);
     };
 
+    if (modulesLoading) {
+        return (
+            <MainContainer>
+                <Paper style={{ padding: 32, textAlign: "center", margin: 24 }}>
+                    Carregando...
+                </Paper>
+            </MainContainer>
+        );
+    }
+
     return (
         <MainContainer>
+            {!hasLanchonetes && (
+                <Paper style={{ padding: 32, textAlign: "center", margin: 24 }}>
+                    <Title>Módulo Lanchonetes</Title>
+                    <p style={{ color: "gray", marginBottom: 24 }}>
+                        O Módulo Lanchonetes é necessário para gerenciar produtos e cardápio. 
+                        Contrate o módulo para usar esta funcionalidade.
+                    </p>
+                    <Button variant="contained" color="primary" onClick={() => history.push("/forms")}>
+                        Voltar para Formulários
+                    </Button>
+                </Paper>
+            )}
+            {hasLanchonetes && (
+            <>
             <ConfirmationModal
                 title="Confirmar exclusão"
                 open={confirmModalOpen}
@@ -279,6 +324,7 @@ const Products = () => {
                 <Table size="small">
                     <TableHead>
                         <TableRow>
+                            <TableCell padding="checkbox">Imagem</TableCell>
                             <TableCell>Nome</TableCell>
                             <TableCell>Descrição</TableCell>
                             <TableCell>Grupo</TableCell>
@@ -291,13 +337,25 @@ const Products = () => {
                     <TableBody>
                         {products.length === 0 && !loading && (
                             <TableRow>
-                                <TableCell colSpan={7} align="center">
+                                <TableCell colSpan={8} align="center">
                                     Nenhum produto encontrado
                                 </TableCell>
                             </TableRow>
                         )}
                         {products.map((product) => (
                             <TableRow key={product.id}>
+                                <TableCell padding="checkbox">
+                                    {product.imageUrl && !failedImages.has(product.id) ? (
+                                        <img
+                                            src={product.imageUrl}
+                                            alt={product.name}
+                                            className={classes.productImage}
+                                            onError={() => setFailedImages((prev) => new Set(prev).add(product.id))}
+                                        />
+                                    ) : (
+                                        <div className={classes.productImagePlaceholder}>—</div>
+                                    )}
+                                </TableCell>
                                 <TableCell>{product.name}</TableCell>
                                 <TableCell>
                                     {product.description || "-"}
@@ -347,10 +405,12 @@ const Products = () => {
                                 </TableCell>
                             </TableRow>
                         ))}
-                        {loading && <TableRowSkeleton columns={7} />}
+                        {loading && <TableRowSkeleton columns={8} />}
                     </TableBody>
                 </Table>
             </Paper>
+            </>
+            )}
         </MainContainer>
     );
 };

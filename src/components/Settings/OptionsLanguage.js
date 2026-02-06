@@ -63,15 +63,15 @@ export default function OptionsLanguage({ settings }) {
   return (
     <Paper className={classes.paper}>
       <Typography variant="h6" className={classes.title}>
-        {i18n.t("settings.options.companyLanguage.title")}
+        {i18n.t("settings.options.fields.companyLanguage.title")}
       </Typography>
       <Typography variant="body2" color="textSecondary" gutterBottom>
-        {i18n.t("settings.options.companyLanguage.helper")}
+        {i18n.t("settings.options.fields.companyLanguage.helper")}
       </Typography>
 
       <FormControl className={classes.formControl} disabled={loading}>
         <InputLabel id="company-language-label">
-          {i18n.t("settings.options.companyLanguage.title")}
+          {i18n.t("settings.options.fields.companyLanguage.title")}
         </InputLabel>
         <Select
           labelId="company-language-label"
@@ -79,18 +79,18 @@ export default function OptionsLanguage({ settings }) {
           onChange={(e) => handleChangeLanguage(e.target.value)}
         >
           <MenuItem value="pt">
-            🇧🇷 {i18n.t("settings.options.companyLanguage.portuguese")}
+            🇧🇷 {i18n.t("settings.options.fields.companyLanguage.portuguese")}
           </MenuItem>
           <MenuItem value="en">
-            🇺🇸 {i18n.t("settings.options.companyLanguage.english")}
+            🇺🇸 {i18n.t("settings.options.fields.companyLanguage.english")}
           </MenuItem>
           <MenuItem value="es">
-            🇪🇸 {i18n.t("settings.options.companyLanguage.spanish")}
+            🇪🇸 {i18n.t("settings.options.fields.companyLanguage.spanish")}
           </MenuItem>
         </Select>
         <FormHelperText>
           {loading && <CircularProgress size={14} />}
-          {!loading && i18n.t("settings.options.companyLanguage.helper")}
+          {!loading && i18n.t("settings.options.fields.companyLanguage.helper")}
         </FormHelperText>
       </FormControl>
     </Paper>

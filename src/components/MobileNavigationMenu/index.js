@@ -38,6 +38,7 @@ import {
   ExpandLess,
   ExpandMore,
   ShoppingCart as ShoppingCartIcon,
+  Assignment as AssignmentIcon,
 } from '@material-ui/icons';
 import { Badge } from '@material-ui/core';
 import { i18n } from '../../translate/i18n';
@@ -45,6 +46,7 @@ import { Can } from '../Can';
 import { AuthContext } from '../../context/Auth/AuthContext';
 import { WhatsAppsContext } from '../../context/WhatsApp/WhatsAppsContext';
 import usePlans from '../../hooks/usePlans';
+import useCompanyModules from '../../hooks/useCompanyModules';
 
 const useStyles = makeStyles((theme) => ({
   list: {
@@ -79,6 +81,7 @@ const MobileNavigationMenu = () => {
   const { user } = useContext(AuthContext);
   const { whatsApps } = useContext(WhatsAppsContext);
   const { getPlanCompany } = usePlans();
+  const { hasLanchonetes } = useCompanyModules();
 
   // Submenus
   const [openAutomacao, setOpenAutomacao] = useState(false);
@@ -218,12 +221,22 @@ const MobileNavigationMenu = () => {
               </ListItemIcon>
               <ListItemText primary={i18n.t("mainDrawer.listItems.tags")} />
             </ListItem>
-            <ListItem button onClick={() => handleNavigate('/products')}>
-              <ListItemIcon>
-                <ShoppingCartIcon />
-              </ListItemIcon>
-              <ListItemText primary="Produtos" />
-            </ListItem>
+            {hasLanchonetes && (
+              <>
+                <ListItem button onClick={() => handleNavigate('/products')}>
+                  <ListItemIcon>
+                    <ShoppingCartIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Produtos" />
+                </ListItem>
+                <ListItem button onClick={() => handleNavigate('/pedidos')}>
+                  <ListItemIcon>
+                    <AssignmentIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Pedidos" />
+                </ListItem>
+              </>
+            )}
 
             {(showCampaigns || showOpenAi) && (
               <>

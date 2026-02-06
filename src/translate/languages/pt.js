@@ -1540,8 +1540,10 @@ const messages = {
         tabs: {
           options: "Opções",
           ai: "Inteligência Artificial",
+          api: "API / Integração",
           schedules: "Horários",
           companies: "Empresas",
+          modules: "Módulos",
           plans: "Planos",
           helps: "Ajuda",
           integrations: "INTEGRAÇÕES",
@@ -1580,7 +1582,7 @@ const messages = {
               title: "Enviar mensagem de transferencia de Fila/agente",
             },
             sendGreetingMessageOneQueues: {
-              title: "Enviar saudação quando houver somente 1 fila<",
+              title: "Enviar saudação quando houver somente 1 fila",
             },
             geminiApiKey: {
               title: "Gemini API Key",
@@ -1622,6 +1624,37 @@ const messages = {
               saveButton: "Salvar Configurações do Chat",
               saving: "Salvando...",
               saveSuccess: "Configurações do chat salvas com sucesso!",
+            },
+            apiCredentials: {
+              title: "Credenciais de API",
+              helper: "Use estas credenciais para integrações e APIs externas. Clique no ícone para copiar.",
+              companyId: "ID da Empresa",
+              jwtToken: "Token JWT",
+              tokenHelper: "Clique no campo para exibir/ocultar o token. Use no header Authorization: Bearer {token}",
+              copy: "Copiar",
+              copied: "{{label}} copiado para a área de transferência!",
+              copyError: "Não foi possível copiar.",
+            },
+            printDevices: {
+              title: "Dispositivos de Impressão",
+              helper: "Gerencie os dispositivos que recebem jobs de impressão via WebSocket. Use o token e device_id no Print Agent.",
+              add: "Adicionar dispositivo",
+              addTitle: "Novo dispositivo de impressão",
+              name: "Nome",
+              deviceId: "Device ID",
+              token: "Token",
+              actions: "Ações",
+              empty: "Nenhum dispositivo configurado. Adicione um para conectar o Print Agent.",
+              deviceIdRequired: "Device ID é obrigatório.",
+              namePlaceholder: "ex: Impressora da Cozinha",
+              create: "Criar",
+              cancel: "Cancelar",
+              created: "Dispositivo criado com sucesso! Copie o token e configure no Print Agent.",
+              deleted: "Dispositivo removido.",
+              tokenRegenerated: "Token regenerado. Atualize a configuração do Print Agent.",
+              regenerateToken: "Gerar novo token",
+              delete: "Excluir",
+              confirmDelete: "Tem certeza que deseja excluir este dispositivo?",
             },
             apiKeys: {
               testButton: "Testar Chave",
@@ -1866,6 +1899,10 @@ const messages = {
           "Esta cor já está em uso, escolha outra.",
         ERR_WAPP_GREETING_REQUIRED:
           "A mensagem de saudação é obrigatório quando há mais de uma fila.",
+        ERR_MODULE_SLUG_EXISTS: "Já existe um módulo com este slug.",
+        ERR_MODULE_NOT_FOUND: "Módulo não encontrado.",
+        ERR_MODULE_LANCHONETES_REQUIRED:
+          "O Módulo Lanchonetes é necessário para este recurso. Contrate o módulo para usar cardápio, produtos e pedidos via WhatsApp.",
       },
       forms: {
         title: "Formulários",

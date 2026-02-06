@@ -27,6 +27,8 @@ import RemoveIcon from "@material-ui/icons/Remove";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { isFieldVisible } from "../../utils/formUtils";
+import { getFormAppearanceStyles, FONT_IMPORTS } from "../../utils/formAppearanceStyles";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -78,6 +80,17 @@ const useStyles = makeStyles((theme) => ({
     "&:hover": {
       boxShadow: theme.shadows[4],
     },
+  },
+  productImage: {
+    width: 80,
+    height: 80,
+    objectFit: "cover",
+    borderRadius: theme.spacing(1),
+    marginRight: theme.spacing(2),
+  },
+  productCardContent: {
+    display: "flex",
+    alignItems: "flex-start",
   },
   productName: {
     fontWeight: 600,
@@ -153,6 +166,22 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
   const [submitted, setSubmitted] = useState(false);
   const [groups, setGroups] = useState([]);
   const [orderData, setOrderData] = useState(null); // Dados do pedido para exibir na confirmação
+
+  const appStyles = form ? getFormAppearanceStyles(form) : null;
+  const fieldVariant = appStyles?.fieldVariant || "outlined";
+
+  useEffect(() => {
+    const app = form?.settings?.appearance || {};
+    const fontFamily = app.fontFamily;
+    if (!fontFamily || fontFamily === "inherit") return;
+    const fontImport = FONT_IMPORTS[fontFamily];
+    if (!fontImport) return;
+    const link = document.createElement("link");
+    link.href = fontImport;
+    link.rel = "stylesheet";
+    document.head.appendChild(link);
+    return () => { link.remove(); };
+  }, [form?.settings?.appearance?.fontFamily]);
 
   useEffect(() => {
     if (form && slug) {
@@ -264,8 +293,10 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
       (f) => !f.metadata?.isAutoField && f.order >= 2
     );
 
-    // Validar campos obrigatórios de finalizar
+    // Validar campos obrigatórios de finalizar (apenas os visíveis)
+    const allFormFieldsSorted = [...allFormFields].sort((a, b) => a.order - b.order);
     finalizeFields.forEach((field) => {
+      if (!isFieldVisible(field, answers, allFormFieldsSorted)) return;
       if (field.isRequired) {
         const answer = answers[field.id];
         if (!answer || (Array.isArray(answer) && answer.length === 0) || (typeof answer === "string" && answer.trim() === "")) {
@@ -418,7 +449,7 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
         return (
           <TextField
             fullWidth
-            variant="outlined"
+            variant={fieldVariant}
             type="text"
             value={phoneValue}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
@@ -438,7 +469,7 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
         return (
           <TextField
             fullWidth
-            variant="outlined"
+            variant={fieldVariant}
             type="number"
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
@@ -454,7 +485,7 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
         return (
           <TextField
             fullWidth
-            variant="outlined"
+            variant={fieldVariant}
             multiline
             rows={4}
             value={value}
@@ -469,7 +500,7 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
 
       case "select":
         return (
-          <FormControl fullWidth variant="outlined" error={hasError} required={field.isRequired}>
+          <FormControl fullWidth variant={fieldVariant} error={hasError} required={field.isRequired}>
             <InputLabel>{field.label}</InputLabel>
             <Select
               value={value}
@@ -514,7 +545,7 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
 
   if (loading) {
     return (
-      <Box className={classes.root}>
+      <Box className={classes.root} style={appStyles?.rootStyle}>
         <Box className={classes.loadingContainer}>
           <CircularProgress />
         </Box>
@@ -524,8 +555,8 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
 
   if (sendingWhatsApp) {
     return (
-      <Box className={classes.root}>
-        <Paper className={classes.formPaper}>
+      <Box className={classes.root} style={appStyles?.rootStyle}>
+        <Paper className={classes.formPaper} style={appStyles?.formPaperStyle}>
           <Box className={classes.loadingContainer} style={{ flexDirection: "column", gap: 16, padding: 40 }}>
             <CircularProgress size={60} />
             <Typography variant="h6" style={{ marginTop: 16 }}>
@@ -542,8 +573,8 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
 
   if (submitted && orderData) {
     return (
-      <Box className={classes.root}>
-        <Paper className={classes.formPaper}>
+      <Box className={classes.root} style={appStyles?.rootStyle}>
+        <Paper className={classes.formPaper} style={appStyles?.formPaperStyle}>
           <Box className={classes.successMessage}>
             {/* Título de Confirmação */}
             <Box style={{ textAlign: "center", marginBottom: 32 }}>
@@ -688,8 +719,8 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
 
   if (submitted) {
     return (
-      <Box className={classes.root}>
-        <Paper className={classes.formPaper}>
+      <Box className={classes.root} style={appStyles?.rootStyle}>
+        <Paper className={classes.formPaper} style={appStyles?.formPaperStyle}>
           <Box className={classes.successMessage}>
             <Typography variant="h5" gutterBottom>
               {form.successMessage || "Obrigado! Seu pedido foi enviado com sucesso."}
@@ -712,9 +743,9 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
   );
 
   return (
-    <Box className={classes.root}>
-      <Box className={classes.container}>
-        <Paper className={classes.formPaper}>
+    <Box className={classes.root} style={appStyles?.rootStyle}>
+      <Box className={classes.container} style={appStyles?.containerStyle}>
+        <Paper className={classes.formPaper} style={appStyles?.formPaperStyle}>
           {form.logoUrl && form.logoPosition !== "none" && (
             <Box className={classes.header}>
               <img src={form.logoUrl} alt="Logo" className={classes.logo} />
@@ -722,7 +753,7 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
           )}
 
           <Box className={classes.header}>
-            <Typography className={classes.title} style={{ color: form.primaryColor }}>
+            <Typography className={classes.title} style={appStyles?.titleStyle}>
               {form.name}
             </Typography>
             {form.description && (
@@ -752,6 +783,16 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
                 return (
                   <Card key={product.id} className={classes.productCard}>
                     <CardContent>
+                      <Box className={classes.productCardContent}>
+                        {product.imageUrl && (
+                          <img
+                            src={product.imageUrl}
+                            alt={product.name}
+                            className={classes.productImage}
+                            onError={(e) => { e.target.style.display = "none"; }}
+                          />
+                        )}
+                        <Box flex={1}>
                       <Typography className={classes.productName}>
                         {product.name}
                       </Typography>
@@ -778,7 +819,7 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
                             value={quantity}
                             onChange={(e) => handleQuantityInput(product.id, e.target.value)}
                             inputProps={{ min: 0 }}
-                            variant="outlined"
+                            variant={fieldVariant}
                             size="small"
                           />
                           <IconButton
@@ -787,6 +828,8 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
                           >
                             <AddIcon />
                           </IconButton>
+                        </Box>
+                      </Box>
                         </Box>
                       </Box>
                     </CardContent>
@@ -801,17 +844,21 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
               <Box style={{ marginTop: 24 }}>
                 {/* Campos automáticos (nome e telefone) */}
                 {autoFields.map((field) => (
-                  <Box key={field.id} className={classes.fieldContainer}>
+                  <Box key={field.id} className={classes.fieldContainer} style={{ marginBottom: 24 * (appStyles?.spacingMultiplier || 1) }}>
                     {renderField(field)}
                   </Box>
                 ))}
 
                 {/* Campos customizados da aba finalizar */}
-                {finalizeFields.map((field) => (
-                  <Box key={field.id} className={classes.fieldContainer}>
-                    {renderField(field)}
-                  </Box>
-                ))}
+                {finalizeFields.map((field) => {
+                  const allFormFieldsSorted = [...(form.fields || [])].sort((a, b) => a.order - b.order);
+                  if (!isFieldVisible(field, answers, allFormFieldsSorted)) return null;
+                  return (
+                    <Box key={field.id} className={classes.fieldContainer} style={{ marginBottom: 24 * (appStyles?.spacingMultiplier || 1) }}>
+                      {renderField(field)}
+                    </Box>
+                  );
+                })}
 
                 {/* Resumo do pedido */}
                 {getTotalItems() > 0 && (
@@ -839,7 +886,7 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
                   fullWidth
                   className={classes.submitButton}
                   disabled={submitting || getTotalItems() === 0}
-                  style={{ backgroundColor: form.primaryColor }}
+                  style={appStyles?.submitButtonStyle}
                   onClick={(e) => {
                     // Fallback: garantir que handleSubmit seja chamado
                     if (!e.defaultPrevented) {

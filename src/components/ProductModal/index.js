@@ -15,10 +15,14 @@ import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
+import Box from "@material-ui/core/Box";
 import FormControl from "@material-ui/core/FormControl";
 import InputLabel from "@material-ui/core/InputLabel";
 import Select from "@material-ui/core/Select";
 import MenuItem from "@material-ui/core/MenuItem";
+import InputAdornment from "@material-ui/core/InputAdornment";
+import IconButton from "@material-ui/core/IconButton";
+import CloudUploadIcon from "@material-ui/icons/CloudUpload";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -46,6 +50,13 @@ const useStyles = makeStyles((theme) => ({
         marginTop: -12,
         marginLeft: -12,
     },
+    imagePreview: {
+        width: 80,
+        height: 80,
+        objectFit: "cover",
+        borderRadius: 8,
+        marginTop: theme.spacing(1),
+    },
 }));
 
 const ProductSchema = Yup.object().shape({
@@ -53,6 +64,7 @@ const ProductSchema = Yup.object().shape({
         .min(2, "Nome muito curto")
         .required("Nome é obrigatório"),
     description: Yup.string().nullable(),
+    imageUrl: Yup.string().nullable(),
     value: Yup.number()
         .required("Valor é obrigatório")
         .min(0, "Valor deve ser maior ou igual a zero"),
@@ -75,11 +87,14 @@ const ProductModal = ({ open, onClose, productId }) => {
         quantity: 0,
         isMenuProduct: false,
         grupo: "",
+        imageUrl: "",
     };
 
     const [product, setProduct] = useState(initialState);
     const [availableGroups, setAvailableGroups] = useState([]);
     const [loadingGroups, setLoadingGroups] = useState(false);
+    const [uploadingImage, setUploadingImage] = useState(false);
+    const imageInputRef = React.useRef(null);
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -97,6 +112,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                     quantity: data.quantity || 0,
                     isMenuProduct: data.isMenuProduct || false,
                     grupo: data.grupo || "",
+                    imageUrl: data.imageUrl || "",
                 });
             } catch (err) {
                 toastError(err);
@@ -172,6 +188,32 @@ const ProductModal = ({ open, onClose, productId }) => {
         setProduct(initialState);
         setAvailableGroups([]);
         onClose();
+    };
+
+    const handleImageUpload = async (e, setFieldValue) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.size > 50 * 1024 * 1024) {
+            toast.error("Imagem deve ter no máximo 50MB");
+            return;
+        }
+        setUploadingImage(true);
+        try {
+            const formData = new FormData();
+            formData.append("image", file);
+            const { data } = await api.post("/products/upload-image", formData, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            const url = data.imageUrl || "";
+            setProduct((prev) => ({ ...prev, imageUrl: url }));
+            if (setFieldValue) setFieldValue("imageUrl", url);
+            toast.success("Imagem enviada com sucesso");
+        } catch (err) {
+            toastError(err);
+        } finally {
+            setUploadingImage(false);
+            e.target.value = "";
+        }
     };
 
     const handleSaveProduct = async (values) => {
@@ -250,6 +292,56 @@ const ProductModal = ({ open, onClose, productId }) => {
                                     multiline
                                     rows={3}
                                 />
+                                <br />
+                                <br />
+                                <input
+                                    type="file"
+                                    ref={imageInputRef}
+                                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                                    style={{ display: "none" }}
+                                    onChange={(e) => handleImageUpload(e, setFieldValue)}
+                                />
+                                <Field
+                                    as={TextField}
+                                    label="Imagem do produto (máx. 50MB)"
+                                    name="imageUrl"
+                                    placeholder="URL ou clique no ícone para enviar"
+                                    error={touched.imageUrl && Boolean(errors.imageUrl)}
+                                    helperText={touched.imageUrl && errors.imageUrl}
+                                    variant="outlined"
+                                    margin="dense"
+                                    fullWidth
+                                    InputProps={{
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton
+                                                    onClick={() => {
+                                                        if (imageInputRef.current) imageInputRef.current.click();
+                                                    }}
+                                                    disabled={uploadingImage}
+                                                    edge="end"
+                                                    title="Enviar imagem"
+                                                >
+                                                    {uploadingImage ? (
+                                                        <CircularProgress size={24} />
+                                                    ) : (
+                                                        <CloudUploadIcon />
+                                                    )}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ),
+                                    }}
+                                />
+                                {values.imageUrl && (
+                                    <Box mt={1}>
+                                        <img
+                                            src={values.imageUrl}
+                                            alt="Preview"
+                                            className={classes.imagePreview}
+                                            onError={(e) => { e.target.style.display = "none"; }}
+                                        />
+                                    </Box>
+                                )}
                                 <br />
                                 <br />
                                 <FormControl

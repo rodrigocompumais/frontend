@@ -70,6 +70,23 @@ const useCompanies = () => {
         return responseData;
     }
 
+    const getModules = async (companyId) => {
+        const { data } = await api.request({
+            url: `/companies/${companyId}/modules`,
+            method: 'GET'
+        });
+        return data.modules || [];
+    }
+
+    const updateModules = async (companyId, modules) => {
+        const { data } = await api.request({
+            url: `/companies/${companyId}/modules`,
+            method: 'PUT',
+            data: { modules }
+        });
+        return data.modules || [];
+    }
+
     return {
         save,
         update,
@@ -78,7 +95,9 @@ const useCompanies = () => {
         find,
         finding,
         findAll,
-        updateSchedules
+        updateSchedules,
+        getModules,
+        updateModules
     }
 }
 

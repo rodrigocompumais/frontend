@@ -38,6 +38,7 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
+import useCompanyModules from "../../hooks/useCompanyModules";
 
 import ArrowBackIcon from "@material-ui/icons/ArrowBack";
 import StarIcon from "@material-ui/icons/Star";
@@ -94,13 +95,33 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+const DEFAULT_ORDER_STATUS_LABELS = {
+  novo: "Novo",
+  confirmado: "Confirmado",
+  em_preparo: "Em preparo",
+  pronto: "Pronto",
+  saiu_entrega: "Saiu para entrega",
+  entregue: "Entregue",
+  cancelado: "Cancelado",
+};
+
+const getOrderStatusLabels = (form) => {
+  const stages = form?.settings?.orderStages;
+  if (stages?.length > 0) {
+    return stages.reduce((acc, s) => ({ ...acc, [s.id]: s.label }), {});
+  }
+  return DEFAULT_ORDER_STATUS_LABELS;
+};
+
 const FormResponses = () => {
   const classes = useStyles();
   const { formId } = useParams();
   const history = useHistory();
+  const { hasLanchonetes } = useCompanyModules();
 
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState(null);
+  const isCardapioForm = form?.settings?.formType === "cardapio" && hasLanchonetes;
   const [responses, setResponses] = useState([]);
   const [selectedResponse, setSelectedResponse] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -234,6 +255,36 @@ const FormResponses = () => {
     return answer?.answer || "";
   };
 
+  const getOrderTotal = (response) => {
+    const metadata = response?.metadata || {};
+    if (metadata.total != null) return Number(metadata.total);
+    const items = metadata.menuItems || [];
+    return items.reduce((sum, item) => {
+      const qty = Number(item.quantity) || 0;
+      const val = Number(item.productValue) || 0;
+      return sum + qty * val;
+    }, 0);
+  };
+
+  const getOrderStatus = (response) => {
+    return response?.orderStatus || response?.metadata?.orderStatus || null;
+  };
+
+  const handleUpdateOrderStatus = async (responseId, newStatus) => {
+    try {
+      await api.put(`/forms/${formId}/responses/${responseId}/order-status`, {
+        orderStatus: newStatus,
+      });
+      toast.success("Status atualizado!");
+      loadResponses();
+      if (selectedResponse?.id === responseId) {
+        setSelectedResponse((prev) => (prev ? { ...prev, orderStatus: newStatus } : null));
+      }
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
   return (
     <MainContainer>
       <MainHeader>
@@ -246,6 +297,32 @@ const FormResponses = () => {
           </Title>
         </Box>
         <MainHeaderButtonsWrapper>
+          {isCardapioForm && (
+            <>
+              <Button
+                variant="outlined"
+                onClick={() => history.push(`/forms/${formId}/fila-pedidos`)}
+                style={{ marginRight: 8 }}
+              >
+                Fila
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => history.push(`/forms/${formId}/historico-pedidos`)}
+                style={{ marginRight: 8 }}
+              >
+                Histórico
+              </Button>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => history.push(`/pedidos?formId=${formId}`)}
+                style={{ marginRight: 8 }}
+              >
+                Ver Pedidos
+              </Button>
+            </>
+          )}
           <Button
             variant="outlined"
             startIcon={<GetAppIcon />}
@@ -267,9 +344,16 @@ const FormResponses = () => {
           <TableHead>
             <TableRow>
               <TableCell padding="checkbox">Status</TableCell>
+              {isCardapioForm && <TableCell>Protocolo</TableCell>}
               <TableCell>Nome</TableCell>
               <TableCell>Telefone</TableCell>
               <TableCell>Email</TableCell>
+              {isCardapioForm && (
+                <>
+                  <TableCell align="right">Total</TableCell>
+                  <TableCell align="center">Status Pedido</TableCell>
+                </>
+              )}
               <TableCell align="center">Data</TableCell>
               <TableCell align="center">Ações</TableCell>
             </TableRow>
@@ -277,14 +361,14 @@ const FormResponses = () => {
           <TableBody>
             {loading && (
               <>
-                <TableRowSkeleton columns={6} />
-                <TableRowSkeleton columns={6} />
-                <TableRowSkeleton columns={6} />
+                <TableRowSkeleton columns={isCardapioForm ? 9 : 6} />
+                <TableRowSkeleton columns={isCardapioForm ? 9 : 6} />
+                <TableRowSkeleton columns={isCardapioForm ? 9 : 6} />
               </>
             )}
             {!loading && responses.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} align="center">
+                <TableCell colSpan={isCardapioForm ? 9 : 6} align="center">
                   <Typography variant="body2" color="textSecondary">
                     Nenhuma resposta encontrada
                   </Typography>
@@ -306,6 +390,13 @@ const FormResponses = () => {
                       )}
                     </Box>
                   </TableCell>
+                  {isCardapioForm && (
+                    <TableCell>
+                      <Typography variant="body2" style={{ fontWeight: 600, fontFamily: "monospace" }}>
+                        {response.protocol || `#${response.id}`}
+                      </Typography>
+                    </TableCell>
+                  )}
                   <TableCell>
                     <Typography variant="body2" style={{ fontWeight: 600 }}>
                       {response.responderName || "Sem nome"}
@@ -336,6 +427,28 @@ const FormResponses = () => {
                       {response.responderEmail || "-"}
                     </Typography>
                   </TableCell>
+                  {isCardapioForm && (
+                    <>
+                      <TableCell align="right">
+                        <Typography variant="body2" fontWeight={600}>
+                          R$ {getOrderTotal(response).toFixed(2).replace(".", ",")}
+                        </Typography>
+                      </TableCell>
+                      <TableCell align="center">
+                        {getOrderStatus(response) ? (
+                          <Chip
+                            label={getOrderStatusLabels(form)[getOrderStatus(response)] || getOrderStatus(response)}
+                            size="small"
+                            className={classes.statusChip}
+                            color={getOrderStatus(response) === "entregue" || getOrderStatus(response) === "cancelado" ? "default" : "primary"}
+                            variant="outlined"
+                          />
+                        ) : (
+                          <Typography variant="body2" color="textSecondary">-</Typography>
+                        )}
+                      </TableCell>
+                    </>
+                  )}
                   <TableCell align="center">
                     <Typography variant="body2" color="textSecondary">
                       {format(new Date(response.submittedAt), "dd/MM/yyyy HH:mm")}
@@ -477,7 +590,52 @@ const FormResponses = () => {
                 </Box>
               </Box>
 
-              <Divider style={{ marginBottom: 24, marginTop: 24 }} />
+              {isCardapioForm && selectedResponse?.metadata?.menuItems?.length > 0 && (
+                <>
+                  <Divider style={{ marginBottom: 24, marginTop: 24 }} />
+                  <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                    Itens do Pedido
+                  </Typography>
+                  <Box className={classes.fieldAnswer} style={{ marginBottom: 24 }}>
+                    {selectedResponse.metadata.menuItems.map((item, idx) => (
+                      <Box key={idx} display="flex" justifyContent="space-between" alignItems="center" style={{ marginBottom: 8 }}>
+                        <Typography variant="body2">
+                          {item.quantity}x {item.productName || `Produto #${item.productId}`}
+                        </Typography>
+                        <Typography variant="body2" fontWeight={600}>
+                          R$ {((item.quantity || 0) * (item.productValue || 0)).toFixed(2).replace(".", ",")}
+                        </Typography>
+                      </Box>
+                    ))}
+                    <Divider style={{ margin: "8px 0" }} />
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Typography className={classes.fieldLabel}>Total</Typography>
+                      <Typography variant="body1" fontWeight={700}>
+                        R$ {getOrderTotal(selectedResponse).toFixed(2).replace(".", ",")}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Divider style={{ marginBottom: 24, marginTop: 24 }} />
+                </>
+              )}
+              {isCardapioForm && selectedResponse && (
+                <Box marginBottom={3}>
+                  <Typography className={classes.fieldLabel} gutterBottom>Alterar status</Typography>
+                  <FormControl variant="outlined" size="small" fullWidth>
+                    <InputLabel>Status do pedido</InputLabel>
+                    <Select
+                      value={getOrderStatus(selectedResponse) || ""}
+                      onChange={(e) => handleUpdateOrderStatus(selectedResponse.id, e.target.value)}
+                      label="Status do pedido"
+                    >
+                      {Object.entries(getOrderStatusLabels(form)).map(([value, label]) => (
+                        <MenuItem key={value} value={value}>{label}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <Divider style={{ marginBottom: 24, marginTop: 24 }} />
+                </Box>
+              )}
 
               <Typography variant="subtitle2" color="textSecondary" gutterBottom>
                 Respostas

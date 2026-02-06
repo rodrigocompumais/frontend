@@ -4,6 +4,9 @@ import {
   Paper,
   Grid,
   FormControl,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
   InputLabel,
   MenuItem,
   TextField,
@@ -14,6 +17,7 @@ import {
   TableRow,
   IconButton,
   Select,
+  Typography,
 } from "@material-ui/core";
 import { Formik, Form, Field } from "formik";
 import ButtonWithSpinner from "../ButtonWithSpinner";
@@ -24,6 +28,7 @@ import { Edit as EditIcon } from "@material-ui/icons";
 import { toast } from "react-toastify";
 import useCompanies from "../../hooks/useCompanies";
 import usePlans from "../../hooks/usePlans";
+import useModules from "../../hooks/useModules";
 import ModalUsers from "../ModalUsers";
 import api from "../../services/api";
 import { head, isArray, has } from "lodash";
@@ -70,7 +75,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 export function CompanyForm(props) {
-  const { onSubmit, onDelete, onCancel, initialValue, loading } = props;
+  const { onSubmit, onDelete, onCancel, initialValue, loading, availableModules = [] } = props;
   const classes = useStyles();
   const [plans, setPlans] = useState([]);
   const [modalUser, setModalUser] = useState(false);
@@ -85,6 +90,7 @@ export function CompanyForm(props) {
     campaignsEnabled: false,
     dueDate: "",
     recurrence: "",
+    modules: [],
     ...initialValue,
   });
 
@@ -117,8 +123,8 @@ export function CompanyForm(props) {
     if (data.dueDate === "" || moment(data.dueDate).isValid() === false) {
       data.dueDate = null;
     }
-    onSubmit(data);
-    setRecord({ ...initialValue, dueDate: "" });
+    onSubmit({ ...data, modules: record.modules });
+    setRecord({ ...initialValue, dueDate: "", modules: [] });
   };
 
   const handleOpenModalUsers = async () => {
@@ -324,6 +330,35 @@ export function CompanyForm(props) {
                   </Field>
                 </FormControl>
               </Grid>
+              {record.id && (
+                <Grid xs={12} item>
+                  <Typography variant="subtitle2" style={{ marginBottom: 8 }}>
+                    Módulos
+                  </Typography>
+                  <FormGroup row>
+                    {availableModules.map((mod) => (
+                      <FormControlLabel
+                        key={mod.id}
+                        control={
+                          <Checkbox
+                            checked={Array.isArray(record.modules) && record.modules.includes(mod.id)}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setRecord((prev) => ({
+                                ...prev,
+                                modules: checked
+                                  ? [...(prev.modules || []), mod.id]
+                                  : (prev.modules || []).filter((m) => m !== mod.id),
+                              }));
+                            }}
+                          />
+                        }
+                        label={`${mod.name} – ${mod.description}`}
+                      />
+                    ))}
+                  </FormGroup>
+                </Grid>
+              )}
               <Grid xs={12} item>
                 <Grid justifyContent="flex-end" spacing={1} container>
                   <Grid xs={4} md={1} item>
@@ -496,7 +531,9 @@ export function CompaniesManagerGrid(props) {
 
 export default function CompaniesManager() {
   const classes = useStyles();
-  const { list, save, update, remove } = useCompanies();
+  const { list, save, update, remove, getModules, updateModules } = useCompanies();
+  const { listAvailable } = useModules();
+  const [availableModules, setAvailableModules] = useState([]);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -510,12 +547,23 @@ export default function CompaniesManager() {
     campaignsEnabled: false,
     dueDate: "",
     recurrence: "",
+    modules: [],
   });
 
   useEffect(() => {
     loadPlans();
+    loadAvailableModules();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const loadAvailableModules = async () => {
+    try {
+      const modules = await listAvailable();
+      setAvailableModules(modules || []);
+    } catch (e) {
+      setAvailableModules([]);
+    }
+  };
 
   const loadPlans = async () => {
     setLoading(true);
@@ -531,10 +579,14 @@ export default function CompaniesManager() {
   const handleSubmit = async (data) => {
     setLoading(true);
     try {
+      const { modules, ...companyData } = data;
       if (data.id !== 0 && data.id !== undefined) {
-        await update(data);
+        await update(companyData);
+        if (Array.isArray(modules)) {
+          await updateModules(data.id, modules);
+        }
       } else {
-        await save(data);
+        await save(companyData);
       }
 
       await loadPlans();
@@ -577,18 +629,26 @@ export default function CompaniesManager() {
       campaignsEnabled: false,
       dueDate: "",
       recurrence: "",
+      modules: [],
     }));
   };
 
-  const handleSelect = (data) => {
+  const handleSelect = async (data) => {
     let campaignsEnabled = false;
 
-    const setting = data.settings.find(
-      (s) => s.key.indexOf("campaignsEnabled") > -1
+    const setting = (data.settings || []).find(
+      (s) => s.key && s.key.indexOf("campaignsEnabled") > -1
     );
     if (setting) {
       campaignsEnabled =
         setting.value === "true" || setting.value === "enabled";
+    }
+
+    let modules = [];
+    try {
+      modules = await getModules(data.id) || [];
+    } catch (e) {
+      // ignore
     }
 
     setRecord((prev) => ({
@@ -602,6 +662,7 @@ export default function CompaniesManager() {
       campaignsEnabled,
       dueDate: data.dueDate || "",
       recurrence: data.recurrence || "",
+      modules,
     }));
   };
 
@@ -615,6 +676,7 @@ export default function CompaniesManager() {
             onSubmit={handleSubmit}
             onCancel={handleCancel}
             loading={loading}
+            availableModules={availableModules}
           />
         </Grid>
         <Grid xs={12} item>

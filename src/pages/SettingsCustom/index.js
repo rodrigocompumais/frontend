@@ -10,8 +10,10 @@ import SchedulesForm from "../../components/SchedulesForm";
 import CompaniesManager from "../../components/CompaniesManager";
 import PlansManager from "../../components/PlansManager";
 import HelpsManager from "../../components/HelpsManager";
+import ModulesManager from "../../components/ModulesManager";
 import Options from "../../components/Settings/Options";
 import OptionsAI from "../../components/Settings/OptionsAI";
+import OptionsAPI from "../../components/Settings/OptionsAPI";
 
 import { i18n } from "../../translate/i18n.js";
 import { toast } from "react-toastify";
@@ -167,8 +169,10 @@ const SettingsCustom = () => {
         >
           <Tab label={i18n.t("settings.tabs.options")} value={"options"} />
           <Tab label={i18n.t("settings.tabs.ai")} value={"ai"} />
+          <Tab label={i18n.t("settings.tabs.api")} value={"api"} />
           {schedulesEnabled && <Tab label={i18n.t("settings.tabs.schedules")} value={"schedules"} />}
           {isSuper() ? <Tab label={i18n.t("settings.tabs.companies")} value={"companies"} /> : null}
+          {isSuper() ? <Tab label={i18n.t("settings.tabs.modules")} value={"modules"} /> : null}
           {isSuper() ? <Tab label={i18n.t("settings.tabs.plans")} value={"plans"} /> : null}
           {isSuper() ? <Tab label={i18n.t("settings.tabs.helps")} value={"helps"} /> : null}
         </Tabs>
@@ -193,6 +197,18 @@ const SettingsCustom = () => {
                 name={"companies"}
               >
                 <CompaniesManager />
+              </TabPanel>
+            )}
+          />
+          <OnlyForSuperUser
+            user={currentUser}
+            yes={() => (
+              <TabPanel
+                className={classes.container}
+                value={tab}
+                name={"modules"}
+              >
+                <ModulesManager />
               </TabPanel>
             )}
           />
@@ -230,6 +246,9 @@ const SettingsCustom = () => {
           </TabPanel>
           <TabPanel className={classes.container} value={tab} name={"ai"}>
             <OptionsAI settings={settings} />
+          </TabPanel>
+          <TabPanel className={classes.container} value={tab} name={"api"}>
+            <OptionsAPI />
           </TabPanel>
         </Paper>
       </Paper>
