@@ -192,6 +192,8 @@ const FormBuilder = () => {
     hasConditional: false,
     conditionalFieldId: null,
     conditionalRules: {},
+    searchContactByName: false, // Flag para buscar contato por nome
+    phoneOnlyPaste: false, // Flag para telefone apenas colar
   });
 
 
@@ -390,6 +392,8 @@ const FormBuilder = () => {
       hasConditional: false,
       conditionalFieldId: null,
       conditionalRules: {},
+      searchContactByName: false,
+      phoneOnlyPaste: false,
     });
     setFieldModalOpen(true);
   };
@@ -400,6 +404,8 @@ const FormBuilder = () => {
     setFieldForm({
       ...field,
       options: field.options || [],
+      searchContactByName: field.searchContactByName || false,
+      phoneOnlyPaste: field.phoneOnlyPaste || false,
     });
     setFieldModalOpen(true);
   };
@@ -411,6 +417,8 @@ const FormBuilder = () => {
     setFieldForm({
       ...fields[index],
       options: fields[index].options || [],
+      searchContactByName: fields[index].searchContactByName || false,
+      phoneOnlyPaste: fields[index].phoneOnlyPaste || false,
     });
     setFieldModalOpen(true);
   };
@@ -1800,6 +1808,50 @@ const FormBuilder = () => {
                 variant="outlined"
               />
             </Grid>
+
+            {/* Opções específicas por tipo de campo */}
+            {fieldForm.fieldType === "text" && (
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={fieldForm.searchContactByName || false}
+                      onChange={(e) =>
+                        setFieldForm({
+                          ...fieldForm,
+                          searchContactByName: e.target.checked,
+                        })
+                      }
+                    />
+                  }
+                  label="Buscar Contato por Nome"
+                />
+                <Typography variant="caption" color="textSecondary" display="block">
+                  Quando ativado, o campo permitirá buscar e selecionar contatos da lista ao digitar
+                </Typography>
+              </Grid>
+            )}
+            {fieldForm.fieldType === "phone" && (
+              <Grid item xs={12}>
+                <FormControlLabel
+                  control={
+                    <Switch
+                      checked={fieldForm.phoneOnlyPaste || false}
+                      onChange={(e) =>
+                        setFieldForm({
+                          ...fieldForm,
+                          phoneOnlyPaste: e.target.checked,
+                        })
+                      }
+                    />
+                  }
+                  label="Apenas Colar (não permitir digitação)"
+                />
+                <Typography variant="caption" color="textSecondary" display="block">
+                  Quando ativado, o campo telefone só permitirá colar valores, não digitação manual
+                </Typography>
+              </Grid>
+            )}
 
             {/* Condições de exibição */}
             <Grid item xs={12}>
