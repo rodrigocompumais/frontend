@@ -11,9 +11,6 @@ import { TicketsContext } from "../../context/Tickets/TicketsContext";
 import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles(theme => ({
-    content: {
-        overflow: "auto"
-    },
     placeholderContainer: {
         display: "flex",
         flexDirection: "column",
@@ -57,9 +54,7 @@ const TicketAdvanced = (props) => {
 
 	return (
         <TicketAdvancedLayout>
-            <Box className={classes.content}>
-                {renderContent()}
-            </Box>
+            {renderContent()}
         </TicketAdvancedLayout>
 	);
 };

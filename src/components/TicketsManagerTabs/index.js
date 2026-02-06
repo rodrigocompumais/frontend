@@ -30,22 +30,61 @@ import TabPanel from "../TabPanel";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
+import rules from "../../rules";
 import TicketsQueueSelect from "../TicketsQueueSelect";
 import { Button } from "@material-ui/core";
 import { TagsFilter } from "../TagsFilter";
 import { UsersFilter } from "../UsersFilter";
 import usePendingTicketNotification from "../../hooks/usePendingTicketNotification";
 
+const check = (role, action, data) => {
+	const permissions = rules[role];
+	if (!permissions) {
+		return false;
+	}
+
+	const staticPermissions = permissions.static;
+
+	if (staticPermissions && staticPermissions.includes(action)) {
+		return true;
+	}
+
+	const dynamicPermissions = permissions.dynamic;
+
+	if (dynamicPermissions) {
+		const permissionCondition = dynamicPermissions[action];
+		if (!permissionCondition) {
+			return false;
+		}
+
+		return permissionCondition(data);
+	}
+	return false;
+};
+
 const useStyles = makeStyles(theme => ({
 	ticketsWrapper: {
 		position: "relative",
 		display: "flex",
+		flex: 1,
+		minHeight: 0,
 		height: "100%",
+		maxHeight: "100%",
 		flexDirection: "column",
 		overflow: "hidden",
-		borderTopRightRadius: 0,
-		borderBottomRightRadius: 0,
-		borderRadius:0,
+		borderRadius: theme.spacing(2),
+		width: "100%",
+		maxWidth: "100%",
+		backgroundColor: theme.palette.background.paper,
+		[theme.breakpoints.down('sm')]: {
+			flex: 1,
+			minHeight: 0,
+			height: "100%",
+			maxHeight: "100%",
+			overflow: "hidden",
+			position: "relative",
+			zIndex: 0,
+		},
 	},
 
 	tabsHeader: {
@@ -464,70 +503,68 @@ const TicketsManagerTabs = () => {
           onClose={handleCloseFilterMenu}
           className={classes.filterMenu}
         >
-              <Box className={classes.filterMenuSection}>
-                <Can
-                  role={user.profile}
-                  perform="tickets-manager:showall"
-                  yes={() => (
-                    <FormControlLabel
-                      label={i18n.t("tickets.buttons.showAll")}
-                      labelPlacement="start"
-                      control={
-                        <Switch
-                          size="small"
-                          checked={showAllTickets}
-                          onChange={() =>
-                            setShowAllTickets((prevState) => !prevState)
-                          }
-                          name="showAllTickets"
-                          color="primary"
-                        />
-                      }
-                    />
-                  )}
-                />
+          {check(user.profile, "tickets-manager:showall") && (
+            <Box className={classes.filterMenuSection}>
+              <FormControlLabel
+                label={i18n.t("tickets.buttons.showAll")}
+                labelPlacement="start"
+                control={
+                  <Switch
+                    size="small"
+                    checked={showAllTickets}
+                    onChange={() =>
+                      setShowAllTickets((prevState) => !prevState)
+                    }
+                    name="showAllTickets"
+                    color="primary"
+                  />
+                }
+              />
+            </Box>
+          )}
+          {check(user.profile, "tickets-manager:showall") && (
+            <Divider />
+          )}
+          <Box className={classes.filterMenuSection}>
+            <Typography variant="caption" color="textSecondary" style={{ padding: "8px 16px" }}>
+              Filas
+            </Typography>
+            <TicketsQueueSelect
+              selectedQueueIds={selectedQueueIds}
+              userQueues={user?.queues}
+              onChange={(values) => setSelectedQueueIds(values)}
+            />
+          </Box>
+          <Divider />
+          <Box className={classes.filterMenuSection}>
+            <Typography variant="caption" color="textSecondary" style={{ padding: "8px 16px" }}>
+              Outras Opções
+            </Typography>
+            <MenuItem 
+              onClick={() => {
+                setTab("closed");
+                handleCloseFilterMenu();
+              }}
+              className={classes.filterMenuItem}
+            >
+              <Box display="flex" alignItems="center" gap={1}>
+                <CheckBoxIcon fontSize="small" />
+                <Typography>{i18n.t("tickets.tabs.closed.title")}</Typography>
               </Box>
-              <Divider />
-              <Box className={classes.filterMenuSection}>
-                <Typography variant="caption" color="textSecondary" style={{ padding: "8px 16px" }}>
-                  Filas
-                </Typography>
-                <TicketsQueueSelect
-                  selectedQueueIds={selectedQueueIds}
-                  userQueues={user?.queues}
-                  onChange={(values) => setSelectedQueueIds(values)}
-                />
+            </MenuItem>
+            <MenuItem 
+              onClick={() => {
+                setTab("search");
+                handleCloseFilterMenu();
+              }}
+              className={classes.filterMenuItem}
+            >
+              <Box display="flex" alignItems="center" gap={1}>
+                <SearchIcon fontSize="small" />
+                <Typography>{i18n.t("tickets.tabs.search.title")}</Typography>
               </Box>
-              <Divider />
-              <Box className={classes.filterMenuSection}>
-                <Typography variant="caption" color="textSecondary" style={{ padding: "8px 16px" }}>
-                  Outras Opções
-                </Typography>
-                <MenuItem 
-                  onClick={() => {
-                    setTab("closed");
-                    handleCloseFilterMenu();
-                  }}
-                  className={classes.filterMenuItem}
-                >
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <CheckBoxIcon fontSize="small" />
-                    <Typography>{i18n.t("tickets.tabs.closed.title")}</Typography>
-                  </Box>
-                </MenuItem>
-                <MenuItem 
-                  onClick={() => {
-                    setTab("search");
-                    handleCloseFilterMenu();
-                  }}
-                  className={classes.filterMenuItem}
-                >
-                  <Box display="flex" alignItems="center" gap={1}>
-                    <SearchIcon fontSize="small" />
-                    <Typography>{i18n.t("tickets.tabs.search.title")}</Typography>
-                  </Box>
-                </MenuItem>
-              </Box>
+            </MenuItem>
+          </Box>
         </Menu>
       </Paper>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={true}>

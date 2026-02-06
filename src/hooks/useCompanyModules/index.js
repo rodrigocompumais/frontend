@@ -1,14 +1,24 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useContext } from "react";
 import api from "../../services/api";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const MODULE_LANCHONETES = "lanchonetes";
 
 const useCompanyModules = () => {
   const [modules, setModules] = useState([]);
   const [loading, setLoading] = useState(true);
+  const { user, isAuth } = useContext(AuthContext);
 
   const fetchModules = useCallback(async () => {
+    const companyId = localStorage.getItem("companyId");
+    if (!companyId || !isAuth) {
+      setModules([]);
+      setLoading(false);
+      return;
+    }
+
     try {
+      setLoading(true);
       const { data } = await api.get("/company/modules");
       setModules(data.modules || []);
     } catch (err) {
@@ -16,11 +26,17 @@ const useCompanyModules = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [isAuth]);
 
   useEffect(() => {
-    fetchModules();
-  }, [fetchModules]);
+    if (isAuth && user?.companyId) {
+      fetchModules();
+    } else {
+      setModules([]);
+      setLoading(false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuth, user?.companyId]);
 
   const hasModule = (moduleName) => modules.includes(moduleName);
   const hasLanchonetes = hasModule(MODULE_LANCHONETES);

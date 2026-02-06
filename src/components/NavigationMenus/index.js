@@ -463,18 +463,18 @@ const NavigationMenus = () => {
                 <ListItemText primary={i18n.t("mainDrawer.listItems.financeiro")} />
               </MenuItem>
               {user.super && (
-                <>
-                  <Divider className={classes.divider} />
-                  <MenuItem
-                    className={classes.menuItem}
-                    onClick={() => handleNavigate('/announcements', () => setAdministracaoAnchor(null))}
-                  >
-                    <ListItemIcon>
-                      <AnnouncementIcon fontSize="small" />
-                    </ListItemIcon>
-                    <ListItemText primary={i18n.t("mainDrawer.listItems.annoucements")} />
-                  </MenuItem>
-                </>
+                <Divider className={classes.divider} />
+              )}
+              {user.super && (
+                <MenuItem
+                  className={classes.menuItem}
+                  onClick={() => handleNavigate('/announcements', () => setAdministracaoAnchor(null))}
+                >
+                  <ListItemIcon>
+                    <AnnouncementIcon fontSize="small" />
+                  </ListItemIcon>
+                  <ListItemText primary={i18n.t("mainDrawer.listItems.annoucements")} />
+                </MenuItem>
               )}
             </Menu>
           </>

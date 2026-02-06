@@ -8,10 +8,34 @@ import api from "../../services/api";
 import ConfirmationModal from "../ConfirmationModal";
 import TransferTicketModalCustom from "../TransferTicketModalCustom";
 import toastError from "../../errors/toastError";
-import { Can } from "../Can";
 import { AuthContext } from "../../context/Auth/AuthContext";
-
 import ScheduleModal from "../ScheduleModal";
+import rules from "../../rules";
+
+const check = (role, action, data) => {
+	const permissions = rules[role];
+	if (!permissions) {
+		return false;
+	}
+
+	const staticPermissions = permissions.static;
+
+	if (staticPermissions && staticPermissions.includes(action)) {
+		return true;
+	}
+
+	const dynamicPermissions = permissions.dynamic;
+
+	if (dynamicPermissions) {
+		const permissionCondition = dynamicPermissions[action];
+		if (!permissionCondition) {
+			return false;
+		}
+
+		return permissionCondition(data);
+	}
+	return false;
+};
 
 const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
@@ -87,15 +111,11 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				<MenuItem onClick={handleOpenTransferModal}>
 					{i18n.t("ticketOptionsMenu.transfer")}
 				</MenuItem>
-				<Can
-					role={user.profile}
-					perform="ticket-options:deleteTicket"
-					yes={() => (
-						<MenuItem onClick={handleOpenConfirmationModal}>
-							{i18n.t("ticketOptionsMenu.delete")}
-						</MenuItem>
-					)}
-				/>
+				{check(user.profile, "ticket-options:deleteTicket") && (
+					<MenuItem onClick={handleOpenConfirmationModal}>
+						{i18n.t("ticketOptionsMenu.delete")}
+					</MenuItem>
+				)}
 			</Menu>
 			<ConfirmationModal
 				title={`${i18n.t("ticketOptionsMenu.confirmationModal.title")}${

@@ -478,7 +478,7 @@ const TicketListItemCustom = ({ ticket }) => {
             className={classes.avatarBadge}
             badgeContent={ticket.unreadMessages > 0 ? ticket.unreadMessages : 0}
             max={99}
-            overlap="circle"
+            overlap="circular"
             anchorOrigin={{
               vertical: "top",
               horizontal: "right",
