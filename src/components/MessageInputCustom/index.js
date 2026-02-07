@@ -29,6 +29,13 @@ import { isString, isEmpty, isObject, has } from "lodash";
 import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
 import ChevronRightIcon from "@material-ui/icons/ChevronRight";
 import VisibilityIcon from "@material-ui/icons/Visibility";
+import AlternateEmailIcon from "@material-ui/icons/AlternateEmail";
+import Popover from "@material-ui/core/Popover";
+import List from "@material-ui/core/List";
+import ListItem from "@material-ui/core/ListItem";
+import ListItemAvatar from "@material-ui/core/ListItemAvatar";
+import ListItemText from "@material-ui/core/ListItemText";
+import Avatar from "@material-ui/core/Avatar";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -565,7 +572,7 @@ const CustomInput = (props) => {
 };
 
 const MessageInputCustom = (props) => {
-  const { ticketStatus, ticketId, onAnalyzeChat, onSummarizeAudios, onSuggestResponse } = props;
+  const { ticketStatus, ticketId, isGroup = false, onAnalyzeChat, onSummarizeAudios, onSuggestResponse } = props;
   const classes = useStyles();
 
   const [medias, setMedias] = useState([]);
@@ -577,6 +584,12 @@ const MessageInputCustom = (props) => {
   const [improveLoading, setImproveLoading] = useState(false);
   const [improvedText, setImprovedText] = useState("");
   const [isInternalMessage, setIsInternalMessage] = useState(false);
+  const [mentionAnchorEl, setMentionAnchorEl] = useState(null);
+  const [participants, setParticipants] = useState([]);
+  const [participantsLoading, setParticipantsLoading] = useState(false);
+  const [pendingMentions, setPendingMentions] = useState([]);
+  const [mentionFilter, setMentionFilter] = useState("");
+  const inputWrapperRef = useRef(null);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const inputRef = useRef();
@@ -637,6 +650,9 @@ const MessageInputCustom = (props) => {
       previewUrlsRef.current = [];
       setMedias([]);
       setReplyingMessage(null);
+      setPendingMentions([]);
+      setParticipants([]);
+      setMentionAnchorEl(null);
     };
   }, [ticketId, setReplyingMessage]);
 
@@ -879,25 +895,79 @@ const MessageInputCustom = (props) => {
     setMedias([]);
   };
 
+  const fetchParticipants = () => {
+    if (!ticketId || participants.length > 0) return;
+    setParticipantsLoading(true);
+    api.get(`/tickets/${ticketId}/group-participants`)
+      .then(({ data }) => setParticipants(data.participants || []))
+      .catch((err) => {
+        toastError(err);
+        setMentionAnchorEl(null);
+      })
+      .finally(() => setParticipantsLoading(false));
+  };
+
+  const handleMentionClick = (e) => {
+    if (!isGroup || !ticketId) return;
+    setMentionAnchorEl(e.currentTarget);
+    setMentionFilter("");
+    fetchParticipants();
+  };
+
+  const handleSelectMention = (participant) => {
+    const mentionText = `@${participant.name} `;
+    setInputMessage((prev) => {
+      const lastAt = prev.lastIndexOf("@");
+      if (lastAt >= 0) {
+        return prev.slice(0, lastAt) + mentionText;
+      }
+      return prev + mentionText;
+    });
+    setPendingMentions((prev) => [...prev, participant.jid]);
+    setMentionAnchorEl(null);
+    setMentionFilter("");
+    if (inputRef.current) inputRef.current.focus();
+  };
+
+  useEffect(() => {
+    if (!isGroup || isInternalMessage || !ticketId) return;
+    const lastAt = inputMessage.lastIndexOf("@");
+    if (lastAt >= 0) {
+      const afterAt = inputMessage.slice(lastAt + 1);
+      if (!afterAt.includes(" ") && !afterAt.includes("\n")) {
+        setMentionFilter(afterAt.toLowerCase());
+        setMentionAnchorEl(inputWrapperRef.current || inputRef.current);
+        fetchParticipants();
+        return;
+      }
+    }
+    setMentionFilter("");
+    setMentionAnchorEl(null);
+  }, [inputMessage, isGroup, isInternalMessage, ticketId]);
+
   const handleSendMessage = async () => {
     if (inputMessage.trim() === "") return;
     setLoading(true);
+
+    const bodyText = isInternalMessage
+      ? inputMessage.trim()
+      : (signMessage
+        ? `*${user?.name}:*\n${inputMessage.trim()}`
+        : inputMessage.trim());
 
     const message = {
       read: 1,
       fromMe: true,
       mediaUrl: "",
-      body: isInternalMessage
-        ? inputMessage.trim()
-        : (signMessage
-          ? `*${user?.name}:*\n${inputMessage.trim()}`
-          : inputMessage.trim()),
+      body: bodyText,
       quotedMsg: replyingMessage,
       isInternal: isInternalMessage,
+      ...(isGroup && pendingMentions.length > 0 && { mentions: pendingMentions }),
     };
     try {
       await api.post(`/messages/${ticketId}`, message);
-      setIsInternalMessage(false); // Reset após enviar
+      setIsInternalMessage(false);
+      setPendingMentions([]);
       
       // Limpar rascunho após enviar mensagem com sucesso
       if (ticketId) {
@@ -913,6 +983,20 @@ const MessageInputCustom = (props) => {
     setLoading(false);
     setReplyingMessage(null);
   };
+
+  const handleCloseMentionPopover = () => {
+    setMentionAnchorEl(null);
+    setMentionFilter("");
+  };
+
+  const filteredParticipants = mentionFilter
+    ? participants.filter((p) => {
+        const nameLower = (p.name || "").toLowerCase();
+        const jidLower = (p.jid || "").replace(/@.*$/, "").toLowerCase();
+        const filterLower = mentionFilter.toLowerCase();
+        return nameLower.includes(filterLower) || jidLower.includes(filterLower);
+      })
+    : participants;
 
   const handleStartRecording = async () => {
     setLoading(true);
@@ -1269,6 +1353,59 @@ const MessageInputCustom = (props) => {
               setShowEmoji={setShowEmoji}
             />
 
+            {isGroup && (
+              <IconButton
+                size="small"
+                onClick={handleMentionClick}
+                disabled={disableOption() || isInternalMessage}
+                title={i18n.t("messagesInput.mention") || "Mencionar"}
+                style={{ padding: 8 }}
+              >
+                <AlternateEmailIcon fontSize="small" />
+              </IconButton>
+            )}
+
+            <Popover
+              open={Boolean(mentionAnchorEl)}
+              anchorEl={mentionAnchorEl}
+              onClose={handleCloseMentionPopover}
+              anchorOrigin={{ vertical: "top", horizontal: "left" }}
+              transformOrigin={{ vertical: "bottom", horizontal: "left" }}
+              PaperProps={{ style: { maxHeight: 280, minWidth: 220 } }}
+              disableEnforceFocus
+              disableAutoFocus
+            >
+              {participantsLoading ? (
+                <Box p={2} display="flex" justifyContent="center">
+                  <CircularProgress size={24} />
+                </Box>
+              ) : (
+                <List dense>
+                  {filteredParticipants.map((p) => (
+                    <ListItem
+                      key={p.jid}
+                      button
+                      onClick={() => handleSelectMention(p)}
+                      style={{ cursor: "pointer" }}
+                      onMouseDown={(e) => e.preventDefault()}
+                    >
+                      <ListItemAvatar>
+                        <Avatar style={{ width: 32, height: 32, fontSize: 14 }}>
+                          {(p.name || p.jid).charAt(0).toUpperCase()}
+                        </Avatar>
+                      </ListItemAvatar>
+                      <ListItemText primary={p.name || p.jid.split("@")[0]} secondary={p.jid.split("@")[0]} />
+                    </ListItem>
+                  ))}
+                  {filteredParticipants.length === 0 && !participantsLoading && (
+                    <ListItem>
+                      <ListItemText primary={i18n.t("messagesInput.noParticipants") || "Nenhum participante"} />
+                    </ListItem>
+                  )}
+                </List>
+              )}
+            </Popover>
+
             <FileInput
               disableOption={disableOption}
               handleChangeMedias={handleChangeMedias}
@@ -1300,19 +1437,20 @@ const MessageInputCustom = (props) => {
               style={{ marginLeft: 8, marginRight: 8, display: "flex", alignItems: "center" }}
             />
 
-            <CustomInput
-              loading={loading}
-              inputRef={inputRef}
-              ticketStatus={ticketStatus}
-              inputMessage={inputMessage}
-              setInputMessage={setInputMessage}
-              // handleChangeInput={handleChangeInput}
-              handleSendMessage={handleSendMessage}
-              handleInputPaste={handleInputPaste}
-              disableOption={disableOption}
-              handleQuickAnswersClick={handleQuickAnswersClick}
-              isInternalMessage={isInternalMessage}
-            />
+            <div ref={inputWrapperRef} style={{ flex: 1, minWidth: 0 }}>
+              <CustomInput
+                loading={loading}
+                inputRef={inputRef}
+                ticketStatus={ticketStatus}
+                inputMessage={inputMessage}
+                setInputMessage={setInputMessage}
+                handleSendMessage={handleSendMessage}
+                handleInputPaste={handleInputPaste}
+                disableOption={disableOption}
+                handleQuickAnswersClick={handleQuickAnswersClick}
+                isInternalMessage={isInternalMessage}
+              />
+            </div>
 
             {ticketId && (
               <ChatAIButton

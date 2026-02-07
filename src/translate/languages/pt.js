@@ -1782,12 +1782,26 @@ const messages = {
         audio: {
           transcribe: "Transcrever",
         },
+        transcriptionModal: {
+          title: "Transcrição de Áudio",
+          loading: "Processando áudio...",
+          loadingHint: "Isso pode levar alguns segundos",
+          errorTitle: "Não foi possível transcrever",
+          retry: "Tentar novamente",
+          close: "Fechar",
+          noTranscription: "Nenhuma transcrição disponível",
+        },
         lostCall: "Chamada de voz/vídeo perdida às",
         deletedMessage: "Essa mensagem foi apagada pelo contato",
         edited: "Editada",
         saudation: "Diga olá para seu novo contato!",
+        you: "Você",
+        contact: "Contato",
+        reactedWith: "Reagiu com",
       },
       messagesInput: {
+        mention: "Mencionar participante",
+        noParticipants: "Nenhum participante",
         placeholderOpen: "Digite uma mensagem",
         placeholderClosed:
           "Reabra ou aceite esse ticket para enviar uma mensagem.",
@@ -1859,10 +1873,25 @@ const messages = {
       },
       messageOptionsMenu: {
         delete: "Deletar",
+        edit: "Editar",
         reply: "Responder",
+        react: "Reagir",
+        reactions: {
+          like: "Curtir",
+          love: "Amor",
+          laugh: "Rir",
+          wow: "Surpresa",
+          thanks: "Obrigado",
+        },
         confirmationModal: {
           title: "Apagar mensagem?",
           message: "Esta ação não pode ser revertida.",
+        },
+        editModal: {
+          title: "Editar mensagem",
+          placeholder: "Digite a nova mensagem...",
+          cancel: "Cancelar",
+          confirm: "Salvar",
         },
       },
       backendErrors: {
@@ -1885,6 +1914,17 @@ const messages = {
         ERR_SENDING_WAPP_MSG:
           "Erro ao enviar mensagem do WhatsApp. Verifique a página de conexões.",
         ERR_DELETE_WAPP_MSG: "Não foi possível excluir a mensagem do WhatsApp.",
+        ERR_CANNOT_EDIT_OTHER_MESSAGE: "Só é possível editar suas próprias mensagens.",
+        ERR_CANNOT_EDIT_MEDIA: "Só é possível editar mensagens de texto.",
+        ERR_MESSAGE_BODY_REQUIRED: "O texto da mensagem é obrigatório.",
+        ERR_AI_QUOTA_EXCEEDED: "A transcrição está temporariamente indisponível. Por favor, tente novamente em alguns minutos.",
+        ERR_AI_AUDIO_TOO_LONG: "Este áudio é muito longo para transcrever. Tente com um áudio mais curto.",
+        ERR_AI_TRANSCRIPTION_EMPTY: "Não foi possível identificar fala neste áudio. Verifique se o áudio tem volume adequado.",
+        ERR_AI_CONFIG_MISSING: "Configure a inteligência artificial em Configurações → Integrações.",
+        AI_KEY_MISSING: "Configure a inteligência artificial em Configurações → Integrações.",
+        GEMINI_KEY_MISSING: "Configure a chave da API do Gemini em Configurações → Integrações.",
+        ERR_CHAT_AI_TRANSCRIBE: "Não foi possível transcrever o áudio. Tente novamente em alguns instantes.",
+        ERR_AI_TRANSCRIPTION_ERROR: "Ocorreu um problema ao transcrever. Tente novamente.",
         ERR_OTHER_OPEN_TICKET: "Já existe um tíquete aberto para este contato.",
         ERR_SESSION_EXPIRED: "Sessão expirada. Por favor entre.",
         ERR_USER_CREATION_DISABLED:

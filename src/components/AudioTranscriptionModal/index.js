@@ -12,6 +12,9 @@ import {
   IconButton,
 } from "@material-ui/core";
 import CloseIcon from "@material-ui/icons/Close";
+import RefreshIcon from "@material-ui/icons/Refresh";
+
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   dialog: {
@@ -52,17 +55,20 @@ const useStyles = makeStyles((theme) => ({
     gap: theme.spacing(2),
   },
   errorBox: {
-    backgroundColor: theme.palette.error.light,
-    color: theme.palette.error.contrastText,
+    backgroundColor: theme.palette.type === "dark"
+      ? "rgba(245, 158, 11, 0.15)"
+      : "rgba(245, 158, 11, 0.12)",
     borderRadius: theme.spacing(1),
     padding: theme.spacing(2),
     marginBottom: theme.spacing(2),
+    borderLeft: `4px solid ${theme.palette.warning.main}`,
   },
 }));
 
 const AudioTranscriptionModal = ({
   open,
   onClose,
+  onRetry,
   loading = false,
   transcription = "",
   error = null,
@@ -78,7 +84,7 @@ const AudioTranscriptionModal = ({
       fullWidth
     >
       <DialogTitle className={classes.dialogTitle}>
-        <Typography variant="h6">Transcrição de Áudio</Typography>
+        <Typography variant="h6">{i18n.t("messagesList.transcriptionModal.title")}</Typography>
         <IconButton size="small" onClick={onClose}>
           <CloseIcon />
         </IconButton>
@@ -88,18 +94,18 @@ const AudioTranscriptionModal = ({
           <Box className={classes.loadingBox}>
             <CircularProgress />
             <Typography variant="body2">
-              Processando áudio...
+              {i18n.t("messagesList.transcriptionModal.loading")}
             </Typography>
             <Typography variant="caption" color="textSecondary">
-              Isso pode levar alguns segundos
+              {i18n.t("messagesList.transcriptionModal.loadingHint")}
             </Typography>
           </Box>
         ) : error ? (
           <Box className={classes.errorBox}>
-            <Typography variant="subtitle2" gutterBottom>
-              Erro ao transcrever áudio
+            <Typography variant="subtitle2" gutterBottom color="textPrimary">
+              {i18n.t("messagesList.transcriptionModal.errorTitle")}
             </Typography>
-            <Typography variant="body2">
+            <Typography variant="body2" color="textPrimary">
               {error}
             </Typography>
           </Box>
@@ -111,13 +117,18 @@ const AudioTranscriptionModal = ({
           </Box>
         ) : (
           <Typography variant="body2" color="textSecondary">
-            Nenhuma transcrição disponível
+            {i18n.t("messagesList.transcriptionModal.noTranscription")}
           </Typography>
         )}
       </DialogContent>
       <DialogActions>
+        {error && onRetry && (
+          <Button onClick={onRetry} color="primary" startIcon={<RefreshIcon />}>
+            {i18n.t("messagesList.transcriptionModal.retry")}
+          </Button>
+        )}
         <Button onClick={onClose} color="primary">
-          Fechar
+          {i18n.t("messagesList.transcriptionModal.close")}
         </Button>
       </DialogActions>
     </Dialog>

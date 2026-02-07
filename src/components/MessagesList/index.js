@@ -10,6 +10,8 @@ import {
   Divider,
   IconButton,
   makeStyles,
+  Popover,
+  Typography,
 } from "@material-ui/core";
 
 import {
@@ -193,6 +195,43 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     color: "#6bcbef",
     fontWeight: 500,
+  },
+
+  messageWithReactionsWrapper: {
+    display: "flex",
+    flexDirection: "column",
+    alignSelf: "flex-start",
+  },
+
+  messageWithReactionsWrapperRight: {
+    alignSelf: "flex-end",
+  },
+
+  messageReactions: {
+    display: "inline-flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 2,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+
+  reactionEmoji: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "2px 6px",
+    minWidth: 24,
+    borderRadius: 12,
+    fontSize: "0.85rem",
+    cursor: "pointer",
+    backgroundColor: theme.mode === "dark" ? "rgba(45, 55, 72, 0.95)" : "rgba(255, 255, 255, 0.95)",
+    boxShadow: theme.mode === "dark" ? "0 1px 3px rgba(0, 0, 0, 0.4)" : "0 1px 3px rgba(0, 0, 0, 0.15)",
+    border: theme.mode === "dark" ? "1px solid rgba(255, 255, 255, 0.08)" : "1px solid rgba(0, 0, 0, 0.06)",
+  },
+
+  reactionPopover: {
+    padding: theme.spacing(1.5, 2),
   },
 
   // Estilos para mensagens internas da empresa em grupos
@@ -385,8 +424,9 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
   const lastMessageRef = useRef();
 
   const [selectedMessage, setSelectedMessage] = useState({});
-  const [anchorEl, setAnchorEl] = useState(null);
-  const messageOptionsMenuOpen = Boolean(anchorEl);
+  const [anchorPosition, setAnchorPosition] = useState(null);
+  const [menuAnchorOrigin, setMenuAnchorOrigin] = useState({ vertical: "top", horizontal: "left" });
+  const messageOptionsMenuOpen = Boolean(anchorPosition);
   const currentTicketId = useRef(ticketId);
   
   // Estados para IA
@@ -404,6 +444,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
   const [transcriptionLoading, setTranscriptionLoading] = useState(false);
   const [transcription, setTranscription] = useState("");
   const [transcriptionError, setTranscriptionError] = useState(null);
+  const [transcriptionMessageId, setTranscriptionMessageId] = useState(null);
 
   const socketManager = useContext(SocketContext);
   const { user, companyLanguage: authCompanyLanguage } = useContext(AuthContext);
@@ -598,12 +639,22 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
   };
 
   const handleOpenMessageOptionsMenu = (e, message) => {
-    setAnchorEl(e.currentTarget);
+    const rect = e.currentTarget.getBoundingClientRect();
+    setAnchorPosition({ left: rect.right, top: rect.bottom });
+    setMenuAnchorOrigin({ vertical: "top", horizontal: "right" });
     setSelectedMessage(message);
   };
 
-  const handleCloseMessageOptionsMenu = (e) => {
-    setAnchorEl(null);
+  const handleContextMenu = (e, message) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAnchorPosition({ left: e.clientX, top: e.clientY });
+    setMenuAnchorOrigin({ vertical: "top", horizontal: "left" });
+    setSelectedMessage(message);
+  };
+
+  const handleCloseMessageOptionsMenu = () => {
+    setAnchorPosition(null);
   };
 
   const checkMessageMedia = (message, index = -1) => {
@@ -704,7 +755,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
     }
   };
 
-  const renderDailyTimestamps = (message, index) => {
+  const renderDailyTimestamps = (message, index, list = messagesList) => {
     if (index === 0) {
       return (
         <span
@@ -712,14 +763,14 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
           key={`timestamp-${message.id}`}
         >
           <div className={classes.dailyTimestampText}>
-            {format(parseISO(messagesList[index].createdAt), "dd/MM/yyyy")}
+            {format(parseISO(list[index].createdAt), "dd/MM/yyyy")}
           </div>
         </span>
       );
     }
-    if (index < messagesList.length - 1) {
-      let messageDay = parseISO(messagesList[index].createdAt);
-      let previousMessageDay = parseISO(messagesList[index - 1].createdAt);
+    if (index < list.length - 1) {
+      let messageDay = parseISO(list[index].createdAt);
+      let previousMessageDay = parseISO(list[index - 1].createdAt);
 
       if (!isSameDay(messageDay, previousMessageDay)) {
         return (
@@ -728,13 +779,13 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
             key={`timestamp-${message.id}`}
           >
             <div className={classes.dailyTimestampText}>
-              {format(parseISO(messagesList[index].createdAt), "dd/MM/yyyy")}
+              {format(parseISO(list[index].createdAt), "dd/MM/yyyy")}
             </div>
           </span>
         );
       }
     }
-    if (index === messagesList.length - 1) {
+    if (index === list.length - 1) {
       return (
         <div
           key={`ref-${message.createdAt}`}
@@ -745,18 +796,18 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
     }
   };
 
-  const renderNumberTicket = (message, index) => {
-    if (index < messagesList.length && index > 0) {
+  const renderNumberTicket = (message, index, list = messagesList) => {
+    if (index < list.length && index > 0) {
 
       let messageTicket = message.ticketId;
       let connectionName = message.ticket?.whatsapp?.name;
-      let previousMessageTicket = messagesList[index - 1].ticketId;
+      let previousMessageTicket = list[index - 1].ticketId;
 
       if (messageTicket !== previousMessageTicket) {
         return (
           <center>
             <div className={classes.ticketNunberClosed}>
-              Conversa encerrada: {format(parseISO(messagesList[index - 1].createdAt), "dd/MM/yyyy HH:mm:ss")}
+              Conversa encerrada: {format(parseISO(list[index - 1].createdAt), "dd/MM/yyyy HH:mm:ss")}
             </div>
 
             <div className={classes.ticketNunberOpen}>
@@ -768,10 +819,10 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
     }
   };
 
-  const renderMessageDivider = (message, index) => {
-    if (index < messagesList.length && index > 0) {
-      let messageUser = messagesList[index].fromMe;
-      let previousMessageUser = messagesList[index - 1].fromMe;
+  const renderMessageDivider = (message, index, list = messagesList) => {
+    if (index < list.length && index > 0) {
+      let messageUser = list[index].fromMe;
+      let previousMessageUser = list[index - 1].fromMe;
 
       if (messageUser !== previousMessageUser) {
         return (
@@ -858,7 +909,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
   };
 
   // Componente auxiliar para renderizar mensagem com tradução
-  const MessageWithTranslation = ({ message, index, fromMe }) => {
+  const MessageWithTranslation = ({ message, index, fromMe, displayList }) => {
     const { translation, loading: translationLoading } = useMessageTranslation(
       message,
       companyLanguage,
@@ -877,9 +928,10 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
 
         return (
           <React.Fragment key={message.id}>
-            {renderDailyTimestamps(message, index)}
-            {renderNumberTicket(message, index)}
-            {renderMessageDivider(message, index)}
+            {renderDailyTimestamps(message, index, displayList)}
+            {renderNumberTicket(message, index, displayList)}
+            {renderMessageDivider(message, index, displayList)}
+            <div className={clsx(classes.messageWithReactionsWrapper, classes.messageWithReactionsWrapperRight)} onContextMenu={(e) => handleContextMenu(e, message)}>
             <div 
               id={`message-${message.id}`}
               className={classes.messageLeft}
@@ -938,15 +990,18 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                 </span>
               </div>
             </div>
+            {renderMessageReactions(message.id)}
+            </div>
           </React.Fragment>
         );
       } else {
         // Mensagens fromMe normais (não em grupo)
         return (
           <React.Fragment key={message.id}>
-            {renderDailyTimestamps(message, index)}
-            {renderNumberTicket(message, index)}
-            {renderMessageDivider(message, index)}
+            {renderDailyTimestamps(message, index, displayList)}
+            {renderNumberTicket(message, index, displayList)}
+            {renderMessageDivider(message, index, displayList)}
+            <div className={clsx(classes.messageWithReactionsWrapper, classes.messageWithReactionsWrapperRight)} onContextMenu={(e) => handleContextMenu(e, message)}>
             <div id={`message-${message.id}`} className={clsx(classes.messageRight, {
               [classes.messageInternal]: message.isInternal,
             })}>
@@ -996,6 +1051,8 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                 </span>
               </div>
             </div>
+            {renderMessageReactions(message.id)}
+            </div>
           </React.Fragment>
         );
       }
@@ -1003,9 +1060,10 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
       // Mensagens recebidas (clientes)
       return (
         <React.Fragment key={message.id}>
-          {renderDailyTimestamps(message, index)}
-          {renderNumberTicket(message, index)}
-          {renderMessageDivider(message, index)}
+          {renderDailyTimestamps(message, index, displayList)}
+          {renderNumberTicket(message, index, displayList)}
+          {renderMessageDivider(message, index, displayList)}
+          <div className={classes.messageWithReactionsWrapper} onContextMenu={(e) => handleContextMenu(e, message)}>
           <div id={`message-${message.id}`} className={classes.messageLeft}>
             <IconButton
               variant="contained"
@@ -1054,22 +1112,85 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
               </span>
             </div>
           </div>
+          {renderMessageReactions(message.id)}
+          </div>
         </React.Fragment>
       );
     }
   };
 
-  const renderMessages = () => {
-    if (messagesList.length > 0) {
-      const viewMessagesList = messagesList.map((message, index) => {
+  const reactionsMap = React.useMemo(() => {
+    const map = {};
+    const byUser = {};
+    messagesList
+      .filter((m) => m.mediaType === "reactionMessage")
+      .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt))
+      .forEach((r) => {
+        const targetId = r.quotedMsgId || r.quotedMsg?.id;
+        if (!targetId) return;
+        const userKey = r.fromMe ? "me" : (r.contactId || r.participant || r.id);
+        if (!map[targetId]) map[targetId] = [];
+        if (!byUser[targetId]) byUser[targetId] = {};
+        if (byUser[targetId][userKey]) {
+          const idx = map[targetId].findIndex((x) => x.id === byUser[targetId][userKey].id);
+          if (idx >= 0) map[targetId].splice(idx, 1);
+        }
+        byUser[targetId][userKey] = r;
+        map[targetId].push(r);
+      });
+    return map;
+  }, [messagesList]);
 
+  const [reactionPopover, setReactionPopover] = useState({ anchorEl: null, reactors: [], emoji: "" });
+
+  const getReactorName = (r) => {
+    if (r.fromMe) return ticket?.user?.name || i18n.t("messagesList.you") || "Você";
+    return r.contact?.name || (r.participant ? r.participant.split("@")[0] : "") || i18n.t("messagesList.contact") || "Contato";
+  };
+
+  const renderMessageReactions = (messageId) => {
+    const reactions = reactionsMap[messageId] || [];
+    if (reactions.length === 0) return null;
+    const grouped = {};
+    reactions.forEach((r) => {
+      const emoji = r.body || "👍";
+      if (!grouped[emoji]) grouped[emoji] = [];
+      grouped[emoji].push(r);
+    });
+    return (
+      <div className={classes.messageReactions}>
+        {Object.entries(grouped).map(([emoji, list]) => (
+          <span
+            key={emoji}
+            className={classes.reactionEmoji}
+            onClick={(e) => {
+              e.stopPropagation();
+              setReactionPopover({ anchorEl: e.currentTarget, reactors: list, emoji });
+            }}
+          >
+            {emoji}
+            {list.length > 1 && (
+              <span style={{ marginLeft: 2, fontSize: "0.7rem", opacity: 0.8 }}>
+                {list.length}
+              </span>
+            )}
+          </span>
+        ))}
+      </div>
+    );
+  };
+
+  const renderMessages = () => {
+    const displayableMessages = messagesList.filter((m) => m.mediaType !== "reactionMessage");
+    if (displayableMessages.length > 0) {
+      const viewMessagesList = displayableMessages.map((message, index) => {
         if (message.mediaType === "call_log") {
           return (
             <React.Fragment key={message.id}>
-              {renderDailyTimestamps(message, index)}
-              {renderNumberTicket(message, index)}
-              {renderMessageDivider(message, index)}
-              <div id={`message-${message.id}`} className={classes.messageCenter}>
+              {renderDailyTimestamps(message, index, displayableMessages)}
+              {renderNumberTicket(message, index, displayableMessages)}
+              {renderMessageDivider(message, index, displayableMessages)}
+              <div id={`message-${message.id}`} className={classes.messageCenter} onContextMenu={(e) => handleContextMenu(e, message)}>
                 <IconButton
                   variant="contained"
                   size="small"
@@ -1097,7 +1218,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
 
         if (!message.fromMe) {
           // Mensagens recebidas (clientes)
-          return <MessageWithTranslation key={message.id} message={message} index={index} fromMe={false} />;
+          return <MessageWithTranslation key={message.id} message={message} index={index} fromMe={false} displayList={displayableMessages} />;
         } else {
           // Mensagens fromMe (enviadas pela empresa) em GRUPOS
           // Cada número/participant diferente recebe uma cor diferente
@@ -1108,9 +1229,10 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
 
             return (
               <React.Fragment key={message.id}>
-                {renderDailyTimestamps(message, index)}
-                {renderNumberTicket(message, index)}
-                {renderMessageDivider(message, index)}
+                {renderDailyTimestamps(message, index, displayableMessages)}
+                {renderNumberTicket(message, index, displayableMessages)}
+                {renderMessageDivider(message, index, displayableMessages)}
+                <div className={clsx(classes.messageWithReactionsWrapper, classes.messageWithReactionsWrapperRight)} onContextMenu={(e) => handleContextMenu(e, message)}>
                 <div 
                   id={`message-${message.id}`}
                   className={classes.messageLeft}
@@ -1166,15 +1288,18 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                     </span>
                   </div>
                 </div>
+                {renderMessageReactions(message.id)}
+                </div>
               </React.Fragment>
             );
           } else {
             // Mensagens fromMe em conversas individuais (comportamento padrão - direita, verde)
             return (
               <React.Fragment key={message.id}>
-                {renderDailyTimestamps(message, index)}
-                {renderNumberTicket(message, index)}
-                {renderMessageDivider(message, index)}
+                {renderDailyTimestamps(message, index, displayableMessages)}
+                {renderNumberTicket(message, index, displayableMessages)}
+                {renderMessageDivider(message, index, displayableMessages)}
+                <div className={clsx(classes.messageWithReactionsWrapper, classes.messageWithReactionsWrapperRight)} onContextMenu={(e) => handleContextMenu(e, message)}>
                 <div id={`message-${message.id}`} className={classes.messageRight}>
                   <IconButton
                     variant="contained"
@@ -1219,6 +1344,8 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                       {!message.isInternal && renderMessageAck(message)}
                     </span>
                   </div>
+                </div>
+                {renderMessageReactions(message.id)}
                 </div>
               </React.Fragment>
             );
@@ -1338,20 +1465,18 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
     setTranscriptionLoading(true);
     setTranscription("");
     setTranscriptionError(null);
+    setTranscriptionMessageId(messageId);
     
     try {
       const { data } = await api.post(`/chat-ai/transcribe/${messageId}`);
       setTranscription(data.transcription || "");
     } catch (err) {
-      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        setTranscriptionError("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
-        toast.error("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
-      } else {
-        const errorMessage = err.response?.data?.error || err.response?.data?.message || "Erro ao transcrever áudio";
-        setTranscriptionError(errorMessage);
-        toastError(err);
-        toast.error("Erro ao transcrever áudio");
-      }
+      const errorCode = err.response?.data?.error;
+      const friendlyMessage = errorCode && i18n.exists(`backendErrors.${errorCode}`)
+        ? i18n.t(`backendErrors.${errorCode}`)
+        : (errorCode || i18n.t("backendErrors.ERR_CHAT_AI_TRANSCRIBE"));
+      setTranscriptionError(friendlyMessage);
+      toastError(err);
     } finally {
       setTranscriptionLoading(false);
     }
@@ -1372,7 +1497,8 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
     <div className={classes.messagesListWrapper}>
       <MessageOptionsMenu
         message={selectedMessage}
-        anchorEl={anchorEl}
+        anchorPosition={anchorPosition}
+        anchorOrigin={menuAnchorOrigin}
         menuOpen={messageOptionsMenuOpen}
         handleClose={handleCloseMessageOptionsMenu}
       />
@@ -1407,11 +1533,31 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
           setTranscriptionModalOpen(false);
           setTranscription("");
           setTranscriptionError(null);
+          setTranscriptionMessageId(null);
         }}
+        onRetry={transcriptionError ? () => handleTranscribeAudio(transcriptionMessageId) : undefined}
         loading={transcriptionLoading}
         transcription={transcription}
         error={transcriptionError}
       />
+      <Popover
+        open={Boolean(reactionPopover.anchorEl)}
+        anchorEl={reactionPopover.anchorEl}
+        onClose={() => setReactionPopover({ anchorEl: null, reactors: [], emoji: "" })}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        transformOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <div className={classes.reactionPopover}>
+          <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+            {reactionPopover.emoji} {i18n.t("messagesList.reactedWith") || "Reagiu com"}
+          </Typography>
+          {reactionPopover.reactors.map((r, i) => (
+            <Typography key={i} variant="body2">
+              • {getReactorName(r)}
+            </Typography>
+          ))}
+        </div>
+      </Popover>
     </div>
   );
 };

@@ -252,6 +252,7 @@ const Ticket = () => {
         <MessageInput
           ticketId={ticket.id}
           ticketStatus={ticket.status}
+          isGroup={ticket.isGroup}
           onAnalyzeChat={aiHandlers?.handleAnalyzeChat}
           onSummarizeAudios={aiHandlers?.handleSummarizeAudios}
           onSuggestResponse={aiHandlers?.handleSuggestResponse}
