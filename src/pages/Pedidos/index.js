@@ -118,7 +118,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const Pedidos = () => {
+const Pedidos = ({ orderTypeFilter }) => {
   const classes = useStyles();
   const history = useHistory();
   const location = useLocation();
@@ -133,7 +133,10 @@ const Pedidos = () => {
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
-      const query = formIdFilter ? `?formId=${formIdFilter}` : "";
+      const queryParams = new URLSearchParams();
+      if (formIdFilter) queryParams.set("formId", formIdFilter);
+      if (orderTypeFilter) queryParams.set("orderType", orderTypeFilter);
+      const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
       const { data } = await api.get(`/orders${query}`);
       let ordersList = data.orders || [];
       let formsList = data.forms || [];
@@ -147,8 +150,9 @@ const Pedidos = () => {
           const idsToFetch = filterId && cardapioForms.some((f) => f.id === filterId)
             ? [filterId]
             : cardapioForms.map((f) => f.id);
+          const orderTypeSuffix = orderTypeFilter ? `?orderType=${orderTypeFilter}` : "";
           const results = await Promise.all(
-            idsToFetch.map((id) => api.get(`/forms/${id}/orders`))
+            idsToFetch.map((id) => api.get(`/forms/${id}/orders${orderTypeSuffix}`))
           );
           ordersList = results.flatMap((r) => r.data.orders || []);
           ordersList.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
@@ -168,7 +172,7 @@ const Pedidos = () => {
     } finally {
       setLoading(false);
     }
-  }, [formIdFilter]);
+  }, [formIdFilter, orderTypeFilter]);
 
   useEffect(() => {
     if (!hasLanchonetes && !modulesLoading) {
@@ -179,8 +183,17 @@ const Pedidos = () => {
   }, [hasLanchonetes, modulesLoading, fetchOrders]);
 
   useEffect(() => {
-    history.replace({ search: formIdFilter ? `?formId=${formIdFilter}` : "" });
-  }, [formIdFilter, history]);
+    const fid = params.get("formId") || "";
+    if (fid !== formIdFilter) setFormIdFilter(fid);
+  }, [location.search]);
+
+  useEffect(() => {
+    const prev = new URLSearchParams(location.search);
+    if (formIdFilter) prev.set("formId", formIdFilter);
+    else prev.delete("formId");
+    const search = prev.toString() ? `?${prev.toString()}` : "";
+    if (search !== location.search) history.replace({ search });
+  }, [formIdFilter, history, location.search]);
 
   const getOrderStatus = (order) => {
     return order?.orderStatus || order?.metadata?.orderStatus || "novo";

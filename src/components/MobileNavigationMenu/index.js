@@ -235,6 +235,12 @@ const MobileNavigationMenu = () => {
                   </ListItemIcon>
                   <ListItemText primary="Pedidos" />
                 </ListItem>
+                <ListItem button onClick={() => handleNavigate('/mesas')}>
+                  <ListItemIcon>
+                    <TableChartIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Mesas" />
+                </ListItem>
               </>
             )}
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { useHistory } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import {
   Card,
@@ -12,6 +13,7 @@ import {
   Visibility as VisibilityIcon,
   WhatsApp as WhatsAppIcon,
   AccessTime as TimeIcon,
+  EventSeat as EventSeatIcon,
 } from "@material-ui/icons";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -106,6 +108,22 @@ const useStyles = makeStyles((theme) => ({
     fontSize: "0.85rem",
     color: "#25D366",
   },
+  mesaBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 4,
+    fontSize: "0.7rem",
+    padding: "2px 8px",
+    borderRadius: 8,
+    backgroundColor: "rgba(245, 158, 11, 0.2)",
+    color: "#B45309",
+    marginTop: 4,
+    cursor: "pointer",
+    transition: "opacity 0.2s",
+    "&:hover": {
+      opacity: 0.85,
+    },
+  },
 }));
 
 const PedidoKanbanCard = ({
@@ -116,6 +134,7 @@ const PedidoKanbanCard = ({
   provided,
 }) => {
   const classes = useStyles();
+  const history = useHistory();
 
   const getOrderTotal = () => {
     const metadata = order?.metadata || {};
@@ -174,6 +193,30 @@ const PedidoKanbanCard = ({
           <WhatsAppIcon className={classes.whatsappIcon} fontSize="inherit" />
           {order?.responderPhone || "Sem número"}
         </Typography>
+        {(order?.metadata?.tableNumber || order?.metadata?.tableId) && (
+          <Tooltip title="Ir para Mesas">
+            <Typography
+              component="span"
+              className={classes.mesaBadge}
+              onClick={(e) => {
+                e.stopPropagation();
+                history.push("/mesas");
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  history.push("/mesas");
+                }
+              }}
+            >
+              <EventSeatIcon style={{ fontSize: "0.75rem" }} />
+              Mesa {order.metadata.tableNumber || order.metadata.tableId}
+            </Typography>
+          </Tooltip>
+        )}
         <Typography className={classes.itemsPreview}>{getItemsPreview()}</Typography>
         <Box className={classes.totalRow}>
           <Box className={classes.timeInfo}>

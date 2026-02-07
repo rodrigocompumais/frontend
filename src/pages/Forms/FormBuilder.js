@@ -164,6 +164,8 @@ const FormBuilder = () => {
       printDeviceId: null, // ID do dispositivo de impressão para impressão de pedidos
       autoConfirmMinutes: 0, // Avançar novo->confirmado após X minutos (0=desativado)
       averageDeliveryTime: "", // Tempo médio de entrega (ex: "30-45 minutos")
+      showMesaField: false, // Exibir campo Número da mesa no cardápio
+      mesaFieldMode: "select", // select = dropdown com mesas, input = campo livre
       appearance: {
         fontFamily: "inherit",
         borderRadius: "12",
@@ -686,6 +688,8 @@ const FormBuilder = () => {
                           finalizeFields: e.target.value === "cardapio"
                             ? (formData.settings?.finalizeFields || [])
                             : [],
+                          mesas: e.target.value === "cardapio" ? (formData.settings?.mesas !== false) : undefined,
+                          delivery: e.target.value === "cardapio" ? (formData.settings?.delivery !== false) : undefined,
                         },
                       })
                     }
@@ -943,6 +947,95 @@ const FormBuilder = () => {
                       helperText="0 = desativado. Pedidos em 'Novo' avançam automaticamente para 'Confirmado' após X minutos."
                     />
                   </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.settings?.mesas !== false}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                mesas: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                      }
+                      label="Aceita pedidos de mesa"
+                    />
+                    <Typography variant="caption" display="block" color="textSecondary">
+                      Permite que clientes façam pedidos para consumo na mesa.
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.settings?.delivery !== false}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                delivery: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                      }
+                      label="Aceita pedidos de delivery"
+                    />
+                    <Typography variant="caption" display="block" color="textSecondary">
+                      Permite que clientes façam pedidos para entrega.
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={!!formData.settings?.showMesaField}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                showMesaField: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                      }
+                      label="Exibir campo Número da mesa"
+                    />
+                    <Typography variant="caption" display="block" color="textSecondary">
+                      Permite que o cliente selecione ou digite a mesa ao finalizar o pedido.
+                    </Typography>
+                  </Grid>
+                  {formData.settings?.showMesaField && (
+                    <Grid item xs={12} md={6}>
+                      <FormControl fullWidth variant="outlined" size="small">
+                        <InputLabel>Modo do campo mesa</InputLabel>
+                        <Select
+                          value={formData.settings?.mesaFieldMode || "select"}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                mesaFieldMode: e.target.value,
+                              },
+                            })
+                          }
+                          label="Modo do campo mesa"
+                        >
+                          <MenuItem value="select">Select (lista de mesas)</MenuItem>
+                          <MenuItem value="input">Input livre (texto)</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  )}
                 </Grid>
 
                 <Typography variant="subtitle2" style={{ marginTop: 24, marginBottom: 12 }}>

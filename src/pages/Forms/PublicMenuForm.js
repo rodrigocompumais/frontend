@@ -166,6 +166,8 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
   const [submitted, setSubmitted] = useState(false);
   const [groups, setGroups] = useState([]);
   const [orderData, setOrderData] = useState(null); // Dados do pedido para exibir na confirmação
+  const [mesas, setMesas] = useState([]);
+  const [mesaValue, setMesaValue] = useState(""); // tableId (string) para select ou texto para input
 
   const appStyles = form ? getFormAppearanceStyles(form) : null;
   const fieldVariant = appStyles?.fieldVariant || "outlined";
@@ -188,6 +190,20 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
       loadProducts();
     }
   }, [form, slug]);
+
+  useEffect(() => {
+    if (form?.settings?.showMesaField && form.settings.mesaFieldMode === "select" && slug) {
+      api.get(`/public/forms/${slug}/mesas`).then(({ data }) => {
+        setMesas(data.mesas || []);
+      }).catch(() => setMesas([]));
+    }
+  }, [form?.settings?.showMesaField, form?.settings?.mesaFieldMode, slug]);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const urlMesa = searchParams.get("mesa");
+    if (urlMesa) setMesaValue(urlMesa);
+  }, [location.search]);
 
   useEffect(() => {
     // Ler parâmetros da URL
@@ -380,10 +396,29 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
         }
       });
 
+      // Metadata com mesa e orderType (se configurado)
+      let orderMetadata = {};
+      const mesasEnabled = form.settings?.mesas !== false;
+      const deliveryEnabled = form.settings?.delivery !== false;
+      if (form.settings?.showMesaField && mesaValue && mesasEnabled) {
+        const isSelect = form.settings.mesaFieldMode === "select";
+        const mesaId = isSelect ? parseInt(mesaValue, 10) : null;
+        const mesa = mesas.find((m) => m.id === parseInt(mesaValue, 10));
+        const mesaNumber = isSelect ? (mesa?.number || mesa?.name || mesaValue) : mesaValue;
+        if (mesaId) orderMetadata.tableId = mesaId;
+        orderMetadata.tableNumber = mesaNumber;
+        orderMetadata.orderType = "mesa";
+      } else if (deliveryEnabled) {
+        orderMetadata.orderType = "delivery";
+      } else {
+        orderMetadata.orderType = mesasEnabled ? "mesa" : "delivery";
+      }
+
       // Enviar formulário
       const response = await api.post(`/public/forms/${form.slug}/submit`, {
         answers: answersArray,
         menuItems,
+        ...(Object.keys(orderMetadata).length > 0 && { metadata: orderMetadata }),
       });
 
       // Preparar dados do pedido para exibição
@@ -396,10 +431,15 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
         totalItems: getTotalItems(),
         customerName: answers[autoFields.find((f) => f.metadata?.autoFieldType === "name")?.id] || "",
         customerPhone: answers[autoFields.find((f) => f.metadata?.autoFieldType === "phone")?.id] || "",
-        customFields: finalizeFields.map((field) => ({
-          label: field.label,
-          value: answers[field.id] || "",
-        })),
+        customFields: [
+          ...(form.settings?.showMesaField && mesaValue
+            ? [{ label: "Mesa", value: form.settings.mesaFieldMode === "select" ? (mesas.find((m) => m.id === parseInt(mesaValue, 10))?.number || mesaValue) : mesaValue }]
+            : []),
+          ...finalizeFields.map((field) => ({
+            label: field.label,
+            value: answers[field.id] || "",
+          })),
+        ],
         averageDeliveryTime: form.settings?.averageDeliveryTime || "",
       };
       setOrderData(orderInfo);
@@ -848,6 +888,40 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
                     {renderField(field)}
                   </Box>
                 ))}
+
+                {/* Campo Mesa (se configurado e form aceita mesas) */}
+                {form.settings?.showMesaField && form.settings?.mesas !== false && (
+                  <Box key="mesa-field" className={classes.fieldContainer} style={{ marginBottom: 24 * (appStyles?.spacingMultiplier || 1) }}>
+                    {form.settings.mesaFieldMode === "select" ? (
+                      <FormControl fullWidth variant={fieldVariant}>
+                        <InputLabel>Número da mesa</InputLabel>
+                        <Select
+                          value={mesaValue}
+                          onChange={(e) => setMesaValue(e.target.value)}
+                          label="Número da mesa"
+                        >
+                          <MenuItem value="">
+                            <em>Selecione</em>
+                          </MenuItem>
+                          {mesas.map((m) => (
+                            <MenuItem key={m.id} value={String(m.id)}>
+                              {m.name || m.number} {m.status === "ocupada" ? "(ocupada)" : ""}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    ) : (
+                      <TextField
+                        fullWidth
+                        variant={fieldVariant}
+                        label="Número da mesa"
+                        value={mesaValue}
+                        onChange={(e) => setMesaValue(e.target.value)}
+                        placeholder="Ex: Mesa 5"
+                      />
+                    )}
+                  </Box>
+                )}
 
                 {/* Campos customizados da aba finalizar */}
                 {finalizeFields.map((field) => {

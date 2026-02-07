@@ -350,6 +350,7 @@ const FormResponses = () => {
               <TableCell>Email</TableCell>
               {isCardapioForm && (
                 <>
+                  <TableCell>Mesa</TableCell>
                   <TableCell align="right">Total</TableCell>
                   <TableCell align="center">Status Pedido</TableCell>
                 </>
@@ -361,14 +362,14 @@ const FormResponses = () => {
           <TableBody>
             {loading && (
               <>
-                <TableRowSkeleton columns={isCardapioForm ? 9 : 6} />
-                <TableRowSkeleton columns={isCardapioForm ? 9 : 6} />
-                <TableRowSkeleton columns={isCardapioForm ? 9 : 6} />
+                <TableRowSkeleton columns={isCardapioForm ? 10 : 6} />
+                <TableRowSkeleton columns={isCardapioForm ? 10 : 6} />
+                <TableRowSkeleton columns={isCardapioForm ? 10 : 6} />
               </>
             )}
             {!loading && responses.length === 0 && (
               <TableRow>
-                <TableCell colSpan={isCardapioForm ? 9 : 6} align="center">
+                <TableCell colSpan={isCardapioForm ? 10 : 6} align="center">
                   <Typography variant="body2" color="textSecondary">
                     Nenhuma resposta encontrada
                   </Typography>
@@ -429,6 +430,13 @@ const FormResponses = () => {
                   </TableCell>
                   {isCardapioForm && (
                     <>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {(response.metadata?.tableNumber || response.metadata?.tableId)
+                            ? `Mesa ${response.metadata.tableNumber || response.metadata.tableId}`
+                            : "-"}
+                        </Typography>
+                      </TableCell>
                       <TableCell align="right">
                         <Typography variant="body2" fontWeight={600}>
                           R$ {getOrderTotal(response).toFixed(2).replace(".", ",")}
@@ -588,6 +596,14 @@ const FormResponses = () => {
                     )}
                   </Typography>
                 </Box>
+                {isCardapioForm && (selectedResponse.metadata?.tableNumber || selectedResponse.metadata?.tableId) && (
+                  <Box className={classes.fieldAnswer}>
+                    <Typography className={classes.fieldLabel}>Mesa</Typography>
+                    <Typography className={classes.fieldValue}>
+                      Mesa {selectedResponse.metadata.tableNumber || selectedResponse.metadata.tableId}
+                    </Typography>
+                  </Box>
+                )}
               </Box>
 
               {isCardapioForm && selectedResponse?.metadata?.menuItems?.length > 0 && (

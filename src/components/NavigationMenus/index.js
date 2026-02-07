@@ -38,6 +38,7 @@ import {
   Security as SecurityIcon,
   Settings as SettingsIcon,
   ShoppingCart as ShoppingCartIcon,
+  Restaurant as RestaurantIcon,
 } from '@material-ui/icons';
 import { Badge } from '@material-ui/core';
 import { i18n } from '../../translate/i18n';
@@ -283,26 +284,15 @@ const NavigationMenus = () => {
           <ListItemText primary={i18n.t("mainDrawer.listItems.forms")} />
         </MenuItem>
         {hasLanchonetes && (
-          <>
-            <MenuItem
-              className={classes.menuItem}
-              onClick={() => handleNavigate('/products', () => setGestaoAnchor(null))}
-            >
-              <ListItemIcon>
-                <ShoppingCartIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Produtos" />
-            </MenuItem>
-            <MenuItem
-              className={classes.menuItem}
-              onClick={() => handleNavigate('/pedidos', () => setGestaoAnchor(null))}
-            >
-              <ListItemIcon>
-                <AssignmentIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary="Pedidos" />
-            </MenuItem>
-          </>
+          <MenuItem
+            className={classes.menuItem}
+            onClick={() => handleNavigate('/lanchonetes', () => setGestaoAnchor(null))}
+          >
+            <ListItemIcon>
+              <RestaurantIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Lanchonetes" />
+          </MenuItem>
         )}
       </Menu>
 
