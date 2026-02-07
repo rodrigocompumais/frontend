@@ -269,6 +269,8 @@ const TicketsManagerTabs = () => {
   const [pendingCount, setPendingCount] = useState(0);
   const [conversationsCount, setConversationsCount] = useState(0);
   const [groupsCount, setGroupsCount] = useState(0);
+  const [conversationsUnread, setConversationsUnread] = useState(0);
+  const [groupsUnread, setGroupsUnread] = useState(0);
 
   // Hook para notificação sonora de tickets pendentes
   usePendingTicketNotification();
@@ -442,9 +444,16 @@ const TicketsManagerTabs = () => {
                     className={classes.badge}
                     invisible={conversationsCount === 0}
                   >
-                    <Typography variant="caption" style={{ fontWeight: 500 }}>
-                      {i18n.t("tickets.tabs.subTabs.conversations")}
-                    </Typography>
+                    <Box>
+                      <Typography variant="caption" style={{ fontWeight: 500 }}>
+                        {i18n.t("tickets.tabs.subTabs.conversations")}
+                      </Typography>
+                      {conversationsUnread > 0 && (
+                        <Typography variant="caption" display="block" style={{ color: "var(--primary-color, #1976d2)", fontWeight: 600, fontSize: "0.65rem" }}>
+                          {i18n.t("ticketsList.summaryUnread", { count: conversationsUnread })}
+                        </Typography>
+                      )}
+                    </Box>
                   </Badge>
                 }
                 style={{ minWidth: 90, textTransform: "none" }}
@@ -458,9 +467,16 @@ const TicketsManagerTabs = () => {
                     className={classes.badge}
                     invisible={groupsCount === 0}
                   >
-                    <Typography variant="caption" style={{ fontWeight: 500 }}>
-                      {i18n.t("tickets.tabs.subTabs.groups")}
-                    </Typography>
+                    <Box>
+                      <Typography variant="caption" style={{ fontWeight: 500 }}>
+                        {i18n.t("tickets.tabs.subTabs.groups")}
+                      </Typography>
+                      {groupsUnread > 0 && (
+                        <Typography variant="caption" display="block" style={{ color: "var(--primary-color, #1976d2)", fontWeight: 600, fontSize: "0.65rem" }}>
+                          {i18n.t("ticketsList.summaryUnread", { count: groupsUnread })}
+                        </Typography>
+                      )}
+                    </Box>
                   </Badge>
                 }
                 style={{ minWidth: 90, textTransform: "none" }}
@@ -573,8 +589,11 @@ const TicketsManagerTabs = () => {
             status="open"
             showAll={showAllTickets}
             selectedQueueIds={selectedQueueIds}
-            updateCount={(val) => {
+            updateCount={(data) => {
+              const val = typeof data === "object" ? data.total : data;
+              const unread = typeof data === "object" ? (data.unread || 0) : 0;
               setConversationsCount(val);
+              setConversationsUnread(unread);
               setOpenCount(val + groupsCount);
             }}
             filterIsGroup={false}
@@ -585,8 +604,11 @@ const TicketsManagerTabs = () => {
             status="open"
             showAll={showAllTickets}
             selectedQueueIds={selectedQueueIds}
-            updateCount={(val) => {
+            updateCount={(data) => {
+              const val = typeof data === "object" ? data.total : data;
+              const unread = typeof data === "object" ? (data.unread || 0) : 0;
               setGroupsCount(val);
+              setGroupsUnread(unread);
               setOpenCount(conversationsCount + val);
             }}
             filterIsGroup={true}
@@ -598,7 +620,7 @@ const TicketsManagerTabs = () => {
           status="pending"
           showAll={showAllTickets}
           selectedQueueIds={selectedQueueIds}
-          updateCount={(val) => setPendingCount(val)}
+          updateCount={(data) => setPendingCount(typeof data === "object" ? data.total : data)}
         />
       </TabPanel>
       <TabPanel value={tab} name="closed" className={classes.ticketsWrapper}>

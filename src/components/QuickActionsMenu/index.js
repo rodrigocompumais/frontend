@@ -8,6 +8,7 @@ import {
   Forum,
   ExpandLess,
   ConfirmationNumber,
+  Search,
 } from "@material-ui/icons";
 import { i18n } from "../../translate/i18n";
 
@@ -70,6 +71,7 @@ const QuickActionsMenu = ({
   onQuickMessageClick,
   onScheduleClick,
   onInternalChatClick,
+  onSearchClick,
   onGenerateTicketClick,
   showGenerateTicket = false,
 }) => {
@@ -136,6 +138,15 @@ const QuickActionsMenu = ({
       label: i18n.t("quickActions.internalChat"),
       onClick: () => {
         onInternalChatClick();
+        setExpanded(false);
+      },
+    },
+    {
+      id: "search",
+      icon: <Search className={classes.actionIcon} />,
+      label: i18n.t("quickActions.search"),
+      onClick: () => {
+        if (onSearchClick) onSearchClick();
         setExpanded(false);
       },
     },

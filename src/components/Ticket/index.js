@@ -19,12 +19,14 @@ import QuickMessageModal from "../QuickActionsMenu/QuickMessageModal";
 import ScheduleModal from "../QuickActionsMenu/ScheduleModal";
 import api from "../../services/api";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
+import { AudioPlayerProvider } from "../../context/AudioPlayer/AudioPlayerContext";
 import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { TagsDropdown } from "../TagsDropdown";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
 import IframeModal from "../IframeModal";
+import SearchMessagesModal from "../SearchMessagesModal";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 
 const drawerWidth = 320;
@@ -82,6 +84,8 @@ const Ticket = () => {
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [iframeModalOpen, setIframeModalOpen] = useState(false);
   const [iframeUrl, setIframeUrl] = useState("");
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [scrollToMessageId, setScrollToMessageId] = useState(null);
   const [realTimeTranslationEnabled, setRealTimeTranslationEnabled] = useLocalStorage("realTimeTranslationEnabled", true);
 
   const socketManager = useContext(SocketContext);
@@ -241,6 +245,9 @@ const Ticket = () => {
           isGroup={ticket.isGroup}
           onAiHandlersReady={setAiHandlers}
           realTimeTranslationEnabled={realTimeTranslationEnabled}
+          scrollToMessageId={scrollToMessageId}
+          onScrollToMessageDone={() => setScrollToMessageId(null)}
+          onScrollToMessageRequest={(id) => setScrollToMessageId(id)}
         ></MessagesList>
         <MessageInput
           ticketId={ticket.id}
@@ -268,9 +275,15 @@ const Ticket = () => {
             ticket={ticket} 
             realTimeTranslationEnabled={realTimeTranslationEnabled}
             onToggleTranslation={() => setRealTimeTranslationEnabled(!realTimeTranslationEnabled)}
+            onSearchClick={() => setSearchModalOpen(true)}
+            onMarkAsUnread={() => history.push("/tickets")}
           />
         </TicketHeader>
-        <ReplyMessageProvider>{renderMessagesList()}</ReplyMessageProvider>
+        <ReplyMessageProvider>
+          <AudioPlayerProvider>
+            {renderMessagesList()}
+          </AudioPlayerProvider>
+        </ReplyMessageProvider>
       </Paper>
       <ContactDrawer
         open={drawerOpen}
@@ -307,10 +320,20 @@ const Ticket = () => {
           onQuickMessageClick={() => setQuickMessageModalOpen(true)}
           onScheduleClick={() => setScheduleModalOpen(true)}
           onInternalChatClick={handleInternalChatClick}
+          onSearchClick={() => setSearchModalOpen(true)}
           onGenerateTicketClick={handleGenerateTicket}
           showGenerateTicket={showGenerateTicket}
         />
       )}
+      <SearchMessagesModal
+        open={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+        ticketId={ticket.id}
+        onSelectMessage={(messageId) => {
+          setScrollToMessageId(messageId);
+          setSearchModalOpen(false);
+        }}
+      />
     </div>
   );
 };

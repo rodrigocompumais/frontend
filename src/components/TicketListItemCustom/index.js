@@ -66,6 +66,16 @@ const useStyles = makeStyles((theme) => ({
       },
     },
   },
+  ticketUnread: {
+    backgroundColor: theme.palette.type === "dark"
+      ? "rgba(25, 118, 210, 0.08)"
+      : "rgba(25, 118, 210, 0.04)",
+    "&:hover": {
+      backgroundColor: theme.palette.type === "dark"
+        ? "rgba(25, 118, 210, 0.12)"
+        : "rgba(25, 118, 210, 0.08)",
+    },
+  },
 
   pendingTicket: {
     cursor: "unset",
@@ -460,6 +470,7 @@ const TicketListItemCustom = ({ ticket }) => {
         selected={ticketId && +ticketId === ticket.id}
         className={clsx(classes.ticket, {
           [classes.pendingTicket]: ticket.status === "pending",
+          [classes.ticketUnread]: (ticket.unreadMessages || 0) > 0,
         })}
       >
         <Tooltip
@@ -563,6 +574,19 @@ const TicketListItemCustom = ({ ticket }) => {
                   <Typography className={classes.attendantName} noWrap>
                     Sem atendente
                   </Typography>
+                )}
+                {ticket.fromMe === false && ticket.status !== "pending" && (
+                  <Chip
+                    size="small"
+                    label={i18n.t("ticketsListItem.awaitingResponse")}
+                    style={{
+                      marginTop: 4,
+                      height: 18,
+                      fontSize: "0.65rem",
+                      backgroundColor: "rgba(237, 108, 2, 0.15)",
+                      color: "#ed6c02",
+                    }}
+                  />
                 )}
                 {ticket.lastMessage && (
                   <Typography className={classes.lastMessage}>

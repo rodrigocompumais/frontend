@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useRef, useState } from "react";
 
 import MenuItem from "@material-ui/core/MenuItem";
 import Menu from "@material-ui/core/Menu";
+import SearchIcon from "@material-ui/icons/Search";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
@@ -37,7 +38,7 @@ const check = (role, action, data) => {
 	return false;
 };
 
-const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
+const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl, onSearchClick, onMarkAsUnread }) => {
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
 	const [transferTicketModalOpen, setTransferTicketModalOpen] = useState(false);
 	const isMounted = useRef(true);
@@ -87,6 +88,16 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 		setContactId(null);
 	}
 
+	const handleMarkAsUnread = async () => {
+		handleClose();
+		try {
+			await api.put(`/tickets/${ticket.id}/mark-unread`);
+			if (onMarkAsUnread) onMarkAsUnread();
+		} catch (err) {
+			toastError(err);
+		}
+	}
+
 	return (
 		<>
 			<Menu
@@ -105,8 +116,15 @@ const TicketOptionsMenu = ({ ticket, menuOpen, handleClose, anchorEl }) => {
 				open={menuOpen}
 				onClose={handleClose}
 			>
+				<MenuItem onClick={() => { handleClose(); if (onSearchClick) onSearchClick(); }}>
+					<SearchIcon fontSize="small" style={{ marginRight: 8 }} />
+					{i18n.t("quickActions.search")}
+				</MenuItem>
 				<MenuItem onClick={handleOpenScheduleModal}>
 					{i18n.t("ticketOptionsMenu.schedule")}
+				</MenuItem>
+				<MenuItem onClick={handleMarkAsUnread}>
+					{i18n.t("ticketOptionsMenu.markAsUnread")}
 				</MenuItem>
 				<MenuItem onClick={handleOpenTransferModal}>
 					{i18n.t("ticketOptionsMenu.transfer")}

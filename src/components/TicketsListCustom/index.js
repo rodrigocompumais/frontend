@@ -3,6 +3,7 @@ import React, { useState, useEffect, useReducer, useContext } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import List from "@material-ui/core/List";
 import Paper from "@material-ui/core/Paper";
+import Typography from "@material-ui/core/Typography";
 
 import TicketListItem from "../TicketListItemCustom";
 import TicketsListSkeleton from "../TicketsListSkeleton";
@@ -393,9 +394,14 @@ const TicketsListCustom = (props) => {
 
   useEffect(() => {
     if (typeof updateCount === "function" && status) {
-      // Filtrar apenas tickets do status atual
       const filteredTickets = ticketsList.filter(t => t.status === status);
-      updateCount(filteredTickets.length);
+      const unread = filteredTickets.filter(t => (t.unreadMessages || 0) > 0).length;
+      const awaiting = filteredTickets.filter(t => t.fromMe === false).length;
+      updateCount({
+        total: filteredTickets.length,
+        unread,
+        awaiting
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ticketsList, status]);
@@ -414,8 +420,28 @@ const TicketsListCustom = (props) => {
     }
   };
 
+  const unreadCount = ticketsList.filter(t => (t.unreadMessages || 0) > 0).length;
+  const awaitingCount = ticketsList.filter(t => t.fromMe === false).length;
+
   return (
     <Paper className={classes.ticketsListWrapper} style={style}>
+      {ticketsList.length > 0 && (status === "open" || status === "pending") && (
+        <Paper square elevation={0} className={classes.ticketsListHeader}>
+          <Typography className={classes.ticketsCount}>
+            {ticketsList.length} {ticketsList.length === 1 ? "conversa" : "conversas"}
+            {unreadCount > 0 && (
+              <span style={{ marginLeft: 8, color: "var(--primary-color, #1976d2)", fontWeight: 600 }}>
+                · {i18n.t("ticketsList.summaryUnread", { count: unreadCount })}
+              </span>
+            )}
+            {awaitingCount > 0 && (
+              <span style={{ marginLeft: 8, color: "var(--warning-color, #ed6c02)", fontWeight: 600 }}>
+                · {i18n.t("ticketsList.summaryAwaiting", { count: awaitingCount })}
+              </span>
+            )}
+          </Typography>
+        </Paper>
+      )}
       <Paper
         square
         name="closed"

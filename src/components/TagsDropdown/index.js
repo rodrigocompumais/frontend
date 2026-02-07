@@ -1,8 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Chip, IconButton, Menu, MenuItem, Typography, Box, TextField, makeStyles, useTheme } from "@material-ui/core";
-import Autocomplete from "@material-ui/lab/Autocomplete";
-import { isArray, isString } from "lodash";
+import { Chip, IconButton, Menu, Typography, Box, TextField, InputAdornment, makeStyles, useTheme } from "@material-ui/core";
 import LabelIcon from "@material-ui/icons/Label";
+import AddIcon from "@material-ui/icons/Add";
 import toastError from "../../errors/toastError";
 import api from "../../services/api";
 
@@ -69,6 +68,20 @@ const useStyles = makeStyles((theme) => ({
 		fontSize: "0.875rem",
 		fontStyle: "italic",
 	},
+	tagsList: {
+		display: "flex",
+		flexWrap: "wrap",
+		gap: theme.spacing(0.75),
+		marginTop: theme.spacing(1),
+		maxHeight: 200,
+		overflowY: "auto",
+		...theme.scrollbarStyles,
+	},
+	newTagRow: {
+		marginTop: theme.spacing(1.5),
+		paddingTop: theme.spacing(1),
+		borderTop: `1px solid ${theme.palette.divider}`,
+	},
 }));
 
 export function TagsDropdown({ ticket }) {
@@ -77,6 +90,7 @@ export function TagsDropdown({ ticket }) {
 	const [anchorEl, setAnchorEl] = useState(null);
 	const [tags, setTags] = useState([]);
 	const [selecteds, setSelecteds] = useState([]);
+	const [newTagName, setNewTagName] = useState("");
 	const isMounted = useRef(true);
 
 	useEffect(() => {
@@ -124,25 +138,29 @@ export function TagsDropdown({ ticket }) {
 		}
 	};
 
-	const onChange = async (value, reason) => {
-		let optionsChanged = [];
-		if (reason === "create-option") {
-			if (isArray(value)) {
-				for (let item of value) {
-					if (isString(item)) {
-						const newTag = await createTag({ name: item });
-						optionsChanged.push(newTag);
-					} else {
-						optionsChanged.push(item);
-					}
-				}
-			}
-			await loadTags();
+	const handleToggleTag = async (tag) => {
+		const isSelected = selecteds.some((s) => s.id === tag.id);
+		let optionsChanged;
+		if (isSelected) {
+			optionsChanged = selecteds.filter((s) => s.id !== tag.id);
 		} else {
-			optionsChanged = value;
+			optionsChanged = [...selecteds, tag];
 		}
 		setSelecteds(optionsChanged);
 		await syncTags({ ticketId: ticket.id, tags: optionsChanged });
+	};
+
+	const handleCreateTag = async () => {
+		const name = newTagName?.trim();
+		if (!name) return;
+		const newTag = await createTag({ name });
+		if (newTag) {
+			await loadTags();
+			setNewTagName("");
+			const optionsChanged = [...selecteds, newTag];
+			setSelecteds(optionsChanged);
+			await syncTags({ ticketId: ticket.id, tags: optionsChanged });
+		}
 	};
 
 	const handleOpenMenu = (event) => {
@@ -155,11 +173,6 @@ export function TagsDropdown({ ticket }) {
 
 	const menuOpen = Boolean(anchorEl);
 	const hasTags = selecteds && selecteds.length > 0;
-
-	// Não exibir tags em grupos
-	if (ticket?.isGroup) {
-		return null;
-	}
 
 	return (
 		<>
@@ -201,35 +214,7 @@ export function TagsDropdown({ ticket }) {
 				}}
 			>
 				<Box className={classes.menuSection}>
-					<Typography className={classes.menuSectionTitle}>Tags</Typography>
-					<Autocomplete
-						multiple
-						size="small"
-						options={tags}
-						value={selecteds}
-						freeSolo
-						onChange={(e, v, r) => onChange(v, r)}
-						getOptionLabel={(option) => option.name}
-						renderInput={(params) => (
-							<TextField
-								{...params}
-								variant="outlined"
-								placeholder="Adicionar tags..."
-								size="small"
-							/>
-						)}
-						PaperComponent={({ children }) => (
-							<Box
-								style={{
-									backgroundColor: theme.palette.background.paper,
-									borderRadius: theme.spacing(1),
-									border: `1px solid ${theme.palette.type === "dark" ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)"}`,
-								}}
-							>
-								{children}
-							</Box>
-						)}
-					/>
+					<Typography className={classes.menuSectionTitle}>Tags selecionadas</Typography>
 					<Box className={classes.selectedTagsContainer}>
 						{hasTags ? (
 							selecteds.map((option, index) => {
@@ -239,7 +224,7 @@ export function TagsDropdown({ ticket }) {
 
 								return (
 									<Chip
-										key={index}
+										key={option.id}
 										variant="filled"
 										style={{
 											backgroundColor: neutralColor,
@@ -257,6 +242,51 @@ export function TagsDropdown({ ticket }) {
 								Nenhuma tag selecionada
 							</Typography>
 						)}
+					</Box>
+					<Typography className={classes.menuSectionTitle} style={{ marginTop: 16 }}>Todas as tags</Typography>
+					<Box className={classes.tagsList}>
+						{tags.map((tag) => {
+							const isSelected = selecteds.some((s) => s.id === tag.id);
+							const neutralColor = getNeutralColor(tag.color);
+							const isDark = theme.palette.type === "dark";
+							const textColor = isDark ? "#FFFFFF" : "#1F2937";
+							return (
+								<Chip
+									key={tag.id}
+									variant={isSelected ? "default" : "outlined"}
+									clickable
+									onClick={() => handleToggleTag(tag)}
+									style={{
+										backgroundColor: isSelected ? neutralColor : "transparent",
+										color: isSelected ? textColor : theme.palette.text.secondary,
+										borderColor: neutralColor,
+										border: isSelected ? "none" : `1px solid ${neutralColor}`,
+									}}
+									label={tag.name}
+									size="small"
+									className={classes.tagChip}
+								/>
+							);
+						})}
+					</Box>
+					<Box className={classes.newTagRow}>
+						<TextField
+							fullWidth
+							size="small"
+							placeholder="Criar nova tag..."
+							value={newTagName}
+							onChange={(e) => setNewTagName(e.target.value)}
+							onKeyDown={(e) => e.key === "Enter" && handleCreateTag()}
+							InputProps={{
+								endAdornment: (
+									<InputAdornment position="end">
+										<IconButton size="small" onClick={handleCreateTag} disabled={!newTagName?.trim()}>
+											<AddIcon fontSize="small" />
+										</IconButton>
+									</InputAdornment>
+								),
+							}}
+						/>
 					</Box>
 				</Box>
 			</Menu>

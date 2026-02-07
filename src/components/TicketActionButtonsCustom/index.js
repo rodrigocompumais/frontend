@@ -132,7 +132,7 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const TicketActionButtonsCustom = ({ ticket, realTimeTranslationEnabled = true, onToggleTranslation }) => {
+const TicketActionButtonsCustom = ({ ticket, realTimeTranslationEnabled = true, onToggleTranslation, onSearchClick, onMarkAsUnread }) => {
 	const classes = useStyles();
 	const history = useHistory();
 	const [anchorEl, setAnchorEl] = useState(null);
@@ -190,7 +190,8 @@ const TicketActionButtonsCustom = ({ ticket, realTimeTranslationEnabled = true, 
 			{/* Não exibir botões de ação em grupos */}
 			{ticket.isGroup ? (
 				<>
-					{/* Apenas menu de opções para grupos */}
+					{/* Tags e menu de opções para grupos */}
+					<TagsDropdown ticket={ticket} />
 					<IconButton
 						onClick={handleOpenTicketOptionsMenu}
 						className={classes.iconButton}
@@ -202,6 +203,8 @@ const TicketActionButtonsCustom = ({ ticket, realTimeTranslationEnabled = true, 
 						anchorEl={anchorEl}
 						menuOpen={ticketOptionsMenuOpen}
 						handleClose={handleCloseTicketOptionsMenu}
+						onSearchClick={onSearchClick}
+						onMarkAsUnread={onMarkAsUnread}
 					/>
 				</>
 			) : (
@@ -266,6 +269,8 @@ const TicketActionButtonsCustom = ({ ticket, realTimeTranslationEnabled = true, 
 								anchorEl={anchorEl}
 								menuOpen={ticketOptionsMenuOpen}
 								handleClose={handleCloseTicketOptionsMenu}
+								onSearchClick={onSearchClick}
+								onMarkAsUnread={onMarkAsUnread}
 							/>
 						</>
 					)}

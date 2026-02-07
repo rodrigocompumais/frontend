@@ -178,7 +178,7 @@ const NavigationMenus = () => {
         >
           <ListItemIcon>
             <Badge 
-              badgeContent={pendingTicketsCount + unreadMessagesCount > 0 ? pendingTicketsCount + unreadMessagesCount : 0} 
+              badgeContent={totalNotifications > 0 ? totalNotifications : 0} 
               color="error" 
               max={99}
             >

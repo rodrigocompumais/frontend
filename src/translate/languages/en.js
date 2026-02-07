@@ -859,6 +859,8 @@ const messages = {
       ticketsList: {
         pendingHeader: "Aguardando",
         assignedHeader: "Atendendo",
+        summaryUnread: "{{count}} não lidas",
+        summaryAwaiting: "{{count}} aguardando resposta",
         noTicketsTitle: "Nada aqui!",
         noTicketsMessage:
           "Nenhum atendimento encontrado com esse status ou termo pesquisado",
@@ -874,6 +876,7 @@ const messages = {
           peek: "Espiar Conversa",
         },
         noQueue: "SEM FILA",
+        awaitingResponse: "Aguardando resposta",
       },
       ticketAdvanced: {
         selectTicket: "Selecionar Ticket",
@@ -1092,6 +1095,7 @@ const messages = {
         quickMessage: "Respostas Rápidas",
         schedule: "Agendamento",
         internalChat: "Chat Interno",
+        search: "Buscar na conversa",
         generateTicket: "Gerar Ticket",
         expand: "Expandir ações rápidas",
         collapse: "Recolher ações rápidas",
@@ -1826,6 +1830,7 @@ const messages = {
       },
       ticketOptionsMenu: {
         schedule: "Agendamento",
+        markAsUnread: "Marcar como não lido",
         delete: "Deletar",
         transfer: "Transferir",
         registerAppointment: "Observações do Contato",

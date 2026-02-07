@@ -37,6 +37,7 @@ import { i18n } from "../../translate/i18n";
 import ChatAIButton from "../ChatAIButton";
 import ChatAIModal from "../ChatAIModal";
 import AudioTranscriptionModal from "../AudioTranscriptionModal";
+import AudioMessagePlayer from "../AudioMessagePlayer";
 import { toast } from "react-toastify";
 import useMessageTranslation from "../../hooks/useMessageTranslation";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -374,7 +375,7 @@ const reducer = (state, action) => {
   }
 };
 
-const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTranslationEnabled = true }) => {
+const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTranslationEnabled = true, scrollToMessageId, onScrollToMessageDone, onScrollToMessageRequest }) => {
   const classes = useStyles();
 
   const [messagesList, dispatch] = useReducer(reducer, []);
@@ -563,6 +564,22 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
     }
   };
 
+  useEffect(() => {
+    if (!scrollToMessageId || !onScrollToMessageDone) return;
+    const el = document.getElementById(`message-${scrollToMessageId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.style.transition = "background-color 0.5s ease";
+      el.style.backgroundColor = "rgba(14, 165, 233, 0.2)";
+      const t = setTimeout(() => {
+        el.style.backgroundColor = "";
+        onScrollToMessageDone();
+      }, 2000);
+      return () => clearTimeout(t);
+    }
+    onScrollToMessageDone();
+  }, [scrollToMessageId, onScrollToMessageDone]);
+
   const handleScroll = (e) => {
     if (!hasMore) return;
     const { scrollTop } = e.currentTarget;
@@ -589,7 +606,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
     setAnchorEl(null);
   };
 
-  const checkMessageMedia = (message) => {
+  const checkMessageMedia = (message, index = -1) => {
     // Check for vCard first (can be in body even if mediaType is not set)
     const isVCard = message.mediaType === "vcard" || 
                     (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD"));
@@ -630,22 +647,17 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
     else if (message.mediaType === "image") {
       return <ModalImageCors imageUrl={message.mediaUrl} />;
     } else if (message.mediaType === "audio") {
+      const nextAudios = index >= 0
+        ? messagesList.slice(index + 1).filter((m) => m.mediaType === "audio").map((m) => ({ url: m.mediaUrl, messageId: m.id }))
+        : [];
       return (
-        <div>
-          <audio controls style={{ width: "100%", marginBottom: 8 }}>
-            <source src={message.mediaUrl} type="audio/ogg"></source>
-          </audio>
-          <Button
-            size="small"
-            variant="outlined"
-            color="primary"
-            onClick={() => handleTranscribeAudio(message.id)}
-            disabled={transcriptionLoading}
-            style={{ marginTop: 4 }}
-          >
-            {i18n.t("messagesList.audio.transcribe")}
-          </Button>
-        </div>
+        <AudioMessagePlayer
+          messageId={message.id}
+          mediaUrl={message.mediaUrl}
+          nextAudiosInQueue={nextAudios}
+          onTranscribe={handleTranscribeAudio}
+          transcriptionLoading={transcriptionLoading}
+        />
       );
     } else if (message.mediaType === "video") {
       return (
@@ -770,66 +782,76 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
   };
 
   const renderQuotedMessage = (message) => {
+    const quoted = message.quotedMsg;
+    if (!quoted) return null;
+
+    const isTextMessage = !quoted.mediaType || quoted.mediaType === "chat" || quoted.mediaType === "conversation" || quoted.mediaType === "extendedTextMessage";
+    const isMediaMessage = ["audio", "video", "image", "application", "document", "contactMessage", "vcard", "locationMessage"].includes(quoted.mediaType);
+    const showText = isTextMessage || (!isMediaMessage && (quoted.body || quoted.isDeleted));
+    const handleQuotedClick = quoted.id && onScrollToMessageRequest
+      ? () => onScrollToMessageRequest(quoted.id)
+      : undefined;
+
     return (
       <div
         className={clsx(classes.quotedContainerLeft, {
           [classes.quotedContainerRight]: message.fromMe,
         })}
+        onClick={handleQuotedClick}
+        role={handleQuotedClick ? "button" : undefined}
+        style={handleQuotedClick ? { cursor: "pointer" } : undefined}
       >
         <span
           className={clsx(classes.quotedSideColorLeft, {
-            [classes.quotedSideColorRight]: message.quotedMsg?.fromMe,
+            [classes.quotedSideColorRight]: quoted.fromMe,
           })}
         ></span>
         <div className={classes.quotedMsg}>
-          {!message.quotedMsg?.fromMe && (
+          {!quoted.fromMe && (
             <span className={classes.messageContactName}>
-              {message.quotedMsg?.contact?.name}
+              {quoted.contact?.name}
             </span>
           )}
 
-          {message.quotedMsg.mediaType === "audio"
-            && (
-              <div className={classes.downloadMedia}>
-                <audio controls>
-                  <source src={message.quotedMsg.mediaUrl} type="audio/ogg"></source>
-                </audio>
-              </div>
-            )
-          }
-          {message.quotedMsg.mediaType === "video"
-            && (
-              <video
-                className={classes.messageMedia}
-                src={message.quotedMsg.mediaUrl}
-                controls
+          {quoted.mediaType === "audio" && (
+            <div className={classes.downloadMedia}>
+              <AudioMessagePlayer
+                messageId={quoted.id}
+                mediaUrl={quoted.mediaUrl}
               />
-            )
-          }
-          {message.quotedMsg.mediaType === "application"
-            && (
-              <div className={classes.downloadMedia}>
-                <Button
-                  startIcon={<GetApp />}
-                  color="primary"
-                  variant="outlined"
-                  target="_blank"
-                  href={message.quotedMsg.mediaUrl}
-                >
-                  {i18n.t("messagesList.header.buttons.download")}
-                </Button>
-              </div>
-            )
-          }
-
-          {message.quotedMsg.mediaType === "image"
-            && (<ModalImageCors imageUrl={message.quotedMsg.mediaUrl} />)}
-
-          {message.quotedMsg.mediaType === "contactMessage"
-            && (
-                <span>{message.quotedMsg.body}</span>
-              )
-          }
+            </div>
+          )}
+          {quoted.mediaType === "video" && (
+            <video
+              className={classes.messageMedia}
+              src={quoted.mediaUrl}
+              controls
+            />
+          )}
+          {quoted.mediaType === "application" && (
+            <div className={classes.downloadMedia}>
+              <Button
+                startIcon={<GetApp />}
+                color="primary"
+                variant="outlined"
+                target="_blank"
+                href={quoted.mediaUrl}
+              >
+                {i18n.t("messagesList.header.buttons.download")}
+              </Button>
+            </div>
+          )}
+          {quoted.mediaType === "image" && (
+            <ModalImageCors imageUrl={quoted.mediaUrl} />
+          )}
+          {quoted.mediaType === "contactMessage" && (
+            <span>{quoted.body}</span>
+          )}
+          {(showText || (quoted.body && !isMediaMessage)) && (
+            <MarkdownWrapper>
+              {quoted.isDeleted ? i18n.t("messagesList.deletedMessage") : (quoted.body && quoted.body.length > 100 ? `${quoted.body.slice(0, 100)}...` : (quoted.body || ""))}
+            </MarkdownWrapper>
+          )}
         </div>
       </div>
     );
@@ -859,6 +881,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
             {renderNumberTicket(message, index)}
             {renderMessageDivider(message, index)}
             <div 
+              id={`message-${message.id}`}
               className={classes.messageLeft}
               style={{ 
                 backgroundColor: backgroundColor,
@@ -875,7 +898,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                 <ExpandMore />
               </IconButton>
               {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
-              ) && checkMessageMedia(message)}
+              ) && checkMessageMedia(message, index)}
               <div
                 className={clsx(classes.textContentItem, {
                   [classes.textContentItemDeleted]: message.isDeleted,
@@ -924,7 +947,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
             {renderDailyTimestamps(message, index)}
             {renderNumberTicket(message, index)}
             {renderMessageDivider(message, index)}
-            <div className={clsx(classes.messageRight, {
+            <div id={`message-${message.id}`} className={clsx(classes.messageRight, {
               [classes.messageInternal]: message.isInternal,
             })}>
               <IconButton
@@ -938,7 +961,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                 <ExpandMore />
               </IconButton>
               {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
-              ) && checkMessageMedia(message)}
+              ) && checkMessageMedia(message, index)}
               <div
                 className={clsx(classes.textContentItem, {
                   [classes.textContentItemDeleted]: message.isDeleted,
@@ -983,7 +1006,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
           {renderDailyTimestamps(message, index)}
           {renderNumberTicket(message, index)}
           {renderMessageDivider(message, index)}
-          <div className={classes.messageLeft}>
+          <div id={`message-${message.id}`} className={classes.messageLeft}>
             <IconButton
               variant="contained"
               size="small"
@@ -1014,7 +1037,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
             )}
 
             {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
-            ) && checkMessageMedia(message)}
+            ) && checkMessageMedia(message, index)}
             <div className={classes.textContentItem}>
               {message.quotedMsg && renderQuotedMessage(message)}
               <MarkdownWrapper>
@@ -1046,7 +1069,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
               {renderDailyTimestamps(message, index)}
               {renderNumberTicket(message, index)}
               {renderMessageDivider(message, index)}
-              <div className={classes.messageCenter}>
+              <div id={`message-${message.id}`} className={classes.messageCenter}>
                 <IconButton
                   variant="contained"
                   size="small"
@@ -1089,6 +1112,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                 {renderNumberTicket(message, index)}
                 {renderMessageDivider(message, index)}
                 <div 
+                  id={`message-${message.id}`}
                   className={classes.messageLeft}
                   style={{ 
                     backgroundColor: backgroundColor,
@@ -1106,7 +1130,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                   </IconButton>
                   {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
                     //|| message.mediaType === "multi_vcard" 
-                  ) && checkMessageMedia(message)}
+                  ) && checkMessageMedia(message, index)}
                   <div
                     className={clsx(classes.textContentItem, {
                       [classes.textContentItemDeleted]: message.isDeleted,
@@ -1151,7 +1175,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                 {renderDailyTimestamps(message, index)}
                 {renderNumberTicket(message, index)}
                 {renderMessageDivider(message, index)}
-                <div className={classes.messageRight}>
+                <div id={`message-${message.id}`} className={classes.messageRight}>
                   <IconButton
                     variant="contained"
                     size="small"
@@ -1164,7 +1188,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                   </IconButton>
                   {((message.mediaUrl || message.mediaType === "locationMessage" || message.mediaType === "vcard" || (message.body && message.body.trim().toUpperCase().startsWith("BEGIN:VCARD")))
                     //|| message.mediaType === "multi_vcard" 
-                  ) && checkMessageMedia(message)}
+                  ) && checkMessageMedia(message, index)}
                   <div
                     className={clsx(classes.textContentItem, {
                       [classes.textContentItemDeleted]: message.isDeleted,

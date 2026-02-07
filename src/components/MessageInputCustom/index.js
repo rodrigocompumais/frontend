@@ -225,10 +225,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     width: "100%",
     alignItems: "center",
-    justifyContent: "center",
-    paddingTop: 8,
-    paddingLeft: 73,
-    paddingRight: 7,
+    padding: "8px 12px",
   },
 
   replyginMsgContainer: {
@@ -1052,7 +1049,24 @@ const MessageInputCustom = (props) => {
     }, 100);
   };
 
+  const getReplyPreviewText = (message) => {
+    if (message.isDeleted) return "(Mensagem excluída)";
+    if (message.body && message.body.trim()) {
+      const text = message.body.trim();
+      return text.length > 80 ? `${text.slice(0, 80)}...` : text;
+    }
+    if (message.mediaType === "audio") return "🎵 Áudio";
+    if (message.mediaType === "image") return "🖼️ Imagem";
+    if (message.mediaType === "video") return "🎬 Vídeo";
+    if (message.mediaType === "document" || message.mediaType === "application") return "📄 Documento";
+    if (message.mediaType === "contactMessage" || message.mediaType === "vcard") return "👤 Contato";
+    if (message.mediaType === "locationMessage") return "📍 Localização";
+    return "(Mensagem)";
+  };
+
   const renderReplyingMessage = (message) => {
+    const previewText = getReplyPreviewText(message);
+    const senderName = message.fromMe ? "Você" : (message.contact?.name || "Cliente");
     return (
       <div className={classes.replyginMsgWrapper}>
         <div className={classes.replyginMsgContainer}>
@@ -1062,16 +1076,14 @@ const MessageInputCustom = (props) => {
             })}
           ></span>
           <div className={classes.replyginMsgBody}>
-            {!message.fromMe && (
-              <span className={classes.messageContactName}>
-                {message.contact?.name}
-              </span>
-            )}
-            {message.body}
+            <span className={classes.messageContactName}>
+              Respondendo a {senderName}:
+            </span>
+            <div style={{ marginTop: 2 }}>{previewText}</div>
           </div>
         </div>
         <IconButton
-          aria-label="showRecorder"
+          aria-label="cancel-reply"
           component="span"
           disabled={loading || ticketStatus !== "open"}
           onClick={() => setReplyingMessage(null)}
@@ -1086,7 +1098,9 @@ const MessageInputCustom = (props) => {
   if (medias.length > 0)
     return (
       <>
-        <Paper elevation={0} square className={classes.viewMediaInputWrapper}>
+        <Paper elevation={0} square className={classes.mainWrapper}>
+          {replyingMessage && renderReplyingMessage(replyingMessage)}
+          <Paper elevation={0} square className={classes.viewMediaInputWrapper}>
           <IconButton
             aria-label="cancel-upload"
             component="span"
@@ -1156,6 +1170,7 @@ const MessageInputCustom = (props) => {
           >
             <SendIcon className={classes.sendMessageIcons} />
           </IconButton>
+        </Paper>
         </Paper>
 
         {/* Modal de Preview com Carrossel */}

@@ -239,10 +239,18 @@ const useNotificationCounts = () => {
     };
   }, [user, socketManager]);
 
+  // totalNotifications = número de CONVERSAS que precisam de atenção (não soma conversas + mensagens)
+  const uniqueTicketsNeedingAttention = new Set([
+    ...pendingTicketsRef.current,
+    ...Array.from(ticketUnreadCountsRef.current.entries())
+      .filter(([, count]) => count > 0)
+      .map(([id]) => parseInt(id, 10))
+  ]);
+
   return {
     pendingTicketsCount,
     unreadMessagesCount,
-    totalNotifications: pendingTicketsCount + unreadMessagesCount
+    totalNotifications: uniqueTicketsNeedingAttention.size
   };
 };
 
