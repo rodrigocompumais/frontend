@@ -27,6 +27,7 @@ import ChatPopover from "../pages/Chat/ChatPopover";
 import AiChatFloating from "../components/AiChatFloating";
 import useChatNotifications from "../hooks/useChatNotifications";
 import useTicketNotifications from "../hooks/useTicketNotifications";
+import useCompanyModules from "../hooks/useCompanyModules";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -104,6 +105,7 @@ const useStyles = makeStyles((theme) => ({
 const LoggedInLayout = ({ children, themeToggle }) => {
   const location = useLocation();
   const history = useHistory();
+  const { hasLanchonetes } = useCompanyModules();
   const isDashboard = location.pathname === "/dashboard" || location.pathname === "/";
   const isChatPage = location.pathname.startsWith("/chats");
   const classes = useStyles();
@@ -167,9 +169,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
             className={classes.dashboardButton}
             onClick={() => history.push('/dashboard')}
             startIcon={<DashboardIcon className={classes.dashboardIcon} />}
-            aria-label="Ir para Dashboard"
+            aria-label={hasLanchonetes ? "Ir para Lanchonetes" : "Ir para Dashboard"}
           >
-            Dashboard
+            {hasLanchonetes ? "Lanchonetes" : "Dashboard"}
           </Button>
 
           {/* Menus de navegação dropdown (desktop) */}

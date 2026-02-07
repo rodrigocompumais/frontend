@@ -3,7 +3,7 @@ import { BrowserRouter, Switch } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 
 import LoggedInLayout from "../layout";
-import Dashboard from "../pages/Dashboard/";
+import HomePage from "../pages/HomePage";
 import TicketResponsiveContainer from "../pages/TicketResponsiveContainer";
 import Signup from "../pages/Signup/";
 // import SignupCheckout from "../pages/Signup/Checkout"; // Checkout transparente desabilitado
@@ -97,7 +97,7 @@ const Routes = () => {
             <WhatsAppsProvider>
               <LoggedInLayout>
                 <Switch>
-                <Route exact path="/dashboard" component={Dashboard} isPrivate />
+                <Route exact path="/dashboard" component={HomePage} isPrivate />
                 <Route
                   exact
                   path="/tickets/:ticketId?"
