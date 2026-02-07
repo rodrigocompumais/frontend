@@ -25,7 +25,6 @@ import {
   TableRow,
   InputAdornment,
 } from "@material-ui/core";
-import Autocomplete from "@material-ui/lab/Autocomplete";
 import { Rating, Alert } from "@material-ui/lab";
 
 import api from "../../services/api";
@@ -116,8 +115,6 @@ const PublicForm = () => {
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [quotationItems, setQuotationItems] = useState([]);
-  const [contactOptions, setContactOptions] = useState({}); // Armazena opções de contatos por campo
-  const [loadingContacts, setLoadingContacts] = useState({}); // Armazena estado de carregamento por campo
 
   useEffect(() => {
     loadForm();
@@ -295,33 +292,6 @@ const PublicForm = () => {
     setQuotationItems(newItems);
   };
 
-  const searchContacts = async (fieldId, searchTerm) => {
-    if (!searchTerm || searchTerm.length < 2) {
-      setContactOptions((prev) => ({ ...prev, [fieldId]: [] }));
-      return;
-    }
-
-    setLoadingContacts((prev) => ({ ...prev, [fieldId]: true }));
-    try {
-      const { data } = await api.get(`/contacts/list`, {
-        params: { name: searchTerm },
-      });
-      setContactOptions((prev) => ({ ...prev, [fieldId]: data || [] }));
-    } catch (err) {
-      // Silenciosamente falhar se não houver autenticação (formulário público)
-      // O usuário ainda pode digitar manualmente
-      if (err.response?.status === 401 || err.response?.status === 403) {
-        // Sem autenticação, não mostrar erro, apenas não buscar
-        setContactOptions((prev) => ({ ...prev, [fieldId]: [] }));
-      } else {
-        console.error("Erro ao buscar contatos:", err);
-        setContactOptions((prev) => ({ ...prev, [fieldId]: [] }));
-      }
-    } finally {
-      setLoadingContacts((prev) => ({ ...prev, [fieldId]: false }));
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -383,130 +353,14 @@ const PublicForm = () => {
 
     switch (field.fieldType) {
       case "text":
-        // Se tiver flag de buscar contato por nome, usar Autocomplete
-        if (field.searchContactByName) {
-          return (
-            <Autocomplete
-              freeSolo
-              options={contactOptions[field.id] || []}
-              getOptionLabel={(option) => (typeof option === "string" ? option : option.name || "")}
-              value={value || null}
-              onInputChange={(event, newInputValue) => {
-                handleFieldChange(field.id, newInputValue);
-                if (newInputValue && newInputValue.length >= 2) {
-                  searchContacts(field.id, newInputValue);
-                } else {
-                  setContactOptions((prev) => ({ ...prev, [field.id]: [] }));
-                }
-              }}
-              onChange={(event, newValue) => {
-                if (newValue) {
-                  const contactName = typeof newValue === "string" ? newValue : newValue.name || "";
-                  handleFieldChange(field.id, contactName);
-                }
-              }}
-              loading={loadingContacts[field.id] || false}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  fullWidth
-                  variant={fieldVariant}
-                  placeholder={field.placeholder}
-                  error={hasError}
-                  helperText={error || field.helpText}
-                  inputProps={{
-                    ...params.inputProps,
-                    maxLength: field.validation?.maxLength,
-                    minLength: field.validation?.minLength,
-                  }}
-                />
-              )}
-            />
-          );
-        }
-        // Caso contrário, TextField normal
-        return (
-          <TextField
-            fullWidth
-            variant={fieldVariant}
-            type="text"
-            value={value}
-            onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            placeholder={field.placeholder}
-            error={hasError}
-            helperText={error || field.helpText}
-            inputProps={{
-              maxLength: field.validation?.maxLength,
-              minLength: field.validation?.minLength,
-            }}
-          />
-        );
       case "email":
+      case "phone":
       case "number":
         return (
           <TextField
             fullWidth
             variant={fieldVariant}
-            type={field.fieldType === "email" ? "email" : "number"}
-            value={value}
-            onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            placeholder={field.placeholder}
-            error={hasError}
-            helperText={error || field.helpText}
-            inputProps={{
-              maxLength: field.validation?.maxLength,
-              minLength: field.validation?.minLength,
-            }}
-          />
-        );
-      case "phone":
-        // Se tiver flag phoneOnlyPaste, permitir apenas colar
-        if (field.phoneOnlyPaste) {
-          return (
-            <TextField
-              fullWidth
-              variant={fieldVariant}
-              type="text"
-              value={value}
-              onPaste={(e) => {
-                e.preventDefault();
-                const pastedText = e.clipboardData.getData("text");
-                handleFieldChange(field.id, pastedText);
-              }}
-              onKeyDown={(e) => {
-                // Permitir apenas Ctrl+V, Ctrl+A, Ctrl+C, Ctrl+X, Backspace, Delete, Tab, Enter, Arrow keys
-                const allowedKeys = [
-                  "Backspace", "Delete", "Tab", "Enter",
-                  "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown",
-                  "Home", "End"
-                ];
-                const isCtrlKey = e.ctrlKey || e.metaKey;
-                const isAllowedKey = allowedKeys.includes(e.key);
-                const isPaste = (e.key === "v" || e.key === "V") && isCtrlKey;
-                const isCopy = (e.key === "c" || e.key === "C") && isCtrlKey;
-                const isCut = (e.key === "x" || e.key === "X") && isCtrlKey;
-                const isSelectAll = (e.key === "a" || e.key === "A") && isCtrlKey;
-                
-                if (!isAllowedKey && !isPaste && !isCopy && !isCut && !isSelectAll) {
-                  e.preventDefault();
-                }
-              }}
-              placeholder={field.placeholder || "Cole o telefone aqui"}
-              error={hasError}
-              helperText={error || field.helpText || "Apenas colar é permitido neste campo"}
-              inputProps={{
-                maxLength: field.validation?.maxLength,
-                minLength: field.validation?.minLength,
-              }}
-            />
-          );
-        }
-        // Caso contrário, TextField normal
-        return (
-          <TextField
-            fullWidth
-            variant={fieldVariant}
-            type="text"
+            type={field.fieldType === "email" ? "email" : field.fieldType === "number" ? "number" : "text"}
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
             placeholder={field.placeholder}
