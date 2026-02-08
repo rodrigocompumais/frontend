@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -7,16 +7,37 @@ import {
   Button,
   Typography,
   Box,
+  CircularProgress,
 } from "@material-ui/core";
 import QRCode from "qrcode.react";
 import { toast } from "react-toastify";
+import api from "../../services/api";
 
-const MesaQRModal = ({ open, onClose, mesa }) => {
+const MesaQRModal = ({ open, onClose, mesa, cardapioSlug }) => {
   const qrRef = useRef(null);
+  const [url, setUrl] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  if (!mesa?.form?.slug) return null;
+  const slug = mesa?.form?.slug || cardapioSlug;
 
-  const url = `${window.location.origin}/f/${mesa.form.slug}?mesa=${mesa.id}`;
+  useEffect(() => {
+    if (!open || !mesa?.id || !slug) {
+      setUrl("");
+      return;
+    }
+    setLoading(true);
+    api.get(`/mesas/${mesa.id}/link-qr`, { params: { formSlug: slug } })
+      .then(({ data }) => {
+        setUrl(data.url || "");
+      })
+      .catch(() => {
+        setUrl(`${window.location.origin}/f/${slug}?mesa=${mesa.id}`);
+      })
+      .finally(() => setLoading(false));
+  }, [open, mesa?.id, slug]);
+
+  if (!slug) return null;
+
   const mesaLabel = mesa.name || mesa.number || `Mesa ${mesa.id}`;
 
   const handleCopyLink = () => {
@@ -42,12 +63,18 @@ const MesaQRModal = ({ open, onClose, mesa }) => {
       <DialogTitle>QR Code - {mesaLabel}</DialogTitle>
       <DialogContent>
         <Box display="flex" flexDirection="column" alignItems="center">
-          <Box ref={qrRef}>
-            <QRCode value={url} size={220} level="M" renderAs="canvas" />
-          </Box>
-          <Typography variant="body2" color="textSecondary" style={{ marginTop: 16, wordBreak: "break-all", textAlign: "center" }}>
-            {url}
-          </Typography>
+          {loading ? (
+            <Box py={3}><CircularProgress /></Box>
+          ) : url ? (
+            <Box ref={qrRef}>
+              <QRCode value={url} size={220} level="M" renderAs="canvas" />
+            </Box>
+          ) : null}
+          {url && (
+            <Typography variant="body2" color="textSecondary" style={{ marginTop: 16, wordBreak: "break-all", textAlign: "center" }}>
+              {url}
+            </Typography>
+          )}
         </Box>
       </DialogContent>
       <DialogActions>

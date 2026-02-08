@@ -103,6 +103,7 @@ const MesaOcuparModal = ({ open, onClose, mesa, onSuccess }) => {
         const { data: ticket } = await api.post("/tickets", {
           contactId: selectedContact.id,
           status: "open",
+          reuseOpenTicket: true, // reutiliza ticket aberto do contato ao ocupar mesa
         });
         ticketId = ticket?.id;
       }

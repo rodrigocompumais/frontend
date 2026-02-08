@@ -827,7 +827,14 @@ const messages = {
           tags: "Filtro por tags",
         },
         notification: {
-          message: "Mensagem de",
+          message: "Mensaje de",
+          contact: "Contacto",
+          newMessage: "Nuevo mensaje",
+          image: "Imagen",
+          video: "Vídeo",
+          audio: "Audio",
+          document: "Documento",
+          sticker: "Sticker",
         },
         tabs: {
           open: { title: "Abertas" },
@@ -1898,6 +1905,10 @@ const messages = {
           "Esta cor já está em uso, escolha outra.",
         ERR_WAPP_GREETING_REQUIRED:
           "A mensagem de saudação é obrigatório quando há mais de uma fila.",
+        ERR_CONTACT_ALREADY_HAS_MESA:
+          "Este contacto ya está en otra mesa. Libere la mesa actual antes de ocupar otra.",
+        ERR_MESA_LINK_INVALID:
+          "Enlace de mesa inválido o expirado. Use el código QR de la mesa para acceder al menú.",
       },
       forms: {
         title: "Formulários",

@@ -182,9 +182,9 @@ const PedidoKanbanCard = ({
             {(order?.protocol || order?.id) && (
               <Typography variant="caption" color="textSecondary" style={{ fontFamily: "monospace", display: "block" }}>
                 {order.protocol || `#${order.id}`}
-                {order.form?.name && (
-                  <span style={{ marginLeft: 8, fontFamily: "inherit" }}> • {order.form.name}</span>
-                )}
+                <span style={{ marginLeft: 8, fontFamily: "inherit" }}>
+                  • {(order?.metadata?.orderType === "delivery" ? "Delivery" : "Mesa")}
+                </span>
               </Typography>
             )}
           </Box>
@@ -200,7 +200,8 @@ const PedidoKanbanCard = ({
               className={classes.mesaBadge}
               onClick={(e) => {
                 e.stopPropagation();
-                history.push("/mesas");
+                const mesaId = order?.metadata?.tableId;
+                history.push(mesaId != null ? `/mesas?mesaId=${mesaId}` : "/mesas");
               }}
               role="button"
               tabIndex={0}
@@ -208,7 +209,8 @@ const PedidoKanbanCard = ({
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
                   e.stopPropagation();
-                  history.push("/mesas");
+                  const mesaId = order?.metadata?.tableId;
+                  history.push(mesaId != null ? `/mesas?mesaId=${mesaId}` : "/mesas");
                 }
               }}
             >

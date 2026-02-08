@@ -828,6 +828,13 @@ const messages = {
         },
         notification: {
           message: "Mensagem de",
+          contact: "Cliente",
+          newMessage: "Nova mensagem",
+          image: "Imagem",
+          video: "Vídeo",
+          audio: "Áudio",
+          document: "Documento",
+          sticker: "Figurinha",
         },
         tabs: {
           open: { title: "Abertas" },
@@ -1948,6 +1955,10 @@ const messages = {
         ERR_MODULE_NOT_FOUND: "Módulo não encontrado.",
         ERR_MODULE_LANCHONETES_REQUIRED:
           "O Módulo Lanchonetes é necessário para este recurso. Contrate o módulo para usar cardápio, produtos e pedidos via WhatsApp.",
+        ERR_CONTACT_ALREADY_HAS_MESA:
+          "Este contato já está em outra mesa. Libere a mesa atual antes de ocupar outra.",
+        ERR_MESA_LINK_INVALID:
+          "Link da mesa inválido ou expirado. Use o QR code da mesa para acessar o cardápio.",
       },
       forms: {
         title: "Formulários",

@@ -31,7 +31,17 @@ import toastError from "../../errors/toastError";
 import useCompanyModules from "../../hooks/useCompanyModules";
 import PedidoKanbanCard from "../../components/PedidoKanbanCard";
 
-const DEFAULT_ORDER_STAGES = [
+// Pedidos mesa: Novo, Confirmado, Em preparo, Pronto, Entregue, Cancelado
+const MESA_ORDER_STAGES = [
+  { id: "novo", label: "Novo", color: "#6366F1" },
+  { id: "confirmado", label: "Confirmado", color: "#3B82F6" },
+  { id: "em_preparo", label: "Em preparo", color: "#F59E0B" },
+  { id: "pronto", label: "Pronto", color: "#22C55E" },
+  { id: "entregue", label: "Entregue", color: "#10B981" },
+  { id: "cancelado", label: "Cancelado", color: "#6B7280" },
+];
+// Delivery: inclui "Saiu para entrega" entre Pronto e Entregue
+const DELIVERY_ORDER_STAGES = [
   { id: "novo", label: "Novo", color: "#6366F1" },
   { id: "confirmado", label: "Confirmado", color: "#3B82F6" },
   { id: "em_preparo", label: "Em preparo", color: "#F59E0B" },
@@ -50,6 +60,21 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2),
     backgroundColor: theme.palette.fancyBackground,
     overflow: "hidden",
+  },
+  rootMinimal: {
+    maxHeight: "none",
+    height: "100%",
+    padding: 0,
+  },
+  boardContainerMinimal: {
+    marginTop: 0,
+    flex: 1,
+    minHeight: 0,
+    alignSelf: "stretch",
+  },
+  columnMinimal: {
+    minHeight: 0,
+    maxHeight: "100%",
   },
   headerActions: {
     display: "flex",
@@ -118,7 +143,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const Pedidos = ({ orderTypeFilter }) => {
+const Pedidos = ({ orderTypeFilter, minimal = false }) => {
   const classes = useStyles();
   const history = useHistory();
   const location = useLocation();
@@ -126,7 +151,9 @@ const Pedidos = ({ orderTypeFilter }) => {
 
   const params = new URLSearchParams(location.search);
   const [formIdFilter, setFormIdFilter] = useState(params.get("formId") || "");
+  const [tableIdFilter, setTableIdFilter] = useState(params.get("tableId") || "");
   const [forms, setForms] = useState([]);
+  const [mesas, setMesas] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -136,6 +163,7 @@ const Pedidos = ({ orderTypeFilter }) => {
       const queryParams = new URLSearchParams();
       if (formIdFilter) queryParams.set("formId", formIdFilter);
       if (orderTypeFilter) queryParams.set("orderType", orderTypeFilter);
+      if (tableIdFilter) queryParams.set("tableId", tableIdFilter);
       const query = queryParams.toString() ? `?${queryParams.toString()}` : "";
       const { data } = await api.get(`/orders${query}`);
       let ordersList = data.orders || [];
@@ -150,9 +178,12 @@ const Pedidos = ({ orderTypeFilter }) => {
           const idsToFetch = filterId && cardapioForms.some((f) => f.id === filterId)
             ? [filterId]
             : cardapioForms.map((f) => f.id);
-          const orderTypeSuffix = orderTypeFilter ? `?orderType=${orderTypeFilter}` : "";
+          const suffixParams = new URLSearchParams();
+          if (orderTypeFilter) suffixParams.set("orderType", orderTypeFilter);
+          if (tableIdFilter) suffixParams.set("tableId", tableIdFilter);
+          const suffix = suffixParams.toString() ? `?${suffixParams.toString()}` : "";
           const results = await Promise.all(
-            idsToFetch.map((id) => api.get(`/forms/${id}/orders${orderTypeSuffix}`))
+            idsToFetch.map((id) => api.get(`/forms/${id}/orders${suffix}`))
           );
           ordersList = results.flatMap((r) => r.data.orders || []);
           ordersList.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt));
@@ -165,6 +196,12 @@ const Pedidos = ({ orderTypeFilter }) => {
 
       setOrders(ordersList);
       setForms(formsList);
+      try {
+        const { data: mesasData } = await api.get("/mesas");
+        setMesas(Array.isArray(mesasData) ? mesasData : []);
+      } catch {
+        setMesas([]);
+      }
     } catch (err) {
       toastError(err);
       setOrders([]);
@@ -172,7 +209,7 @@ const Pedidos = ({ orderTypeFilter }) => {
     } finally {
       setLoading(false);
     }
-  }, [formIdFilter, orderTypeFilter]);
+  }, [formIdFilter, orderTypeFilter, tableIdFilter]);
 
   useEffect(() => {
     if (!hasLanchonetes && !modulesLoading) {
@@ -185,21 +222,25 @@ const Pedidos = ({ orderTypeFilter }) => {
   useEffect(() => {
     const fid = params.get("formId") || "";
     if (fid !== formIdFilter) setFormIdFilter(fid);
+    const tid = params.get("tableId") || "";
+    if (tid !== tableIdFilter) setTableIdFilter(tid);
   }, [location.search]);
 
   useEffect(() => {
     const prev = new URLSearchParams(location.search);
     if (formIdFilter) prev.set("formId", formIdFilter);
     else prev.delete("formId");
+    if (tableIdFilter) prev.set("tableId", tableIdFilter);
+    else prev.delete("tableId");
     const search = prev.toString() ? `?${prev.toString()}` : "";
     if (search !== location.search) history.replace({ search });
-  }, [formIdFilter, history, location.search]);
+  }, [formIdFilter, tableIdFilter, history, location.search]);
 
   const getOrderStatus = (order) => {
     return order?.orderStatus || order?.metadata?.orderStatus || "novo";
   };
 
-  const orderStages = DEFAULT_ORDER_STAGES;
+  const orderStages = orderTypeFilter === "mesa" ? MESA_ORDER_STAGES : DELIVERY_ORDER_STAGES;
 
   const columnsWithOrders = orderStages.map((stage) => ({
     ...stage,
@@ -249,99 +290,60 @@ const Pedidos = ({ orderTypeFilter }) => {
 
   if (!hasLanchonetes && !modulesLoading) return null;
 
+  const wrap = (content) =>
+    minimal ? content : <MainContainer>{content}</MainContainer>;
+
   if (modulesLoading) {
-    return (
-      <MainContainer>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
-          <CircularProgress />
-        </Box>
-      </MainContainer>
+    return wrap(
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
+        <CircularProgress />
+      </Box>
     );
   }
 
   const activeFormId = formIdFilter || (forms[0]?.id ? String(forms[0].id) : null);
 
   if (forms.length === 0 && !loading) {
-    return (
-      <MainContainer>
-        <MainHeader>
-          <Title>Pedidos</Title>
-        </MainHeader>
-        <Paper className={classes.selectFormPaper}>
-          <Typography>Nenhum formulário de cardápio encontrado.</Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            style={{ marginTop: 16 }}
-            onClick={() => history.push("/forms")}
-          >
-            Ir para Formulários
-          </Button>
-        </Paper>
-      </MainContainer>
+    return wrap(
+      minimal ? (
+        <Box p={3} display="flex" justifyContent="center" alignItems="center" flexDirection="column">
+          <Typography color="textSecondary">Nenhum formulário de cardápio encontrado.</Typography>
+        </Box>
+      ) : (
+        <>
+          <MainHeader>
+            <Title>Pedidos</Title>
+          </MainHeader>
+          <Paper className={classes.selectFormPaper}>
+            <Typography>Nenhum formulário de cardápio encontrado.</Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              style={{ marginTop: 16 }}
+              onClick={() => history.push("/forms")}
+            >
+              Ir para Formulários
+            </Button>
+          </Paper>
+        </>
+      )
     );
   }
 
-  return (
-    <MainContainer>
-      <MainHeader>
-        <Box display="flex" alignItems="center" gap={2}>
-          <IconButton onClick={() => history.push("/forms")}>
-            <ArrowBackIcon />
-          </IconButton>
-          <Title>Pedidos - Kanban</Title>
-        </Box>
-        <Box className={classes.headerActions}>
-          <FormControl variant="outlined" size="small" className={classes.formSelect}>
-            <Select
-              value={formIdFilter || ""}
-              onChange={(e) => setFormIdFilter(e.target.value)}
-              displayEmpty
-            >
-              <MenuItem value="">Todos os cardápios</MenuItem>
-              {forms.map((f) => (
-                <MenuItem key={f.id} value={String(f.id)}>
-                  {f.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={fetchOrders}
-          >
-            Atualizar
-          </Button>
-          {activeFormId && (
-            <>
-              <Button
-                variant="outlined"
-                startIcon={<QueueIcon />}
-                onClick={() => history.push(`/forms/${activeFormId}/fila-pedidos`)}
-              >
-                Fila
-              </Button>
-              <Button
-                variant="outlined"
-                onClick={() => history.push(`/forms/${activeFormId}/responses`)}
-              >
-                Ver Respostas
-              </Button>
-            </>
-          )}
-        </Box>
-      </MainHeader>
-
+  const kanban = (
+    <>
       {loading ? (
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
+        <Box display="flex" justifyContent="center" alignItems="center" flex={1} minHeight={200}>
           <CircularProgress />
         </Box>
       ) : (
         <DragDropContext onDragEnd={handleDragEnd}>
-          <Box className={classes.boardContainer}>
+          <Box
+            className={`${classes.boardContainer} ${minimal ? classes.boardContainerMinimal : ""}`}
+            style={{ gridTemplateColumns: `repeat(${orderStages.length}, minmax(180px, 1fr))` }}
+          >
             {columnsWithOrders.map((column) => (
-              <Paper key={column.id} elevation={0} className={classes.column}>
+              <Paper key={column.id} elevation={0} className={`${classes.column} ${minimal ? classes.columnMinimal : ""}`}>
                 <Box
                   className={classes.columnHeader}
                   style={{ backgroundColor: column.color }}
@@ -383,6 +385,82 @@ const Pedidos = ({ orderTypeFilter }) => {
           </Box>
         </DragDropContext>
       )}
+    </>
+  );
+
+  if (minimal) {
+    return (
+      <Box className={`${classes.root} ${classes.rootMinimal}`} padding={0}>
+        {kanban}
+      </Box>
+    );
+  }
+
+  return (
+    <MainContainer>
+      <MainHeader>
+        <Box display="flex" alignItems="center" gap={2}>
+          <IconButton onClick={() => history.push("/forms")}>
+            <ArrowBackIcon />
+          </IconButton>
+          <Title>Pedidos - Kanban</Title>
+        </Box>
+        <Box className={classes.headerActions}>
+          <FormControl variant="outlined" size="small" className={classes.formSelect}>
+            <Select
+              value={formIdFilter || ""}
+              onChange={(e) => setFormIdFilter(e.target.value)}
+              displayEmpty
+            >
+              <MenuItem value="">Todos os cardápios</MenuItem>
+              {forms.map((f) => (
+                <MenuItem key={f.id} value={String(f.id)}>
+                  {f.name}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl variant="outlined" size="small" className={classes.formSelect}>
+            <Select
+              value={tableIdFilter || ""}
+              onChange={(e) => setTableIdFilter(e.target.value)}
+              displayEmpty
+            >
+              <MenuItem value="">Todas as mesas</MenuItem>
+              {mesas.map((m) => (
+                <MenuItem key={m.id} value={String(m.id)}>
+                  {m.number || m.name || `Mesa ${m.id}`}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={fetchOrders}
+          >
+            Atualizar
+          </Button>
+          {activeFormId && (
+            <>
+              <Button
+                variant="outlined"
+                startIcon={<QueueIcon />}
+                onClick={() => history.push(`/forms/${activeFormId}/fila-pedidos`)}
+              >
+                Fila
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => history.push(`/forms/${activeFormId}/responses`)}
+              >
+                Ver Respostas
+              </Button>
+            </>
+          )}
+        </Box>
+      </MainHeader>
+      {kanban}
     </MainContainer>
   );
 };

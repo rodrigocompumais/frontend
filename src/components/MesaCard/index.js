@@ -18,6 +18,7 @@ import {
   Chat as ChatIcon,
   AccessTime as TimeIcon,
   Link as LinkIcon,
+  AddCircle as AddCircleIcon,
 } from "@material-ui/icons";
 import { QrCode2 as QrCodeIcon } from "@mui/icons-material";
 import { formatDistanceToNow } from "date-fns";
@@ -119,18 +120,21 @@ const MesaCard = ({
   onDelete,
   onVerTicket,
   onCopyLink,
+  onAdicionarPedido,
+  cardapioSlug,
 }) => {
   const classes = useStyles();
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const isOcupada = mesa.status === "ocupada";
+  const slug = mesa.form?.slug || cardapioSlug;
   const sectionClass = mesa.section === "varanda" ? classes.sectionVaranda
     : mesa.section === "area_externa" ? classes.sectionAreaExterna
     : mesa.section === "salao" ? classes.sectionSalao : "";
 
   const handleCopyLink = (e) => {
     e.stopPropagation();
-    if (!mesa.form?.slug) return;
-    const url = `${window.location.origin}/f/${mesa.form.slug}?mesa=${mesa.id}`;
+    if (!slug) return;
+    const url = `${window.location.origin}/f/${slug}?mesa=${mesa.id}`;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url).then(() => {
         if (onCopyLink) onCopyLink(url);
@@ -181,6 +185,17 @@ const MesaCard = ({
         <Box className={classes.actions}>
           {isOcupada ? (
             <>
+              {onAdicionarPedido && (
+                <Button
+                  size="small"
+                  color="primary"
+                  variant="contained"
+                  startIcon={<AddCircleIcon />}
+                  onClick={() => onAdicionarPedido(mesa)}
+                >
+                  Adicionar pedido
+                </Button>
+              )}
               {mesa.ticketId && (
                 <Tooltip title="Ver ticket">
                   <IconButton
@@ -212,7 +227,7 @@ const MesaCard = ({
               Ocupar
             </Button>
           )}
-          {mesa.form?.slug && (
+          {slug && (
             <>
               <Tooltip title="Ver QR Code do cardápio para esta mesa">
                 <IconButton
@@ -259,6 +274,7 @@ const MesaCard = ({
         open={qrModalOpen}
         onClose={() => setQrModalOpen(false)}
         mesa={mesa}
+        cardapioSlug={cardapioSlug}
       />
     </Card>
   );

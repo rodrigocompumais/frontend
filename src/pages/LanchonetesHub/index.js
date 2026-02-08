@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { useHistory, useLocation } from "react-router-dom";
+import { AuthContext } from "../../context/Auth/AuthContext";
+import { SocketContext } from "../../context/Socket/SocketContext";
 import { makeStyles } from "@material-ui/core/styles";
 import {
   Box,
@@ -12,6 +14,7 @@ import {
   CardContent,
   Grid,
   CircularProgress,
+  Badge,
 } from "@material-ui/core";
 import {
   Restaurant as RestaurantIcon,
@@ -23,6 +26,8 @@ import {
   LocalShipping as LocalShippingIcon,
   People as PeopleIcon,
 } from "@material-ui/icons";
+import useSound from "use-sound";
+import alertSound from "../../assets/sound.mp3";
 import QRCode from "qrcode.react";
 import MainContainer from "../../components/MainContainer";
 import api from "../../services/api";
@@ -69,6 +74,8 @@ const LanchonetesHub = () => {
   const classes = useStyles();
   const history = useHistory();
   const location = useLocation();
+  const { user } = useContext(AuthContext);
+  const socketManager = useContext(SocketContext);
   const { hasLanchonetes, loading: modulesLoading } = useCompanyModules();
   const params = new URLSearchParams(location.search);
   const tabFromUrl = parseInt(params.get("tab"), 10);
@@ -77,7 +84,11 @@ const LanchonetesHub = () => {
   );
   const [cardapioForms, setCardapioForms] = useState([]);
   const [ordersStats, setOrdersStats] = useState({ pedidosHoje: 0, mesasOcupadas: 0 });
+  const [unconfirmedCounts, setUnconfirmedCounts] = useState({ mesa: 0, delivery: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
+  const pendingOrderIdsRef = useRef(new Set());
+  const soundIntervalRef = useRef(null);
+  const [playOrderAlert] = useSound(alertSound, { volume: 0.6 });
 
   useEffect(() => {
     if (!hasLanchonetes && !modulesLoading) {
@@ -98,15 +109,23 @@ const LanchonetesHub = () => {
     history.replace(`/lanchonetes${newSearch}`);
   };
 
+  const fetchUnconfirmedCounts = React.useCallback(async () => {
+    try {
+      const { data } = await api.get("/orders/unconfirmed-counts");
+      setUnconfirmedCounts({ mesa: data.mesa ?? 0, delivery: data.delivery ?? 0 });
+    } catch (_) {}
+  }, []);
+
   useEffect(() => {
     if (!hasLanchonetes) return;
     const fetchData = async () => {
       setLoadingStats(true);
       try {
-        const [formsRes, ordersRes, mesasRes] = await Promise.all([
+        const [formsRes, ordersRes, mesasRes, countsRes] = await Promise.all([
           api.get("/forms?formType=cardapio"),
           api.get("/orders"),
           api.get("/mesas").catch(() => ({ data: [] })),
+          api.get("/orders/unconfirmed-counts").catch(() => ({ data: { mesa: 0, delivery: 0 } })),
         ]);
         setCardapioForms(formsRes.data.forms || []);
         const orders = ordersRes.data.orders || [];
@@ -117,6 +136,7 @@ const LanchonetesHub = () => {
         const mesas = Array.isArray(mesasRes.data) ? mesasRes.data : [];
         const mesasOcupadas = mesas.filter((m) => m.status === "ocupada").length;
         setOrdersStats({ pedidosHoje, mesasOcupadas });
+        setUnconfirmedCounts({ mesa: countsRes.data?.mesa ?? 0, delivery: countsRes.data?.delivery ?? 0 });
       } catch (err) {
         toastError(err);
       } finally {
@@ -125,6 +145,88 @@ const LanchonetesHub = () => {
     };
     fetchData();
   }, [hasLanchonetes]);
+
+  useEffect(() => {
+    const companyId = user?.companyId;
+    const socket = companyId ? socketManager?.getSocket?.(companyId) : null;
+    if (!socket) return;
+    const refreshStats = async () => {
+      try {
+        const [ordersRes, mesasRes] = await Promise.all([
+          api.get("/orders"),
+          api.get("/mesas").catch(() => ({ data: [] })),
+        ]);
+        const orders = ordersRes.data?.orders || [];
+        const today = new Date().toDateString();
+        const pedidosHoje = orders.filter(
+          (o) => new Date(o.submittedAt).toDateString() === today
+        ).length;
+        const mesas = Array.isArray(mesasRes.data) ? mesasRes.data : [];
+        const mesasOcupadas = mesas.filter((m) => m.status === "ocupada").length;
+        setOrdersStats((prev) => ({ ...prev, pedidosHoje, mesasOcupadas }));
+      } catch (_) {}
+    };
+    socket.on(`company-${companyId}-mesa`, refreshStats);
+    return () => socket.off(`company-${companyId}-mesa`, refreshStats);
+  }, [socketManager, user?.companyId]);
+
+  // Notificações de pedidos: badges + som persistente até confirmado
+  useEffect(() => {
+    const companyId = user?.companyId;
+    const socket = companyId ? socketManager?.getSocket?.(companyId) : null;
+    if (!socket) return;
+
+    const stopSoundLoop = () => {
+      if (soundIntervalRef.current) {
+        clearInterval(soundIntervalRef.current);
+        soundIntervalRef.current = null;
+      }
+    };
+
+    const startSoundLoop = () => {
+      if (soundIntervalRef.current) return;
+      playOrderAlert();
+      soundIntervalRef.current = setInterval(() => {
+        if (pendingOrderIdsRef.current.size === 0) {
+          stopSoundLoop();
+          return;
+        }
+        playOrderAlert();
+      }, 30000);
+    };
+
+    const onFormResponse = (payload) => {
+      const { action, response } = payload || {};
+      if (!response || !response.id) return;
+      const status = response.orderStatus || response.metadata?.orderStatus || "novo";
+      const orderType = response.metadata?.orderType === "delivery" ? "delivery" : "mesa";
+
+      if (action === "create" && status !== "confirmado") {
+        pendingOrderIdsRef.current.add(response.id);
+        setUnconfirmedCounts((prev) => ({
+          ...prev,
+          [orderType]: prev[orderType] + 1,
+        }));
+        startSoundLoop();
+      } else if (action === "update") {
+        if (status === "confirmado") {
+          pendingOrderIdsRef.current.delete(response.id);
+          setUnconfirmedCounts((prev) => ({
+            ...prev,
+            [orderType]: Math.max(0, prev[orderType] - 1),
+          }));
+          if (pendingOrderIdsRef.current.size === 0) stopSoundLoop();
+        }
+      }
+      fetchUnconfirmedCounts();
+    };
+
+    socket.on(`company-${companyId}-formResponse`, onFormResponse);
+    return () => {
+      socket.off(`company-${companyId}-formResponse`, onFormResponse);
+      stopSoundLoop();
+    };
+  }, [socketManager, user?.companyId, fetchUnconfirmedCounts, playOrderAlert]);
 
   const handleCopyLink = (link) => {
     if (navigator.clipboard) {
@@ -151,8 +253,22 @@ const LanchonetesHub = () => {
           <Tab label="Produtos" icon={<ShoppingCartIcon />} />
           <Tab label="Cardápio" icon={<DescriptionIcon />} />
           <Tab label="Mesas" icon={<EventSeatIcon />} />
-          <Tab label="Pedidos (Mesa)" icon={<EventSeatIcon />} />
-          <Tab label="Delivery" icon={<LocalShippingIcon />} />
+          <Tab
+            label={
+              <Badge badgeContent={unconfirmedCounts.mesa} color="error">
+                <span style={{ marginRight: unconfirmedCounts.mesa ? 8 : 0 }}>Pedidos (Mesa)</span>
+              </Badge>
+            }
+            icon={<EventSeatIcon />}
+          />
+          <Tab
+            label={
+              <Badge badgeContent={unconfirmedCounts.delivery} color="error">
+                <span style={{ marginRight: unconfirmedCounts.delivery ? 8 : 0 }}>Delivery</span>
+              </Badge>
+            }
+            icon={<LocalShippingIcon />}
+          />
           <Tab label="Garçons" icon={<PeopleIcon />} />
         </Tabs>
 
@@ -435,7 +551,15 @@ const LanchonetesHub = () => {
               )}
             </Box>
           )}
-          {tabValue === 3 && <Mesas />}
+          {tabValue === 3 && (
+            <Mesas
+              cardapioSlugFromHub={
+                params.get("formId")
+                  ? (cardapioForms.find((f) => String(f.id) === params.get("formId"))?.slug)
+                  : cardapioForms[0]?.slug
+              }
+            />
+          )}
           {tabValue === 4 && <Pedidos orderTypeFilter="mesa" />}
           {tabValue === 5 && <Pedidos orderTypeFilter="delivery" />}
           {tabValue === 6 && (

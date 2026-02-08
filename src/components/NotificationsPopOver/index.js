@@ -190,18 +190,47 @@ const NotificationsPopOver = (volume) => {
 		};
 	}, [user, showPendingTickets, socketManager]);
 
+	const getNotificationTitle = (contact) => {
+		const name = contact?.name?.trim?.() || "";
+		const number = contact?.number || "";
+		const onlyDigits = /^\d+$/.test(name);
+		const displayName = name && !onlyDigits && name !== number
+			? name
+			: (number ? number : i18n.t("tickets.notification.contact"));
+		return `${i18n.t("tickets.notification.message")} ${displayName}`;
+	};
+
+	const getNotificationBody = (message) => {
+		const body = message?.body?.trim?.() || "";
+		const mediaTypeLabels = {
+			extendedTextMessage: i18n.t("tickets.notification.newMessage"),
+			conversation: i18n.t("tickets.notification.newMessage"),
+			imageMessage: "🖼 " + (i18n.t("tickets.notification.image") || "Imagem"),
+			videoMessage: "🎬 " + (i18n.t("tickets.notification.video") || "Vídeo"),
+			audioMessage: "🎵 " + (i18n.t("tickets.notification.audio") || "Áudio"),
+			documentMessage: "📎 " + (i18n.t("tickets.notification.document") || "Documento"),
+			stickerMessage: "🖼 " + (i18n.t("tickets.notification.sticker") || "Figurinha"),
+		};
+		if (body && !mediaTypeLabels[body]) {
+			return body.length > 100 ? body.substring(0, 97) + "..." : body;
+		}
+		return mediaTypeLabels[body] || i18n.t("tickets.notification.newMessage");
+	};
+
 	const handleNotifications = data => {
 		const { message, contact, ticket } = data;
+		const safeContact = contact || {};
+		const bodyText = getNotificationBody(message);
 
 		const options = {
-			body: `${message.body} - ${format(new Date(), "HH:mm")}`,
-			icon: contact.urlPicture,
+			body: `${bodyText} - ${format(new Date(), "HH:mm")}`,
+			icon: safeContact.urlPicture,
 			tag: ticket.id,
 			renotify: true,
 		};
 
 		const notification = new Notification(
-			`${i18n.t("tickets.notification.message")} ${contact.name}`,
+			getNotificationTitle(safeContact),
 			options
 		);
 

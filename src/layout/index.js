@@ -108,6 +108,8 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   const { hasLanchonetes } = useCompanyModules();
   const isDashboard = location.pathname === "/dashboard" || location.pathname === "/";
   const isChatPage = location.pathname.startsWith("/chats");
+  const isGarcomPage = location.pathname === "/garcom";
+  const isCozinhaPage = location.pathname === "/cozinha";
   const classes = useStyles();
   const { handleLogout, loading } = useContext(AuthContext);
   const { user } = useContext(AuthContext);
@@ -158,6 +160,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       {/* Banner de período de teste */}
       <TrialBanner />
       
+      {!isGarcomPage && !isCozinhaPage && (
       <AppBar
         position="static"
         className={classes.appBar}
@@ -198,6 +201,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
           <UserProfileMenu volume={volume} setVolume={setVolume} />
         </Toolbar>
       </AppBar>
+      )}
       
       <main className={isChatPage ? classes.contentNoScroll : classes.content}>
         {children ? children : null}

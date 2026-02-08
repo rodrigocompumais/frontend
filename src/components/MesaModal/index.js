@@ -127,9 +127,11 @@ const MesaModal = ({ open, onClose, mesa, onSuccess }) => {
           </Select>
         </FormControl>
         <FormControl fullWidth margin="dense">
-          <InputLabel>Formulário cardápio associado</InputLabel>
+          <InputLabel>Formulário cardápio (opcional)</InputLabel>
           <Select value={formId} onChange={(e) => setFormId(e.target.value)}>
-            <MenuItem value="">Nenhum</MenuItem>
+            <MenuItem value="">
+              <em>Nenhum — usar cardápio padrão (QR único por mesa)</em>
+            </MenuItem>
             {forms.map((f) => (
               <MenuItem key={f.id} value={String(f.id)}>
                 {f.name}

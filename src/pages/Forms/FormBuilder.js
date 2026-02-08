@@ -288,6 +288,19 @@ const FormBuilder = () => {
         (f, i, arr) => !f.id || arr.findIndex((x) => x.id === f.id) === i
       );
 
+      const mergedSettings = {
+        ...data.settings,
+        finalizeFields: isMenuForm ? uniqueFields.sort((a, b) => a.order - b.order) : (data.settings?.finalizeFields || []),
+        whatsappId: data.settings?.whatsappId || null,
+        printDeviceId: data.settings?.printDeviceId || null,
+      };
+      // Garantir defaults do cardápio para mesa (evitar que mesaFieldMode ausente mostre input em vez de select)
+      if (isMenuForm) {
+        if (mergedSettings.showMesaField && mergedSettings.mesaFieldMode === undefined) {
+          mergedSettings.mesaFieldMode = "select";
+        }
+      }
+
       setFormData({
         name: data.name || "",
         description: data.description || "",
@@ -301,17 +314,12 @@ const FormBuilder = () => {
         requireAuth: data.requireAuth || false,
         allowMultipleSubmissions: data.allowMultipleSubmissions || false,
         isAnonymous: data.isAnonymous || false,
-        createContact: data.createContact || false,
-        createTicket: data.createTicket || false,
+        createContact: isMenuForm ? (data.createContact !== false) : (data.createContact || false),
+        createTicket: isMenuForm ? (data.createTicket !== false) : (data.createTicket || false),
         sendWebhook: data.sendWebhook || false,
         webhookUrl: data.webhookUrl || "",
         fields: isMenuForm ? [] : uniqueFields.sort((a, b) => a.order - b.order),
-        settings: {
-          ...data.settings,
-          finalizeFields: isMenuForm ? uniqueFields.sort((a, b) => a.order - b.order) : (data.settings?.finalizeFields || []),
-          whatsappId: data.settings?.whatsappId || null,
-          printDeviceId: data.settings?.printDeviceId || null,
-        },
+        settings: mergedSettings,
       });
     } catch (err) {
       formLoadedRef.current = false; // Reset em caso de erro
@@ -676,14 +684,17 @@ const FormBuilder = () => {
                   <InputLabel>Tipo de Formulário</InputLabel>
                   <Select
                     value={formData.settings?.formType || "normal"}
-                    onChange={(e) =>
+                    onChange={(e) => {
+                      const isCardapio = e.target.value === "cardapio";
                       setFormData({
                         ...formData,
+                        createContact: isCardapio ? true : formData.createContact,
+                        createTicket: isCardapio ? true : formData.createTicket,
                         settings: {
                           ...formData.settings,
                           formType: e.target.value,
-                          quotationItems: e.target.value === "quotation" 
-                            ? (formData.settings?.quotationItems || []) 
+                          quotationItems: e.target.value === "quotation"
+                            ? (formData.settings?.quotationItems || [])
                             : [],
                           finalizeFields: e.target.value === "cardapio"
                             ? (formData.settings?.finalizeFields || [])
@@ -691,8 +702,8 @@ const FormBuilder = () => {
                           mesas: e.target.value === "cardapio" ? (formData.settings?.mesas !== false) : undefined,
                           delivery: e.target.value === "cardapio" ? (formData.settings?.delivery !== false) : undefined,
                         },
-                      })
-                    }
+                      });
+                    }}
                     label="Tipo de Formulário"
                   >
                     <MenuItem value="normal">Normal</MenuItem>
@@ -1708,6 +1719,16 @@ const FormBuilder = () => {
                   Um ticket será criado quando o formulário for preenchido (requer criar contato)
                 </Typography>
               </Grid>
+              {formData.settings?.formType === "cardapio" &&
+                formData.settings?.showMesaField &&
+                formData.settings?.mesas !== false &&
+                !formData.createContact && (
+                  <Grid item xs={12}>
+                    <Typography variant="body2" color="error">
+                      Com "Exibir campo Número da mesa" ativo, é recomendável manter "Criar Contato" ativado para que a mesa seja ocupada automaticamente quando o cliente pedir pelo cardápio.
+                    </Typography>
+                  </Grid>
+                )}
               <Grid item xs={12}>
                 <FormControlLabel
                   control={

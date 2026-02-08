@@ -21,10 +21,14 @@ import {
   IconButton,
   InputAdornment,
   Divider,
+  Fab,
+  Badge,
 } from "@material-ui/core";
 import AddIcon from "@material-ui/icons/Add";
 import RemoveIcon from "@material-ui/icons/Remove";
+import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
 
+import InputMask from "react-input-mask";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { isFieldVisible } from "../../utils/formUtils";
@@ -146,6 +150,16 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     minHeight: "50vh",
   },
+  fab: {
+    position: "fixed",
+    bottom: theme.spacing(3),
+    right: theme.spacing(3),
+    zIndex: 1300,
+    [theme.breakpoints.up("sm")]: {
+      bottom: theme.spacing(4),
+      right: theme.spacing(4),
+    },
+  },
 }));
 
 const PublicMenuForm = ({ form, slug: formSlug }) => {
@@ -157,7 +171,6 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [products, setProducts] = useState([]);
   const [selectedItems, setSelectedItems] = useState({}); // { productId: quantity }
   const [activeTab, setActiveTab] = useState(0);
@@ -168,6 +181,11 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
   const [orderData, setOrderData] = useState(null); // Dados do pedido para exibir na confirmação
   const [mesas, setMesas] = useState([]);
   const [mesaValue, setMesaValue] = useState(""); // tableId (string) para select ou texto para input
+  /** Mesa vinda do QR (?mesa=ID): status e contato para não pedir dados se já ocupada */
+  const [mesaFromQR, setMesaFromQR] = useState(null);
+  const [loadingMesa, setLoadingMesa] = useState(false);
+  /** Token de sessão da mesa (link assinado): enviado no submit para garantir mesa correta */
+  const [orderToken, setOrderToken] = useState(null);
 
   const appStyles = form ? getFormAppearanceStyles(form) : null;
   const fieldVariant = appStyles?.fieldVariant || "outlined";
@@ -192,7 +210,7 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
   }, [form, slug]);
 
   useEffect(() => {
-    if (form?.settings?.showMesaField && form.settings.mesaFieldMode === "select" && slug) {
+    if (form?.settings?.showMesaField && (form.settings?.mesaFieldMode || "select") === "select" && slug) {
       api.get(`/public/forms/${slug}/mesas`).then(({ data }) => {
         setMesas(data.mesas || []);
       }).catch(() => setMesas([]));
@@ -204,6 +222,45 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
     const urlMesa = searchParams.get("mesa");
     if (urlMesa) setMesaValue(urlMesa);
   }, [location.search]);
+
+  // QR da mesa: buscar status da mesa (ocupada = não pedir nome/telefone). Passar t= para link assinado.
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const mesaId = searchParams.get("mesa");
+    const t = searchParams.get("t");
+    if (!form || !slug || !mesaId) {
+      setMesaFromQR(null);
+      setOrderToken(null);
+      return;
+    }
+    setLoadingMesa(true);
+    const params = t ? { t } : {};
+    api.get(`/public/forms/${slug}/mesas/${mesaId}`, { params })
+      .then(({ data }) => {
+        setMesaFromQR(data);
+        setMesaValue(String(data.id));
+        if (data.orderToken) setOrderToken(data.orderToken);
+        else setOrderToken(null);
+        if (data.status === "ocupada" && data.contact && form?.fields) {
+          setAnswers((prev) => {
+            const next = { ...prev };
+            form.fields.forEach((field) => {
+              if (field.metadata?.autoFieldType === "name" && data.contact?.name) {
+                next[field.id] = data.contact.name;
+              } else if (field.metadata?.autoFieldType === "phone" && data.contact?.number) {
+                next[field.id] = data.contact.number;
+              }
+            });
+            return next;
+          });
+        }
+      })
+      .catch(() => {
+        setMesaFromQR(null);
+        setOrderToken(null);
+      })
+      .finally(() => setLoadingMesa(false));
+  }, [form?.id, slug, location.search]);
 
   useEffect(() => {
     // Ler parâmetros da URL
@@ -322,19 +379,22 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
       }
     });
 
-    // Validar campos automáticos obrigatórios (nome e telefone)
+    // Validar campos automáticos obrigatórios (nome e telefone) — dispensar se mesa ocupada (QR)
+    const mesaOcupadaFromQR = mesaFromQR?.status === "ocupada";
     const autoFields = form.fields?.filter(
       (f) => f.metadata?.autoFieldType === "name" || f.metadata?.autoFieldType === "phone"
     ) || [];
-    autoFields.forEach((field) => {
-      if (field.isRequired) {
-        const answer = answers[field.id];
-        if (!answer || (Array.isArray(answer) && answer.length === 0) || (typeof answer === "string" && answer.trim() === "")) {
-          newErrors[field.id] = `${field.label} é obrigatório`;
-          isValid = false;
+    if (!mesaOcupadaFromQR) {
+      autoFields.forEach((field) => {
+        if (field.isRequired) {
+          const answer = answers[field.id];
+          if (!answer || (Array.isArray(answer) && answer.length === 0) || (typeof answer === "string" && answer.trim() === "")) {
+            newErrors[field.id] = `${field.label} é obrigatório`;
+            isValid = false;
+          }
         }
-      }
-    });
+      });
+    }
 
     // Se houver erros, mostrar toast
     if (!isValid && Object.keys(newErrors).length > 0) {
@@ -396,32 +456,51 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
         }
       });
 
-      // Metadata com mesa e orderType (se configurado)
+      // Metadata com mesa e orderType (QR da mesa ou campo mesa configurado)
       let orderMetadata = {};
       const mesasEnabled = form.settings?.mesas !== false;
       const deliveryEnabled = form.settings?.delivery !== false;
-      if (form.settings?.showMesaField && mesaValue && mesasEnabled) {
-        const isSelect = form.settings.mesaFieldMode === "select";
+      if (mesaFromQR && mesaValue) {
+        orderMetadata.tableId = mesaFromQR.id;
+        orderMetadata.tableNumber = mesaFromQR.number || mesaFromQR.name || String(mesaFromQR.id);
+        orderMetadata.orderType = "mesa";
+      } else if (form.settings?.showMesaField && mesaValue && mesasEnabled) {
+        const isSelect = (form.settings?.mesaFieldMode || "select") === "select";
         const mesaId = isSelect ? parseInt(mesaValue, 10) : null;
         const mesa = mesas.find((m) => m.id === parseInt(mesaValue, 10));
         const mesaNumber = isSelect ? (mesa?.number || mesa?.name || mesaValue) : mesaValue;
         if (mesaId) orderMetadata.tableId = mesaId;
         orderMetadata.tableNumber = mesaNumber;
         orderMetadata.orderType = "mesa";
-      } else if (deliveryEnabled) {
+      } else if (mesaValue && mesasEnabled) {
+        const mesaIdNum = parseInt(mesaValue, 10);
+        if (!Number.isNaN(mesaIdNum)) {
+          orderMetadata.tableId = mesaIdNum;
+          orderMetadata.tableNumber = mesas.find((m) => m.id === mesaIdNum)?.number || mesas.find((m) => m.id === mesaIdNum)?.name || mesaValue;
+          orderMetadata.orderType = "mesa";
+        }
+      }
+      if (!orderMetadata.tableId && deliveryEnabled) {
         orderMetadata.orderType = "delivery";
-      } else {
+      } else if (!orderMetadata.tableId) {
         orderMetadata.orderType = mesasEnabled ? "mesa" : "delivery";
       }
 
-      // Enviar formulário
+      // Enviar formulário (orderToken garante que o pedido vá para a mesa do link assinado)
       const response = await api.post(`/public/forms/${form.slug}/submit`, {
         answers: answersArray,
         menuItems,
         ...(Object.keys(orderMetadata).length > 0 && { metadata: orderMetadata }),
+        ...(orderToken && { orderToken }),
       });
 
-      // Preparar dados do pedido para exibição
+      const customerName = answers[autoFields.find((f) => f.metadata?.autoFieldType === "name")?.id] || "";
+      const mesaNumberDisplay = mesaFromQR
+        ? (mesaFromQR.number || mesaFromQR.name || String(mesaFromQR.id))
+        : (form.settings?.showMesaField && mesaValue
+          ? ((form.settings?.mesaFieldMode || "select") === "select" ? (mesas.find((m) => m.id === parseInt(mesaValue, 10))?.number || mesaValue) : mesaValue)
+          : "");
+      // Preparar dados do pedido para exibição (com responsável da mesa para confirmação)
       const orderInfo = {
         menuItems: menuItems.map((item) => ({
           ...item,
@@ -429,12 +508,12 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
         })),
         total: calculateTotal(),
         totalItems: getTotalItems(),
-        customerName: answers[autoFields.find((f) => f.metadata?.autoFieldType === "name")?.id] || "",
+        customerName,
         customerPhone: answers[autoFields.find((f) => f.metadata?.autoFieldType === "phone")?.id] || "",
+        responsavelMesa: customerName,
+        mesaNumber: mesaNumberDisplay,
         customFields: [
-          ...(form.settings?.showMesaField && mesaValue
-            ? [{ label: "Mesa", value: form.settings.mesaFieldMode === "select" ? (mesas.find((m) => m.id === parseInt(mesaValue, 10))?.number || mesaValue) : mesaValue }]
-            : []),
+          ...(mesaNumberDisplay ? [{ label: "Mesa", value: mesaNumberDisplay }] : []),
           ...finalizeFields.map((field) => ({
             label: field.label,
             value: answers[field.id] || "",
@@ -444,30 +523,15 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
       };
       setOrderData(orderInfo);
 
-      // Verificar se precisa enviar WhatsApp e aguardar confirmação
-      if (response.data?.whatsappSent !== undefined) {
-        setSendingWhatsApp(true);
-        
-        // Aguardar confirmação do envio (já foi enviado no backend, mas aguardamos a resposta)
-        if (response.data.whatsappSent) {
-          // Mensagem enviada com sucesso
-          setTimeout(() => {
-            setSendingWhatsApp(false);
-            setSubmitted(true);
-          }, 1000); // Pequeno delay para mostrar a confirmação
-        } else {
-          // Erro ao enviar mensagem
-          setSendingWhatsApp(false);
-          toast.error(response.data.whatsappError || "Pedido salvo, mas houve erro ao enviar mensagem WhatsApp");
-          setSubmitted(true);
-        }
-      } else {
-        // Se não for cardápio ou não tiver WhatsApp configurado, apenas mostrar sucesso
-        setSubmitted(true);
+      // Pedido salvo; envio WhatsApp é em segundo plano — não bloqueia a tela
+      setSubmitted(true);
+      if (response.data?.whatsappSent === "pending") {
+        toast.info("Pedido enviado! A confirmação por WhatsApp será enviada em instantes.");
+      } else if (response.data?.whatsappSent === false && response.data?.whatsappError) {
+        toast.warn("Pedido salvo. " + (response.data.whatsappError || ""));
       }
     } catch (err) {
       toastError(err);
-      setSendingWhatsApp(false);
     } finally {
       setSubmitting(false);
     }
@@ -481,30 +545,52 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
     switch (field.fieldType) {
       case "text":
       case "email":
-      case "phone":
-        // Garantir que campo telefone sempre tenha "55" como valor padrão se for campo automático
-        const phoneValue = field.metadata?.autoFieldType === "phone" 
-          ? (value || "55") 
-          : value;
         return (
           <TextField
             fullWidth
             variant={fieldVariant}
             type="text"
-            value={phoneValue}
+            value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
-            placeholder={field.placeholder || "55"}
+            placeholder={field.placeholder}
             error={hasError}
             helperText={error || field.helpText}
             required={field.isRequired}
             label={field.label}
-            InputProps={{
-              startAdornment: field.metadata?.autoFieldType === "phone" ? (
-                <InputAdornment position="start">+</InputAdornment>
-              ) : null,
-            }}
           />
         );
+      case "phone": {
+        const phoneValue = field.metadata?.autoFieldType === "phone"
+          ? (value || "55")
+          : value;
+        return (
+          <InputMask
+            mask="55(99)9999-9999"
+            maskChar={null}
+            value={phoneValue}
+            onChange={(e) => handleFieldChange(field.id, e.target.value)}
+          >
+            {(inputProps) => (
+              <TextField
+                {...inputProps}
+                fullWidth
+                variant={fieldVariant}
+                type="text"
+                placeholder="55(99)9999-9999"
+                error={hasError}
+                helperText={error || field.helpText}
+                required={field.isRequired}
+                label={field.label}
+                InputProps={{
+                  startAdornment: field.metadata?.autoFieldType === "phone" ? (
+                    <InputAdornment position="start">+</InputAdornment>
+                  ) : null,
+                }}
+              />
+            )}
+          </InputMask>
+        );
+      }
       case "number":
         return (
           <TextField
@@ -589,24 +675,6 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
         <Box className={classes.loadingContainer}>
           <CircularProgress />
         </Box>
-      </Box>
-    );
-  }
-
-  if (sendingWhatsApp) {
-    return (
-      <Box className={classes.root} style={appStyles?.rootStyle}>
-        <Paper className={classes.formPaper} style={appStyles?.formPaperStyle}>
-          <Box className={classes.loadingContainer} style={{ flexDirection: "column", gap: 16, padding: 40 }}>
-            <CircularProgress size={60} />
-            <Typography variant="h6" style={{ marginTop: 16 }}>
-              Enviando mensagem WhatsApp...
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              Aguarde enquanto confirmamos o envio da mensagem
-            </Typography>
-          </Box>
-        </Paper>
       </Box>
     );
   }
@@ -722,6 +790,25 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
                 </Typography>
               </Box>
             </Box>
+
+            {/* Confirmação: responsável pela mesa */}
+            {(orderData.mesaNumber || orderData.responsavelMesa) && (
+              <Box style={{ marginBottom: 24, padding: 16, backgroundColor: "#e8f5e9", borderRadius: 8 }}>
+                <Typography variant="h6" gutterBottom style={{ fontWeight: 600, marginBottom: 12 }}>
+                  Confirmação
+                </Typography>
+                {orderData.mesaNumber && (
+                  <Typography variant="body1" style={{ marginBottom: 4 }}>
+                    <strong>Mesa:</strong> {orderData.mesaNumber}
+                  </Typography>
+                )}
+                {orderData.responsavelMesa && (
+                  <Typography variant="body1">
+                    <strong>Responsável pela mesa:</strong> {orderData.responsavelMesa}
+                  </Typography>
+                )}
+              </Box>
+            )}
 
             {/* Informações Adicionais */}
             {orderData.customFields && orderData.customFields.length > 0 && orderData.customFields.some(f => f.value) && (
@@ -882,17 +969,35 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
           {activeTab === groups.length && (
             <form onSubmit={handleSubmit}>
               <Box style={{ marginTop: 24 }}>
-                {/* Campos automáticos (nome e telefone) */}
-                {autoFields.map((field) => (
+                {/* Mesa fixa por QR: se ocupada, só mostrar "Mesa X - Cliente"; se livre, pedir nome/telefone */}
+                {loadingMesa && (
+                  <Box className={classes.fieldContainer} style={{ marginBottom: 16 }}>
+                    <Typography variant="body2" color="textSecondary">Carregando informações da mesa...</Typography>
+                  </Box>
+                )}
+                {mesaFromQR && !loadingMesa && (
+                  <Box className={classes.fieldContainer} style={{ marginBottom: 24 * (appStyles?.spacingMultiplier || 1) }}>
+                    <Typography variant="body1" style={{ fontWeight: 600 }}>
+                      Mesa {mesaFromQR.number || mesaFromQR.name || mesaFromQR.id}
+                    </Typography>
+                    {mesaFromQR.status === "ocupada" && mesaFromQR.contact && (
+                      <Typography variant="body2" color="textSecondary">
+                        Cliente: {mesaFromQR.contact.name || mesaFromQR.contact.number || "—"}
+                      </Typography>
+                    )}
+                  </Box>
+                )}
+                {/* Campos automáticos (nome e telefone) — ocultar se mesa ocupada (QR) */}
+                {!(mesaFromQR?.status === "ocupada") && autoFields.map((field) => (
                   <Box key={field.id} className={classes.fieldContainer} style={{ marginBottom: 24 * (appStyles?.spacingMultiplier || 1) }}>
                     {renderField(field)}
                   </Box>
                 ))}
 
-                {/* Campo Mesa (se configurado e form aceita mesas) */}
-                {form.settings?.showMesaField && form.settings?.mesas !== false && (
+                {/* Campo Mesa (se configurado e form aceita mesas; não mostrar quando mesa veio do QR) */}
+                {form.settings?.showMesaField && form.settings?.mesas !== false && !mesaFromQR && (
                   <Box key="mesa-field" className={classes.fieldContainer} style={{ marginBottom: 24 * (appStyles?.spacingMultiplier || 1) }}>
-                    {form.settings.mesaFieldMode === "select" ? (
+                    {(form.settings?.mesaFieldMode || "select") === "select" ? (
                       <FormControl fullWidth variant={fieldVariant}>
                         <InputLabel>Número da mesa</InputLabel>
                         <Select
@@ -975,6 +1080,21 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
           )}
         </Paper>
       </Box>
+
+      {/* Botão flutuante: ir para Finalizar */}
+      {!submitted && form && groups.length > 0 && (
+        <Fab
+          color="primary"
+          aria-label="Finalizar pedido"
+          className={classes.fab}
+          onClick={() => setActiveTab(groups.length)}
+          style={appStyles?.primaryColor ? { backgroundColor: appStyles.primaryColor } : {}}
+        >
+          <Badge badgeContent={getTotalItems()} color="secondary">
+            <ShoppingCartIcon />
+          </Badge>
+        </Fab>
+      )}
     </Box>
   );
 };

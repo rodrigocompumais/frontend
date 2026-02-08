@@ -27,6 +27,7 @@ import {
 } from "@material-ui/core";
 import { Rating, Alert } from "@material-ui/lab";
 
+import InputMask from "react-input-mask";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import PublicMenuForm from "./PublicMenuForm";
@@ -352,9 +353,33 @@ const PublicForm = () => {
     const hasError = !!error;
 
     switch (field.fieldType) {
+      case "phone":
+        return (
+          <InputMask
+            mask="55(99)9999-9999"
+            maskChar={null}
+            value={value}
+            onChange={(e) => handleFieldChange(field.id, e.target.value)}
+          >
+            {(inputProps) => (
+              <TextField
+                {...inputProps}
+                fullWidth
+                variant={fieldVariant}
+                type="text"
+                placeholder="55(99)9999-9999"
+                error={hasError}
+                helperText={error || field.helpText}
+                inputProps={{
+                  maxLength: field.validation?.maxLength,
+                  minLength: field.validation?.minLength,
+                }}
+              />
+            )}
+          </InputMask>
+        );
       case "text":
       case "email":
-      case "phone":
       case "number":
         return (
           <TextField

@@ -211,16 +211,27 @@ const ContactModal = ({ open, onClose, contactId, initialValues, onSave }) => {
 									margin="dense"
 									className={classes.textField}
 								/>
-								<Field
-									as={TextField}
-									name="number"
-									label={i18n.t("contactModal.form.number")}
-									error={touched.number && Boolean(errors.number)}
-									helperText={touched.number && errors.number}
-									placeholder=""
-									variant="outlined"
-									margin="dense"
-								/>
+								<Field name="number">
+									{({ field }) => (
+										<InputMask
+											{...field}
+											mask="55(99)9999-9999"
+											maskChar={null}
+											placeholder="55(99)9999-9999"
+										>
+											{(inputProps) => (
+												<TextField
+													{...inputProps}
+													label={i18n.t("contactModal.form.number")}
+													error={touched.number && Boolean(errors.number)}
+													helperText={touched.number && errors.number}
+													variant="outlined"
+													margin="dense"
+												/>
+											)}
+										</InputMask>
+									)}
+								</Field>
 
 								<div>
 									<Field
