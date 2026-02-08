@@ -110,6 +110,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   const isChatPage = location.pathname.startsWith("/chats");
   const isGarcomPage = location.pathname === "/garcom";
   const isCozinhaPage = location.pathname === "/cozinha";
+  const isEntregadorPage = location.pathname === "/entregador";
   const classes = useStyles();
   const { handleLogout, loading } = useContext(AuthContext);
   const { user } = useContext(AuthContext);
@@ -160,7 +161,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       {/* Banner de período de teste */}
       <TrialBanner />
       
-      {!isGarcomPage && !isCozinhaPage && (
+      {!isGarcomPage && !isCozinhaPage && !isEntregadorPage && (
       <AppBar
         position="static"
         className={classes.appBar}

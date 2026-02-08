@@ -205,7 +205,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                 headers: { "Content-Type": "multipart/form-data" },
             });
             const url = data.imageUrl || "";
-            setProduct((prev) => ({ ...prev, imageUrl: url }));
+            // Atualizar só o campo no Formik; não alterar product para não disparar enableReinitialize e limpar os outros campos
             if (setFieldValue) setFieldValue("imageUrl", url);
             toast.success("Imagem enviada com sucesso");
         } catch (err) {

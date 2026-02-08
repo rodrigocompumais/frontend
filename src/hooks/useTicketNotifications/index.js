@@ -4,12 +4,19 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { toast } from "react-toastify";
 
+const NO_NOTIFICATION_PATHS = ["/garcom", "/cozinha"];
+
 const useTicketNotifications = () => {
   const location = useLocation();
   const history = useHistory();
   const socketManager = useContext(SocketContext);
   const { user } = useContext(AuthContext);
   const currentTicketIdRef = useRef(null);
+  const pathnameRef = useRef(location.pathname);
+
+  useEffect(() => {
+    pathnameRef.current = location.pathname;
+  }, [location.pathname]);
 
   // Extrair ID do ticket da URL atual
   useEffect(() => {
@@ -30,6 +37,7 @@ const useTicketNotifications = () => {
     if (!socket) return;
 
     const handleAppMessage = (data) => {
+      if (NO_NOTIFICATION_PATHS.includes(pathnameRef.current)) return;
       if (data.action !== "create") return;
 
       const { message, ticket, contact } = data;

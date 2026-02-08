@@ -1,5 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useContext } from "react";
 import { useHistory, useLocation } from "react-router-dom";
+import { AuthContext } from "../../context/Auth/AuthContext";
+import { SocketContext } from "../../context/Socket/SocketContext";
 import { makeStyles } from "@material-ui/core/styles";
 import {
   Box,
@@ -147,6 +149,8 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
   const classes = useStyles();
   const history = useHistory();
   const location = useLocation();
+  const { user } = useContext(AuthContext);
+  const socketManager = useContext(SocketContext);
   const { hasLanchonetes, loading: modulesLoading } = useCompanyModules();
 
   const params = new URLSearchParams(location.search);
@@ -219,6 +223,26 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
     fetchOrders();
   }, [hasLanchonetes, modulesLoading, fetchOrders]);
 
+  // Atualizar lista em tempo real quando chegar novo pedido ou atualização (mesa/delivery)
+  useEffect(() => {
+    const companyId = user?.companyId;
+    const socket = companyId ? socketManager?.getSocket?.(companyId) : null;
+    if (!socket) return;
+
+    const onFormResponse = (payload) => {
+      const { action, response } = payload || {};
+      if (!response) return;
+      const orderType = response.metadata?.orderType === "delivery" ? "delivery" : "mesa";
+      if (orderTypeFilter && orderType !== orderTypeFilter) return;
+      if (action === "create" || action === "update" || action === "delete") {
+        fetchOrders();
+      }
+    };
+
+    socket.on(`company-${companyId}-formResponse`, onFormResponse);
+    return () => socket.off(`company-${companyId}-formResponse`, onFormResponse);
+  }, [user?.companyId, socketManager, orderTypeFilter, fetchOrders]);
+
   useEffect(() => {
     const fid = params.get("formId") || "";
     if (fid !== formIdFilter) setFormIdFilter(fid);
@@ -242,9 +266,12 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
 
   const orderStages = orderTypeFilter === "mesa" ? MESA_ORDER_STAGES : DELIVERY_ORDER_STAGES;
 
+  // Pedidos cancelados somem da lista (mesa e delivery)
+  const ordersToShow = orders.filter((o) => getOrderStatus(o) !== "cancelado");
+
   const columnsWithOrders = orderStages.map((stage) => ({
     ...stage,
-    orders: orders.filter((o) => getOrderStatus(o) === stage.id),
+    orders: ordersToShow.filter((o) => getOrderStatus(o) === stage.id),
   }));
 
   const handleDragEnd = async (result) => {

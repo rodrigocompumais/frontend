@@ -15,6 +15,8 @@ import {
   Grid,
   CircularProgress,
   Badge,
+  IconButton,
+  Tooltip,
 } from "@material-ui/core";
 import {
   Restaurant as RestaurantIcon,
@@ -26,6 +28,7 @@ import {
   LocalShipping as LocalShippingIcon,
   People as PeopleIcon,
 } from "@material-ui/icons";
+import { QrCode2 as QrCodeScannerIcon } from "@mui/icons-material";
 import useSound from "use-sound";
 import alertSound from "../../assets/sound.mp3";
 import QRCode from "qrcode.react";
@@ -37,6 +40,7 @@ import useCompanyModules from "../../hooks/useCompanyModules";
 import Products from "../Products";
 import Mesas from "../Mesas";
 import Pedidos from "../Pedidos";
+import QuickScanModal from "../../components/QuickScanModal";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -80,12 +84,13 @@ const LanchonetesHub = () => {
   const params = new URLSearchParams(location.search);
   const tabFromUrl = parseInt(params.get("tab"), 10);
   const [tabValue, setTabValue] = useState(
-    !isNaN(tabFromUrl) && tabFromUrl >= 0 && tabFromUrl <= 6 ? tabFromUrl : 0
+    !isNaN(tabFromUrl) && tabFromUrl >= 0 && tabFromUrl <= 7 ? tabFromUrl : 0
   );
   const [cardapioForms, setCardapioForms] = useState([]);
   const [ordersStats, setOrdersStats] = useState({ pedidosHoje: 0, mesasOcupadas: 0 });
   const [unconfirmedCounts, setUnconfirmedCounts] = useState({ mesa: 0, delivery: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
+  const [quickScanOpen, setQuickScanOpen] = useState(false);
   const pendingOrderIdsRef = useRef(new Set());
   const soundIntervalRef = useRef(null);
   const [playOrderAlert] = useSound(alertSound, { volume: 0.6 });
@@ -99,7 +104,7 @@ const LanchonetesHub = () => {
   useEffect(() => {
     const p = new URLSearchParams(location.search);
     const t = parseInt(p.get("tab"), 10);
-    if (!isNaN(t) && t >= 0 && t <= 6) setTabValue(t);
+    if (!isNaN(t) && t >= 0 && t <= 7) setTabValue(t);
   }, [location.search]);
 
   const handleTabChange = (_, v, formIdOverride) => {
@@ -201,7 +206,7 @@ const LanchonetesHub = () => {
       const status = response.orderStatus || response.metadata?.orderStatus || "novo";
       const orderType = response.metadata?.orderType === "delivery" ? "delivery" : "mesa";
 
-      if (action === "create" && status !== "confirmado") {
+      if (action === "create" && status === "novo") {
         pendingOrderIdsRef.current.add(response.id);
         setUnconfirmedCounts((prev) => ({
           ...prev,
@@ -209,7 +214,8 @@ const LanchonetesHub = () => {
         }));
         startSoundLoop();
       } else if (action === "update") {
-        if (status === "confirmado") {
+        // Badge atualiza quando o pedido sai de "novo" (confirmado, preparando, saiu_entrega, entregue, etc.)
+        if (status !== "novo" && status != null) {
           pendingOrderIdsRef.current.delete(response.id);
           setUnconfirmedCounts((prev) => ({
             ...prev,
@@ -240,9 +246,20 @@ const LanchonetesHub = () => {
   return (
     <MainContainer>
       <Box className={classes.root}>
-        <Typography variant="h5" style={{ fontWeight: 600, marginBottom: 16 }}>
-          Lanchonetes
-        </Typography>
+        <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" style={{ marginBottom: 16 }}>
+          <Typography variant="h5" style={{ fontWeight: 600 }}>
+            Lanchonetes
+          </Typography>
+          <Tooltip title="Escanear QR Code (garçom, cozinha, etc.)">
+            <IconButton
+              color="primary"
+              onClick={() => setQuickScanOpen(true)}
+              aria-label="Ação rápida - escanear QR"
+            >
+              <QrCodeScannerIcon />
+            </IconButton>
+          </Tooltip>
+        </Box>
 
         <Tabs
           value={tabValue}
@@ -270,6 +287,7 @@ const LanchonetesHub = () => {
             icon={<LocalShippingIcon />}
           />
           <Tab label="Garçons" icon={<PeopleIcon />} />
+          <Tab label="Entregador" icon={<LocalShippingIcon />} />
         </Tabs>
 
         <Box className={classes.tabPanel}>
@@ -607,8 +625,54 @@ const LanchonetesHub = () => {
               </Box>
             </Box>
           )}
+          {tabValue === 7 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Área do entregador
+              </Typography>
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: 24 }}>
+                O entregador pode escanear o QR Code abaixo para abrir a tela de coleta no celular, escanear os QRs dos pedidos e iniciar/finalizar a rota.
+              </Typography>
+              <Paper style={{ padding: 24, maxWidth: 400 }}>
+                <Box display="flex" flexDirection="column" alignItems="center">
+                  <QRCode
+                    value={`${window.location.origin}/entregador`}
+                    size={220}
+                    level="M"
+                    includeMargin
+                  />
+                  <Typography variant="body2" color="textSecondary" style={{ marginTop: 16, textAlign: "center" }}>
+                    Escaneie para abrir a tela do entregador
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary" style={{ marginTop: 8, wordBreak: "break-all" }}>
+                    {window.location.origin}/entregador
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    style={{ marginTop: 16 }}
+                    onClick={() => history.push("/entregador")}
+                  >
+                    Abrir tela do entregador
+                  </Button>
+                </Box>
+              </Paper>
+              <Box mt={3}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Fluxo do entregador:
+                </Typography>
+                <ul style={{ paddingLeft: 20, color: "var(--color-text-secondary, #666)" }}>
+                  <li>Escanear os QR Codes impressos nos pedidos delivery para adicionar à rota</li>
+                  <li>Clicar em &quot;Iniciar rota&quot; (atualiza status e notifica clientes)</li>
+                  <li>Após as entregas, clicar em &quot;Finalizar rota&quot; (marca como entregue e envia avaliação)</li>
+                </ul>
+              </Box>
+            </Box>
+          )}
         </Box>
       </Box>
+
+      <QuickScanModal open={quickScanOpen} onClose={() => setQuickScanOpen(false)} />
     </MainContainer>
   );
 };
