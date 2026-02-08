@@ -18,7 +18,6 @@ import DeleteIcon from "@material-ui/icons/Delete";
 import PlayArrowIcon from "@material-ui/icons/PlayArrow";
 import StopIcon from "@material-ui/icons/Stop";
 import { toast } from "react-toastify";
-import QRCode from "qrcode.react";
 import MainContainer from "../../components/MainContainer";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -38,11 +37,6 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     alignItems: "center",
     gap: theme.spacing(1),
-  },
-  qrCard: {
-    padding: theme.spacing(2),
-    textAlign: "center",
-    marginBottom: theme.spacing(2),
   },
   listCard: {
     padding: theme.spacing(2),
@@ -159,24 +153,12 @@ const Entregador = () => {
     }
   };
 
-  const entregadorUrl = `${window.location.origin}/entregador`;
-
   return (
     <MainContainer>
       <Box className={classes.root}>
         <Typography variant="h5" className={classes.title}>
           <LocalShippingIcon /> Entregador
         </Typography>
-
-        <Paper className={classes.qrCard} elevation={0}>
-          <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-            QR Code desta tela (para impressão)
-          </Typography>
-          <QRCode value={entregadorUrl} size={160} level="M" />
-          <Typography variant="caption" display="block" style={{ marginTop: 8 }}>
-            {entregadorUrl}
-          </Typography>
-        </Paper>
 
         <Paper className={classes.listCard} elevation={0}>
           <Typography variant="subtitle1" gutterBottom>

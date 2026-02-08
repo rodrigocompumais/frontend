@@ -1961,15 +1961,15 @@ const messages = {
           "Link da mesa inválido ou expirado. Use o QR code da mesa para acessar o cardápio.",
       },
       lanchonetes: {
-        hubName: "Comanda",
-        hubWelcome: "Bem-vindo à Comanda",
+        hubName: "Home",
+        hubWelcome: "Bem-vindo ao Home",
         hubWelcomeSubtitle: "Use as abas acima para gerenciar produtos, cardápio, mesas e pedidos. Tudo em um só lugar.",
         cardapiosSection: "Cardápios",
         cardapiosDescription: "Seus cardápios para os clientes fazerem pedidos. Copie o link ou edite o cardápio.",
         cardapiosEmpty: "Nenhum cardápio cadastrado. Crie um em Cardápios.",
         createCardapio: "Criar cardápio",
         goToCardapios: "Ir para Cardápios",
-        goToHub: "Ir para Comanda",
+        goToHub: "Ir para Home",
       },
       forms: {
         title: "Formulários",

@@ -1956,15 +1956,15 @@ const messages = {
           "Invalid or expired table link. Use the table QR code to access the menu.",
       },
       lanchonetes: {
-        hubName: "Comanda",
-        hubWelcome: "Welcome to Comanda",
+        hubName: "Home",
+        hubWelcome: "Welcome to Home",
         hubWelcomeSubtitle: "Use the tabs above to manage products, menu, tables and orders. All in one place.",
         cardapiosSection: "Menus",
         cardapiosDescription: "Your menus for customers to place orders. Copy the link or edit the menu.",
         cardapiosEmpty: "No menu registered. Create one in Menus.",
         createCardapio: "Create menu",
         goToCardapios: "Go to Menus",
-        goToHub: "Go to Comanda",
+        goToHub: "Go to Home",
       },
       forms: {
         title: "Formulários",

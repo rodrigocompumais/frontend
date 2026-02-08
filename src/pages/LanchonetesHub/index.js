@@ -52,6 +52,11 @@ const useStyles = makeStyles((theme) => ({
   tabs: {
     borderBottom: `1px solid ${theme.palette.divider}`,
     marginBottom: theme.spacing(2),
+    overflowX: "auto",
+    flexShrink: 0,
+    "& .MuiTabs-flexContainer": {
+      flexWrap: "nowrap",
+    },
   },
   tabPanel: {
     flex: 1,
@@ -266,6 +271,8 @@ const LanchonetesHub = () => {
           value={tabValue}
           onChange={handleTabChange}
           className={classes.tabs}
+          variant="scrollable"
+          scrollButtons="auto"
         >
           <Tab label="Início" icon={<RestaurantIcon />} />
           <Tab label="Produtos" icon={<ShoppingCartIcon />} />
