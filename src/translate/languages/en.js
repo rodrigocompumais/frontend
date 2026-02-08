@@ -1955,6 +1955,17 @@ const messages = {
         ERR_MESA_LINK_INVALID:
           "Invalid or expired table link. Use the table QR code to access the menu.",
       },
+      lanchonetes: {
+        hubName: "Comanda",
+        hubWelcome: "Welcome to Comanda",
+        hubWelcomeSubtitle: "Use the tabs above to manage products, menu, tables and orders. All in one place.",
+        cardapiosSection: "Menus",
+        cardapiosDescription: "Your menus for customers to place orders. Copy the link or edit the menu.",
+        cardapiosEmpty: "No menu registered. Create one in Menus.",
+        createCardapio: "Create menu",
+        goToCardapios: "Go to Menus",
+        goToHub: "Go to Comanda",
+      },
       forms: {
         title: "Formulários",
         noForms: "Nenhum formulário encontrado",

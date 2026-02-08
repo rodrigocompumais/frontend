@@ -28,6 +28,7 @@ import AiChatFloating from "../components/AiChatFloating";
 import useChatNotifications from "../hooks/useChatNotifications";
 import useTicketNotifications from "../hooks/useTicketNotifications";
 import useCompanyModules from "../hooks/useCompanyModules";
+import { i18n } from "../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -168,14 +169,14 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         color="primary"
       >
         <Toolbar variant="dense" className={classes.toolbar}>
-          {/* Botão Dashboard à esquerda */}
+          {/* Botão Dashboard / Comanda à esquerda */}
           <Button
             className={classes.dashboardButton}
             onClick={() => history.push('/dashboard')}
             startIcon={<DashboardIcon className={classes.dashboardIcon} />}
-            aria-label={hasLanchonetes ? "Ir para Lanchonetes" : "Ir para Dashboard"}
+            aria-label={hasLanchonetes ? i18n.t("lanchonetes.goToHub") : "Ir para Dashboard"}
           >
-            {hasLanchonetes ? "Lanchonetes" : "Dashboard"}
+            {hasLanchonetes ? i18n.t("lanchonetes.hubName") : i18n.t("mainDrawer.listItems.dashboard")}
           </Button>
 
           {/* Menus de navegação dropdown (desktop) */}

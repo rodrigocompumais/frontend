@@ -1910,6 +1910,17 @@ const messages = {
         ERR_MESA_LINK_INVALID:
           "Enlace de mesa inválido o expirado. Use el código QR de la mesa para acceder al menú.",
       },
+      lanchonetes: {
+        hubName: "Comanda",
+        hubWelcome: "Bienvenido a Comanda",
+        hubWelcomeSubtitle: "Use las pestañas para gestionar productos, carta, mesas y pedidos. Todo en un solo lugar.",
+        cardapiosSection: "Cartas",
+        cardapiosDescription: "Sus cartas para que los clientes pidan. Copie el enlace o edite la carta.",
+        cardapiosEmpty: "Ninguna carta registrada. Cree una en Cartas.",
+        createCardapio: "Crear carta",
+        goToCardapios: "Ir a Cartas",
+        goToHub: "Ir a Comanda",
+      },
       forms: {
         title: "Formulários",
         noForms: "Nenhum formulário encontrado",

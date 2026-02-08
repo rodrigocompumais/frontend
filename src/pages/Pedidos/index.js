@@ -31,6 +31,7 @@ import Title from "../../components/Title";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import useCompanyModules from "../../hooks/useCompanyModules";
+import { i18n } from "../../translate/i18n";
 import PedidoKanbanCard from "../../components/PedidoKanbanCard";
 
 // Pedidos mesa: Novo, Confirmado, Em preparo, Pronto, Entregue, Cancelado
@@ -349,7 +350,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
               style={{ marginTop: 16 }}
               onClick={() => history.push("/forms")}
             >
-              Ir para Formulários
+              {i18n.t("lanchonetes.goToCardapios")}
             </Button>
           </Paper>
         </>

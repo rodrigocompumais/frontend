@@ -37,6 +37,7 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
 import useCompanyModules from "../../hooks/useCompanyModules";
+import { i18n } from "../../translate/i18n";
 import Products from "../Products";
 import Mesas from "../Mesas";
 import Pedidos from "../Pedidos";
@@ -248,7 +249,7 @@ const LanchonetesHub = () => {
       <Box className={classes.root}>
         <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" style={{ marginBottom: 16 }}>
           <Typography variant="h5" style={{ fontWeight: 600 }}>
-            Lanchonetes
+            {i18n.t("lanchonetes.hubName")}
           </Typography>
           <Tooltip title="Escanear QR Code (garçom, cozinha, etc.)">
             <IconButton
@@ -295,11 +296,10 @@ const LanchonetesHub = () => {
             <>
               <Paper className={classes.welcomeCard}>
                 <Typography variant="h6" gutterBottom>
-                  Bem-vindo ao módulo Lanchonetes
+                  {i18n.t("lanchonetes.hubWelcome")}
                 </Typography>
                 <Typography variant="body2" color="textSecondary">
-                  Use as abas acima para gerenciar produtos, cardápio, mesas e pedidos. 
-                  Tudo em um só lugar.
+                  {i18n.t("lanchonetes.hubWelcomeSubtitle")}
                 </Typography>
               </Paper>
 
@@ -487,15 +487,15 @@ const LanchonetesHub = () => {
           {tabValue === 2 && (
             <Box>
               <Typography variant="h6" gutterBottom>
-                Formulários de cardápio
+                {i18n.t("lanchonetes.cardapiosSection")}
               </Typography>
               <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
-                Seus cardápios para os clientes fazerem pedidos. Copie o link ou edite o formulário.
+                {i18n.t("lanchonetes.cardapiosDescription")}
               </Typography>
               {cardapioForms.length === 0 ? (
                 <Paper style={{ padding: 32, textAlign: "center" }}>
                   <Typography color="textSecondary">
-                    Nenhum cardápio cadastrado. Crie um formulário do tipo "Cardápio" em Formulários.
+                    {i18n.t("lanchonetes.cardapiosEmpty")}
                   </Typography>
                   <Button
                     variant="contained"
@@ -503,7 +503,7 @@ const LanchonetesHub = () => {
                     style={{ marginTop: 16 }}
                     onClick={() => history.push("/forms/new")}
                   >
-                    Criar cardápio
+                    {i18n.t("lanchonetes.createCardapio")}
                   </Button>
                 </Paper>
               ) : (

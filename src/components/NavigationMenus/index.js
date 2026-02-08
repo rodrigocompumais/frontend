@@ -291,7 +291,7 @@ const NavigationMenus = () => {
             <ListItemIcon>
               <RestaurantIcon fontSize="small" />
             </ListItemIcon>
-            <ListItemText primary="Lanchonetes" />
+            <ListItemText primary={i18n.t("lanchonetes.hubName")} />
           </MenuItem>
         )}
       </Menu>
