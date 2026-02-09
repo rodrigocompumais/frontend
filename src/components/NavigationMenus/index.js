@@ -100,9 +100,9 @@ const NavigationMenus = () => {
   const [administracaoAnchor, setAdministracaoAnchor] = useState(null);
   const [sistemaAnchor, setSistemaAnchor] = useState(null);
 
-  // Expandir ao passar o mouse: timer para fechar ao sair (evita fechar ao mover para o dropdown)
+  // Expandir ao passar o mouse: wrapper evita fechar ao mover do botão para o dropdown (disablePortal mantém menu no mesmo container)
   const closeTimerRef = useRef(null);
-  const HOVER_CLOSE_DELAY = 150;
+  const HOVER_CLOSE_DELAY = 280;
   const clearCloseTimer = () => {
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
@@ -116,6 +116,7 @@ const NavigationMenus = () => {
   const scheduleClose = (setAnchor) => {
     closeTimerRef.current = setTimeout(() => setAnchor(null), HOVER_CLOSE_DELAY);
   };
+  const wrapperStyle = { position: 'relative', display: 'inline-block' };
 
   // Features do plano
   const [showCampaigns, setShowCampaigns] = useState(false);

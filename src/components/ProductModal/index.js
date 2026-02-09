@@ -239,11 +239,16 @@ const ProductModal = ({ open, onClose, productId }) => {
 
     const handleSaveProduct = async (values) => {
         try {
+            const payload = { ...values };
+            if (!payload.allowsHalfAndHalf || payload.halfAndHalfPriceRule === "") {
+                payload.halfAndHalfPriceRule = null;
+            }
+            if (payload.halfAndHalfGrupo === "") payload.halfAndHalfGrupo = null;
             if (productId) {
-                await api.put(`/products/${productId}`, values);
+                await api.put(`/products/${productId}`, payload);
                 toast.success("Produto atualizado com sucesso");
             } else {
-                await api.post("/products", values);
+                await api.post("/products", payload);
                 toast.success("Produto criado com sucesso");
             }
             // Atualizar lista de grupos caso um novo grupo tenha sido criado

@@ -323,7 +323,6 @@ const Garcom = () => {
     if (!baseProduct) return [];
     const grupoFilter = baseProduct.halfAndHalfGrupo || baseProduct.grupo || null;
     return products.filter((p) => {
-      if (p.id === baseProduct.id) return false;
       if (grupoFilter) return (p.grupo || "Outros") === grupoFilter;
       return true;
     });
@@ -342,7 +341,7 @@ const Garcom = () => {
 
   const openHalfAndHalfModal = (product) => {
     setHalfAndHalfModalProduct(product);
-    setHalfAndHalfModalHalf1("");
+    setHalfAndHalfModalHalf1(String(product.id));
     setHalfAndHalfModalHalf2("");
     setHalfAndHalfModalQty(1);
     setHalfAndHalfModalOpen(true);
