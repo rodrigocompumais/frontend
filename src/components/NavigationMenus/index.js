@@ -172,34 +172,37 @@ const NavigationMenus = () => {
   return (
     <div className={classes.root}>
       {/* 1. ATENDIMENTO */}
-      <Button
-        className={classes.menuButton}
-        onClick={(e) => setAtendimentoAnchor(e.currentTarget)}
-        onMouseEnter={(e) => openOnHover(setAtendimentoAnchor, e)}
+      <div
+        style={wrapperStyle}
+        onMouseEnter={clearCloseTimer}
         onMouseLeave={() => scheduleClose(setAtendimentoAnchor)}
-        startIcon={
-          <Badge badgeContent={totalNotifications > 0 ? totalNotifications : 0} color="error" max={99}>
-            <HeadsetMicIcon />
-          </Badge>
-        }
       >
-        {i18n.t("navigation.atendimento")}
-      </Button>
-      <Menu
-        anchorEl={atendimentoAnchor}
-        open={Boolean(atendimentoAnchor)}
-        onClose={() => { clearCloseTimer(); setAtendimentoAnchor(null); }}
-        MenuListProps={{ onMouseLeave: () => scheduleClose(setAtendimentoAnchor) }}
-        MenuListProps={{ onMouseEnter: clearCloseTimer }}
-        getContentAnchorEl={null}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
-        className={classes.menu}
-        PaperProps={{
-          onMouseEnter: clearCloseTimer,
-          onMouseLeave: () => scheduleClose(setAtendimentoAnchor),
-        }}
-      >
+        <Button
+          className={classes.menuButton}
+          onClick={(e) => setAtendimentoAnchor(e.currentTarget)}
+          onMouseEnter={(e) => openOnHover(setAtendimentoAnchor, e)}
+          startIcon={
+            <Badge badgeContent={totalNotifications > 0 ? totalNotifications : 0} color="error" max={99}>
+              <HeadsetMicIcon />
+            </Badge>
+          }
+        >
+          {i18n.t("navigation.atendimento")}
+        </Button>
+        <Menu
+          anchorEl={atendimentoAnchor}
+          open={Boolean(atendimentoAnchor)}
+          onClose={() => { clearCloseTimer(); setAtendimentoAnchor(null); }}
+          disablePortal
+          getContentAnchorEl={null}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+          transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+          className={classes.menu}
+          MenuListProps={{
+            onMouseEnter: clearCloseTimer,
+            onMouseLeave: () => scheduleClose(setAtendimentoAnchor),
+          }}
+        >
         <MenuItem
           className={classes.menuItem}
           onClick={() => handleNavigate('/tickets', () => setAtendimentoAnchor(null))}
