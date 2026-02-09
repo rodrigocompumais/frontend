@@ -22,6 +22,10 @@ import InputAdornment from "@material-ui/core/InputAdornment";
 import Chip from "@material-ui/core/Chip";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
+import FormControl from "@material-ui/core/FormControl";
+import InputLabel from "@material-ui/core/InputLabel";
+import Select from "@material-ui/core/Select";
+import MenuItem from "@material-ui/core/MenuItem";
 
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
@@ -97,6 +101,8 @@ const Products = () => {
     const [productModalOpen, setProductModalOpen] = useState(false);
     const [groupsModalOpen, setGroupsModalOpen] = useState(false);
     const [filterMenuOnly, setFilterMenuOnly] = useState(false);
+    const [filterGrupo, setFilterGrupo] = useState("");
+    const [productGroups, setProductGroups] = useState([]);
     const [failedImages, setFailedImages] = useState(new Set());
 
     const fetchProducts = useCallback(async () => {
@@ -106,6 +112,7 @@ const Products = () => {
                 searchParam: searchParam || undefined,
                 pageNumber,
                 isMenuProduct: filterMenuOnly ? true : undefined,
+                grupo: filterGrupo || undefined,
             };
             const { data } = await api.get("/products", { params });
             if (pageNumber === 1) {
@@ -114,26 +121,29 @@ const Products = () => {
                 setProducts((prev) => [...prev, ...(data.products || [])]);
             }
             setHasMore(data.hasMore || false);
+            if (data.groups && Array.isArray(data.groups)) {
+                setProductGroups(data.groups);
+            }
             setLoading(false);
         } catch (err) {
             toastError(err);
             setLoading(false);
         }
-    }, [searchParam, pageNumber, filterMenuOnly]);
+    }, [searchParam, pageNumber, filterMenuOnly, filterGrupo]);
 
     const socketManager = useContext(SocketContext);
 
     useEffect(() => {
         setPageNumber(1);
         setProducts([]);
-    }, [searchParam, filterMenuOnly]);
+    }, [searchParam, filterMenuOnly, filterGrupo]);
 
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
             fetchProducts();
         }, 500);
         return () => clearTimeout(delayDebounceFn);
-    }, [searchParam, pageNumber, filterMenuOnly, fetchProducts]);
+    }, [searchParam, pageNumber, filterMenuOnly, filterGrupo, fetchProducts]);
 
     useEffect(() => {
         const socket = socketManager.getSocket(user.companyId);
@@ -297,6 +307,19 @@ const Products = () => {
                         label="Apenas cardápio"
                         style={{ marginRight: 8 }}
                     />
+                    <FormControl size="small" style={{ minWidth: 160, marginRight: 8 }}>
+                        <InputLabel>Grupo</InputLabel>
+                        <Select
+                            value={filterGrupo}
+                            onChange={(e) => setFilterGrupo(e.target.value)}
+                            label="Grupo"
+                        >
+                            <MenuItem value="">Todos</MenuItem>
+                            {productGroups.map((g) => (
+                                <MenuItem key={g} value={g}>{g}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
                     <Button
                         variant="outlined"
                         color="primary"

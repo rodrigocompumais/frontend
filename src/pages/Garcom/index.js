@@ -22,7 +22,9 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  InputAdornment,
 } from "@material-ui/core";
+import SearchIcon from "@material-ui/icons/Search";
 import AddIcon from "@material-ui/icons/Add";
 import RemoveIcon from "@material-ui/icons/Remove";
 import AddCircleIcon from "@material-ui/icons/AddCircle";
@@ -176,6 +178,9 @@ const Garcom = () => {
   const [halfAndHalfModalHalf1, setHalfAndHalfModalHalf1] = useState("");
   const [halfAndHalfModalHalf2, setHalfAndHalfModalHalf2] = useState("");
   const [halfAndHalfModalQty, setHalfAndHalfModalQty] = useState(1);
+
+  const [mesaStatusFilter, setMesaStatusFilter] = useState("");
+  const [orderProductSearch, setOrderProductSearch] = useState("");
 
   useEffect(() => {
     if (!hasLanchonetes && !modulesLoading) {
@@ -560,6 +565,19 @@ const Garcom = () => {
 
   const groups = [...new Set(products.map((p) => p.grupo || "Outros"))].sort();
 
+  const filteredMesas = mesas.filter((m) => {
+    if (!mesaStatusFilter) return true;
+    if (mesaStatusFilter === "ocupada") return m.status === "ocupada";
+    if (mesaStatusFilter === "livre") return m.status === "livre";
+    return true;
+  });
+
+  const filterProductsBySearch = (list) => {
+    if (!orderProductSearch.trim()) return list;
+    const q = orderProductSearch.trim().toLowerCase();
+    return list.filter((p) => (p.name || "").toLowerCase().includes(q) || (p.description || "").toLowerCase().includes(q));
+  };
+
   if (!hasLanchonetes && !modulesLoading) return null;
 
   return (
@@ -584,11 +602,33 @@ const Garcom = () => {
           </Paper>
         ) : (
           <>
-            <Typography variant="body2" color="textSecondary" gutterBottom>
-              Clique em &quot;Fazer pedido&quot; na mesa. Se estiver livre, informe o cliente primeiro.
-            </Typography>
+            <Box display="flex" alignItems="center" flexWrap="wrap" gap={8} marginBottom={2}>
+              <Typography variant="body2" color="textSecondary">
+                Clique em &quot;Fazer pedido&quot; na mesa. Se estiver livre, informe o cliente primeiro.
+              </Typography>
+              <FormControl size="small" style={{ minWidth: 140 }}>
+                <InputLabel>Exibir mesas</InputLabel>
+                <Select
+                  value={mesaStatusFilter}
+                  onChange={(e) => setMesaStatusFilter(e.target.value)}
+                  label="Exibir mesas"
+                >
+                  <MenuItem value="">Todas</MenuItem>
+                  <MenuItem value="ocupada">Ocupadas</MenuItem>
+                  <MenuItem value="livre">Livres</MenuItem>
+                </Select>
+              </FormControl>
+            </Box>
             <Grid container spacing={2} className={classes.mesaGrid}>
-            {mesas.map((mesa) => (
+            {filteredMesas.length === 0 ? (
+              <Grid item xs={12}>
+                <Paper style={{ padding: 24, textAlign: "center" }}>
+                  <Typography color="textSecondary">
+                    {mesas.length === 0 ? "Nenhuma mesa cadastrada." : "Nenhuma mesa encontrada com o filtro selecionado."}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ) : filteredMesas.map((mesa) => (
               <Grid item xs={12} sm={6} md={4} key={mesa.id}>
                 <Card
                   className={`${classes.mesaCard} ${
@@ -653,6 +693,7 @@ const Garcom = () => {
             setContactParaPedido(null);
             setOrderLines([]);
             setHalfAndHalfItems([]);
+            setOrderProductSearch("");
           }
         }}
         maxWidth="sm"
@@ -668,6 +709,22 @@ const Garcom = () => {
           )}
         </DialogTitle>
         <DialogContent className={classes.orderDialogContent}>
+          <TextField
+            size="small"
+            placeholder="Buscar produto..."
+            value={orderProductSearch}
+            onChange={(e) => setOrderProductSearch(e.target.value)}
+            variant="outlined"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+            style={{ marginBottom: 12 }}
+          />
           <Tabs
             value={orderDialogTab}
             onChange={(_, v) => setOrderDialogTab(v)}
@@ -690,8 +747,7 @@ const Garcom = () => {
             >
               {orderDialogTab === idx && (
                 <Box>
-                  {products
-                    .filter((p) => (p.grupo || "Outros") === grupo)
+                  {filterProductsBySearch(products.filter((p) => (p.grupo || "Outros") === grupo))
                     .map((product) => {
                       const isHalfAndHalf = product.allowsHalfAndHalf === true;
                       return (
