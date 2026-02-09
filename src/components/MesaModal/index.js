@@ -23,10 +23,11 @@ const SECTIONS = [
   { value: "area_externa", label: "Área externa" },
 ];
 
-const MesaModal = ({ open, onClose, mesa, onSuccess }) => {
+const MesaModal = ({ open, onClose, mesa, initialType = "mesa", onSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [number, setNumber] = useState("");
   const [name, setName] = useState("");
+  const [type, setType] = useState("mesa");
   const [capacity, setCapacity] = useState("");
   const [section, setSection] = useState("");
   const [forms, setForms] = useState([]);
@@ -37,18 +38,20 @@ const MesaModal = ({ open, onClose, mesa, onSuccess }) => {
       if (mesa) {
         setNumber(mesa.number || "");
         setName(mesa.name || "");
+        setType(mesa.type === "comanda" ? "comanda" : "mesa");
         setCapacity(mesa.capacity ? String(mesa.capacity) : "");
         setSection(mesa.section || "");
         setFormId(mesa.formId ? String(mesa.formId) : "");
       } else {
         setNumber("");
         setName("");
+        setType(initialType === "comanda" ? "comanda" : "mesa");
         setCapacity("");
         setSection("");
         setFormId("");
       }
     }
-  }, [open, mesa]);
+  }, [open, mesa, initialType]);
 
   useEffect(() => {
     if (open) {
@@ -68,16 +71,17 @@ const MesaModal = ({ open, onClose, mesa, onSuccess }) => {
       const payload = {
         number: number.trim(),
         name: name.trim() || null,
+        type: type === "comanda" ? "comanda" : "mesa",
         capacity: capacity ? parseInt(capacity) : null,
         section: section || null,
         formId: formId ? parseInt(formId) : null,
       };
       if (mesa) {
         await api.put(`/mesas/${mesa.id}`, payload);
-        toast.success("Mesa atualizada");
+        toast.success(type === "comanda" ? "Comanda atualizada" : "Mesa atualizada");
       } else {
         await api.post("/mesas", payload);
-        toast.success("Mesa criada");
+        toast.success(type === "comanda" ? "Comanda criada" : "Mesa criada");
       }
       onSuccess && onSuccess();
       onClose();
@@ -90,15 +94,23 @@ const MesaModal = ({ open, onClose, mesa, onSuccess }) => {
 
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>{mesa ? "Editar mesa" : "Nova mesa"}</DialogTitle>
+      <DialogTitle>{mesa ? (type === "comanda" ? "Editar comanda" : "Editar mesa") : (type === "comanda" ? "Nova comanda" : "Nova mesa")}</DialogTitle>
       <DialogContent>
+        <FormControl fullWidth margin="dense">
+          <InputLabel>Tipo</InputLabel>
+          <Select value={type} onChange={(e) => setType(e.target.value)} label="Tipo">
+            <MenuItem value="mesa">Mesa</MenuItem>
+            <MenuItem value="comanda">Comanda</MenuItem>
+          </Select>
+        </FormControl>
         <TextField
-          label="Número"
+          label={type === "comanda" ? "Código da comanda (ex.: para leitor)" : "Número"}
           value={number}
           onChange={(e) => setNumber(e.target.value)}
           fullWidth
           margin="dense"
           required
+          placeholder={type === "comanda" ? "Ex.: 1001" : ""}
         />
         <TextField
           label="Nome (opcional)"

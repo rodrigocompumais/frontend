@@ -28,7 +28,8 @@ import {
   LocalShipping as LocalShippingIcon,
   People as PeopleIcon,
   Kitchen as KitchenIcon,
-} from "@material-ui/icons";
+  Receipt as ReceiptIcon,
+  } from "@material-ui/icons";
 import { QrCode2 as QrCodeScannerIcon } from "@mui/icons-material";
 import useSound from "use-sound";
 import alertSound from "../../assets/sound.mp3";
@@ -447,7 +448,26 @@ const LanchonetesHub = () => {
                       </CardContent>
                     </Card>
                   </Grid>
-                </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Card
+                      className={classes.statCard}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => history.push("/pdv")}
+                    >
+                      <CardContent>
+                        <Typography color="textSecondary" gutterBottom>
+                          PDV
+                        </Typography>
+                        <Typography variant="body2">
+                          Fechar contas (mesas e comandas)
+                        </Typography>
+                        <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                          Abrir PDV
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  </Grid>
               )}
 
               {cardapioForms.length > 0 && (

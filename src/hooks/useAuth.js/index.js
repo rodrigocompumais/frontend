@@ -214,7 +214,7 @@ const useAuth = () => {
           );
         }
         const route = typeof data.user?.defaultRoute === "string" ? data.user.defaultRoute.trim() : "";
-        const allowedRoutes = ["dashboard", "tickets", "cozinha", "entregador", "garcom", "pedidos", "mesas", "forms", "lanchonetes"];
+        const allowedRoutes = ["dashboard", "tickets", "cozinha", "entregador", "garcom", "pedidos", "mesas", "forms", "lanchonetes", "pdv"];
         const path = route && allowedRoutes.includes(route) ? `/${route}` : "/tickets";
         history.push(path);
       } else {

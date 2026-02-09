@@ -39,7 +39,8 @@ import {
   ExpandMore,
   ShoppingCart as ShoppingCartIcon,
   Assignment as AssignmentIcon,
-} from '@material-ui/icons';
+  Receipt as ReceiptIcon,
+  } from '@material-ui/icons';
 import { Badge } from '@material-ui/core';
 import { i18n } from '../../translate/i18n';
 import { Can } from '../Can';
@@ -241,7 +242,13 @@ const MobileNavigationMenu = () => {
                   </ListItemIcon>
                   <ListItemText primary="Mesas" />
                 </ListItem>
-              </>
+                <ListItem button onClick={() => handleNavigate('/pdv')}>
+                  <ListItemIcon>
+                    <ReceiptIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="PDV" />
+                </ListItem>
+                </>
             )}
 
             {(showCampaigns || showOpenAi) && (

@@ -39,6 +39,7 @@ import {
   Settings as SettingsIcon,
   ShoppingCart as ShoppingCartIcon,
   Restaurant as RestaurantIcon,
+  Receipt as ReceiptIcon,
 } from '@material-ui/icons';
 import { Badge } from '@material-ui/core';
 import { i18n } from '../../translate/i18n';
@@ -302,6 +303,15 @@ const NavigationMenus = () => {
                 <RestaurantIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText primary={i18n.t("lanchonetes.hubName")} />
+            </MenuItem>
+            <MenuItem
+              className={classes.menuItem}
+              onClick={() => handleNavigate('/pdv', () => setGestaoAnchor(null))}
+            >
+              <ListItemIcon>
+                <ReceiptIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="PDV" />
             </MenuItem>
           </>
         )}

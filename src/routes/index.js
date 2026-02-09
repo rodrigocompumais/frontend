@@ -67,6 +67,7 @@ import LanchonetesHub from "../pages/LanchonetesHub";
 import Garcom from "../pages/Garcom";
 import Cozinha from "../pages/Cozinha";
 import Entregador from "../pages/Entregador";
+import Pdv from "../pages/Pdv";
 
 const Routes = () => {
   const [showCampaigns, setShowCampaigns] = useState(false);
@@ -145,6 +146,7 @@ const Routes = () => {
                 <Route exact path="/garcom" component={Garcom} isPrivate />
                 <Route exact path="/cozinha" component={Cozinha} isPrivate />
                 <Route exact path="/entregador" component={Entregador} isPrivate />
+                <Route exact path="/pdv" component={Pdv} isPrivate />
                 <Route exact path="/prompts" component={Prompts} isPrivate />
                 <Route
                   exact

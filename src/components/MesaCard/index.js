@@ -146,9 +146,12 @@ const MesaCard = ({
     <Card className={`${classes.card} ${isOcupada ? classes.cardOcupada : classes.cardLivree} ${sectionClass}`}>
       <CardContent className={classes.cardContent}>
         <Box className={classes.header}>
-          <Typography className={classes.mesaNumber}>
-            {mesa.name || mesa.number}
-          </Typography>
+          <Box display="flex" alignItems="center" flexWrap="wrap" gap={1}>
+            <Typography className={classes.mesaNumber}>
+              {(mesa.type === "comanda" ? "Comanda " : "Mesa ") + (mesa.name || mesa.number)}
+            </Typography>
+            <Chip size="small" label={mesa.type === "comanda" ? "Comanda" : "Mesa"} variant="outlined" style={{ fontSize: "0.7rem" }} />
+          </Box>
           <Chip
             size="small"
             label={isOcupada ? "Ocupada" : "Livre"}

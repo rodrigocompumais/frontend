@@ -516,7 +516,7 @@ const Garcom = () => {
                   <CardContent className={classes.mesaCardContent}>
                     <Typography className={classes.mesaNumber}>
                       <EventSeatIcon style={{ fontSize: "1.2rem", verticalAlign: "middle", marginRight: 4 }} />
-                      Mesa {mesa.number || mesa.name || mesa.id}
+                      {mesa.type === "comanda" ? "Comanda" : "Mesa"} {mesa.number || mesa.name || mesa.id}
                     </Typography>
                     <Typography
                       className={classes.mesaStatus}

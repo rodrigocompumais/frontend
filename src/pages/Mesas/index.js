@@ -143,6 +143,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
   const [statusFilter, setStatusFilter] = useState("");
   const [sectionFilter, setSectionFilter] = useState("");
   const [mesaModalOpen, setMesaModalOpen] = useState(false);
+  const [mesaModalInitialType, setMesaModalInitialType] = useState("mesa");
   const [mesaBulkModalOpen, setMesaBulkModalOpen] = useState(false);
   const [ocuparModalOpen, setOcuparModalOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
@@ -431,9 +432,10 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     highlightedMesaRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
   }, [mesaIdFromUrl, mesas]);
 
-  const handleOpenMesaModal = (mesa = null) => {
+  const handleOpenMesaModal = (mesa = null, initialType = "mesa") => {
     setSelectedMesa(mesa);
     setMesaModalOpen(true);
+    setMesaModalInitialType(initialType);
   };
 
   const handleCloseMesaModal = () => {
@@ -520,9 +522,16 @@ const Mesas = ({ cardapioSlugFromHub }) => {
             <Button
               variant="outlined"
               startIcon={<AddIcon />}
-              onClick={() => handleOpenMesaModal()}
+              onClick={() => handleOpenMesaModal(null, "mesa")}
             >
-              Nova mesa
+              Add mesa
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<AddIcon />}
+              onClick={() => handleOpenMesaModal(null, "comanda")}
+            >
+              Add comanda
             </Button>
             <Button
               variant="outlined"
@@ -547,8 +556,11 @@ const Mesas = ({ cardapioSlugFromHub }) => {
               Crie mesas individuais ou em massa para começar.
             </Typography>
             <Box mt={2} display="flex" gap={1}>
-              <Button variant="contained" color="primary" onClick={() => handleOpenMesaModal()}>
+              <Button variant="contained" color="primary" onClick={() => handleOpenMesaModal(null, "mesa")}>
                 Nova mesa
+              </Button>
+              <Button variant="outlined" onClick={() => handleOpenMesaModal(null, "comanda")}>
+                Nova comanda
               </Button>
               <Button variant="outlined" onClick={handleOpenBulkModal}>
                 Criar várias
@@ -795,6 +807,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         onClose={handleCloseMesaModal}
         mesa={selectedMesa}
         onSuccess={fetchMesas}
+        initialType={mesaModalInitialType}
       />
       <MesaOcuparModal
         open={ocuparModalOpen}

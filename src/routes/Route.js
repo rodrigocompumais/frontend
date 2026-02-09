@@ -34,7 +34,7 @@ const Route = ({ component: Component, isPrivate = false, isPublic = false, allo
 			redirectPath = "/subscription-expired";
 		} else if (user?.defaultRoute) {
 			const route = typeof user.defaultRoute === "string" ? user.defaultRoute.trim() : "";
-			const allowed = ["dashboard", "tickets", "cozinha", "entregador", "garcom", "pedidos", "mesas", "forms", "lanchonetes"];
+			const allowed = ["dashboard", "tickets", "cozinha", "entregador", "garcom", "pedidos", "mesas", "forms", "lanchonetes", "pdv"];
 			if (route && allowed.includes(route)) {
 				redirectPath = `/${route}`;
 			}

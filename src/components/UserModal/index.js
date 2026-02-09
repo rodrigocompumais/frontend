@@ -385,7 +385,8 @@ const UserModal = ({ open, onClose, userId }) => {
 											<MenuItem value="mesas">Mesas</MenuItem>
 											<MenuItem value="forms">Formulários</MenuItem>
 											<MenuItem value="lanchonetes">Lanchonetes</MenuItem>
-										</Field>
+											<MenuItem value="pdv">PDV</MenuItem>
+											</Field>
 									</FormControl>
 								</div>
 								<Can
