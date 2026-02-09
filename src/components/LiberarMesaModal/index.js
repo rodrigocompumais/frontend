@@ -22,11 +22,14 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import useSettings from "../../hooks/useSettings";
 import { i18n } from "../../translate/i18n";
+import ReciboPdvModal from "../ReciboPdvModal";
 
 export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
   const [resumoConta, setResumoConta] = useState(null);
   const [loadingResumo, setLoadingResumo] = useState(false);
   const [liberando, setLiberando] = useState(false);
+  const [showRecibo, setShowRecibo] = useState(false);
+  const [reciboData, setReciboData] = useState(null);
   const [numeroPessoas, setNumeroPessoas] = useState(1);
   const [meioPagamento, setMeioPagamento] = useState("pix");
   const [settingsPix, setSettingsPix] = useState({ pixKey: "", pixReceiverName: "", pixReceiverCity: "" });
@@ -67,13 +70,20 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
     try {
       await api.put(`/mesas/${mesa.id}/liberar`);
       toast.success(i18n.t("mesas.tableLiberated"));
-      onSuccess && onSuccess();
+      setReciboData(resumoConta ? { ...resumoConta, mesa: resumoConta.mesa || mesa } : { pedidos: [], total: 0, mesa, cliente: null });
+      setShowRecibo(true);
       onClose && onClose();
     } catch (err) {
       toastError(err);
     } finally {
       setLiberando(false);
     }
+  };
+
+  const handleCloseRecibo = () => {
+    setShowRecibo(false);
+    setReciboData(null);
+    onSuccess && onSuccess();
   };
 
   const handleClose = () => {
@@ -85,6 +95,7 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
   if (!mesa) return null;
 
   return (
+    <>
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>
         {i18n.t("mesas.closeAccountTitle")} {mesa.number || mesa.name}
@@ -231,5 +242,13 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
         </Button>
       </DialogActions>
     </Dialog>
+
+    <ReciboPdvModal
+      open={showRecibo}
+      onClose={handleCloseRecibo}
+      data={reciboData}
+      mesa={reciboData?.mesa || mesa}
+    />
+    </>
   );
 }

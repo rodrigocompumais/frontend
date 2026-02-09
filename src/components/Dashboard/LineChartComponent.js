@@ -52,14 +52,16 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const CustomTooltip = ({ active, payload, label, classes }) => {
+const CustomTooltip = ({ active, payload, label, classes, tooltipSuffix = " tickets", formatCurrency = false }) => {
   if (active && payload && payload.length) {
+    const raw = payload[0].value;
+    const value = formatCurrency
+      ? `R$ ${Number(raw).toFixed(2).replace(".", ",")}`
+      : `${raw}${tooltipSuffix}`;
     return (
       <div className={classes.tooltip}>
         <p className={classes.tooltipLabel}>{label}</p>
-        <p className={classes.tooltipValue}>
-          {payload[0].value} tickets
-        </p>
+        <p className={classes.tooltipValue}>{value}</p>
       </div>
     );
   }
@@ -74,11 +76,14 @@ const LineChartComponent = ({
   xAxisKey = "hour",
   color = "#3B82F6",
   gradient = true,
+  tooltipSuffix = " tickets",
+  formatCurrency = false,
 }) => {
   const classes = useStyles();
   const theme = useTheme();
 
   const gradientId = `gradient-${dataKey}`;
+  const chartData = Array.isArray(data) && data.length > 0 ? data : [];
 
   return (
     <Paper className={classes.container} elevation={0}>
@@ -91,7 +96,7 @@ const LineChartComponent = ({
       <Box className={classes.chartContainer}>
         <ResponsiveContainer width="100%" height="100%">
           {gradient ? (
-            <AreaChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+            <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
               <defs>
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={color} stopOpacity={0.3} />
@@ -113,8 +118,9 @@ const LineChartComponent = ({
                 axisLine={false}
                 tickLine={false}
                 tick={{ fontSize: 11, fill: theme.palette.text.secondary }}
+                domain={chartData.length ? [0, "auto"] : [0, 100]}
               />
-              <Tooltip content={<CustomTooltip classes={classes} />} />
+              <Tooltip content={<CustomTooltip classes={classes} tooltipSuffix={tooltipSuffix} formatCurrency={formatCurrency} />} />
               <Area
                 type="monotone"
                 dataKey={dataKey}
@@ -124,7 +130,7 @@ const LineChartComponent = ({
               />
             </AreaChart>
           ) : (
-            <LineChart data={data} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+            <LineChart data={chartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
               <CartesianGrid 
                 strokeDasharray="3 3" 
                 stroke={theme.palette.divider}

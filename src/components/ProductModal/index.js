@@ -24,6 +24,8 @@ import MenuItem from "@material-ui/core/MenuItem";
 import InputAdornment from "@material-ui/core/InputAdornment";
 import IconButton from "@material-ui/core/IconButton";
 import CloudUploadIcon from "@material-ui/icons/CloudUpload";
+import AddIcon from "@material-ui/icons/Add";
+import DeleteIcon from "@material-ui/icons/Delete";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -79,6 +81,22 @@ const ProductSchema = Yup.object().shape({
     halfAndHalfPriceRule: Yup.string().oneOf(["max", "fixed", "average"]).nullable(),
     halfAndHalfGrupo: Yup.string().nullable(),
     grupo: Yup.string().nullable(),
+    variations: Yup.array()
+        .of(
+            Yup.object().shape({
+                name: Yup.string().required("Nome da variação é obrigatório"),
+                options: Yup.array()
+                    .min(1, "Adicione ao menos uma opção")
+                    .of(
+                        Yup.object().shape({
+                            label: Yup.string().required("Rótulo é obrigatório"),
+                            value: Yup.number().min(0, "Valor deve ser ≥ 0").required("Valor é obrigatório"),
+                        })
+                    )
+                    .required(),
+            })
+        )
+        .nullable(),
 }).test(
     "halfAndHalfRule",
     "Regra de cobrança é obrigatória quando 'Permitir meio a meio' está ativo",
@@ -105,6 +123,7 @@ const ProductModal = ({ open, onClose, productId }) => {
         halfAndHalfGrupo: "",
         grupo: "",
         imageUrl: "",
+        variations: [],
     };
 
     const [product, setProduct] = useState(initialState);
@@ -122,6 +141,10 @@ const ProductModal = ({ open, onClose, productId }) => {
 
             try {
                 const { data } = await api.get(`/products/${productId}`);
+                const variations = (data.variations || []).map((v) => ({
+                    name: v.name || "",
+                    options: (v.options || []).map((o) => ({ label: o.label || "", value: parseFloat(o.value) || 0 })),
+                }));
                 setProduct({
                     name: data.name || "",
                     description: data.description || "",
@@ -134,6 +157,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                     halfAndHalfGrupo: data.halfAndHalfGrupo || "",
                     grupo: data.grupo || "",
                     imageUrl: data.imageUrl || "",
+                    variations,
                 });
             } catch (err) {
                 toastError(err);
@@ -244,6 +268,10 @@ const ProductModal = ({ open, onClose, productId }) => {
                 payload.halfAndHalfPriceRule = null;
             }
             if (payload.halfAndHalfGrupo === "") payload.halfAndHalfGrupo = null;
+            payload.variations = (payload.variations || []).filter((v) => v.name && v.options && v.options.length > 0).map((v) => ({
+                name: v.name.trim(),
+                options: v.options.map((o) => ({ label: String(o.label).trim(), value: Number(o.value) })),
+            }));
             if (productId) {
                 await api.put(`/products/${productId}`, payload);
                 toast.success("Produto atualizado com sucesso");
@@ -524,6 +552,109 @@ const ProductModal = ({ open, onClose, productId }) => {
                                         </Typography>
                                     </Box>
                                 )}
+                                <Box mt={2}>
+                                    <Typography variant="subtitle2" gutterBottom>Variações (ex.: Tamanho, Cor)</Typography>
+                                    <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 8 }}>
+                                        Adicione variações com opções e valores diferentes (ex.: P R$ 10, M R$ 15, G R$ 20).
+                                    </Typography>
+                                    {(values.variations || []).map((variation, vIdx) => (
+                                        <Box key={vIdx} mb={2} p={1.5} border={1} borderColor="divider" borderRadius={8}>
+                                            <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                                                <TextField
+                                                    label="Nome da variação"
+                                                    placeholder="Ex: Tamanho"
+                                                    value={variation.name || ""}
+                                                    onChange={(e) => {
+                                                        const next = [...(values.variations || [])];
+                                                        next[vIdx] = { ...next[vIdx], name: e.target.value };
+                                                        setFieldValue("variations", next);
+                                                    }}
+                                                    variant="outlined"
+                                                    margin="dense"
+                                                    size="small"
+                                                    style={{ flex: 1, marginRight: 8 }}
+                                                />
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => {
+                                                        const next = (values.variations || []).filter((_, i) => i !== vIdx);
+                                                        setFieldValue("variations", next);
+                                                    }}
+                                                    title="Remover variação"
+                                                >
+                                                    <DeleteIcon />
+                                                </IconButton>
+                                            </Box>
+                                            {(variation.options || []).map((opt, oIdx) => (
+                                                <Box key={oIdx} display="flex" alignItems="center" gap={8} mb={0.5} ml={1}>
+                                                    <TextField
+                                                        label="Opção"
+                                                        placeholder="Ex: P, M, G"
+                                                        value={opt.label || ""}
+                                                        onChange={(e) => {
+                                                            const next = [...(values.variations || [])];
+                                                            next[vIdx].options = [...(next[vIdx].options || [])];
+                                                            next[vIdx].options[oIdx] = { ...next[vIdx].options[oIdx], label: e.target.value };
+                                                            setFieldValue("variations", next);
+                                                        }}
+                                                        variant="outlined"
+                                                        margin="dense"
+                                                        size="small"
+                                                        style={{ width: 120 }}
+                                                    />
+                                                    <TextField
+                                                        label="Valor (R$)"
+                                                        type="number"
+                                                        inputProps={{ step: "0.01", min: "0" }}
+                                                        value={opt.value ?? ""}
+                                                        onChange={(e) => {
+                                                            const next = [...(values.variations || [])];
+                                                            next[vIdx].options = [...(next[vIdx].options || [])];
+                                                            next[vIdx].options[oIdx] = { ...next[vIdx].options[oIdx], value: parseFloat(e.target.value) || 0 };
+                                                            setFieldValue("variations", next);
+                                                        }}
+                                                        variant="outlined"
+                                                        margin="dense"
+                                                        size="small"
+                                                        style={{ width: 100 }}
+                                                    />
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => {
+                                                            const next = [...(values.variations || [])];
+                                                            next[vIdx].options = (next[vIdx].options || []).filter((_, i) => i !== oIdx);
+                                                            setFieldValue("variations", next);
+                                                        }}
+                                                        title="Remover opção"
+                                                    >
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
+                                            ))}
+                                            <Button
+                                                size="small"
+                                                startIcon={<AddIcon />}
+                                                onClick={() => {
+                                                    const next = [...(values.variations || [])];
+                                                    if (!next[vIdx].options) next[vIdx].options = [];
+                                                    next[vIdx].options.push({ label: "", value: 0 });
+                                                    setFieldValue("variations", next);
+                                                }}
+                                                style={{ marginLeft: 8, marginTop: 4 }}
+                                            >
+                                                Adicionar opção
+                                            </Button>
+                                        </Box>
+                                    ))}
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        startIcon={<AddIcon />}
+                                        onClick={() => setFieldValue("variations", [...(values.variations || []), { name: "", options: [{ label: "", value: 0 }] }])}
+                                    >
+                                        Adicionar variação
+                                    </Button>
+                                </Box>
                             </DialogContent>
                             <DialogActions>
                                 <Button

@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import {
   Button,
@@ -100,24 +100,6 @@ const NavigationMenus = () => {
   const [administracaoAnchor, setAdministracaoAnchor] = useState(null);
   const [sistemaAnchor, setSistemaAnchor] = useState(null);
 
-  // Expandir ao passar o mouse: wrapper evita fechar ao mover do botão para o dropdown (disablePortal mantém menu no mesmo container)
-  const closeTimerRef = useRef(null);
-  const HOVER_CLOSE_DELAY = 280;
-  const clearCloseTimer = () => {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-  };
-  const openOnHover = (setAnchor, e) => {
-    clearCloseTimer();
-    setAnchor(e.currentTarget);
-  };
-  const scheduleClose = (setAnchor) => {
-    closeTimerRef.current = setTimeout(() => setAnchor(null), HOVER_CLOSE_DELAY);
-  };
-  const wrapperStyle = { position: 'relative', display: 'inline-block' };
-
   // Features do plano
   const [showCampaigns, setShowCampaigns] = useState(false);
   const [showKanban, setShowKanban] = useState(false);
@@ -172,15 +154,10 @@ const NavigationMenus = () => {
   return (
     <div className={classes.root}>
       {/* 1. ATENDIMENTO */}
-      <div
-        style={wrapperStyle}
-        onMouseEnter={clearCloseTimer}
-        onMouseLeave={() => scheduleClose(setAtendimentoAnchor)}
-      >
+      <div>
         <Button
           className={classes.menuButton}
           onClick={(e) => setAtendimentoAnchor(e.currentTarget)}
-          onMouseEnter={(e) => openOnHover(setAtendimentoAnchor, e)}
           startIcon={
             <Badge badgeContent={totalNotifications > 0 ? totalNotifications : 0} color="error" max={99}>
               <HeadsetMicIcon />
@@ -192,16 +169,12 @@ const NavigationMenus = () => {
         <Menu
           anchorEl={atendimentoAnchor}
           open={Boolean(atendimentoAnchor)}
-          onClose={() => { clearCloseTimer(); setAtendimentoAnchor(null); }}
+          onClose={() => setAtendimentoAnchor(null)}
           disablePortal
           getContentAnchorEl={null}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
           transformOrigin={{ vertical: 'top', horizontal: 'left' }}
           className={classes.menu}
-          MenuListProps={{
-            onMouseEnter: clearCloseTimer,
-            onMouseLeave: () => scheduleClose(setAtendimentoAnchor),
-          }}
         >
         <MenuItem
           className={classes.menuItem}
@@ -253,15 +226,10 @@ const NavigationMenus = () => {
       </div>
 
       {/* 2. GESTÃO */}
-      <div
-        style={wrapperStyle}
-        onMouseEnter={clearCloseTimer}
-        onMouseLeave={() => scheduleClose(setGestaoAnchor)}
-      >
+      <div>
         <Button
           className={classes.menuButton}
           onClick={(e) => setGestaoAnchor(e.currentTarget)}
-          onMouseEnter={(e) => openOnHover(setGestaoAnchor, e)}
           startIcon={<BusinessCenterIcon />}
         >
           {i18n.t("navigation.gestao")}
@@ -269,16 +237,12 @@ const NavigationMenus = () => {
         <Menu
           anchorEl={gestaoAnchor}
           open={Boolean(gestaoAnchor)}
-          onClose={() => { clearCloseTimer(); setGestaoAnchor(null); }}
+          onClose={() => setGestaoAnchor(null)}
           disablePortal
           getContentAnchorEl={null}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
           transformOrigin={{ vertical: 'top', horizontal: 'left' }}
           className={classes.menu}
-          MenuListProps={{
-            onMouseEnter: clearCloseTimer,
-            onMouseLeave: () => scheduleClose(setGestaoAnchor),
-          }}
         >
         <MenuItem
           className={classes.menuItem}
@@ -362,15 +326,10 @@ const NavigationMenus = () => {
       {/* 3. AUTOMAÇÃO & IA */}
       {(showCampaigns || showOpenAi) && (
         <>
-          <div
-            style={wrapperStyle}
-            onMouseEnter={clearCloseTimer}
-            onMouseLeave={() => scheduleClose(setAutomacaoAnchor)}
-          >
+          <div>
             <Button
               className={classes.menuButton}
               onClick={(e) => setAutomacaoAnchor(e.currentTarget)}
-              onMouseEnter={(e) => openOnHover(setAutomacaoAnchor, e)}
               startIcon={<ExtensionIcon />}
             >
               {i18n.t("navigation.automacaoIA")}
@@ -378,16 +337,12 @@ const NavigationMenus = () => {
             <Menu
               anchorEl={automacaoAnchor}
               open={Boolean(automacaoAnchor)}
-              onClose={() => { clearCloseTimer(); setAutomacaoAnchor(null); }}
+              onClose={() => setAutomacaoAnchor(null)}
               disablePortal
               getContentAnchorEl={null}
               anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
               transformOrigin={{ vertical: 'top', horizontal: 'left' }}
               className={classes.menu}
-              MenuListProps={{
-                onMouseEnter: clearCloseTimer,
-                onMouseLeave: () => scheduleClose(setAutomacaoAnchor),
-              }}
             >
             {showCampaigns && (
               <>
@@ -442,15 +397,10 @@ const NavigationMenus = () => {
         perform="drawer-admin-items:view"
         yes={() => (
           <>
-            <div
-              style={wrapperStyle}
-              onMouseEnter={clearCloseTimer}
-              onMouseLeave={() => scheduleClose(setAdministracaoAnchor)}
-            >
+            <div>
               <Button
                 className={classes.menuButton}
                 onClick={(e) => setAdministracaoAnchor(e.currentTarget)}
-                onMouseEnter={(e) => openOnHover(setAdministracaoAnchor, e)}
                 startIcon={<SecurityIcon />}
               >
                 {i18n.t("navigation.administracao")}
@@ -458,16 +408,12 @@ const NavigationMenus = () => {
               <Menu
                 anchorEl={administracaoAnchor}
                 open={Boolean(administracaoAnchor)}
-                onClose={() => { clearCloseTimer(); setAdministracaoAnchor(null); }}
+                onClose={() => setAdministracaoAnchor(null)}
                 disablePortal
                 getContentAnchorEl={null}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
                 className={classes.menu}
-                MenuListProps={{
-                  onMouseEnter: clearCloseTimer,
-                  onMouseLeave: () => scheduleClose(setAdministracaoAnchor),
-                }}
               >
               <MenuItem
                 className={classes.menuItem}
@@ -559,15 +505,10 @@ const NavigationMenus = () => {
       />
 
       {/* 5. SISTEMA */}
-      <div
-        style={wrapperStyle}
-        onMouseEnter={clearCloseTimer}
-        onMouseLeave={() => scheduleClose(setSistemaAnchor)}
-      >
+      <div>
         <Button
           className={classes.menuButton}
           onClick={(e) => setSistemaAnchor(e.currentTarget)}
-          onMouseEnter={(e) => openOnHover(setSistemaAnchor, e)}
           startIcon={<SettingsIcon />}
         >
           {i18n.t("navigation.sistema")}
@@ -575,16 +516,12 @@ const NavigationMenus = () => {
         <Menu
           anchorEl={sistemaAnchor}
           open={Boolean(sistemaAnchor)}
-          onClose={() => { clearCloseTimer(); setSistemaAnchor(null); }}
+          onClose={() => setSistemaAnchor(null)}
           disablePortal
           getContentAnchorEl={null}
           anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
           transformOrigin={{ vertical: 'top', horizontal: 'left' }}
           className={classes.menu}
-          MenuListProps={{
-            onMouseEnter: clearCloseTimer,
-            onMouseLeave: () => scheduleClose(setSistemaAnchor),
-          }}
         >
         <MenuItem
           className={classes.menuItem}

@@ -200,6 +200,8 @@ const PublicMenuForm = ({
   const [halfAndHalfModalHalf1, setHalfAndHalfModalHalf1] = useState("");
   const [halfAndHalfModalHalf2, setHalfAndHalfModalHalf2] = useState("");
   const [halfAndHalfModalQty, setHalfAndHalfModalQty] = useState(1);
+  /** Para produtos com variações: productId -> variationOptionId selecionado */
+  const [selectedVariationOption, setSelectedVariationOption] = useState({});
 
   const appStyles = form ? getFormAppearanceStyles(form) : null;
   const fieldVariant = appStyles?.fieldVariant || "outlined";
@@ -219,7 +221,7 @@ const PublicMenuForm = ({
 
   useEffect(() => {
     if (initialProducts && initialProducts.length > 0) {
-      const filtered = initialProducts.filter((p) => !p.variablePrice);
+      const filtered = initialProducts.filter((p) => !p.variablePrice || (p.variations && p.variations.length > 0));
       setProducts(filtered);
       const groupsMap = {};
       filtered.forEach((p) => {
@@ -337,7 +339,7 @@ const PublicMenuForm = ({
       const { data } = await api.get(`/public/forms/${slug}/products`);
 
       const allProducts = data.products || [];
-      const filtered = allProducts.filter((p) => !p.variablePrice);
+      const filtered = allProducts.filter((p) => !p.variablePrice || (p.variations && p.variations.length > 0));
       setProducts(filtered);
 
       // Agrupar produtos por grupo (apenas os exibidos, sem preço variável)
@@ -359,27 +361,56 @@ const PublicMenuForm = ({
     }
   };
 
-  const handleQuantityChange = (productId, delta) => {
+  /** Chave no carrinho: productId (sem variação) ou "productId_optionId" (com variação) */
+  const getItemKey = (product) => {
+    if (!product) return "";
+    if (!product.variations || product.variations.length === 0) return String(product.id);
+    const optionId = selectedVariationOption[product.id] ?? product.variations[0]?.options?.[0]?.id;
+    return optionId != null ? `${product.id}_${optionId}` : String(product.id);
+  };
+
+  /** Resolve key para { product, productValue, productName, optionLabel } */
+  const getItemDetailsByKey = (key) => {
+    const product = products.find((p) => p.id === parseInt(key, 10));
+    if (!product) return { product: null, productValue: 0, productName: "", optionLabel: "" };
+    if (key.includes("_")) {
+      const [, optionIdStr] = key.split("_");
+      const optionId = parseInt(optionIdStr, 10);
+      const variation = product.variations?.[0];
+      const option = variation?.options?.find((o) => o.id === optionId);
+      const productValue = option ? parseFloat(option.value) : parseFloat(product.value) || 0;
+      const productName = option ? `${product.name} - ${option.label}` : product.name;
+      return { product, productValue, productName, optionLabel: option?.label || "" };
+    }
+    return {
+      product,
+      productValue: parseFloat(product.value) || 0,
+      productName: product.name || "",
+      optionLabel: "",
+    };
+  };
+
+  const handleQuantityChange = (key, delta) => {
     setSelectedItems((prev) => {
-      const current = prev[productId] || 0;
+      const current = prev[key] || 0;
       const newQuantity = Math.max(0, current + delta);
       if (newQuantity === 0) {
-        const { [productId]: removed, ...rest } = prev;
+        const { [key]: removed, ...rest } = prev;
         return rest;
       }
-      return { ...prev, [productId]: newQuantity };
+      return { ...prev, [key]: newQuantity };
     });
   };
 
-  const handleQuantityInput = (productId, value) => {
+  const handleQuantityInput = (key, value) => {
     const quantity = parseInt(value) || 0;
     if (quantity <= 0) {
       setSelectedItems((prev) => {
-        const { [productId]: removed, ...rest } = prev;
+        const { [key]: removed, ...rest } = prev;
         return rest;
       });
     } else {
-      setSelectedItems((prev) => ({ ...prev, [productId]: quantity }));
+      setSelectedItems((prev) => ({ ...prev, [key]: quantity }));
     }
   };
 
@@ -474,14 +505,15 @@ const PublicMenuForm = ({
     setSubmitting(true);
 
     try {
-      // Preparar menuItems (normais + meio a meio)
-      const normalMenuItems = Object.keys(selectedItems).map((productId) => {
-        const product = products.find((p) => p.id === parseInt(productId));
+      // Preparar menuItems (normais + com variação + meio a meio)
+      const normalMenuItems = Object.keys(selectedItems).map((key) => {
+        const productId = key.includes("_") ? parseInt(key.split("_")[0], 10) : parseInt(key, 10);
+        const { product, productValue, productName } = getItemDetailsByKey(key);
         return {
-          productId: parseInt(productId),
-          quantity: selectedItems[productId],
-          productName: product?.name,
-          productValue: product?.value,
+          productId,
+          quantity: selectedItems[key],
+          productName: productName || product?.name,
+          productValue,
           grupo: product?.grupo || "Outros",
         };
       });
@@ -801,11 +833,9 @@ const PublicMenuForm = ({
 
   const calculateTotal = () => {
     let total = 0;
-    Object.keys(selectedItems).forEach((productId) => {
-      const product = products.find((p) => p.id === parseInt(productId));
-      if (product) {
-        total += (product.value || 0) * selectedItems[productId];
-      }
+    Object.keys(selectedItems).forEach((key) => {
+      const { productValue } = getItemDetailsByKey(key);
+      total += productValue * selectedItems[key];
     });
     halfAndHalfItems.forEach((item) => {
       const base = products.find((p) => p.id === item.baseProductId);
@@ -1059,8 +1089,13 @@ const PublicMenuForm = ({
           {activeTab < groups.length && (
             <Box style={{ marginTop: 24 }}>
               {getProductsByGroup(groups[activeTab]).map((product) => {
-                const quantity = selectedItems[product.id] || 0;
+                const itemKey = getItemKey(product);
+                const quantity = selectedItems[itemKey] || 0;
                 const isHalfAndHalf = product.allowsHalfAndHalf === true;
+                const hasVariations = product.variations && product.variations.length > 0;
+                const firstVariation = hasVariations ? product.variations[0] : null;
+                const selectedOptionId = hasVariations ? (selectedVariationOption[product.id] ?? firstVariation?.options?.[0]?.id) : null;
+                const displayPrice = hasVariations ? getItemDetailsByKey(itemKey).productValue : parseFloat(product.value || 0);
                 return (
                   <Card key={product.id} className={classes.productCard}>
                     <CardContent>
@@ -1082,9 +1117,25 @@ const PublicMenuForm = ({
                           {product.description}
                         </Typography>
                       )}
+                      {hasVariations && firstVariation && (
+                        <FormControl variant={fieldVariant} size="small" fullWidth style={{ marginTop: 8, marginBottom: 4 }}>
+                          <InputLabel>{firstVariation.name}</InputLabel>
+                          <Select
+                            value={selectedOptionId ?? ""}
+                            onChange={(e) => setSelectedVariationOption((prev) => ({ ...prev, [product.id]: Number(e.target.value) }))}
+                            label={firstVariation.name}
+                          >
+                            {firstVariation.options.map((opt) => (
+                              <MenuItem key={opt.id} value={opt.id}>
+                                {opt.label} - R$ {parseFloat(opt.value || 0).toFixed(2).replace(".", ",")}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      )}
                       <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap">
                         <Typography className={classes.productValue}>
-                          R$ {parseFloat(product.value || 0).toFixed(2).replace(".", ",")}
+                          R$ {displayPrice.toFixed(2).replace(".", ",")}
                         </Typography>
                         <Box display="flex" alignItems="center" flexWrap="wrap">
                           {isHalfAndHalf && (
@@ -1101,7 +1152,7 @@ const PublicMenuForm = ({
                           <Box className={classes.quantityControl}>
                             <IconButton
                               size="small"
-                              onClick={() => handleQuantityChange(product.id, -1)}
+                              onClick={() => handleQuantityChange(itemKey, -1)}
                               disabled={quantity === 0}
                             >
                               <RemoveIcon />
@@ -1110,14 +1161,14 @@ const PublicMenuForm = ({
                               className={classes.quantityInput}
                               type="number"
                               value={quantity}
-                              onChange={(e) => handleQuantityInput(product.id, e.target.value)}
+                              onChange={(e) => handleQuantityInput(itemKey, e.target.value)}
                               inputProps={{ min: 0 }}
                               variant={fieldVariant}
                               size="small"
                             />
                             <IconButton
                               size="small"
-                              onClick={() => handleQuantityChange(product.id, 1)}
+                              onClick={() => handleQuantityChange(itemKey, 1)}
                             >
                               <AddIcon />
                             </IconButton>

@@ -109,15 +109,18 @@ const useStyles = makeStyles((theme) => ({
   orderTabPanel: { paddingTop: theme.spacing(1) },
   orderProductCard: { marginBottom: theme.spacing(1) },
   orderQuantityControl: { display: "flex", alignItems: "center", gap: theme.spacing(0.5) },
-  orderSummaryRow: {
-    marginTop: theme.spacing(2),
-    paddingTop: theme.spacing(2),
+  orderDialogFooter: {
     borderTop: `1px solid ${theme.palette.divider}`,
+    padding: theme.spacing(2),
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
     flexWrap: "wrap",
-    gap: theme.spacing(1),
+    gap: theme.spacing(2),
+    backgroundColor: theme.palette.background.paper,
+  },
+  orderSearchField: {
+    marginBottom: theme.spacing(1.5),
   },
   orderLineRow: {
     display: "flex",
@@ -168,6 +171,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
   const [variablePriceProduct, setVariablePriceProduct] = useState(null);
   const [variablePriceQty, setVariablePriceQty] = useState(1);
   const [variablePriceUnit, setVariablePriceUnit] = useState("");
+  const [orderProductSearch, setOrderProductSearch] = useState("");
 
   const cardapioSlug = cardapioSlugFromHub ?? cardapioSlugFetched;
 
@@ -281,6 +285,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       setOrderDialogOpen(false);
       setMesaParaPedido(null);
       setOrderLines([]);
+      setOrderProductSearch("");
     }
   };
 
@@ -425,7 +430,15 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     }
   };
 
-  const orderGroups = [...new Set(orderProducts.map((p) => p.grupo || "Outros"))].sort();
+  const orderProductsFiltered = orderProductSearch.trim()
+    ? orderProducts.filter(
+        (p) =>
+          (p.name || "").toLowerCase().includes(orderProductSearch.trim().toLowerCase()) ||
+          (p.grupo || "Outros").toLowerCase().includes(orderProductSearch.trim().toLowerCase()) ||
+          (p.description || "").toLowerCase().includes(orderProductSearch.trim().toLowerCase())
+      )
+    : orderProducts;
+  const orderGroups = [...new Set(orderProductsFiltered.map((p) => p.grupo || "Outros"))].sort();
 
   useEffect(() => {
     if (!mesaIdFromUrl || mesas.length === 0 || !highlightedMesaRef.current) return;
@@ -665,6 +678,16 @@ const Mesas = ({ cardapioSlugFromHub }) => {
             </Box>
           ) : (
             <>
+              <TextField
+                className={classes.orderSearchField}
+                fullWidth
+                size="small"
+                variant="outlined"
+                placeholder="Buscar produtos..."
+                value={orderProductSearch}
+                onChange={(e) => setOrderProductSearch(e.target.value)}
+                inputProps={{ "aria-label": "Buscar produtos" }}
+              />
               <Tabs
                 value={orderDialogTab}
                 onChange={(_, v) => setOrderDialogTab(v)}
@@ -687,7 +710,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                 >
                   {orderDialogTab === idx && (
                     <Box>
-                      {orderProducts
+                      {orderProductsFiltered
                         .filter((p) => (p.grupo || "Outros") === grupo)
                         .map((product) => (
                           <Card key={product.id} className={classes.orderProductCard} variant="outlined">
@@ -742,22 +765,24 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                   })}
                 </Box>
               )}
-              <Box className={classes.orderSummaryRow}>
-                <Typography variant="h6">
-                  Total: R$ {(Number(calculateOrderTotal()) || 0).toFixed(2).replace(".", ",")} • {getOrderTotalItems()} itens
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={submitOrder}
-                  disabled={getOrderTotalItems() === 0 || orderSubmitting}
-                >
-                  {orderSubmitting ? <CircularProgress size={24} color="inherit" /> : "Enviar pedido"}
-                </Button>
-              </Box>
             </>
           )}
         </DialogContent>
+        {!orderLoading && (
+          <Box component={DialogActions} className={classes.orderDialogFooter} disableSpacing>
+            <Typography variant="h6" style={{ margin: 0 }}>
+              Total: R$ {(Number(calculateOrderTotal()) || 0).toFixed(2).replace(".", ",")} • {getOrderTotalItems()} itens
+            </Typography>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={submitOrder}
+              disabled={getOrderTotalItems() === 0 || orderSubmitting}
+            >
+              {orderSubmitting ? <CircularProgress size={24} color="inherit" /> : "Enviar pedido"}
+            </Button>
+          </Box>
+        )}
       </Dialog>
 
       <Dialog open={variablePriceDialogOpen} onClose={() => setVariablePriceDialogOpen(false)} maxWidth="xs" fullWidth>

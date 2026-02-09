@@ -44,6 +44,10 @@ import Products from "../Products";
 import Mesas from "../Mesas";
 import Pedidos from "../Pedidos";
 import QuickScanModal from "../../components/QuickScanModal";
+import LineChartComponent from "../../components/Dashboard/LineChartComponent";
+import BarChartComponent from "../../components/Dashboard/BarChartComponent";
+import TrendingUpIcon from "@material-ui/icons/TrendingUp";
+import AttachMoneyIcon from "@material-ui/icons/AttachMoney";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -76,6 +80,13 @@ const useStyles = makeStyles((theme) => ({
   statCard: {
     height: "100%",
   },
+  vendasCard: {
+    height: "100%",
+    borderLeft: `4px solid ${theme.palette.primary.main}`,
+  },
+  chartCard: {
+    minHeight: 280,
+  },
   quickLink: {
     textDecoration: "none",
     color: "inherit",
@@ -98,6 +109,13 @@ const LanchonetesHub = () => {
   const [ordersStats, setOrdersStats] = useState({ pedidosHoje: 0, mesasOcupadas: 0 });
   const [unconfirmedCounts, setUnconfirmedCounts] = useState({ mesa: 0, delivery: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
+  const [lanchonetesStats, setLanchonetesStats] = useState({
+    totalVendasDia: 0,
+    totalVendasMes: 0,
+    evolucaoVendas: [],
+    entregasPorEntregador: [],
+  });
+  const [loadingLanchonetesStats, setLoadingLanchonetesStats] = useState(false);
   const [quickScanOpen, setQuickScanOpen] = useState(false);
   const pendingOrderIdsRef = useRef(new Set());
   const soundIntervalRef = useRef(null);
@@ -157,6 +175,16 @@ const LanchonetesHub = () => {
       }
     };
     fetchData();
+  }, [hasLanchonetes]);
+
+  useEffect(() => {
+    if (!hasLanchonetes) return;
+    setLoadingLanchonetesStats(true);
+    api
+      .get("/dashboard/lanchonetes-stats")
+      .then(({ data }) => setLanchonetesStats(data || { totalVendasDia: 0, totalVendasMes: 0, evolucaoVendas: [], entregasPorEntregador: [] }))
+      .catch(() => setLanchonetesStats({ totalVendasDia: 0, totalVendasMes: 0, evolucaoVendas: [], entregasPorEntregador: [] }))
+      .finally(() => setLoadingLanchonetesStats(false));
   }, [hasLanchonetes]);
 
   useEffect(() => {
@@ -233,6 +261,9 @@ const LanchonetesHub = () => {
         }
       }
       fetchUnconfirmedCounts();
+      api.get("/dashboard/lanchonetes-stats")
+        .then(({ data }) => setLanchonetesStats(data || { totalVendasDia: 0, totalVendasMes: 0, evolucaoVendas: [], entregasPorEntregador: [] }))
+        .catch(() => {});
     };
 
     socket.on(`company-${companyId}-formResponse`, onFormResponse);
@@ -313,161 +344,231 @@ const LanchonetesHub = () => {
                 </Typography>
               </Paper>
 
-              {loadingStats ? (
-                <Box display="flex" justifyContent="center" py={4}>
-                  <CircularProgress />
+              <Typography variant="h6" style={{ marginBottom: 16, marginTop: 8 }}>
+                Acesso rápido
+              </Typography>
+              <Grid container spacing={2} style={{ marginBottom: 24 }}>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card
+                    className={classes.statCard}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleTabChange(null, 4)}
+                  >
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        Pedidos mesa
+                      </Typography>
+                      <Typography variant="h4">{loadingStats ? "—" : ordersStats.pedidosHoje}</Typography>
+                      <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                        Ver pedidos mesa
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card
+                    className={classes.statCard}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleTabChange(null, 3)}
+                  >
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        Mesas ocupadas
+                      </Typography>
+                      <Typography variant="h4">{loadingStats ? "—" : ordersStats.mesasOcupadas}</Typography>
+                      <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                        Ver mesas
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card
+                    className={classes.statCard}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleTabChange(null, 1)}
+                  >
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        Produtos
+                      </Typography>
+                      <Typography variant="body2">
+                        Cadastre itens do cardápio
+                      </Typography>
+                      <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                        Gerenciar
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card
+                    className={classes.statCard}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleTabChange(null, 5)}
+                  >
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        Delivery
+                      </Typography>
+                      <Typography variant="body2">
+                        Pedidos para entrega
+                      </Typography>
+                      <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                        Ver pedidos
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card
+                    className={classes.statCard}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleTabChange(null, 6)}
+                  >
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        Garçons
+                      </Typography>
+                      <Typography variant="body2">
+                        Tela de pedidos para garçons
+                      </Typography>
+                      <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                        Ver QR Code
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card
+                    className={classes.statCard}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleTabChange(null, 2)}
+                  >
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        Cardápio
+                      </Typography>
+                      <Typography variant="body2">
+                        Link para clientes pedirem
+                      </Typography>
+                      <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                        Ver links
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card
+                    className={classes.statCard}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => handleTabChange(null, 8)}
+                  >
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        Cozinha
+                      </Typography>
+                      <Typography variant="body2">
+                        Tela de pedidos para a cozinha
+                      </Typography>
+                      <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                        Ver QR Code
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card
+                    className={classes.statCard}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => history.push("/pdv")}
+                  >
+                    <CardContent>
+                      <Typography color="textSecondary" gutterBottom>
+                        PDV
+                      </Typography>
+                      <Typography variant="body2">
+                        Fechar contas (mesas e comandas)
+                      </Typography>
+                      <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                        Abrir PDV
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              <Typography variant="h6" style={{ marginBottom: 16 }}>
+                Vendas e estatísticas
+              </Typography>
+              {loadingLanchonetesStats ? (
+                <Box display="flex" justifyContent="center" py={2}>
+                  <CircularProgress size={32} />
                 </Box>
               ) : (
-                <Grid container spacing={2}>
+                <Grid container spacing={2} style={{ marginBottom: 24 }}>
                   <Grid item xs={12} sm={6} md={3}>
-                    <Card
-                      className={classes.statCard}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => handleTabChange(null, 4)}
-                    >
+                    <Card className={`${classes.statCard} ${classes.vendasCard}`}>
                       <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                          Pedidos mesa
-                        </Typography>
-                        <Typography variant="h4">{ordersStats.pedidosHoje}</Typography>
-                        <Button size="small" color="primary" style={{ marginTop: 8 }}>
-                          Ver pedidos mesa
-                        </Button>
+                        <Box display="flex" alignItems="center" justifyContent="space-between">
+                          <Box>
+                            <Typography color="textSecondary" gutterBottom>
+                              Vendas hoje
+                            </Typography>
+                            <Typography variant="h4">
+                              R$ {(lanchonetesStats.totalVendasDia ?? 0).toFixed(2).replace(".", ",")}
+                            </Typography>
+                          </Box>
+                          <AttachMoneyIcon style={{ fontSize: 40, color: "rgba(34, 197, 94, 0.8)" }} />
+                        </Box>
                       </CardContent>
                     </Card>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
-                    <Card
-                      className={classes.statCard}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => handleTabChange(null, 3)}
-                    >
+                    <Card className={`${classes.statCard} ${classes.vendasCard}`}>
                       <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                          Mesas ocupadas
-                        </Typography>
-                        <Typography variant="h4">{ordersStats.mesasOcupadas}</Typography>
-                        <Button size="small" color="primary" style={{ marginTop: 8 }}>
-                          Ver mesas
-                        </Button>
+                        <Box display="flex" alignItems="center" justifyContent="space-between">
+                          <Box>
+                            <Typography color="textSecondary" gutterBottom>
+                              Vendas do mês
+                            </Typography>
+                            <Typography variant="h4">
+                              R$ {(lanchonetesStats.totalVendasMes ?? 0).toFixed(2).replace(".", ",")}
+                            </Typography>
+                          </Box>
+                          <TrendingUpIcon style={{ fontSize: 40, color: "rgba(59, 130, 246, 0.8)" }} />
+                        </Box>
                       </CardContent>
                     </Card>
                   </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card
-                      className={classes.statCard}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => handleTabChange(null, 1)}
-                    >
-                      <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                          Produtos
-                        </Typography>
-                        <Typography variant="body2">
-                          Cadastre itens do cardápio
-                        </Typography>
-                        <Button size="small" color="primary" style={{ marginTop: 8 }}>
-                          Gerenciar
-                        </Button>
-                      </CardContent>
-                    </Card>
+                  <Grid item xs={12} md={6} className={classes.chartCard}>
+                    <LineChartComponent
+                      data={(lanchonetesStats.evolucaoVendas || []).map((ev) => ({
+                        data: new Date(ev.data + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+                        total: ev.total,
+                        quantidade: ev.quantidade,
+                      }))}
+                      title="Vendas nos últimos 30 dias"
+                      subtitle="Total em R$ por dia"
+                      dataKey="total"
+                      xAxisKey="data"
+                      color="#22C55E"
+                      gradient
+                      formatCurrency
+                    />
                   </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card
-                      className={classes.statCard}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => handleTabChange(null, 5)}
-                    >
-                      <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                          Delivery
-                        </Typography>
-                        <Typography variant="body2">
-                          Pedidos para entrega
-                        </Typography>
-                        <Button size="small" color="primary" style={{ marginTop: 8 }}>
-                          Ver pedidos
-                        </Button>
-                      </CardContent>
-                    </Card>
+                  <Grid item xs={12} md={6} className={classes.chartCard}>
+                    <BarChartComponent
+                      data={(lanchonetesStats.entregasPorEntregador || []).map((e) => ({
+                        name: e.nome || "Sem nome",
+                        count: e.quantidade,
+                      }))}
+                      title="Entregas concluídas por entregador"
+                      subtitle="Quantidade de pedidos entregues"
+                      horizontal
+                    />
                   </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card
-                      className={classes.statCard}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => handleTabChange(null, 6)}
-                    >
-                      <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                          Garçons
-                        </Typography>
-                        <Typography variant="body2">
-                          Tela de pedidos para garçons
-                        </Typography>
-                        <Button size="small" color="primary" style={{ marginTop: 8 }}>
-                          Ver QR Code
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card
-                      className={classes.statCard}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => handleTabChange(null, 2)}
-                    >
-                      <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                          Cardápio
-                        </Typography>
-                        <Typography variant="body2">
-                          Link para clientes pedirem
-                        </Typography>
-                        <Button size="small" color="primary" style={{ marginTop: 8 }}>
-                          Ver links
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card
-                      className={classes.statCard}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => handleTabChange(null, 8)}
-                    >
-                      <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                          Cozinha
-                        </Typography>
-                        <Typography variant="body2">
-                          Tela de pedidos para a cozinha
-                        </Typography>
-                        <Button size="small" color="primary" style={{ marginTop: 8 }}>
-                          Ver QR Code
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Card
-                      className={classes.statCard}
-                      style={{ cursor: "pointer" }}
-                      onClick={() => history.push("/pdv")}
-                    >
-                      <CardContent>
-                        <Typography color="textSecondary" gutterBottom>
-                          PDV
-                        </Typography>
-                        <Typography variant="body2">
-                          Fechar contas (mesas e comandas)
-                        </Typography>
-                        <Button size="small" color="primary" style={{ marginTop: 8 }}>
-                          Abrir PDV
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-                  </Grid>
+                </Grid>
               )}
 
               {cardapioForms.length > 0 && (
