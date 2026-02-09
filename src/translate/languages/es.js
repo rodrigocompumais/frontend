@@ -2020,6 +2020,21 @@ const messages = {
           deleteMessage: "Tem certeza que deseja excluir este formulário? Esta ação não pode ser desfeita.",
         },
       },
+      formBuilder: {
+        printConfig: {
+          mesaTitle: "Impresión por grupo (Mesa y Camarero)",
+          mesaHint: "Defina en qué impresora imprime cada grupo de productos. Añada filas para más impresoras.",
+          deliveryTitle: "Impresoras para pedidos delivery",
+          deliveryHint: "Seleccione en qué impresoras salen los pedidos de delivery (pedido completo en cada una).",
+          printer: "Impresora",
+          groups: "Grupos de esta impresora",
+          allGroups: "Todos los grupos",
+          none: "Ninguna (no imprimir)",
+          addPrinter: "Añadir impresora",
+          remove: "Quitar",
+          noDevices: "Ningún dispositivo configurado. Configure en Configuración → API / Integración.",
+        },
+      },
     },
   },
 };

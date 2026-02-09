@@ -32,6 +32,7 @@ import {
   Radio,
   RadioGroup,
   Checkbox,
+  FormGroup,
 } from "@material-ui/core";
 
 import MainContainer from "../../components/MainContainer";
@@ -136,6 +137,7 @@ const FormBuilder = () => {
   const { whatsApps } = useWhatsApps();
   const { hasLanchonetes } = useCompanyModules();
   const [printDevices, setPrintDevices] = useState([]);
+  const [productGroups, setProductGroups] = useState([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -162,6 +164,8 @@ const FormBuilder = () => {
       finalizeFields: [], // Campos customizados para aba finalizar do cardápio
       whatsappId: null, // ID da conexão WhatsApp para envio de confirmação do pedido
       printDeviceId: null, // ID do dispositivo de impressão para impressão de pedidos
+      mesaPrintConfig: [], // [{ printDeviceId, groupNames }] para pedidos mesa/garçom
+      deliveryPrintDeviceIds: [], // IDs das impressoras para pedidos delivery
       autoConfirmMinutes: 0, // Avançar novo->confirmado após X minutos (0=desativado)
       averageDeliveryTime: "", // Tempo médio de entrega (ex: "30-45 minutos")
       showMesaField: false, // Exibir campo Número da mesa no cardápio
@@ -208,6 +212,21 @@ const FormBuilder = () => {
     };
     fetchPrintDevices();
   }, []);
+
+  useEffect(() => {
+    if (!hasLanchonetes) return;
+    const fetchGroups = async () => {
+      try {
+        const { data } = await api.get("/products", { params: { pageNumber: "1" } });
+        const groups = data?.groups || [];
+        const list = ["Outros", ...(Array.isArray(groups) ? groups : [])].filter(Boolean);
+        setProductGroups([...new Set(list)].sort());
+      } catch (err) {
+        setProductGroups(["Outros"]);
+      }
+    };
+    fetchGroups();
+  }, [hasLanchonetes]);
 
   useEffect(() => {
     // Se o ID mudou, resetar todas as flags
@@ -293,6 +312,8 @@ const FormBuilder = () => {
         finalizeFields: isMenuForm ? uniqueFields.sort((a, b) => a.order - b.order) : (data.settings?.finalizeFields || []),
         whatsappId: data.settings?.whatsappId || null,
         printDeviceId: data.settings?.printDeviceId || null,
+        mesaPrintConfig: data.settings?.mesaPrintConfig ?? (data.settings?.printDeviceId ? [{ printDeviceId: data.settings.printDeviceId, groupNames: ["*"] }] : []),
+        deliveryPrintDeviceIds: Array.isArray(data.settings?.deliveryPrintDeviceIds) ? data.settings.deliveryPrintDeviceIds : (data.settings?.printDeviceId ? [data.settings.printDeviceId] : []),
       };
       // Garantir defaults do cardápio para mesa (evitar que mesaFieldMode ausente mostre input em vez de select)
       if (isMenuForm) {
@@ -887,35 +908,112 @@ const FormBuilder = () => {
                       Selecione qual conexão WhatsApp será usada para enviar a confirmação do pedido. Se não selecionar, será usada a conexão padrão.
                     </Typography>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth variant="outlined">
-                      <InputLabel>Dispositivo de Impressão</InputLabel>
-                      <Select
-                        value={formData.settings?.printDeviceId || ""}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            settings: {
-                              ...formData.settings,
-                              printDeviceId: e.target.value ? Number(e.target.value) : null,
-                            },
-                          })
-                        }
-                        label="Dispositivo de Impressão"
-                      >
-                        <MenuItem value="">
-                          <em>Nenhum (não imprimir)</em>
-                        </MenuItem>
-                        {printDevices.map((device) => (
-                          <MenuItem key={device.id} value={device.id}>
-                            {device.name || device.deviceId}
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    <Typography variant="caption" color="textSecondary" style={{ marginTop: 8, display: "block" }}>
-                      Selecione o dispositivo que imprimirá os pedidos. Configure em Configurações → API / Integração.
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 8 }}>
+                      {i18n.t("formBuilder.printConfig.mesaTitle")}
                     </Typography>
+                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 12 }}>
+                      {i18n.t("formBuilder.printConfig.mesaHint")}
+                    </Typography>
+                    {(formData.settings?.mesaPrintConfig || []).map((row, idx) => (
+                      <Box key={idx} display="flex" alignItems="flex-start" flexWrap="wrap" gap={2} style={{ marginBottom: 12 }}>
+                        <FormControl variant="outlined" size="small" style={{ minWidth: 200 }}>
+                          <InputLabel>{i18n.t("formBuilder.printConfig.printer")}</InputLabel>
+                          <Select
+                            value={row.printDeviceId || ""}
+                            onChange={(e) => {
+                              const next = [...(formData.settings?.mesaPrintConfig || [])];
+                              next[idx] = { ...next[idx], printDeviceId: e.target.value ? Number(e.target.value) : "" };
+                              setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
+                            }}
+                            label={i18n.t("formBuilder.printConfig.printer")}
+                          >
+                            <MenuItem value="">
+                              <em>{i18n.t("formBuilder.printConfig.none")}</em>
+                            </MenuItem>
+                            {printDevices.map((device) => (
+                              <MenuItem key={device.id} value={device.id}>
+                                {device.name || device.deviceId}
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <FormControl variant="outlined" size="small" style={{ minWidth: 220 }}>
+                          <InputLabel>{i18n.t("formBuilder.printConfig.groups")}</InputLabel>
+                          <Select
+                            multiple
+                            value={row.groupNames || []}
+                            onChange={(e) => {
+                              const next = [...(formData.settings?.mesaPrintConfig || [])];
+                              const val = e.target.value;
+                              next[idx] = { ...next[idx], groupNames: val.includes("*") ? ["*"] : val };
+                              setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
+                            }}
+                            label={i18n.t("formBuilder.printConfig.groups")}
+                            renderValue={(sel) => (sel.includes("*") ? i18n.t("formBuilder.printConfig.allGroups") : sel.join(", "))}
+                          >
+                            <MenuItem value="*">{i18n.t("formBuilder.printConfig.allGroups")}</MenuItem>
+                            {productGroups.map((g) => (
+                              <MenuItem key={g} value={g}>
+                                <Checkbox checked={(row.groupNames || []).indexOf(g) > -1} />
+                                <span>{g}</span>
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                        <IconButton
+                          size="small"
+                          onClick={() => {
+                            const next = (formData.settings?.mesaPrintConfig || []).filter((_, i) => i !== idx);
+                            setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
+                          }}
+                          aria-label={i18n.t("formBuilder.printConfig.remove")}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    ))}
+                    <Button
+                      size="small"
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        const next = [...(formData.settings?.mesaPrintConfig || []), { printDeviceId: "", groupNames: ["*"] }];
+                        setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
+                      }}
+                    >
+                      {i18n.t("formBuilder.printConfig.addPrinter")}
+                    </Button>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 8 }}>
+                      {i18n.t("formBuilder.printConfig.deliveryTitle")}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 8 }}>
+                      {i18n.t("formBuilder.printConfig.deliveryHint")}
+                    </Typography>
+                    <FormGroup row>
+                      {printDevices.map((device) => (
+                        <FormControlLabel
+                          key={device.id}
+                          control={
+                            <Checkbox
+                              checked={((formData.settings?.deliveryPrintDeviceIds) || []).indexOf(device.id) > -1}
+                              onChange={(e) => {
+                                const prev = formData.settings?.deliveryPrintDeviceIds || [];
+                                const next = e.target.checked ? [...prev, device.id] : prev.filter((id) => id !== device.id);
+                                setFormData({ ...formData, settings: { ...formData.settings, deliveryPrintDeviceIds: next } });
+                              }}
+                            />
+                          }
+                          label={device.name || device.deviceId}
+                        />
+                      ))}
+                      {printDevices.length === 0 && (
+                        <Typography variant="body2" color="textSecondary">
+                          {i18n.t("formBuilder.printConfig.noDevices")}
+                        </Typography>
+                      )}
+                    </FormGroup>
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <TextField
