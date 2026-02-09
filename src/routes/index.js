@@ -53,6 +53,7 @@ import Forms from "../pages/Forms";
 import FormBuilder from "../pages/Forms/FormBuilder";
 import PublicForm from "../pages/Forms/PublicForm";
 import MesaRedirect from "../pages/MesaRedirect";
+import MesaCardapio from "../pages/MesaCardapio";
 import FormResponses from "../pages/Forms/FormResponses";
 import OrderHistory from "../pages/Forms/OrderHistory";
 import OrderQueue from "../components/OrderQueue";
@@ -87,6 +88,7 @@ const Routes = () => {
             <Route exact path="/" component={Landing} />
             <Route exact path="/proposta-personalizada" component={CustomProposalForm} isPublic={true} />
             <Route exact path="/f/:slug" component={PublicForm} isPublic={true} />
+            <Route exact path="/mesa/:mesaId/cardapio" component={MesaCardapio} isPublic={true} />
             <Route exact path="/mesa/:mesaId" component={MesaRedirect} isPublic={true} />
             <Route exact path="/login" component={Login} />
             <Route exact path="/signup" component={Signup} />

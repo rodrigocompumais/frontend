@@ -162,30 +162,34 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const PublicMenuForm = ({ form, slug: formSlug }) => {
+const PublicMenuForm = ({
+  form,
+  slug: formSlug,
+  initialProducts,
+  initialMesaFromQR,
+  initialOrderToken,
+  initialMesaValue,
+}) => {
   const classes = useStyles();
   const location = useLocation();
   const { slug: urlSlug } = useParams();
-  // Usar slug do formulário, da prop ou da URL
   const slug = form?.slug || formSlug || urlSlug;
 
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialProducts);
   const [submitting, setSubmitting] = useState(false);
-  const [products, setProducts] = useState([]);
-  const [selectedItems, setSelectedItems] = useState({}); // { productId: quantity }
+  const [products, setProducts] = useState(initialProducts || []);
+  const [selectedItems, setSelectedItems] = useState({});
   const [activeTab, setActiveTab] = useState(0);
   const [answers, setAnswers] = useState({});
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [groups, setGroups] = useState([]);
-  const [orderData, setOrderData] = useState(null); // Dados do pedido para exibir na confirmação
+  const [orderData, setOrderData] = useState(null);
   const [mesas, setMesas] = useState([]);
-  const [mesaValue, setMesaValue] = useState(""); // tableId (string) para select ou texto para input
-  /** Mesa vinda do QR (?mesa=ID): status e contato para não pedir dados se já ocupada */
-  const [mesaFromQR, setMesaFromQR] = useState(null);
+  const [mesaValue, setMesaValue] = useState(initialMesaValue ?? "");
+  const [mesaFromQR, setMesaFromQR] = useState(initialMesaFromQR ?? null);
   const [loadingMesa, setLoadingMesa] = useState(false);
-  /** Token de sessão da mesa (link assinado): enviado no submit para garantir mesa correta */
-  const [orderToken, setOrderToken] = useState(null);
+  const [orderToken, setOrderToken] = useState(initialOrderToken ?? null);
 
   const appStyles = form ? getFormAppearanceStyles(form) : null;
   const fieldVariant = appStyles?.fieldVariant || "outlined";
@@ -204,10 +208,22 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
   }, [form?.settings?.appearance?.fontFamily]);
 
   useEffect(() => {
+    if (initialProducts && initialProducts.length > 0) {
+      setProducts(initialProducts);
+      const groupsMap = {};
+      initialProducts.forEach((p) => {
+        const g = p.grupo || "Outros";
+        if (!groupsMap[g]) groupsMap[g] = [];
+        groupsMap[g].push(p);
+      });
+      setGroups(Object.keys(groupsMap).sort());
+      setLoading(false);
+      return;
+    }
     if (form && slug) {
       loadProducts();
     }
-  }, [form, slug]);
+  }, [form, slug, initialProducts]);
 
   useEffect(() => {
     if (form?.settings?.showMesaField && (form.settings?.mesaFieldMode || "select") === "select" && slug) {
@@ -224,7 +240,24 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
   }, [location.search]);
 
   // QR da mesa: buscar status da mesa (ocupada = não pedir nome/telefone). Passar t= para link assinado.
+  // Quando initialOrderToken/initialMesaFromQR vêm do link da mesa (/mesa/:id/cardapio), não refetch.
   useEffect(() => {
+    if (initialOrderToken != null && initialMesaFromQR != null) {
+      if (initialMesaFromQR.status === "ocupada" && initialMesaFromQR.contact && form?.fields) {
+        setAnswers((prev) => {
+          const next = { ...prev };
+          form.fields.forEach((field) => {
+            if (field.metadata?.autoFieldType === "name" && initialMesaFromQR.contact?.name) {
+              next[field.id] = initialMesaFromQR.contact.name;
+            } else if (field.metadata?.autoFieldType === "phone" && initialMesaFromQR.contact?.number) {
+              next[field.id] = initialMesaFromQR.contact.number;
+            }
+          });
+          return next;
+        });
+      }
+      return;
+    }
     const searchParams = new URLSearchParams(location.search);
     const mesaId = searchParams.get("mesa");
     const t = searchParams.get("t");
@@ -260,7 +293,7 @@ const PublicMenuForm = ({ form, slug: formSlug }) => {
         setOrderToken(null);
       })
       .finally(() => setLoadingMesa(false));
-  }, [form?.id, slug, location.search]);
+  }, [form?.id, slug, location.search, initialOrderToken, initialMesaFromQR]);
 
   useEffect(() => {
     // Ler parâmetros da URL

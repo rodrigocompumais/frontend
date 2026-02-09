@@ -20,9 +20,8 @@ const MesaRedirect = () => {
     api
       .get(`/public/mesas/${mesaId}`, { params: t ? { t } : {} })
       .then(({ data }) => {
-        const formSlug = data.formSlug;
-        const token = t ? `&t=${encodeURIComponent(t)}` : "";
-        window.location.replace(`/f/${formSlug}?mesa=${mesaId}${token}`);
+        const token = t ? `?t=${encodeURIComponent(t)}` : "";
+        window.location.replace(`/mesa/${mesaId}/cardapio${token}`);
       })
       .catch((err) => {
         setError(err?.response?.data?.message || "Link inválido ou expirado.");
