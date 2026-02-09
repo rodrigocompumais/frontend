@@ -15,6 +15,7 @@ import { useHistory } from "react-router-dom";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import MessagesList from "../MessagesList";
 import { ReplyMessageProvider } from "../../context/ReplyingMessage/ReplyingMessageContext";
+import { AudioPlayerProvider } from "../../context/AudioPlayer/AudioPlayerContext";
 import TicketHeader from "../TicketHeader";
 import TicketInfo from "../TicketInfo";
 import { SocketContext } from "../../context/Socket/SocketContext";
@@ -174,7 +175,9 @@ export default function TicketMessagesDialog({ open, handleClose, ticketId }) {
   return (
     <Dialog maxWidth="md" onClose={handleClose} open={open}>
       <TicketHeader loading={loading}>{renderTicketInfo()}</TicketHeader>
-      <ReplyMessageProvider>{renderMessagesList()}</ReplyMessageProvider>
+      <AudioPlayerProvider>
+        <ReplyMessageProvider>{renderMessagesList()}</ReplyMessageProvider>
+      </AudioPlayerProvider>
       <DialogActions>
         <Button onClick={handleClose} color="primary">
           Fechar

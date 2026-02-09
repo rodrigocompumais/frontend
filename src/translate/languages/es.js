@@ -1794,6 +1794,7 @@ const messages = {
         lostCall: "Chamada de voz/vídeo perdida às",
         deletedMessage: "Essa mensagem foi apagada pelo contato",
         edited: "Editada",
+        forwarded: "Reenviada",
         saudation: "Diga olá para seu novo contato!",
         translation: {
           badge: "Traduzido",
@@ -1870,10 +1871,36 @@ const messages = {
       },
       messageOptionsMenu: {
         delete: "Deletar",
+        edit: "Editar",
         reply: "Responder",
+        forward: "Reenviar",
+        react: "Reaccionar",
+        reactions: {
+          like: "Me gusta",
+          love: "Amor",
+          laugh: "Reír",
+          wow: "Sorpresa",
+          thanks: "Gracias",
+        },
         confirmationModal: {
           title: "Apagar mensagem?",
           message: "Esta ação não pode ser revertida.",
+        },
+        editModal: {
+          title: "Editar mensagem",
+          placeholder: "Escriba el nuevo mensaje...",
+          cancel: "Cancelar",
+          confirm: "Guardar",
+        },
+      },
+      forwardMessageModal: {
+        title: "Reenviar mensaje",
+        searchPlaceholder: "Buscar conversación...",
+        noConversations: "Ninguna conversación encontrada",
+        success: "¡Mensaje reenviado!",
+        buttons: {
+          cancel: "Cancelar",
+          forward: "Reenviar",
         },
       },
       backendErrors: {

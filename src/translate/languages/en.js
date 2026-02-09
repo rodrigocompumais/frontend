@@ -1807,6 +1807,7 @@ const messages = {
         lostCall: "Chamada de voz/vídeo perdida às",
         deletedMessage: "Essa mensagem foi apagada pelo contato",
         edited: "Editada",
+        forwarded: "Encaminhada",
         saudation: "Diga olá para seu novo contato!",
         you: "You",
         contact: "Contact",
@@ -1891,7 +1892,8 @@ const messages = {
         delete: "Deletar",
         edit: "Editar",
         reply: "Responder",
-        react: "React",
+        forward: "Encaminhar",
+        react: "Reagir",
         reactions: {
           like: "Like",
           love: "Love",
@@ -1908,6 +1910,16 @@ const messages = {
           placeholder: "Digite a nova mensagem...",
           cancel: "Cancelar",
           confirm: "Salvar",
+        },
+      },
+      forwardMessageModal: {
+        title: "Encaminhar mensagem",
+        searchPlaceholder: "Buscar conversa...",
+        noConversations: "Nenhuma conversa encontrada",
+        success: "Mensagem encaminhada com sucesso!",
+        buttons: {
+          cancel: "Cancelar",
+          forward: "Encaminhar",
         },
       },
       backendErrors: {

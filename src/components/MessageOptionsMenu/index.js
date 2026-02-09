@@ -161,7 +161,7 @@ const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorPosition, an
 				</MenuItem>
 				<MenuItem onClick={handleOpenForwardModal}>
 					<Forward fontSize="small" style={{ marginRight: 8, verticalAlign: "middle" }} />
-					{i18n.t("messageOptionsMenu.forward") || "Encaminhar"}
+					{i18n.t("messageOptionsMenu.forward")}
 				</MenuItem>
 			</Menu>
 		</>

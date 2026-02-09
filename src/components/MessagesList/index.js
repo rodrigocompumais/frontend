@@ -984,6 +984,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                   </span>
                 )}
                 <span className={classes.timestamp}>
+                  {message.isForwarded && <span>{i18n.t("messagesList.forwarded")} </span>}
                   {message.isEdited && <span>{i18n.t("messagesList.edited")} </span>}
                   {format(parseISO(message.createdAt), "HH:mm")}
                   {renderMessageAck(message)}
@@ -1045,6 +1046,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                   </span>
                 )}
                 <span className={classes.timestamp}>
+                  {message.isForwarded && <span>{i18n.t("messagesList.forwarded")} </span>}
                   {message.isEdited && <span>{i18n.t("messagesList.edited")} </span>}
                   {format(parseISO(message.createdAt), "HH:mm")}
                   {renderMessageAck(message)}
@@ -1107,6 +1109,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                 </span>
               )}
               <span className={classes.timestamp}>
+                {message.isForwarded && <span>{i18n.t("messagesList.forwarded")} </span>}
                 {message.isEdited && <span>{i18n.t("messagesList.edited")} </span>}
                 {format(parseISO(message.createdAt), "HH:mm")}
               </span>
@@ -1282,6 +1285,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                       </div>
                     )}
                     <span className={classes.timestamp}>
+                      {message.isForwarded && <span>{i18n.t("messagesList.forwarded")} </span>}
                       {message.isEdited && <span>{i18n.t("messagesList.edited")}</span>}
                       {format(parseISO(message.createdAt), "HH:mm")}
                       {!message.isInternal && renderMessageAck(message)}
@@ -1339,6 +1343,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
                       </div>
                     )}
                     <span className={classes.timestamp}>
+                      {message.isForwarded && <span>{i18n.t("messagesList.forwarded")} </span>}
                       {message.isEdited && <span>{i18n.t("messagesList.edited")}</span>}
                       {format(parseISO(message.createdAt), "HH:mm")}
                       {!message.isInternal && renderMessageAck(message)}
