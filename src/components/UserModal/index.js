@@ -122,7 +122,8 @@ const UserModal = ({ open, onClose, userId }) => {
 		password: "",
 		profile: "user",
 		allTicket: "desabled",
-		repeatPendingChatSound: true
+		repeatPendingChatSound: true,
+		defaultRoute: ""
 	};
 
 	const { user: loggedInUser } = useContext(AuthContext);
@@ -215,7 +216,14 @@ const UserModal = ({ open, onClose, userId }) => {
 	};
 
 	const handleSaveUser = async values => {
-		const userData = { ...values, whatsappId, queueIds: selectedQueueIds, allTicket: values.allTicket, repeatPendingChatSound: values.repeatPendingChatSound };
+		const userData = {
+			...values,
+			whatsappId,
+			queueIds: selectedQueueIds,
+			allTicket: values.allTicket,
+			repeatPendingChatSound: values.repeatPendingChatSound,
+			defaultRoute: values.defaultRoute || null
+		};
 		try {
 			if (userId) {
 				await api.put(`/users/${userId}`, userData);
@@ -357,6 +365,27 @@ const UserModal = ({ open, onClose, userId }) => {
 												</>
 											)}
 										/>
+									</FormControl>
+									<FormControl variant="outlined" className={classes.formControl} margin="dense" fullWidth>
+										<InputLabel id="defaultRoute-label">Página inicial (após login)</InputLabel>
+										<Field
+											as={Select}
+											label="Página inicial (após login)"
+											name="defaultRoute"
+											labelId="defaultRoute-label"
+											id="defaultRoute-select"
+										>
+											<MenuItem value="">Padrão (Atendimentos)</MenuItem>
+											<MenuItem value="dashboard">Dashboard</MenuItem>
+											<MenuItem value="tickets">Atendimentos</MenuItem>
+											<MenuItem value="cozinha">Cozinha</MenuItem>
+											<MenuItem value="entregador">Entregador</MenuItem>
+											<MenuItem value="garcom">Garçom</MenuItem>
+											<MenuItem value="pedidos">Pedidos</MenuItem>
+											<MenuItem value="mesas">Mesas</MenuItem>
+											<MenuItem value="forms">Formulários</MenuItem>
+											<MenuItem value="lanchonetes">Lanchonetes</MenuItem>
+										</Field>
 									</FormControl>
 								</div>
 								<Can

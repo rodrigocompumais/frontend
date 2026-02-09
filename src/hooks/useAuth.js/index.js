@@ -213,7 +213,10 @@ const useAuth = () => {
             } `
           );
         }
-        history.push("/tickets");
+        const route = typeof data.user?.defaultRoute === "string" ? data.user.defaultRoute.trim() : "";
+        const allowedRoutes = ["dashboard", "tickets", "cozinha", "entregador", "garcom", "pedidos", "mesas", "forms", "lanchonetes"];
+        const path = route && allowedRoutes.includes(route) ? `/${route}` : "/tickets";
+        history.push(path);
       } else {
         // Assinatura vencida - redirecionar para página de vencimento
         toast.warn("Seu período de teste expirou. Renove sua assinatura para continuar.");

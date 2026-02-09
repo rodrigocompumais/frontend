@@ -39,9 +39,11 @@ import MesaOcuparModal from "../../components/MesaOcuparModal";
 import MesaBulkCreateModal from "../../components/MesaBulkCreateModal";
 import MesaPrintQRModal from "../../components/MesaPrintQRModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
+import LiberarMesaModal from "../../components/LiberarMesaModal";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import useCompanyModules from "../../hooks/useCompanyModules";
+import { i18n } from "../../translate/i18n";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
@@ -143,9 +145,6 @@ const Mesas = ({ cardapioSlugFromHub }) => {
   const cardapioQRRef = useRef(null);
   const [liberarModalOpen, setLiberarModalOpen] = useState(false);
   const [mesaParaLiberar, setMesaParaLiberar] = useState(null);
-  const [resumoConta, setResumoConta] = useState(null);
-  const [loadingResumo, setLoadingResumo] = useState(false);
-  const [liberando, setLiberando] = useState(false);
   const [cardapioSlugFetched, setCardapioSlugFetched] = useState(null);
 
   const [mesaParaPedido, setMesaParaPedido] = useState(null);
@@ -312,15 +311,23 @@ const Mesas = ({ cardapioSlugFromHub }) => {
           grupo: p?.grupo || "Outros",
         };
       });
-      const autoFields = (orderForm.fields || []).filter(
+      const labelLower = (l) => (l || "").trim().toLowerCase();
+      const fields = orderForm.fields || [];
+      const autoFields = fields.filter(
         (f) => f.metadata?.autoFieldType === "name" || f.metadata?.autoFieldType === "phone"
       );
       let answers = autoFields.map((f) => ({
         fieldId: f.id,
-        answer: f.metadata?.autoFieldType === "name" ? (contact?.name || "") : (contact?.number || ""),
-      })).filter((a) => a.answer !== undefined);
+        answer: f.metadata?.autoFieldType === "name" ? (contact?.name || "Cliente") : (contact?.number || ""),
+      }));
+      const nomeField = fields.find(
+        (f) => f.isRequired && (f.metadata?.autoFieldType === "name" || (labelLower(f.label).includes("nome") && !labelLower(f.label).includes("sobrenome")))
+      );
+      if (nomeField && !answers.some((a) => a.fieldId === nomeField.id)) {
+        answers = [...answers, { fieldId: nomeField.id, answer: contact?.name || "Cliente" }];
+      }
       const tipoPedidoField = (orderForm.fields || []).find(
-        (f) => f.isRequired && /tipo\s*(de\s*)?pedido/i.test((f.label || "").trim())
+        (f) => f.isRequired && labelLower(f.label).includes("tipo") && labelLower(f.label).includes("pedido")
       );
       if (tipoPedidoField && !answers.some((a) => a.fieldId === tipoPedidoField.id)) {
         answers = [...answers, { fieldId: tipoPedidoField.id, answer: "Mesa" }];
@@ -381,38 +388,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
 
   const handleLiberar = (mesa) => {
     setMesaParaLiberar(mesa);
-    setResumoConta(null);
     setLiberarModalOpen(true);
-  };
-
-  useEffect(() => {
-    if (!liberarModalOpen || !mesaParaLiberar) return;
-    setLoadingResumo(true);
-    api
-      .get(`/mesas/${mesaParaLiberar.id}/resumo-conta`)
-      .then(({ data }) => setResumoConta(data))
-      .catch((err) => {
-        toastError(err);
-        setResumoConta({ pedidos: [], total: 0, mesa: mesaParaLiberar, cliente: null });
-      })
-      .finally(() => setLoadingResumo(false));
-  }, [liberarModalOpen, mesaParaLiberar?.id]);
-
-  const handleConfirmarLiberar = async () => {
-    if (!mesaParaLiberar) return;
-    setLiberando(true);
-    try {
-      await api.put(`/mesas/${mesaParaLiberar.id}/liberar`);
-      toast.success("Mesa liberada");
-      setLiberarModalOpen(false);
-      setMesaParaLiberar(null);
-      setResumoConta(null);
-      fetchMesas();
-    } catch (err) {
-      toastError(err);
-    } finally {
-      setLiberando(false);
-    }
   };
 
   const handleVerTicket = (mesa) => {
@@ -715,84 +691,15 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         Tem certeza que deseja excluir a mesa {mesaToDelete?.number || mesaToDelete?.name}?
       </ConfirmationModal>
 
-      <Dialog
+      <LiberarMesaModal
         open={liberarModalOpen}
+        mesa={mesaParaLiberar}
         onClose={() => {
-          if (!liberando) {
-            setLiberarModalOpen(false);
-            setMesaParaLiberar(null);
-            setResumoConta(null);
-          }
+          setLiberarModalOpen(false);
+          setMesaParaLiberar(null);
         }}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          Fechar conta - Mesa {mesaParaLiberar?.number || mesaParaLiberar?.name}
-          {resumoConta?.cliente && (
-            <Typography variant="body2" color="textSecondary" display="block">
-              Cliente: {resumoConta.cliente.name || resumoConta.cliente.number}
-            </Typography>
-          )}
-        </DialogTitle>
-        <DialogContent>
-          {loadingResumo ? (
-            <Box display="flex" justifyContent="center" py={3}>
-              <CircularProgress />
-            </Box>
-          ) : resumoConta ? (
-            <Box>
-              {resumoConta.pedidos.length === 0 ? (
-                <Typography color="textSecondary">Nenhum pedido nesta sessão.</Typography>
-              ) : (
-                <>
-                  <Typography variant="subtitle2" gutterBottom>
-                    Pedidos da mesa
-                  </Typography>
-                  {resumoConta.pedidos.map((p) => (
-                    <Paper key={p.id} variant="outlined" style={{ padding: 12, marginBottom: 8 }}>
-                      <Box display="flex" justifyContent="space-between" alignItems="center">
-                        <Typography variant="body2">
-                          {p.protocol} - {new Date(p.submittedAt).toLocaleString("pt-BR")}
-                        </Typography>
-                        <Typography variant="body2" fontWeight={600}>
-                          R$ {Number(p.total).toFixed(2).replace(".", ",")}
-                        </Typography>
-                      </Box>
-                      {p.menuItems?.length > 0 && (
-                        <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 4 }}>
-                          {p.menuItems.map((i) => `${i.quantity}x ${i.productName || ""}`).join(", ")}
-                        </Typography>
-                      )}
-                    </Paper>
-                  ))}
-                  <Box mt={2} pt={2} borderTop={1} borderColor="divider">
-                    <Typography variant="h6" style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span>Total</span>
-                      <span>R$ {Number(resumoConta.total).toFixed(2).replace(".", ",")}</span>
-                    </Typography>
-                  </Box>
-                </>
-              )}
-            </Box>
-          ) : null}
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => {
-              setLiberarModalOpen(false);
-              setMesaParaLiberar(null);
-              setResumoConta(null);
-            }}
-            disabled={liberando}
-          >
-            Cancelar
-          </Button>
-          <Button variant="contained" color="primary" onClick={handleConfirmarLiberar} disabled={liberando}>
-            {liberando ? <CircularProgress size={24} /> : "Fechar conta e liberar"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSuccess={fetchMesas}
+      />
 
       {(() => {
         const formSlug = mesas.find((m) => m.form?.slug)?.form?.slug || cardapioSlug;

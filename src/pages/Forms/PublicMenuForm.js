@@ -489,6 +489,28 @@ const PublicMenuForm = ({
         }
       });
 
+      // Mesa ocupada (QR): preencher Nome/Telefone/Tipo de pedido obrigatórios com dados do contato da mesa
+      const mesaOcupadaFromQR = mesaFromQR?.status === "ocupada" && mesaFromQR?.contact;
+      if (mesaOcupadaFromQR) {
+        const contact = mesaFromQR.contact;
+        const labelLower = (l) => (l || "").trim().toLowerCase();
+        const hasAnswer = (fieldId) => answersArray.some((a) => a.fieldId === fieldId);
+        allFormFields.forEach((field) => {
+          if (hasAnswer(field.id)) return;
+          if (field.metadata?.autoFieldType === "name" || (field.isRequired && labelLower(field.label).includes("nome") && !labelLower(field.label).includes("sobrenome"))) {
+            answersArray.push({ fieldId: field.id, answer: contact.name || "Cliente" });
+          } else if (field.metadata?.autoFieldType === "phone" || (field.isRequired && (field.fieldType === "phone" || labelLower(field.label).includes("telefone")))) {
+            answersArray.push({ fieldId: field.id, answer: contact.number || "Não informado" });
+          }
+        });
+        const tipoPedidoField = allFormFields.find(
+          (f) => f.isRequired && labelLower(f.label).includes("tipo") && labelLower(f.label).includes("pedido")
+        );
+        if (tipoPedidoField && !hasAnswer(tipoPedidoField.id)) {
+          answersArray.push({ fieldId: tipoPedidoField.id, answer: "Mesa" });
+        }
+      }
+
       // Metadata com mesa e orderType (QR da mesa ou campo mesa configurado)
       let orderMetadata = {};
       const mesasEnabled = form.settings?.mesas !== false;

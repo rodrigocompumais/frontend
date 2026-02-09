@@ -14,6 +14,7 @@ import ModulesManager from "../../components/ModulesManager";
 import Options from "../../components/Settings/Options";
 import OptionsAI from "../../components/Settings/OptionsAI";
 import OptionsAPI from "../../components/Settings/OptionsAPI";
+import OptionsPix from "../../components/Settings/OptionsPix";
 
 import { i18n } from "../../translate/i18n.js";
 import { toast } from "react-toastify";
@@ -21,6 +22,7 @@ import { toast } from "react-toastify";
 import useCompanies from "../../hooks/useCompanies";
 import useAuth from "../../hooks/useAuth.js";
 import useSettings from "../../hooks/useSettings";
+import useCompanyModules from "../../hooks/useCompanyModules";
 
 import OnlyForSuperUser from "../../components/OnlyForSuperUser";
 
@@ -71,6 +73,7 @@ const SettingsCustom = () => {
   const { getCurrentUserInfo } = useAuth();
   const { find, updateSchedules } = useCompanies();
   const { getAll: getAllSettings } = useSettings();
+  const { hasLanchonetes } = useCompanyModules();
 
   useEffect(() => {
     async function findData() {
@@ -170,6 +173,7 @@ const SettingsCustom = () => {
           <Tab label={i18n.t("settings.tabs.options")} value={"options"} />
           <Tab label={i18n.t("settings.tabs.ai")} value={"ai"} />
           <Tab label={i18n.t("settings.tabs.api")} value={"api"} />
+          {hasLanchonetes && <Tab label={i18n.t("settings.tabs.billing")} value={"billing"} />}
           {schedulesEnabled && <Tab label={i18n.t("settings.tabs.schedules")} value={"schedules"} />}
           {isSuper() ? <Tab label={i18n.t("settings.tabs.companies")} value={"companies"} /> : null}
           {isSuper() ? <Tab label={i18n.t("settings.tabs.modules")} value={"modules"} /> : null}
@@ -236,6 +240,9 @@ const SettingsCustom = () => {
               </TabPanel>
             )}
           />
+          <TabPanel className={classes.container} value={tab} name={"billing"}>
+            <OptionsPix settings={settings} />
+          </TabPanel>
           <TabPanel className={classes.container} value={tab} name={"options"}>
             <Options
               settings={settings}

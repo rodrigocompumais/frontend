@@ -34,6 +34,7 @@ import useAuth from "../../hooks/useAuth.js";
 import { useContext } from "react";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import ContactModal from "../../components/ContactModal";
+import LiberarMesaModal from "../../components/LiberarMesaModal";
 
 const filter = createFilterOptions({ trim: true });
 
@@ -144,6 +145,8 @@ const Garcom = () => {
 
   const [clienteDialogOpen, setClienteDialogOpen] = useState(false);
   const [mesaParaOcupar, setMesaParaOcupar] = useState(null);
+  const [liberarModalOpen, setLiberarModalOpen] = useState(false);
+  const [mesaParaLiberar, setMesaParaLiberar] = useState(null);
   const [contacts, setContacts] = useState([]);
   const [searchContact, setSearchContact] = useState("");
   const [loadingContacts, setLoadingContacts] = useState(false);
@@ -258,6 +261,20 @@ const Garcom = () => {
     setNewContactInitial({});
   };
 
+  const handleLiberar = (mesa) => {
+    setMesaParaLiberar(mesa);
+    setLiberarModalOpen(true);
+  };
+
+  const fetchMesasForLiberar = async () => {
+    try {
+      const mesasRes = await api.get("/mesas");
+      setMesas(Array.isArray(mesasRes.data) ? mesasRes.data : []);
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
   const abrirPedido = (mesa) => {
     if (mesa.status === "ocupada") {
       const contact = mesa.contact || (mesa.contactId ? { id: mesa.contactId, name: "Cliente", number: "" } : null);
@@ -339,20 +356,28 @@ const Garcom = () => {
           grupo: p?.grupo || "Outros",
         };
       });
-      const autoFields = form.fields?.filter(
+      const labelLower = (l) => (l || "").trim().toLowerCase();
+      const fields = form.fields || [];
+      const autoFields = fields.filter(
         (f) => f.metadata?.autoFieldType === "name" || f.metadata?.autoFieldType === "phone"
       ) || [];
       const answers = [];
       autoFields.forEach((f) => {
         const val = f.metadata?.autoFieldType === "name"
-          ? (contactParaPedido?.name || "")
+          ? (contactParaPedido?.name || "Cliente")
           : f.metadata?.autoFieldType === "phone"
           ? (contactParaPedido?.number || "")
           : "";
-        if (val) answers.push({ fieldId: f.id, answer: val });
+        answers.push({ fieldId: f.id, answer: f.metadata?.autoFieldType === "name" ? val : (contactParaPedido?.number || "") });
       });
+      const nomeField = fields.find(
+        (f) => f.isRequired && (f.metadata?.autoFieldType === "name" || (labelLower(f.label).includes("nome") && !labelLower(f.label).includes("sobrenome")))
+      );
+      if (nomeField && !answers.some((a) => a.fieldId === nomeField.id)) {
+        answers.push({ fieldId: nomeField.id, answer: contactParaPedido?.name || "Cliente" });
+      }
       const tipoPedidoField = (form.fields || []).find(
-        (f) => f.isRequired && /tipo\s*(de\s*)?pedido/i.test((f.label || "").trim())
+        (f) => f.isRequired && labelLower(f.label).includes("tipo") && labelLower(f.label).includes("pedido")
       );
       if (tipoPedidoField && !answers.some((a) => a.fieldId === tipoPedidoField.id)) {
         answers.push({ fieldId: tipoPedidoField.id, answer: "Mesa" });
@@ -440,15 +465,27 @@ const Garcom = () => {
                       </Typography>
                     )}
                     <Box flex={1} />
-                    <Button
-                      variant="contained"
-                      color="primary"
-                      fullWidth
-                      onClick={() => abrirPedido(mesa)}
-                      style={{ marginTop: 8 }}
-                    >
-                      Fazer pedido
-                    </Button>
+                    <Box display="flex" flexDirection="column" style={{ marginTop: 8 }}>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        fullWidth
+                        onClick={() => abrirPedido(mesa)}
+                      >
+                        Fazer pedido
+                      </Button>
+                      {mesa.status === "ocupada" && (
+                        <Button
+                          variant="outlined"
+                          color="secondary"
+                          fullWidth
+                          onClick={(e) => { e.stopPropagation(); handleLiberar(mesa); }}
+                          style={{ marginTop: 8 }}
+                        >
+                          Liberar mesa
+                        </Button>
+                      )}
+                    </Box>
                   </CardContent>
                 </Card>
               </Grid>
@@ -622,6 +659,16 @@ const Garcom = () => {
         onClose={() => { setContactModalOpen(false); setNewContactInitial({}); }}
         onSave={handleContactCreated}
         initialValues={newContactInitial}
+      />
+
+      <LiberarMesaModal
+        open={liberarModalOpen}
+        mesa={mesaParaLiberar}
+        onClose={() => {
+          setLiberarModalOpen(false);
+          setMesaParaLiberar(null);
+        }}
+        onSuccess={fetchMesasForLiberar}
       />
     </MainContainer>
   );

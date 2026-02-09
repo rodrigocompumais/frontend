@@ -27,10 +27,18 @@ const Route = ({ component: Component, isPrivate = false, isPublic = false, allo
 	}
 
 	// Se está autenticado e a rota não é privada (ex: login, signup)
-	// MAS SOMENTE se não for uma rota pública (permite acesso mesmo estando autenticado)
-	// Redireciona para dashboard ou para página de expiração
+	// Redireciona para página de expiração, ou para a função do usuário (defaultRoute), ou dashboard
 	if (isAuth && !isPrivate && !isPublic) {
-		const redirectPath = isSubscriptionExpired() ? "/subscription-expired" : "/dashboard";
+		let redirectPath = "/dashboard";
+		if (isSubscriptionExpired()) {
+			redirectPath = "/subscription-expired";
+		} else if (user?.defaultRoute) {
+			const route = typeof user.defaultRoute === "string" ? user.defaultRoute.trim() : "";
+			const allowed = ["dashboard", "tickets", "cozinha", "entregador", "garcom", "pedidos", "mesas", "forms", "lanchonetes"];
+			if (route && allowed.includes(route)) {
+				redirectPath = `/${route}`;
+			}
+		}
 		return (
 			<>
 				{loading && <BackdropLoading />}
