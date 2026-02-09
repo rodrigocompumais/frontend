@@ -61,7 +61,7 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const MesaPrintQRModal = ({ open, onClose, formSlug }) => {
+const MesaPrintQRModal = ({ open, onClose }) => {
   const classes = useStyles();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -72,14 +72,9 @@ const MesaPrintQRModal = ({ open, onClose, formSlug }) => {
       setItems([]);
       return;
     }
-    if (!formSlug) {
-      setItems([]);
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     api
-      .get("/mesas/links-qr", { params: { formSlug } })
+      .get("/mesas/links-qr")
       .then(({ data }) => {
         setItems(data.items || []);
       })
@@ -88,7 +83,7 @@ const MesaPrintQRModal = ({ open, onClose, formSlug }) => {
         setItems([]);
       })
       .finally(() => setLoading(false));
-  }, [open, formSlug]);
+  }, [open]);
 
   const handlePrint = () => {
     const el = printRef.current;
@@ -125,10 +120,6 @@ const MesaPrintQRModal = ({ open, onClose, formSlug }) => {
           <Box display="flex" justifyContent="center" py={4}>
             <CircularProgress />
           </Box>
-        ) : !formSlug ? (
-          <Typography className={classes.empty}>
-            Configure o cardápio (formulário tipo cardápio) para gerar os links das mesas.
-          </Typography>
         ) : items.length === 0 ? (
           <Typography className={classes.empty}>
             Nenhuma mesa cadastrada.
@@ -158,7 +149,7 @@ const MesaPrintQRModal = ({ open, onClose, formSlug }) => {
           color="primary"
           startIcon={<PrintIcon />}
           onClick={handlePrint}
-          disabled={loading || items.length === 0 || !formSlug}
+          disabled={loading || items.length === 0}
         >
           Imprimir
         </Button>

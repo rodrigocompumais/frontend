@@ -702,7 +702,6 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       <MesaPrintQRModal
         open={printAllQRModalOpen}
         onClose={() => setPrintAllQRModalOpen(false)}
-        formSlug={cardapioSlug}
       />
       <ConfirmationModal
         title="Excluir mesa"

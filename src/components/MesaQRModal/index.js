@@ -18,25 +18,25 @@ const MesaQRModal = ({ open, onClose, mesa, cardapioSlug }) => {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const slug = mesa?.form?.slug || cardapioSlug;
-
   useEffect(() => {
-    if (!open || !mesa?.id || !slug) {
+    if (!open || !mesa?.id) {
       setUrl("");
       return;
     }
+    if (mesa.linkUrl) {
+      setUrl(mesa.linkUrl);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    api.get(`/mesas/${mesa.id}/link-qr`, { params: { formSlug: slug } })
-      .then(({ data }) => {
-        setUrl(data.url || "");
-      })
-      .catch(() => {
-        setUrl(`${window.location.origin}/f/${slug}?mesa=${mesa.id}`);
-      })
+    api
+      .get(`/mesas/${mesa.id}/link-qr`)
+      .then(({ data }) => setUrl(data.url || ""))
+      .catch(() => setUrl(""))
       .finally(() => setLoading(false));
-  }, [open, mesa?.id, slug]);
+  }, [open, mesa?.id, mesa?.linkUrl]);
 
-  if (!slug) return null;
+  if (!mesa?.id) return null;
 
   const mesaLabel = mesa.name || mesa.number || `Mesa ${mesa.id}`;
 

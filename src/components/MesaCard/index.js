@@ -133,8 +133,8 @@ const MesaCard = ({
 
   const handleCopyLink = (e) => {
     e.stopPropagation();
-    if (!slug) return;
-    const url = `${window.location.origin}/f/${slug}?mesa=${mesa.id}`;
+    const url = mesa.linkUrl || (slug ? `${window.location.origin}/f/${slug}?mesa=${mesa.id}` : null);
+    if (!url) return;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url).then(() => {
         if (onCopyLink) onCopyLink(url);
@@ -227,7 +227,7 @@ const MesaCard = ({
               Ocupar
             </Button>
           )}
-          {slug && (
+          {(slug || mesa.linkUrl) && (
             <>
               <Tooltip title="Ver QR Code do cardápio para esta mesa">
                 <IconButton
