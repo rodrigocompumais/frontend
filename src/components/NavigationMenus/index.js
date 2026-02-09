@@ -284,15 +284,26 @@ const NavigationMenus = () => {
           <ListItemText primary={i18n.t("mainDrawer.listItems.forms")} />
         </MenuItem>
         {hasLanchonetes && (
-          <MenuItem
-            className={classes.menuItem}
-            onClick={() => handleNavigate('/lanchonetes', () => setGestaoAnchor(null))}
-          >
-            <ListItemIcon>
-              <RestaurantIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText primary={i18n.t("lanchonetes.hubName")} />
-          </MenuItem>
+          <>
+            <MenuItem
+              className={classes.menuItem}
+              onClick={() => handleNavigate('/products', () => setGestaoAnchor(null))}
+            >
+              <ListItemIcon>
+                <ShoppingCartIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary="Produtos" />
+            </MenuItem>
+            <MenuItem
+              className={classes.menuItem}
+              onClick={() => handleNavigate('/lanchonetes', () => setGestaoAnchor(null))}
+            >
+              <ListItemIcon>
+                <RestaurantIcon fontSize="small" />
+              </ListItemIcon>
+              <ListItemText primary={i18n.t("lanchonetes.hubName")} />
+            </MenuItem>
+          </>
         )}
       </Menu>
 

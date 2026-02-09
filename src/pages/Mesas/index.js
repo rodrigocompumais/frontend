@@ -21,6 +21,7 @@ import {
   Tabs,
   Tab,
   IconButton,
+  TextField,
 } from "@material-ui/core";
 import AddIcon from "@material-ui/icons/Add";
 import RemoveIcon from "@material-ui/icons/Remove";
@@ -118,6 +119,13 @@ const useStyles = makeStyles((theme) => ({
     flexWrap: "wrap",
     gap: theme.spacing(1),
   },
+  orderLineRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: theme.spacing(1, 0),
+    borderBottom: `1px solid ${theme.palette.divider}`,
+  },
 }));
 
 const Mesas = ({ cardapioSlugFromHub }) => {
@@ -149,12 +157,16 @@ const Mesas = ({ cardapioSlugFromHub }) => {
 
   const [mesaParaPedido, setMesaParaPedido] = useState(null);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
-  const [orderSelectedItems, setOrderSelectedItems] = useState({});
+  const [orderLines, setOrderLines] = useState([]);
   const [orderProducts, setOrderProducts] = useState([]);
   const [orderForm, setOrderForm] = useState(null);
   const [orderSubmitting, setOrderSubmitting] = useState(false);
   const [orderLoading, setOrderLoading] = useState(false);
   const [orderDialogTab, setOrderDialogTab] = useState(0);
+  const [variablePriceDialogOpen, setVariablePriceDialogOpen] = useState(false);
+  const [variablePriceProduct, setVariablePriceProduct] = useState(null);
+  const [variablePriceQty, setVariablePriceQty] = useState(1);
+  const [variablePriceUnit, setVariablePriceUnit] = useState("");
 
   const cardapioSlug = cardapioSlugFromHub ?? cardapioSlugFetched;
 
@@ -228,7 +240,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       if (!orderDialogOpen) {
         setOrderForm(null);
         setOrderProducts([]);
-        setOrderSelectedItems({});
+        setOrderLines([]);
         setOrderDialogTab(0);
       }
       return;
@@ -258,7 +270,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       return;
     }
     setMesaParaPedido(mesa);
-    setOrderSelectedItems({});
+    setOrderLines([]);
     setOrderDialogTab(0);
     setOrderDialogOpen(true);
   };
@@ -267,29 +279,76 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     if (!orderSubmitting) {
       setOrderDialogOpen(false);
       setMesaParaPedido(null);
-      setOrderSelectedItems({});
+      setOrderLines([]);
     }
   };
 
-  const handleOrderQuantityChange = (productId, delta) => {
-    setOrderSelectedItems((prev) => {
-      const current = prev[productId] || 0;
-      const newQty = Math.max(0, current + delta);
-      if (newQty === 0) {
-        const { [productId]: _, ...rest } = prev;
-        return rest;
+  const getOrderLineCount = (productId) =>
+    orderLines
+      .filter((l) => l.productId === productId)
+      .reduce((a, l) => a + l.quantity, 0);
+
+  const handleOrderQuantityChange = (productId, delta, product) => {
+    const p = product || orderProducts.find((x) => x.id === productId);
+    if (delta === 1 && p?.variablePrice) {
+      setVariablePriceProduct(p);
+      setVariablePriceQty(1);
+      setVariablePriceUnit(Number(p?.value) ?? 0);
+      setVariablePriceDialogOpen(true);
+      return;
+    }
+    setOrderLines((prev) => {
+      if (delta === 1) {
+        const idx = prev.findIndex((l) => l.productId === productId && l.productValue == null);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], quantity: next[idx].quantity + 1 };
+          return next;
+        }
+        return [...prev, { productId, quantity: 1 }];
       }
-      return { ...prev, [productId]: newQty };
+      const rev = prev.map((l, i) => ({ l, i })).filter((x) => x.l.productId === productId);
+      const last = rev[rev.length - 1];
+      if (!last) return prev;
+      const idx = last.i;
+      const next = [...prev];
+      next[idx] = { ...next[idx], quantity: next[idx].quantity - 1 };
+      if (next[idx].quantity <= 0) next.splice(idx, 1);
+      return next;
     });
   };
 
+  const handleAddVariablePriceLine = () => {
+    const qty = Math.max(1, parseInt(variablePriceQty, 10) || 1);
+    const unit = parseFloat(String(variablePriceUnit).replace(",", "."));
+    if (isNaN(unit) || unit < 0) {
+      toast.error("Informe um valor unitário válido (maior ou igual a zero).");
+      return;
+    }
+    setOrderLines((prev) => [
+      ...prev,
+      {
+        productId: variablePriceProduct.id,
+        quantity: qty,
+        productValue: unit,
+      },
+    ]);
+    setVariablePriceDialogOpen(false);
+    setVariablePriceProduct(null);
+  };
+
+  const handleRemoveOrderLine = (lineIndex) => {
+    setOrderLines((prev) => prev.filter((_, i) => i !== lineIndex));
+  };
+
   const getOrderTotalItems = () =>
-    Object.values(orderSelectedItems).reduce((a, b) => a + b, 0);
+    orderLines.reduce((a, l) => a + l.quantity, 0);
 
   const calculateOrderTotal = () =>
-    Object.entries(orderSelectedItems).reduce((acc, [productId, qty]) => {
-      const p = orderProducts.find((x) => x.id === parseInt(productId, 10));
-      return acc + (Number(p?.value) || 0) * qty;
+    orderLines.reduce((acc, line) => {
+      const p = orderProducts.find((x) => x.id === line.productId);
+      const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+      return acc + line.quantity * unit;
     }, 0);
 
   const submitOrder = async () => {
@@ -299,15 +358,23 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       return;
     }
     const contact = mesaParaPedido.contact || {};
+    for (const line of orderLines) {
+      const p = orderProducts.find((x) => x.id === line.productId);
+      if (p?.variablePrice && (line.productValue == null || line.productValue < 0)) {
+        toast.error(`Informe o valor para "${p.name}".`);
+        return;
+      }
+    }
     setOrderSubmitting(true);
     try {
-      const menuItems = Object.entries(orderSelectedItems).map(([productId, qty]) => {
-        const p = orderProducts.find((x) => x.id === parseInt(productId, 10));
+      const menuItems = orderLines.map((line) => {
+        const p = orderProducts.find((x) => x.id === line.productId);
+        const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
         return {
-          productId: parseInt(productId, 10),
-          quantity: qty,
+          productId: line.productId,
+          quantity: line.quantity,
           productName: p?.name,
-          productValue: Number(p?.value) || 0,
+          productValue: unit,
           grupo: p?.grupo || "Outros",
         };
       });
@@ -348,7 +415,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       toast.success("Pedido enviado!");
       setOrderDialogOpen(false);
       setMesaParaPedido(null);
-      setOrderSelectedItems({});
+      setOrderLines([]);
       fetchMesas();
     } catch (err) {
       toastError(err);
@@ -616,17 +683,19 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                               <Box>
                                 <Typography variant="body1">{product.name}</Typography>
                                 <Typography variant="body2" color="primary">
-                                  R$ {(Number(product.value) || 0).toFixed(2)}
+                                  {product.variablePrice
+                                    ? "Preço variável"
+                                    : `R$ ${(Number(product.value) || 0).toFixed(2)}`}
                                 </Typography>
                               </Box>
                               <Box className={classes.orderQuantityControl}>
-                                <IconButton size="small" onClick={() => handleOrderQuantityChange(product.id, -1)}>
+                                <IconButton size="small" onClick={() => handleOrderQuantityChange(product.id, -1, product)}>
                                   <RemoveIcon fontSize="small" />
                                 </IconButton>
                                 <Typography style={{ minWidth: 28, textAlign: "center", fontWeight: 600 }}>
-                                  {orderSelectedItems[product.id] || 0}
+                                  {getOrderLineCount(product.id)}
                                 </Typography>
-                                <IconButton size="small" onClick={() => handleOrderQuantityChange(product.id, 1)}>
+                                <IconButton size="small" onClick={() => handleOrderQuantityChange(product.id, 1, product)}>
                                   <AddIcon fontSize="small" />
                                 </IconButton>
                               </Box>
@@ -637,6 +706,30 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                   )}
                 </div>
               ))}
+              {orderLines.length > 0 && (
+                <Box mt={2} mb={1}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Itens do pedido
+                  </Typography>
+                  {orderLines.map((line, idx) => {
+                    const p = orderProducts.find((x) => x.id === line.productId);
+                    const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+                    const subtotal = line.quantity * unit;
+                    return (
+                      <Box key={idx} className={classes.orderLineRow}>
+                        <Box>
+                          <Typography variant="body2">
+                            {p?.name || "Produto"} • {line.quantity}x R$ {unit.toFixed(2).replace(".", ",")} = R$ {subtotal.toFixed(2).replace(".", ",")}
+                          </Typography>
+                        </Box>
+                        <IconButton size="small" onClick={() => handleRemoveOrderLine(idx)} aria-label="Remover item">
+                          <RemoveIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
               <Box className={classes.orderSummaryRow}>
                 <Typography variant="h6">
                   Total: R$ {(Number(calculateOrderTotal()) || 0).toFixed(2).replace(".", ",")} • {getOrderTotalItems()} itens
@@ -653,6 +746,48 @@ const Mesas = ({ cardapioSlugFromHub }) => {
             </>
           )}
         </DialogContent>
+      </Dialog>
+
+      <Dialog open={variablePriceDialogOpen} onClose={() => setVariablePriceDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Valor unitário</DialogTitle>
+        <DialogContent>
+          {variablePriceProduct && (
+            <>
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                {variablePriceProduct.name} — informe a quantidade e o valor unitário (ex.: refeição por kg).
+              </Typography>
+              <TextField
+                label="Quantidade"
+                type="number"
+                inputProps={{ min: 1 }}
+                value={variablePriceQty}
+                onChange={(e) => setVariablePriceQty(e.target.value)}
+                variant="outlined"
+                margin="dense"
+                fullWidth
+                style={{ marginBottom: 12 }}
+              />
+              <TextField
+                label="Valor unitário (R$)"
+                type="number"
+                inputProps={{ step: "0.01", min: "0" }}
+                value={variablePriceUnit}
+                onChange={(e) => setVariablePriceUnit(e.target.value)}
+                variant="outlined"
+                margin="dense"
+                fullWidth
+              />
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setVariablePriceDialogOpen(false)} color="secondary">
+            Cancelar
+          </Button>
+          <Button onClick={handleAddVariablePriceLine} color="primary" variant="contained">
+            Adicionar
+          </Button>
+        </DialogActions>
       </Dialog>
 
       <MesaModal

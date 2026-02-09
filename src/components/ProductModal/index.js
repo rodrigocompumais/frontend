@@ -16,6 +16,7 @@ import CircularProgress from "@material-ui/core/CircularProgress";
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
 import Box from "@material-ui/core/Box";
+import Typography from "@material-ui/core/Typography";
 import FormControl from "@material-ui/core/FormControl";
 import InputLabel from "@material-ui/core/InputLabel";
 import Select from "@material-ui/core/Select";
@@ -73,6 +74,7 @@ const ProductSchema = Yup.object().shape({
         .min(0, "Quantidade deve ser maior ou igual a zero")
         .nullable(),
     isMenuProduct: Yup.boolean().nullable(),
+    variablePrice: Yup.boolean().nullable(),
     grupo: Yup.string().nullable(),
 });
 
@@ -86,6 +88,7 @@ const ProductModal = ({ open, onClose, productId }) => {
         value: 0,
         quantity: 0,
         isMenuProduct: false,
+        variablePrice: false,
         grupo: "",
         imageUrl: "",
     };
@@ -111,6 +114,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                     value: data.value || 0,
                     quantity: data.quantity || 0,
                     isMenuProduct: data.isMenuProduct || false,
+                    variablePrice: data.variablePrice || false,
                     grupo: data.grupo || "",
                     imageUrl: data.imageUrl || "",
                 });
@@ -425,6 +429,25 @@ const ProductModal = ({ open, onClose, productId }) => {
                                     }
                                     label="Produto de cardápio"
                                 />
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={values.variablePrice || false}
+                                            onChange={(e) =>
+                                                setFieldValue("variablePrice", e.target.checked)
+                                            }
+                                            color="primary"
+                                        />
+                                    }
+                                    label="Preço variável"
+                                />
+                                {values.variablePrice && (
+                                    <Box mt={0.5} mb={1}>
+                                        <Typography variant="caption" color="textSecondary" display="block">
+                                            Ao adicionar em pedidos (Mesas/Garçom), o valor será solicitado (ex.: refeição por kg). O valor acima serve como sugestão.
+                                        </Typography>
+                                    </Box>
+                                )}
                             </DialogContent>
                             <DialogActions>
                                 <Button

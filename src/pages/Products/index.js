@@ -331,13 +331,14 @@ const Products = () => {
                             <TableCell align="right">Valor</TableCell>
                             <TableCell align="center">Quantidade</TableCell>
                             <TableCell align="center">Cardápio</TableCell>
+                            <TableCell align="center">Preço var.</TableCell>
                             <TableCell align="center">Ações</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {products.length === 0 && !loading && (
                             <TableRow>
-                                <TableCell colSpan={8} align="center">
+                                <TableCell colSpan={9} align="center">
                                     Nenhum produto encontrado
                                 </TableCell>
                             </TableRow>
@@ -385,6 +386,18 @@ const Products = () => {
                                     )}
                                 </TableCell>
                                 <TableCell align="center">
+                                    {product.variablePrice ? (
+                                        <Chip
+                                            label="Variável"
+                                            color="secondary"
+                                            size="small"
+                                            className={classes.menuChip}
+                                        />
+                                    ) : (
+                                        <span>—</span>
+                                    )}
+                                </TableCell>
+                                <TableCell align="center">
                                     <div className={classes.actionButtons}>
                                         <IconButton
                                             size="small"
@@ -405,7 +418,7 @@ const Products = () => {
                                 </TableCell>
                             </TableRow>
                         ))}
-                        {loading && <TableRowSkeleton columns={8} />}
+                        {loading && <TableRowSkeleton columns={9} />}
                     </TableBody>
                 </Table>
             </Paper>

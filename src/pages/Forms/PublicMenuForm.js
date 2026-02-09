@@ -209,9 +209,10 @@ const PublicMenuForm = ({
 
   useEffect(() => {
     if (initialProducts && initialProducts.length > 0) {
-      setProducts(initialProducts);
+      const filtered = initialProducts.filter((p) => !p.variablePrice);
+      setProducts(filtered);
       const groupsMap = {};
-      initialProducts.forEach((p) => {
+      filtered.forEach((p) => {
         const g = p.grupo || "Outros";
         if (!groupsMap[g]) groupsMap[g] = [];
         groupsMap[g].push(p);
@@ -326,11 +327,12 @@ const PublicMenuForm = ({
       const { data } = await api.get(`/public/forms/${slug}/products`);
 
       const allProducts = data.products || [];
-      setProducts(allProducts);
+      const filtered = allProducts.filter((p) => !p.variablePrice);
+      setProducts(filtered);
 
-      // Agrupar produtos por grupo
+      // Agrupar produtos por grupo (apenas os exibidos, sem preço variável)
       const groupsMap = {};
-      allProducts.forEach((product) => {
+      filtered.forEach((product) => {
         const grupo = product.grupo || "Outros";
         if (!groupsMap[grupo]) {
           groupsMap[grupo] = [];
