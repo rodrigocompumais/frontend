@@ -23,6 +23,10 @@ import {
   Divider,
   Fab,
   Badge,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from "@material-ui/core";
 import AddIcon from "@material-ui/icons/Add";
 import RemoveIcon from "@material-ui/icons/Remove";
@@ -190,6 +194,12 @@ const PublicMenuForm = ({
   const [mesaFromQR, setMesaFromQR] = useState(initialMesaFromQR ?? null);
   const [loadingMesa, setLoadingMesa] = useState(false);
   const [orderToken, setOrderToken] = useState(initialOrderToken ?? null);
+  const [halfAndHalfItems, setHalfAndHalfItems] = useState([]);
+  const [halfAndHalfModalOpen, setHalfAndHalfModalOpen] = useState(false);
+  const [halfAndHalfModalProduct, setHalfAndHalfModalProduct] = useState(null);
+  const [halfAndHalfModalHalf1, setHalfAndHalfModalHalf1] = useState("");
+  const [halfAndHalfModalHalf2, setHalfAndHalfModalHalf2] = useState("");
+  const [halfAndHalfModalQty, setHalfAndHalfModalQty] = useState(1);
 
   const appStyles = form ? getFormAppearanceStyles(form) : null;
   const fieldVariant = appStyles?.fieldVariant || "outlined";
@@ -389,8 +399,8 @@ const PublicMenuForm = ({
     const newErrors = {};
     let isValid = true;
 
-    // Validar que pelo menos um produto foi selecionado (validação mais importante)
-    if (Object.keys(selectedItems).length === 0) {
+    // Validar que pelo menos um produto foi selecionado (normal ou meio a meio)
+    if (Object.keys(selectedItems).length === 0 && halfAndHalfItems.length === 0) {
       toast.error("Selecione pelo menos um produto");
       isValid = false;
     }
@@ -464,8 +474,8 @@ const PublicMenuForm = ({
     setSubmitting(true);
 
     try {
-      // Preparar menuItems
-      const menuItems = Object.keys(selectedItems).map((productId) => {
+      // Preparar menuItems (normais + meio a meio)
+      const normalMenuItems = Object.keys(selectedItems).map((productId) => {
         const product = products.find((p) => p.id === parseInt(productId));
         return {
           productId: parseInt(productId),
@@ -475,6 +485,15 @@ const PublicMenuForm = ({
           grupo: product?.grupo || "Outros",
         };
       });
+      const halfMenuItems = halfAndHalfItems.map((item) => ({
+        type: "halfAndHalf",
+        productId: item.baseProductId,
+        quantity: item.quantity,
+        half1ProductId: item.half1ProductId,
+        half2ProductId: item.half2ProductId,
+        grupo: products.find((p) => p.id === item.baseProductId)?.grupo || "Outros",
+      }));
+      const menuItems = [...normalMenuItems, ...halfMenuItems];
 
       // Preparar answers - incluir TODOS os campos do formulário (automáticos + customizados)
       const allFormFields = form.fields || [];
@@ -558,11 +577,29 @@ const PublicMenuForm = ({
           ? ((form.settings?.mesaFieldMode || "select") === "select" ? (mesas.find((m) => m.id === parseInt(mesaValue, 10))?.number || mesaValue) : mesaValue)
           : "");
       // Preparar dados do pedido para exibição (com responsável da mesa para confirmação)
-      const orderInfo = {
-        menuItems: menuItems.map((item) => ({
+      const displayMenuItems = menuItems.map((item) => {
+        if (item.type === "halfAndHalf") {
+          const base = products.find((p) => p.id === item.productId);
+          const half1 = products.find((p) => p.id === item.half1ProductId);
+          const half2 = products.find((p) => p.id === item.half2ProductId);
+          const unitVal = computeHalfAndHalfUnitValue(base, half1, half2);
+          const productName = base && half1 && half2
+            ? `${base.name} - Metade ${half1.name} / Metade ${half2.name}`
+            : "Meio a meio";
+          return {
+            ...item,
+            productName,
+            productValue: unitVal,
+            total: unitVal * item.quantity,
+          };
+        }
+        return {
           ...item,
           total: (item.productValue || 0) * item.quantity,
-        })),
+        };
+      });
+      const orderInfo = {
+        menuItems: displayMenuItems,
         total: calculateTotal(),
         totalItems: getTotalItems(),
         customerName,
@@ -711,6 +748,58 @@ const PublicMenuForm = ({
     return products.filter((p) => (p.grupo || "Outros") === grupo);
   };
 
+  const getFlavorProductsForHalfAndHalf = (baseProduct) => {
+    if (!baseProduct) return [];
+    const grupoFilter = baseProduct.halfAndHalfGrupo || baseProduct.grupo || null;
+    return products.filter((p) => {
+      if (p.id === baseProduct.id) return false;
+      if (grupoFilter) return (p.grupo || "") === grupoFilter;
+      return true;
+    });
+  };
+
+  const computeHalfAndHalfUnitValue = (base, half1, half2) => {
+    if (!base || !half1 || !half2) return 0;
+    const rule = base.halfAndHalfPriceRule || "max";
+    const v1 = parseFloat(half1.value) || 0;
+    const v2 = parseFloat(half2.value) || 0;
+    if (rule === "max") return Math.max(v1, v2);
+    if (rule === "fixed") return parseFloat(base.value) || 0;
+    if (rule === "average") return (v1 + v2) / 2;
+    return Math.max(v1, v2);
+  };
+
+  const openHalfAndHalfModal = (product) => {
+    setHalfAndHalfModalProduct(product);
+    setHalfAndHalfModalHalf1("");
+    setHalfAndHalfModalHalf2("");
+    setHalfAndHalfModalQty(1);
+    setHalfAndHalfModalOpen(true);
+  };
+
+  const addHalfAndHalfToCart = () => {
+    if (!halfAndHalfModalProduct || !halfAndHalfModalHalf1 || !halfAndHalfModalHalf2 || halfAndHalfModalHalf1 === halfAndHalfModalHalf2) {
+      toast.error("Selecione dois sabores diferentes");
+      return;
+    }
+    const qty = Math.max(1, parseInt(halfAndHalfModalQty, 10) || 1);
+    setHalfAndHalfItems((prev) => [
+      ...prev,
+      {
+        baseProductId: halfAndHalfModalProduct.id,
+        half1ProductId: parseInt(halfAndHalfModalHalf1, 10),
+        half2ProductId: parseInt(halfAndHalfModalHalf2, 10),
+        quantity: qty,
+      },
+    ]);
+    setHalfAndHalfModalOpen(false);
+    setHalfAndHalfModalProduct(null);
+  };
+
+  const removeHalfAndHalfItem = (index) => {
+    setHalfAndHalfItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const calculateTotal = () => {
     let total = 0;
     Object.keys(selectedItems).forEach((productId) => {
@@ -719,11 +808,19 @@ const PublicMenuForm = ({
         total += (product.value || 0) * selectedItems[productId];
       }
     });
+    halfAndHalfItems.forEach((item) => {
+      const base = products.find((p) => p.id === item.baseProductId);
+      const half1 = products.find((p) => p.id === item.half1ProductId);
+      const half2 = products.find((p) => p.id === item.half2ProductId);
+      total += computeHalfAndHalfUnitValue(base, half1, half2) * item.quantity;
+    });
     return total;
   };
 
   const getTotalItems = () => {
-    return Object.values(selectedItems).reduce((sum, qty) => sum + qty, 0);
+    const normal = Object.values(selectedItems).reduce((sum, qty) => sum + qty, 0);
+    const half = halfAndHalfItems.reduce((sum, i) => sum + i.quantity, 0);
+    return normal + half;
   };
 
   if (loading) {
@@ -964,6 +1061,7 @@ const PublicMenuForm = ({
             <Box style={{ marginTop: 24 }}>
               {getProductsByGroup(groups[activeTab]).map((product) => {
                 const quantity = selectedItems[product.id] || 0;
+                const isHalfAndHalf = product.allowsHalfAndHalf === true;
                 return (
                   <Card key={product.id} className={classes.productCard}>
                     <CardContent>
@@ -985,34 +1083,45 @@ const PublicMenuForm = ({
                           {product.description}
                         </Typography>
                       )}
-                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Box display="flex" justifyContent="space-between" alignItems="center" flexWrap="wrap">
                         <Typography className={classes.productValue}>
                           R$ {parseFloat(product.value || 0).toFixed(2).replace(".", ",")}
                         </Typography>
-                        <Box className={classes.quantityControl}>
-                          <IconButton
+                        {isHalfAndHalf ? (
+                          <Button
+                            variant="outlined"
+                            color="primary"
                             size="small"
-                            onClick={() => handleQuantityChange(product.id, -1)}
-                            disabled={quantity === 0}
+                            onClick={() => openHalfAndHalfModal(product)}
                           >
-                            <RemoveIcon />
-                          </IconButton>
-                          <TextField
-                            className={classes.quantityInput}
-                            type="number"
-                            value={quantity}
-                            onChange={(e) => handleQuantityInput(product.id, e.target.value)}
-                            inputProps={{ min: 0 }}
-                            variant={fieldVariant}
-                            size="small"
-                          />
-                          <IconButton
-                            size="small"
-                            onClick={() => handleQuantityChange(product.id, 1)}
-                          >
-                            <AddIcon />
-                          </IconButton>
-                        </Box>
+                            Meio a meio
+                          </Button>
+                        ) : (
+                          <Box className={classes.quantityControl}>
+                            <IconButton
+                              size="small"
+                              onClick={() => handleQuantityChange(product.id, -1)}
+                              disabled={quantity === 0}
+                            >
+                              <RemoveIcon />
+                            </IconButton>
+                            <TextField
+                              className={classes.quantityInput}
+                              type="number"
+                              value={quantity}
+                              onChange={(e) => handleQuantityInput(product.id, e.target.value)}
+                              inputProps={{ min: 0 }}
+                              variant={fieldVariant}
+                              size="small"
+                            />
+                            <IconButton
+                              size="small"
+                              onClick={() => handleQuantityChange(product.id, 1)}
+                            >
+                              <AddIcon />
+                            </IconButton>
+                          </Box>
+                        )}
                       </Box>
                         </Box>
                       </Box>
@@ -1023,9 +1132,80 @@ const PublicMenuForm = ({
             </Box>
           )}
 
+          <Dialog open={halfAndHalfModalOpen} onClose={() => setHalfAndHalfModalOpen(false)} maxWidth="sm" fullWidth>
+            <DialogTitle>Meio a meio - {halfAndHalfModalProduct?.name}</DialogTitle>
+            <DialogContent>
+              <FormControl fullWidth variant={fieldVariant} size="small" style={{ marginTop: 8 }}>
+                <InputLabel>Metade 1</InputLabel>
+                <Select
+                  value={halfAndHalfModalHalf1}
+                  onChange={(e) => setHalfAndHalfModalHalf1(e.target.value)}
+                  label="Metade 1"
+                >
+                  <MenuItem value=""><em>Selecione</em></MenuItem>
+                  {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct).map((p) => (
+                    <MenuItem key={p.id} value={String(p.id)}>{p.name} - R$ {parseFloat(p.value || 0).toFixed(2)}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <FormControl fullWidth variant={fieldVariant} size="small" style={{ marginTop: 16 }}>
+                <InputLabel>Metade 2</InputLabel>
+                <Select
+                  value={halfAndHalfModalHalf2}
+                  onChange={(e) => setHalfAndHalfModalHalf2(e.target.value)}
+                  label="Metade 2"
+                >
+                  <MenuItem value=""><em>Selecione</em></MenuItem>
+                  {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct).map((p) => (
+                    <MenuItem key={p.id} value={String(p.id)}>{p.name} - R$ {parseFloat(p.value || 0).toFixed(2)}</MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              <TextField
+                label="Quantidade"
+                type="number"
+                value={halfAndHalfModalQty}
+                onChange={(e) => setHalfAndHalfModalQty(e.target.value)}
+                inputProps={{ min: 1 }}
+                variant={fieldVariant}
+                size="small"
+                fullWidth
+                style={{ marginTop: 16 }}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={() => setHalfAndHalfModalOpen(false)} color="secondary">Cancelar</Button>
+              <Button onClick={addHalfAndHalfToCart} color="primary" variant="contained">Adicionar</Button>
+            </DialogActions>
+          </Dialog>
+
           {activeTab === groups.length && (
             <form onSubmit={handleSubmit}>
               <Box style={{ marginTop: 24 }}>
+                {halfAndHalfItems.length > 0 && (
+                  <Box marginBottom={2} padding={2} bgcolor="action.hover" borderRadius={8}>
+                    <Typography variant="subtitle2" gutterBottom>Itens meio a meio</Typography>
+                    {halfAndHalfItems.map((item, idx) => {
+                      const base = products.find((p) => p.id === item.baseProductId);
+                      const h1 = products.find((p) => p.id === item.half1ProductId);
+                      const h2 = products.find((p) => p.id === item.half2ProductId);
+                      const unitVal = computeHalfAndHalfUnitValue(base, h1, h2);
+                      const label = base && h1 && h2
+                        ? `${base.name}: ${h1.name} / ${h2.name}`
+                        : "Meio a meio";
+                      return (
+                        <Box key={idx} display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 4 }}>
+                          <Typography variant="body2">
+                            {item.quantity}x {label} — R$ {(unitVal * item.quantity).toFixed(2).replace(".", ",")}
+                          </Typography>
+                          <IconButton size="small" onClick={() => removeHalfAndHalfItem(idx)} aria-label="Remover">
+                            <RemoveIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                )}
                 {/* Mesa fixa por QR: se ocupada, só mostrar "Mesa X - Cliente"; se livre, pedir nome/telefone */}
                 {loadingMesa && (
                   <Box className={classes.fieldContainer} style={{ marginBottom: 16 }}>

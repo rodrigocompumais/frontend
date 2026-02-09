@@ -75,8 +75,19 @@ const ProductSchema = Yup.object().shape({
         .nullable(),
     isMenuProduct: Yup.boolean().nullable(),
     variablePrice: Yup.boolean().nullable(),
+    allowsHalfAndHalf: Yup.boolean().nullable(),
+    halfAndHalfPriceRule: Yup.string().oneOf(["max", "fixed", "average"]).nullable(),
+    halfAndHalfGrupo: Yup.string().nullable(),
     grupo: Yup.string().nullable(),
-});
+}).test(
+    "halfAndHalfRule",
+    "Regra de cobrança é obrigatória quando 'Permitir meio a meio' está ativo",
+    (obj) => {
+        if (obj?.allowsHalfAndHalf === true)
+            return obj?.halfAndHalfPriceRule != null && ["max", "fixed", "average"].includes(obj.halfAndHalfPriceRule);
+        return true;
+    }
+);
 
 const ProductModal = ({ open, onClose, productId }) => {
     const classes = useStyles();
@@ -89,6 +100,9 @@ const ProductModal = ({ open, onClose, productId }) => {
         quantity: 0,
         isMenuProduct: false,
         variablePrice: false,
+        allowsHalfAndHalf: false,
+        halfAndHalfPriceRule: "",
+        halfAndHalfGrupo: "",
         grupo: "",
         imageUrl: "",
     };
@@ -115,6 +129,9 @@ const ProductModal = ({ open, onClose, productId }) => {
                     quantity: data.quantity || 0,
                     isMenuProduct: data.isMenuProduct || false,
                     variablePrice: data.variablePrice || false,
+                    allowsHalfAndHalf: data.allowsHalfAndHalf || false,
+                    halfAndHalfPriceRule: data.halfAndHalfPriceRule || "",
+                    halfAndHalfGrupo: data.halfAndHalfGrupo || "",
                     grupo: data.grupo || "",
                     imageUrl: data.imageUrl || "",
                 });
@@ -445,6 +462,60 @@ const ProductModal = ({ open, onClose, productId }) => {
                                     <Box mt={0.5} mb={1}>
                                         <Typography variant="caption" color="textSecondary" display="block">
                                             Ao adicionar em pedidos (Mesas/Garçom), o valor será solicitado (ex.: refeição por kg). O valor acima serve como sugestão.
+                                        </Typography>
+                                    </Box>
+                                )}
+                                <br />
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={values.allowsHalfAndHalf || false}
+                                            onChange={(e) => {
+                                                const checked = e.target.checked;
+                                                setFieldValue("allowsHalfAndHalf", checked);
+                                                if (checked && !values.halfAndHalfPriceRule)
+                                                    setFieldValue("halfAndHalfPriceRule", "max");
+                                            }}
+                                            color="primary"
+                                        />
+                                    }
+                                    label="Permitir meio a meio (ex.: pizza dois sabores)"
+                                />
+                                {values.allowsHalfAndHalf && (
+                                    <Box mt={1} mb={1}>
+                                        <FormControl variant="outlined" margin="dense" fullWidth size="small">
+                                            <InputLabel>Regra de cobrança</InputLabel>
+                                            <Field
+                                                as={Select}
+                                                name="halfAndHalfPriceRule"
+                                                label="Regra de cobrança"
+                                                value={values.halfAndHalfPriceRule || ""}
+                                            >
+                                                <MenuItem value="max">Sabor mais caro</MenuItem>
+                                                <MenuItem value="fixed">Preço fixo do tamanho</MenuItem>
+                                                <MenuItem value="average">Média dos dois sabores</MenuItem>
+                                            </Field>
+                                        </FormControl>
+                                        <FormControl variant="outlined" margin="dense" fullWidth size="small" style={{ marginTop: 8 }}>
+                                            <InputLabel>Grupo dos sabores (opcional)</InputLabel>
+                                            <Field
+                                                as={Select}
+                                                name="halfAndHalfGrupo"
+                                                label="Grupo dos sabores (opcional)"
+                                                value={values.halfAndHalfGrupo || ""}
+                                            >
+                                                <MenuItem value="">
+                                                    <em>Qualquer grupo</em>
+                                                </MenuItem>
+                                                {availableGroups.map((group) => (
+                                                    <MenuItem key={group} value={group}>
+                                                        {group}
+                                                    </MenuItem>
+                                                ))}
+                                            </Field>
+                                        </FormControl>
+                                        <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 4 }}>
+                                            No cardápio, ao clicar neste produto o cliente escolherá duas metades (sabores). Se informar grupo, só produtos desse grupo poderão ser escolhidos.
                                         </Typography>
                                     </Box>
                                 )}
