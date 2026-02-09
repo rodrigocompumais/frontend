@@ -27,6 +27,7 @@ import {
   Link as LinkIcon,
   LocalShipping as LocalShippingIcon,
   People as PeopleIcon,
+  Kitchen as KitchenIcon,
 } from "@material-ui/icons";
 import { QrCode2 as QrCodeScannerIcon } from "@mui/icons-material";
 import useSound from "use-sound";
@@ -90,7 +91,7 @@ const LanchonetesHub = () => {
   const params = new URLSearchParams(location.search);
   const tabFromUrl = parseInt(params.get("tab"), 10);
   const [tabValue, setTabValue] = useState(
-    !isNaN(tabFromUrl) && tabFromUrl >= 0 && tabFromUrl <= 7 ? tabFromUrl : 0
+    !isNaN(tabFromUrl) && tabFromUrl >= 0 && tabFromUrl <= 8 ? tabFromUrl : 0
   );
   const [cardapioForms, setCardapioForms] = useState([]);
   const [ordersStats, setOrdersStats] = useState({ pedidosHoje: 0, mesasOcupadas: 0 });
@@ -110,7 +111,7 @@ const LanchonetesHub = () => {
   useEffect(() => {
     const p = new URLSearchParams(location.search);
     const t = parseInt(p.get("tab"), 10);
-    if (!isNaN(t) && t >= 0 && t <= 7) setTabValue(t);
+    if (!isNaN(t) && t >= 0 && t <= 8) setTabValue(t);
   }, [location.search]);
 
   const handleTabChange = (_, v, formIdOverride) => {
@@ -296,6 +297,7 @@ const LanchonetesHub = () => {
           />
           <Tab label="Garçons" icon={<PeopleIcon />} />
           <Tab label="Entregador" icon={<LocalShippingIcon />} />
+          <Tab label="Cozinha" icon={<KitchenIcon />} />
         </Tabs>
 
         <Box className={classes.tabPanel}>
@@ -422,6 +424,25 @@ const LanchonetesHub = () => {
                         </Typography>
                         <Button size="small" color="primary" style={{ marginTop: 8 }}>
                           Ver links
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Card
+                      className={classes.statCard}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => handleTabChange(null, 8)}
+                    >
+                      <CardContent>
+                        <Typography color="textSecondary" gutterBottom>
+                          Cozinha
+                        </Typography>
+                        <Typography variant="body2">
+                          Tela de pedidos para a cozinha
+                        </Typography>
+                        <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                          Ver QR Code
                         </Button>
                       </CardContent>
                     </Card>
@@ -672,6 +693,50 @@ const LanchonetesHub = () => {
                   <li>Escanear os QR Codes impressos nos pedidos delivery para adicionar à rota</li>
                   <li>Clicar em &quot;Iniciar rota&quot; (atualiza status e notifica clientes)</li>
                   <li>Após as entregas, clicar em &quot;Finalizar rota&quot; (marca como entregue e envia avaliação)</li>
+                </ul>
+              </Box>
+            </Box>
+          )}
+          {tabValue === 8 && (
+            <Box>
+              <Typography variant="h6" gutterBottom>
+                Área da cozinha
+              </Typography>
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: 24 }}>
+                A cozinha pode escanear o QR Code abaixo para abrir a tela de pedidos no celular ou tablet — pedidos de mesa e delivery em abas separadas.
+              </Typography>
+              <Paper style={{ padding: 24, maxWidth: 400 }}>
+                <Box display="flex" flexDirection="column" alignItems="center">
+                  <QRCode
+                    value={`${window.location.origin}/cozinha`}
+                    size={220}
+                    level="M"
+                    includeMargin
+                  />
+                  <Typography variant="body2" color="textSecondary" style={{ marginTop: 16, textAlign: "center" }}>
+                    Escaneie para abrir a tela da cozinha
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary" style={{ marginTop: 8, wordBreak: "break-all" }}>
+                    {window.location.origin}/cozinha
+                  </Typography>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    style={{ marginTop: 16 }}
+                    onClick={() => history.push("/cozinha")}
+                  >
+                    Abrir tela da cozinha
+                  </Button>
+                </Box>
+              </Paper>
+              <Box mt={3}>
+                <Typography variant="subtitle2" gutterBottom>
+                  O que a cozinha pode fazer:
+                </Typography>
+                <ul style={{ paddingLeft: 20, color: "var(--color-text-secondary, #666)" }}>
+                  <li>Ver pedidos de mesa e pedidos delivery em abas separadas</li>
+                  <li>Confirmar, marcar em preparo e concluir pedidos</li>
+                  <li>Atualização em tempo real via conexão com o sistema</li>
                 </ul>
               </Box>
             </Box>
