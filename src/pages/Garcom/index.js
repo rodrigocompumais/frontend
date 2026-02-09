@@ -178,6 +178,10 @@ const Garcom = () => {
   const [halfAndHalfModalHalf1, setHalfAndHalfModalHalf1] = useState("");
   const [halfAndHalfModalHalf2, setHalfAndHalfModalHalf2] = useState("");
   const [halfAndHalfModalQty, setHalfAndHalfModalQty] = useState(1);
+  /** Para produtos com variações: productId -> variationOptionId selecionado */
+  const [selectedVariationOption, setSelectedVariationOption] = useState({});
+  /** Variação selecionada do produto base quando abre o modal meio a meio */
+  const [halfAndHalfModalBaseVariation, setHalfAndHalfModalBaseVariation] = useState(null);
 
   const [mesaStatusFilter, setMesaStatusFilter] = useState("");
   const [orderProductSearch, setOrderProductSearch] = useState("");
@@ -261,31 +265,68 @@ const Garcom = () => {
     return () => clearTimeout(t);
   }, [clienteDialogOpen, searchContact]);
 
-  const getOrderLineCount = (productId) =>
-    orderLines
-      .filter((l) => l.productId === productId)
+  const getOrderLineCount = (productId) => {
+    const product = products.find((p) => p.id === productId);
+    const selectedOptionId = product?.variations && product.variations.length > 0 
+      ? selectedVariationOption[productId] 
+      : null;
+    
+    return orderLines
+      .filter((l) => {
+        if (selectedOptionId) {
+          return l.productId === productId && l.optionId === selectedOptionId;
+        }
+        return l.productId === productId && l.optionId == null;
+      })
       .reduce((a, l) => a + l.quantity, 0);
+  };
 
   const handleQuantityChange = (productId, delta, product) => {
     const p = product || products.find((x) => x.id === productId);
-    if (delta === 1 && p?.variablePrice) {
+    
+    // Se o produto tem variações, verificar se uma variação foi selecionada
+    if (delta === 1 && p?.variations && p.variations.length > 0) {
+      const selectedOptionId = selectedVariationOption[productId];
+      if (!selectedOptionId) {
+        toast.error("Selecione uma variação de preço primeiro");
+        return;
+      }
+    }
+    
+    if (delta === 1 && p?.variablePrice && (!p?.variations || p.variations.length === 0)) {
       setVariablePriceProduct(p);
       setVariablePriceQty(1);
       setVariablePriceUnit(Number(p?.value) ?? 0);
       setVariablePriceDialogOpen(true);
       return;
     }
+    
+    // Obter optionId se houver variação selecionada
+    const optionId = p?.variations && p.variations.length > 0 ? selectedVariationOption[productId] : null;
+    
     setOrderLines((prev) => {
       if (delta === 1) {
-        const idx = prev.findIndex((l) => l.productId === productId && l.productValue == null);
+        // Para produtos com variações, usar optionId na chave
+        const key = optionId ? `${productId}_${optionId}` : productId;
+        const idx = prev.findIndex((l) => {
+          if (optionId) {
+            return l.productId === productId && l.optionId === optionId;
+          }
+          return l.productId === productId && l.productValue == null && l.optionId == null;
+        });
         if (idx >= 0) {
           const next = [...prev];
           next[idx] = { ...next[idx], quantity: next[idx].quantity + 1 };
           return next;
         }
-        return [...prev, { productId, quantity: 1 }];
+        return [...prev, { productId, quantity: 1, optionId }];
       }
-      const rev = prev.map((l, i) => ({ l, i })).filter((x) => x.l.productId === productId);
+      const rev = prev.map((l, i) => ({ l, i })).filter((x) => {
+        if (optionId) {
+          return x.l.productId === productId && x.l.optionId === optionId;
+        }
+        return x.l.productId === productId && x.l.optionId == null;
+      });
       const last = rev[rev.length - 1];
       if (!last) return prev;
       const idx = last.i;
@@ -319,22 +360,65 @@ const Garcom = () => {
     setOrderLines((prev) => prev.filter((_, i) => i !== lineIndex));
   };
 
-  const getFlavorProductsForHalfAndHalf = (baseProduct) => {
+  const getFlavorProductsForHalfAndHalf = (baseProduct, baseVariationLabel = null) => {
     if (!baseProduct) return [];
     const grupoFilter = baseProduct.halfAndHalfGrupo || baseProduct.grupo || null;
-    return products.filter((p) => {
+    let filtered = products.filter((p) => {
       if (grupoFilter) return (p.grupo || "Outros") === grupoFilter;
       return true;
     });
+
+    // Se há uma variação base selecionada, filtrar apenas produtos com variação da mesma sigla
+    if (baseVariationLabel && baseProduct.variations && baseProduct.variations.length > 0) {
+      filtered = filtered.filter((p) => {
+        // Se o produto não tem variações, não incluir
+        if (!p.variations || p.variations.length === 0) return false;
+        
+        // Verificar se alguma opção da variação tem a mesma sigla (label)
+        const firstVariation = p.variations[0];
+        if (!firstVariation || !firstVariation.options) return false;
+        
+        return firstVariation.options.some((opt) => opt.label === baseVariationLabel);
+      });
+    }
+
+    return filtered;
   };
 
-  const computeHalfAndHalfUnitValue = (base, half1, half2) => {
+  const computeHalfAndHalfUnitValue = (base, half1, half2, half1OptionId = null, half2OptionId = null) => {
     if (!base || !half1 || !half2) return 0;
     const rule = base.halfAndHalfPriceRule || "max";
-    const v1 = parseFloat(half1.value) || 0;
-    const v2 = parseFloat(half2.value) || 0;
+    
+    // Obter valores das variações se disponíveis, senão usar valor base
+    let v1 = parseFloat(half1.value) || 0;
+    let v2 = parseFloat(half2.value) || 0;
+    
+    // Se há optionIds, usar os valores das variações
+    if (half1OptionId && half1.variations && half1.variations.length > 0) {
+      const firstVariation = half1.variations[0];
+      const option = firstVariation?.options?.find((o) => o.id === half1OptionId);
+      if (option) v1 = parseFloat(option.value) || 0;
+    }
+    
+    if (half2OptionId && half2.variations && half2.variations.length > 0) {
+      const firstVariation = half2.variations[0];
+      const option = firstVariation?.options?.find((o) => o.id === half2OptionId);
+      if (option) v2 = parseFloat(option.value) || 0;
+    }
+    
     if (rule === "max") return Math.max(v1, v2);
-    if (rule === "fixed") return parseFloat(base.value) || 0;
+    if (rule === "fixed") {
+      // Para fixed, usar a variação selecionada do produto base se disponível
+      if (base.variations && base.variations.length > 0) {
+        const baseOptionId = selectedVariationOption[base.id];
+        if (baseOptionId) {
+          const firstVariation = base.variations[0];
+          const option = firstVariation?.options?.find((o) => o.id === baseOptionId);
+          if (option) return parseFloat(option.value) || 0;
+        }
+      }
+      return parseFloat(base.value) || 0;
+    }
     if (rule === "average") return (v1 + v2) / 2;
     return Math.max(v1, v2);
   };
@@ -344,6 +428,21 @@ const Garcom = () => {
     setHalfAndHalfModalHalf1(String(product.id));
     setHalfAndHalfModalHalf2("");
     setHalfAndHalfModalQty(1);
+    
+    // Capturar a variação selecionada do produto base
+    let baseVariationLabel = null;
+    if (product.variations && product.variations.length > 0) {
+      const selectedOptionId = selectedVariationOption[product.id];
+      if (selectedOptionId) {
+        const firstVariation = product.variations[0];
+        const option = firstVariation?.options?.find((o) => o.id === selectedOptionId);
+        if (option) {
+          baseVariationLabel = option.label;
+        }
+      }
+    }
+    setHalfAndHalfModalBaseVariation(baseVariationLabel);
+    
     setHalfAndHalfModalOpen(true);
   };
 
@@ -352,18 +451,45 @@ const Garcom = () => {
       toast.error("Selecione dois sabores diferentes");
       return;
     }
+    
+    const half1ProductId = parseInt(halfAndHalfModalHalf1, 10);
+    const half2ProductId = parseInt(halfAndHalfModalHalf2, 10);
+    
+    // Encontrar os produtos selecionados
+    const half1Product = products.find((p) => p.id === half1ProductId);
+    const half2Product = products.find((p) => p.id === half2ProductId);
+    
+    // Obter os optionIds das variações selecionadas (se houver)
+    let half1OptionId = null;
+    let half2OptionId = null;
+    
+    if (half1Product?.variations && half1Product.variations.length > 0 && halfAndHalfModalBaseVariation) {
+      const firstVariation = half1Product.variations[0];
+      const option = firstVariation?.options?.find((o) => o.label === halfAndHalfModalBaseVariation);
+      if (option) half1OptionId = option.id;
+    }
+    
+    if (half2Product?.variations && half2Product.variations.length > 0 && halfAndHalfModalBaseVariation) {
+      const firstVariation = half2Product.variations[0];
+      const option = firstVariation?.options?.find((o) => o.label === halfAndHalfModalBaseVariation);
+      if (option) half2OptionId = option.id;
+    }
+    
     const qty = Math.max(1, parseInt(halfAndHalfModalQty, 10) || 1);
     setHalfAndHalfItems((prev) => [
       ...prev,
       {
         baseProductId: halfAndHalfModalProduct.id,
-        half1ProductId: parseInt(halfAndHalfModalHalf1, 10),
-        half2ProductId: parseInt(halfAndHalfModalHalf2, 10),
+        half1ProductId,
+        half2ProductId,
+        half1OptionId,
+        half2OptionId,
         quantity: qty,
       },
     ]);
     setHalfAndHalfModalOpen(false);
     setHalfAndHalfModalProduct(null);
+    setHalfAndHalfModalBaseVariation(null);
   };
 
   const removeHalfAndHalfItem = (index) => {
@@ -376,14 +502,24 @@ const Garcom = () => {
   const calculateTotal = () => {
     let total = orderLines.reduce((acc, line) => {
       const p = products.find((x) => x.id === line.productId);
-      const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+      let unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+      
+      // Se há optionId, usar o valor da variação
+      if (line.optionId && p?.variations && p.variations.length > 0) {
+        const firstVariation = p.variations[0];
+        const option = firstVariation?.options?.find((o) => o.id === line.optionId);
+        if (option) {
+          unit = parseFloat(option.value) || 0;
+        }
+      }
+      
       return acc + line.quantity * unit;
     }, 0);
     halfAndHalfItems.forEach((item) => {
       const base = products.find((p) => p.id === item.baseProductId);
       const half1 = products.find((p) => p.id === item.half1ProductId);
       const half2 = products.find((p) => p.id === item.half2ProductId);
-      total += computeHalfAndHalfUnitValue(base, half1, half2) * item.quantity;
+      total += computeHalfAndHalfUnitValue(base, half1, half2, item.half1OptionId, item.half2OptionId) * item.quantity;
     });
     return total;
   };
@@ -481,7 +617,13 @@ const Garcom = () => {
     }
     for (const line of orderLines) {
       const p = products.find((x) => x.id === line.productId);
-      if (p?.variablePrice && (line.productValue == null || line.productValue < 0)) {
+      // Se tem variações, verificar se uma foi selecionada
+      if (p?.variations && p.variations.length > 0) {
+        if (!line.optionId) {
+          toast.error(`Selecione uma variação para "${p.name}".`);
+          return;
+        }
+      } else if (p?.variablePrice && (line.productValue == null || line.productValue < 0)) {
         toast.error(`Informe o valor para "${p.name}".`);
         return;
       }
@@ -490,23 +632,51 @@ const Garcom = () => {
     try {
       const normalMenuItems = orderLines.map((line) => {
         const p = products.find((x) => x.id === line.productId);
-        const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+        let unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+        
+        // Se há optionId, usar o valor da variação
+        if (line.optionId && p?.variations && p.variations.length > 0) {
+          const firstVariation = p.variations[0];
+          const option = firstVariation?.options?.find((o) => o.id === line.optionId);
+          if (option) {
+            unit = parseFloat(option.value) || 0;
+          }
+        }
+        
+        const productName = line.optionId && p?.variations && p.variations.length > 0
+          ? (() => {
+              const firstVariation = p.variations[0];
+              const option = firstVariation?.options?.find((o) => o.id === line.optionId);
+              return option ? `${p?.name} - ${option.label}` : p?.name;
+            })()
+          : p?.name;
+        
         return {
           productId: line.productId,
           quantity: line.quantity,
-          productName: p?.name,
+          productName: productName || p?.name,
           productValue: unit,
+          optionId: line.optionId || null,
           grupo: p?.grupo || "Outros",
         };
       });
-      const halfMenuItems = halfAndHalfItems.map((item) => ({
-        type: "halfAndHalf",
-        productId: item.baseProductId,
-        quantity: item.quantity,
-        half1ProductId: item.half1ProductId,
-        half2ProductId: item.half2ProductId,
-        grupo: products.find((p) => p.id === item.baseProductId)?.grupo || "Outros",
-      }));
+      const halfMenuItems = halfAndHalfItems.map((item) => {
+        const baseProduct = products.find((p) => p.id === item.baseProductId);
+        const baseOptionId = baseProduct?.variations && baseProduct.variations.length > 0
+          ? (selectedVariationOption[item.baseProductId] ?? null)
+          : null;
+        return {
+          type: "halfAndHalf",
+          productId: item.baseProductId,
+          quantity: item.quantity,
+          half1ProductId: item.half1ProductId,
+          half2ProductId: item.half2ProductId,
+          half1OptionId: item.half1OptionId || null,
+          half2OptionId: item.half2OptionId || null,
+          baseOptionId: baseOptionId,
+          grupo: baseProduct?.grupo || "Outros",
+        };
+      });
       const menuItems = [...normalMenuItems, ...halfMenuItems];
       const labelLower = (l) => (l || "").trim().toLowerCase();
       const fields = form.fields || [];
@@ -749,41 +919,70 @@ const Garcom = () => {
                   {filterProductsBySearch(products.filter((p) => (p.grupo || "Outros") === grupo))
                     .map((product) => {
                       const isHalfAndHalf = product.allowsHalfAndHalf === true;
+                    const hasVariations = product.variations && product.variations.length > 0;
+                    const firstVariation = hasVariations ? product.variations[0] : null;
+                    const selectedOptionId = hasVariations ? (selectedVariationOption[product.id] ?? firstVariation?.options?.[0]?.id) : null;
+                    const displayPrice = hasVariations 
+                      ? (() => {
+                          const option = firstVariation?.options?.find((o) => o.id === selectedOptionId);
+                          return option ? parseFloat(option.value || 0) : parseFloat(product.value || 0);
+                        })()
+                      : (product.variablePrice ? null : parseFloat(product.value || 0));
                       return (
                         <Card key={product.id} className={classes.productCard} variant="outlined">
-                          <CardContent style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px" }}>
-                            <Box>
-                              <Typography variant="body1">{product.name}</Typography>
-                              <Typography variant="body2" color="primary">
-                                {product.variablePrice
-                                  ? "Preço variável"
-                                  : `R$ ${(Number(product.value) || 0).toFixed(2)}`}
-                              </Typography>
-                            </Box>
-                            <Box display="flex" alignItems="center" flexWrap="wrap">
-                              {isHalfAndHalf && (
-                                <Button
-                                  variant="outlined"
-                                  color="primary"
-                                  size="small"
-                                  onClick={() => openHalfAndHalfModal(product)}
-                                  style={{ marginRight: 8 }}
-                                >
-                                  Meio a meio
-                                </Button>
-                              )}
-                              <Box className={classes.quantityControl}>
-                                <IconButton size="small" onClick={() => handleQuantityChange(product.id, -1, product)}>
-                                  <RemoveIcon fontSize="small" />
-                                </IconButton>
-                                <Typography style={{ minWidth: 28, textAlign: "center", fontWeight: 600 }}>
-                                  {getOrderLineCount(product.id)}
+                          <CardContent style={{ display: "flex", flexDirection: "column", padding: "12px 16px" }}>
+                            <Box display="flex" alignItems="center" justifyContent="space-between" marginBottom={hasVariations ? 1 : 0}>
+                              <Box>
+                                <Typography variant="body1">{product.name}</Typography>
+                                <Typography variant="body2" color="primary">
+                                  {product.variablePrice && !hasVariations
+                                    ? "Preço variável"
+                                    : displayPrice != null
+                                    ? `R$ ${displayPrice.toFixed(2).replace(".", ",")}`
+                                    : "Preço variável"}
                                 </Typography>
-                                <IconButton size="small" onClick={() => handleQuantityChange(product.id, 1, product)}>
-                                  <AddIcon fontSize="small" />
-                                </IconButton>
+                              </Box>
+                              <Box display="flex" alignItems="center" flexWrap="wrap">
+                                {isHalfAndHalf && (
+                                  <Button
+                                    variant="outlined"
+                                    color="primary"
+                                    size="small"
+                                    onClick={() => openHalfAndHalfModal(product)}
+                                    style={{ marginRight: 8 }}
+                                  >
+                                    Meio a meio
+                                  </Button>
+                                )}
+                                <Box className={classes.quantityControl}>
+                                  <IconButton size="small" onClick={() => handleQuantityChange(product.id, -1, product)}>
+                                    <RemoveIcon fontSize="small" />
+                                  </IconButton>
+                                  <Typography style={{ minWidth: 28, textAlign: "center", fontWeight: 600 }}>
+                                    {getOrderLineCount(product.id)}
+                                  </Typography>
+                                  <IconButton size="small" onClick={() => handleQuantityChange(product.id, 1, product)}>
+                                    <AddIcon fontSize="small" />
+                                  </IconButton>
+                                </Box>
                               </Box>
                             </Box>
+                            {hasVariations && firstVariation && (
+                              <FormControl variant="outlined" size="small" fullWidth style={{ marginTop: 8 }}>
+                                <InputLabel>{firstVariation.name}</InputLabel>
+                                <Select
+                                  value={selectedOptionId ?? ""}
+                                  onChange={(e) => setSelectedVariationOption((prev) => ({ ...prev, [product.id]: Number(e.target.value) }))}
+                                  label={firstVariation.name}
+                                >
+                                  {firstVariation.options.map((opt) => (
+                                    <MenuItem key={opt.id} value={opt.id}>
+                                      {opt.label} - R$ {parseFloat(opt.value || 0).toFixed(2).replace(".", ",")}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            )}
                           </CardContent>
                         </Card>
                       );
@@ -799,13 +998,31 @@ const Garcom = () => {
               </Typography>
               {orderLines.map((line, idx) => {
                 const p = products.find((x) => x.id === line.productId);
-                const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+                let unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+                
+                // Se há optionId, usar o valor da variação
+                if (line.optionId && p?.variations && p.variations.length > 0) {
+                  const firstVariation = p.variations[0];
+                  const option = firstVariation?.options?.find((o) => o.id === line.optionId);
+                  if (option) {
+                    unit = parseFloat(option.value) || 0;
+                  }
+                }
+                
+                const productName = line.optionId && p?.variations && p.variations.length > 0
+                  ? (() => {
+                      const firstVariation = p.variations[0];
+                      const option = firstVariation?.options?.find((o) => o.id === line.optionId);
+                      return option ? `${p?.name || "Produto"} - ${option.label}` : (p?.name || "Produto");
+                    })()
+                  : (p?.name || "Produto");
+                
                 const subtotal = line.quantity * unit;
                 return (
                   <Box key={`n-${idx}`} className={classes.orderLineRow}>
                     <Box>
                       <Typography variant="body2">
-                        {p?.name || "Produto"} • {line.quantity}x R$ {unit.toFixed(2).replace(".", ",")} = R$ {subtotal.toFixed(2).replace(".", ",")}
+                        {productName} • {line.quantity}x R$ {unit.toFixed(2).replace(".", ",")} = R$ {subtotal.toFixed(2).replace(".", ",")}
                       </Typography>
                     </Box>
                     <IconButton size="small" onClick={() => handleRemoveOrderLine(idx)} aria-label="Remover item">
@@ -823,7 +1040,7 @@ const Garcom = () => {
                     const base = products.find((p) => p.id === item.baseProductId);
                     const h1 = products.find((p) => p.id === item.half1ProductId);
                     const h2 = products.find((p) => p.id === item.half2ProductId);
-                    const unitVal = computeHalfAndHalfUnitValue(base, h1, h2);
+                    const unitVal = computeHalfAndHalfUnitValue(base, h1, h2, item.half1OptionId, item.half2OptionId);
                     const label = base && h1 && h2 ? `${base.name}: ${h1.name} / ${h2.name}` : "Meio a meio";
                     return (
                       <Box key={`h-${idx}`} className={classes.orderLineRow} display="flex" alignItems="center" justifyContent="space-between">
@@ -909,9 +1126,20 @@ const Garcom = () => {
               label="Metade 1"
             >
               <MenuItem value=""><em>Selecione</em></MenuItem>
-              {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct).map((p) => (
-                <MenuItem key={p.id} value={String(p.id)}>{p.name} - R$ {parseFloat(p.value || 0).toFixed(2)}</MenuItem>
-              ))}
+              {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct, halfAndHalfModalBaseVariation).map((p) => {
+                // Obter o preço da variação se disponível, senão usar valor base
+                let displayPrice = parseFloat(p.value || 0);
+                if (halfAndHalfModalBaseVariation && p.variations && p.variations.length > 0) {
+                  const firstVariation = p.variations[0];
+                  const option = firstVariation?.options?.find((o) => o.label === halfAndHalfModalBaseVariation);
+                  if (option) displayPrice = parseFloat(option.value || 0);
+                }
+                return (
+                  <MenuItem key={p.id} value={String(p.id)}>
+                    {p.name} - R$ {displayPrice.toFixed(2).replace(".", ",")}
+                  </MenuItem>
+                );
+              })}
             </Select>
           </FormControl>
           <FormControl fullWidth variant="outlined" size="small" style={{ marginTop: 16 }}>
@@ -922,9 +1150,20 @@ const Garcom = () => {
               label="Metade 2"
             >
               <MenuItem value=""><em>Selecione</em></MenuItem>
-              {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct).map((p) => (
-                <MenuItem key={p.id} value={String(p.id)}>{p.name} - R$ {parseFloat(p.value || 0).toFixed(2)}</MenuItem>
-              ))}
+              {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct, halfAndHalfModalBaseVariation).map((p) => {
+                // Obter o preço da variação se disponível, senão usar valor base
+                let displayPrice = parseFloat(p.value || 0);
+                if (halfAndHalfModalBaseVariation && p.variations && p.variations.length > 0) {
+                  const firstVariation = p.variations[0];
+                  const option = firstVariation?.options?.find((o) => o.label === halfAndHalfModalBaseVariation);
+                  if (option) displayPrice = parseFloat(option.value || 0);
+                }
+                return (
+                  <MenuItem key={p.id} value={String(p.id)}>
+                    {p.name} - R$ {displayPrice.toFixed(2).replace(".", ",")}
+                  </MenuItem>
+                );
+              })}
             </Select>
           </FormControl>
           <TextField

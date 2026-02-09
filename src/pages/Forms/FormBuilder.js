@@ -941,6 +941,28 @@ const FormBuilder = () => {
                       fullWidth
                       variant="outlined"
                       type="number"
+                      inputProps={{ min: 0, step: 0.01 }}
+                      label="Taxa de Entrega (R$)"
+                      placeholder="0.00"
+                      value={formData.settings?.deliveryFee || ""}
+                      onChange={(e) => {
+                        const val = e.target.value === "" ? "" : parseFloat(e.target.value) || 0;
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            deliveryFee: val,
+                          },
+                        });
+                      }}
+                      helperText="Valor da taxa de entrega que será adicionado aos pedidos de delivery"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      type="number"
                       inputProps={{ min: 0, step: 1 }}
                       label="Avançar para 'Confirmado' automaticamente após (minutos)"
                       placeholder="0 = desativado"

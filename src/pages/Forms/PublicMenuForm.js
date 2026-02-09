@@ -202,6 +202,8 @@ const PublicMenuForm = ({
   const [halfAndHalfModalQty, setHalfAndHalfModalQty] = useState(1);
   /** Para produtos com variações: productId -> variationOptionId selecionado */
   const [selectedVariationOption, setSelectedVariationOption] = useState({});
+  /** Variação selecionada do produto base quando abre o modal meio a meio */
+  const [halfAndHalfModalBaseVariation, setHalfAndHalfModalBaseVariation] = useState(null);
 
   const appStyles = form ? getFormAppearanceStyles(form) : null;
   const fieldVariant = appStyles?.fieldVariant || "outlined";
@@ -517,14 +519,23 @@ const PublicMenuForm = ({
           grupo: product?.grupo || "Outros",
         };
       });
-      const halfMenuItems = halfAndHalfItems.map((item) => ({
-        type: "halfAndHalf",
-        productId: item.baseProductId,
-        quantity: item.quantity,
-        half1ProductId: item.half1ProductId,
-        half2ProductId: item.half2ProductId,
-        grupo: products.find((p) => p.id === item.baseProductId)?.grupo || "Outros",
-      }));
+      const halfMenuItems = halfAndHalfItems.map((item) => {
+        const baseProduct = products.find((p) => p.id === item.baseProductId);
+        const baseOptionId = baseProduct?.variations && baseProduct.variations.length > 0
+          ? (selectedVariationOption[item.baseProductId] ?? null)
+          : null;
+        return {
+          type: "halfAndHalf",
+          productId: item.baseProductId,
+          quantity: item.quantity,
+          half1ProductId: item.half1ProductId,
+          half2ProductId: item.half2ProductId,
+          half1OptionId: item.half1OptionId || null,
+          half2OptionId: item.half2OptionId || null,
+          baseOptionId: baseOptionId,
+          grupo: baseProduct?.grupo || "Outros",
+        };
+      });
       const menuItems = [...normalMenuItems, ...halfMenuItems];
 
       // Preparar answers - incluir TODOS os campos do formulário (automáticos + customizados)
@@ -565,34 +576,7 @@ const PublicMenuForm = ({
       }
 
       // Metadata com mesa e orderType (QR da mesa ou campo mesa configurado)
-      let orderMetadata = {};
-      const mesasEnabled = form.settings?.mesas !== false;
-      const deliveryEnabled = form.settings?.delivery !== false;
-      if (mesaFromQR && mesaValue) {
-        orderMetadata.tableId = mesaFromQR.id;
-        orderMetadata.tableNumber = mesaFromQR.number || mesaFromQR.name || String(mesaFromQR.id);
-        orderMetadata.orderType = "mesa";
-      } else if (form.settings?.showMesaField && mesaValue && mesasEnabled) {
-        const isSelect = (form.settings?.mesaFieldMode || "select") === "select";
-        const mesaId = isSelect ? parseInt(mesaValue, 10) : null;
-        const mesa = mesas.find((m) => m.id === parseInt(mesaValue, 10));
-        const mesaNumber = isSelect ? (mesa?.number || mesa?.name || mesaValue) : mesaValue;
-        if (mesaId) orderMetadata.tableId = mesaId;
-        orderMetadata.tableNumber = mesaNumber;
-        orderMetadata.orderType = "mesa";
-      } else if (mesaValue && mesasEnabled) {
-        const mesaIdNum = parseInt(mesaValue, 10);
-        if (!Number.isNaN(mesaIdNum)) {
-          orderMetadata.tableId = mesaIdNum;
-          orderMetadata.tableNumber = mesas.find((m) => m.id === mesaIdNum)?.number || mesas.find((m) => m.id === mesaIdNum)?.name || mesaValue;
-          orderMetadata.orderType = "mesa";
-        }
-      }
-      if (!orderMetadata.tableId && deliveryEnabled) {
-        orderMetadata.orderType = "delivery";
-      } else if (!orderMetadata.tableId) {
-        orderMetadata.orderType = mesasEnabled ? "mesa" : "delivery";
-      }
+      const orderMetadata = getOrderMetadata();
 
       // Enviar formulário (orderToken garante que o pedido vá para a mesa do link assinado)
       const response = await api.post(`/public/forms/${form.slug}/submit`, {
@@ -614,7 +598,7 @@ const PublicMenuForm = ({
           const base = products.find((p) => p.id === item.productId);
           const half1 = products.find((p) => p.id === item.half1ProductId);
           const half2 = products.find((p) => p.id === item.half2ProductId);
-          const unitVal = computeHalfAndHalfUnitValue(base, half1, half2);
+          const unitVal = computeHalfAndHalfUnitValue(base, half1, half2, item.half1OptionId, item.half2OptionId);
           const productName = base && half1 && half2
             ? `${base.name} - Metade ${half1.name} / Metade ${half2.name}`
             : "Meio a meio";
@@ -630,9 +614,15 @@ const PublicMenuForm = ({
           total: (item.productValue || 0) * item.quantity,
         };
       });
+      const orderMetadataForDisplay = getOrderMetadata();
+      const subtotal = calculateTotal() - (orderMetadataForDisplay?.orderType === "delivery" && form?.settings?.deliveryFee ? (parseFloat(form.settings.deliveryFee) || 0) : 0);
+      const deliveryFee = orderMetadataForDisplay?.orderType === "delivery" && form?.settings?.deliveryFee ? (parseFloat(form.settings.deliveryFee) || 0) : 0;
+      
       const orderInfo = {
         menuItems: displayMenuItems,
         total: calculateTotal(),
+        subtotal: subtotal,
+        deliveryFee: deliveryFee,
         totalItems: getTotalItems(),
         customerName,
         customerPhone: answers[autoFields.find((f) => f.metadata?.autoFieldType === "phone")?.id] || "",
@@ -646,6 +636,7 @@ const PublicMenuForm = ({
           })),
         ],
         averageDeliveryTime: form.settings?.averageDeliveryTime || "",
+        orderType: orderMetadataForDisplay?.orderType || "mesa",
       };
       setOrderData(orderInfo);
 
@@ -780,31 +771,126 @@ const PublicMenuForm = ({
     return products.filter((p) => (p.grupo || "Outros") === grupo);
   };
 
-  const getFlavorProductsForHalfAndHalf = (baseProduct) => {
+  const getFlavorProductsForHalfAndHalf = (baseProduct, baseVariationLabel = null) => {
     if (!baseProduct) return [];
     const grupoFilter = baseProduct.halfAndHalfGrupo || baseProduct.grupo || null;
-    return products.filter((p) => {
+    let filtered = products.filter((p) => {
       if (grupoFilter) return (p.grupo || "") === grupoFilter;
       return true;
     });
+
+    // Se há uma variação base selecionada, filtrar apenas produtos com variação da mesma sigla
+    if (baseVariationLabel && baseProduct.variations && baseProduct.variations.length > 0) {
+      filtered = filtered.filter((p) => {
+        // Se o produto não tem variações, não incluir
+        if (!p.variations || p.variations.length === 0) return false;
+        
+        // Verificar se alguma opção da variação tem a mesma sigla (label)
+        const firstVariation = p.variations[0];
+        if (!firstVariation || !firstVariation.options) return false;
+        
+        return firstVariation.options.some((opt) => opt.label === baseVariationLabel);
+      });
+    }
+
+    return filtered;
   };
 
-  const computeHalfAndHalfUnitValue = (base, half1, half2) => {
+  const computeHalfAndHalfUnitValue = (base, half1, half2, half1OptionId = null, half2OptionId = null) => {
     if (!base || !half1 || !half2) return 0;
     const rule = base.halfAndHalfPriceRule || "max";
-    const v1 = parseFloat(half1.value) || 0;
-    const v2 = parseFloat(half2.value) || 0;
+    
+    // Obter valores das variações se disponíveis, senão usar valor base
+    let v1 = parseFloat(half1.value) || 0;
+    let v2 = parseFloat(half2.value) || 0;
+    
+    // Se há optionIds, usar os valores das variações
+    if (half1OptionId && half1.variations && half1.variations.length > 0) {
+      const firstVariation = half1.variations[0];
+      const option = firstVariation?.options?.find((o) => o.id === half1OptionId);
+      if (option) v1 = parseFloat(option.value) || 0;
+    }
+    
+    if (half2OptionId && half2.variations && half2.variations.length > 0) {
+      const firstVariation = half2.variations[0];
+      const option = firstVariation?.options?.find((o) => o.id === half2OptionId);
+      if (option) v2 = parseFloat(option.value) || 0;
+    }
+    
     if (rule === "max") return Math.max(v1, v2);
-    if (rule === "fixed") return parseFloat(base.value) || 0;
+    if (rule === "fixed") {
+      // Para fixed, usar a variação selecionada do produto base se disponível
+      if (base.variations && base.variations.length > 0) {
+        const baseOptionId = selectedVariationOption[base.id];
+        if (baseOptionId) {
+          const firstVariation = base.variations[0];
+          const option = firstVariation?.options?.find((o) => o.id === baseOptionId);
+          if (option) return parseFloat(option.value) || 0;
+        }
+      }
+      return parseFloat(base.value) || 0;
+    }
     if (rule === "average") return (v1 + v2) / 2;
     return Math.max(v1, v2);
   };
 
   const openHalfAndHalfModal = (product) => {
     setHalfAndHalfModalProduct(product);
-    setHalfAndHalfModalHalf1(String(product.id));
-    setHalfAndHalfModalHalf2("");
     setHalfAndHalfModalQty(1);
+    
+    // Capturar a variação selecionada do produto base
+    let baseVariationLabel = null;
+    let baseOptionId = null;
+    if (product.variations && product.variations.length > 0) {
+      const selectedOptionId = selectedVariationOption[product.id];
+      if (selectedOptionId) {
+        baseOptionId = selectedOptionId;
+        const firstVariation = product.variations[0];
+        const option = firstVariation?.options?.find((o) => o.id === selectedOptionId);
+        if (option) {
+          baseVariationLabel = option.label;
+        }
+      } else {
+        // Se não há variação selecionada, usar a primeira variação disponível
+        const firstVariation = product.variations[0];
+        if (firstVariation?.options && firstVariation.options.length > 0) {
+          const firstOption = firstVariation.options[0];
+          baseOptionId = firstOption.id;
+          baseVariationLabel = firstOption.label;
+        }
+      }
+    }
+    setHalfAndHalfModalBaseVariation(baseVariationLabel);
+    
+    // Filtrar produtos disponíveis com a mesma variação
+    const availableProducts = getFlavorProductsForHalfAndHalf(product, baseVariationLabel);
+    
+    // Pré-selecionar o primeiro produto disponível (não o produto base) com a variação correta
+    if (availableProducts.length > 0) {
+      // Se há variação, encontrar o primeiro produto que tenha essa variação (excluindo o produto base)
+      let firstProductId = null;
+      if (baseVariationLabel) {
+        const productWithVariation = availableProducts.find((p) => {
+          if (p.id === product.id) return false; // Excluir o produto base
+          if (!p.variations || p.variations.length === 0) return false;
+          const firstVariation = p.variations[0];
+          return firstVariation?.options?.some((opt) => opt.label === baseVariationLabel);
+        });
+        if (productWithVariation) {
+          firstProductId = productWithVariation.id;
+        }
+      }
+      // Se não encontrou com variação ou não há variação, usar o primeiro disponível (excluindo o produto base)
+      if (!firstProductId && availableProducts.length > 0) {
+        const firstAvailable = availableProducts.find((p) => p.id !== product.id) || availableProducts[0];
+        firstProductId = firstAvailable.id;
+      }
+      setHalfAndHalfModalHalf1(String(firstProductId));
+    } else {
+      setHalfAndHalfModalHalf1("");
+    }
+    
+    setHalfAndHalfModalHalf2("");
     setHalfAndHalfModalOpen(true);
   };
 
@@ -813,18 +899,45 @@ const PublicMenuForm = ({
       toast.error("Selecione dois sabores diferentes");
       return;
     }
+    
+    const half1ProductId = parseInt(halfAndHalfModalHalf1, 10);
+    const half2ProductId = parseInt(halfAndHalfModalHalf2, 10);
+    
+    // Encontrar os produtos selecionados
+    const half1Product = products.find((p) => p.id === half1ProductId);
+    const half2Product = products.find((p) => p.id === half2ProductId);
+    
+    // Obter os optionIds das variações selecionadas (se houver)
+    let half1OptionId = null;
+    let half2OptionId = null;
+    
+    if (half1Product?.variations && half1Product.variations.length > 0 && halfAndHalfModalBaseVariation) {
+      const firstVariation = half1Product.variations[0];
+      const option = firstVariation?.options?.find((o) => o.label === halfAndHalfModalBaseVariation);
+      if (option) half1OptionId = option.id;
+    }
+    
+    if (half2Product?.variations && half2Product.variations.length > 0 && halfAndHalfModalBaseVariation) {
+      const firstVariation = half2Product.variations[0];
+      const option = firstVariation?.options?.find((o) => o.label === halfAndHalfModalBaseVariation);
+      if (option) half2OptionId = option.id;
+    }
+    
     const qty = Math.max(1, parseInt(halfAndHalfModalQty, 10) || 1);
     setHalfAndHalfItems((prev) => [
       ...prev,
       {
         baseProductId: halfAndHalfModalProduct.id,
-        half1ProductId: parseInt(halfAndHalfModalHalf1, 10),
-        half2ProductId: parseInt(halfAndHalfModalHalf2, 10),
+        half1ProductId,
+        half2ProductId,
+        half1OptionId,
+        half2OptionId,
         quantity: qty,
       },
     ]);
     setHalfAndHalfModalOpen(false);
     setHalfAndHalfModalProduct(null);
+    setHalfAndHalfModalBaseVariation(null);
   };
 
   const removeHalfAndHalfItem = (index) => {
@@ -841,9 +954,48 @@ const PublicMenuForm = ({
       const base = products.find((p) => p.id === item.baseProductId);
       const half1 = products.find((p) => p.id === item.half1ProductId);
       const half2 = products.find((p) => p.id === item.half2ProductId);
-      total += computeHalfAndHalfUnitValue(base, half1, half2) * item.quantity;
+      total += computeHalfAndHalfUnitValue(base, half1, half2, item.half1OptionId, item.half2OptionId) * item.quantity;
     });
+    
+    // Adicionar taxa de entrega se for pedido de delivery
+    const orderMetadata = getOrderMetadata();
+    if (orderMetadata?.orderType === "delivery" && form?.settings?.deliveryFee) {
+      total += parseFloat(form.settings.deliveryFee) || 0;
+    }
+    
     return total;
+  };
+  
+  const getOrderMetadata = () => {
+    let orderMetadata = {};
+    const mesasEnabled = form.settings?.mesas !== false;
+    const deliveryEnabled = form.settings?.delivery !== false;
+    if (mesaFromQR && mesaValue) {
+      orderMetadata.tableId = mesaFromQR.id;
+      orderMetadata.tableNumber = mesaFromQR.number || mesaFromQR.name || String(mesaFromQR.id);
+      orderMetadata.orderType = "mesa";
+    } else if (form.settings?.showMesaField && mesaValue && mesasEnabled) {
+      const isSelect = (form.settings?.mesaFieldMode || "select") === "select";
+      const mesaId = isSelect ? parseInt(mesaValue, 10) : null;
+      const mesa = mesas.find((m) => m.id === parseInt(mesaValue, 10));
+      const mesaNumber = isSelect ? (mesa?.number || mesa?.name || mesaValue) : mesaValue;
+      if (mesaId) orderMetadata.tableId = mesaId;
+      orderMetadata.tableNumber = mesaNumber;
+      orderMetadata.orderType = "mesa";
+    } else if (mesaValue && mesasEnabled) {
+      const mesaIdNum = parseInt(mesaValue, 10);
+      if (!Number.isNaN(mesaIdNum)) {
+        orderMetadata.tableId = mesaIdNum;
+        orderMetadata.tableNumber = mesas.find((m) => m.id === mesaIdNum)?.number || mesas.find((m) => m.id === mesaIdNum)?.name || mesaValue;
+        orderMetadata.orderType = "mesa";
+      }
+    }
+    if (!orderMetadata.tableId && deliveryEnabled) {
+      orderMetadata.orderType = "delivery";
+    } else if (!orderMetadata.tableId) {
+      orderMetadata.orderType = mesasEnabled ? "mesa" : "delivery";
+    }
+    return orderMetadata;
   };
 
   const getTotalItems = () => {
@@ -961,6 +1113,30 @@ const PublicMenuForm = ({
                   {orderData.totalItems} {orderData.totalItems === 1 ? "item" : "itens"}
                 </Typography>
               </Box>
+              
+              <Divider style={{ marginBottom: 12 }} />
+              
+              {orderData.subtotal !== undefined && (
+                <Box display="flex" justifyContent="space-between" alignItems="center" style={{ marginBottom: 8 }}>
+                  <Typography variant="body1">
+                    <strong>Subtotal:</strong>
+                  </Typography>
+                  <Typography variant="body1" style={{ fontWeight: 600 }}>
+                    R$ {orderData.subtotal.toFixed(2).replace(".", ",")}
+                  </Typography>
+                </Box>
+              )}
+              
+              {orderData.deliveryFee > 0 && (
+                <Box display="flex" justifyContent="space-between" alignItems="center" style={{ marginBottom: 12 }}>
+                  <Typography variant="body1">
+                    <strong>Taxa de entrega:</strong>
+                  </Typography>
+                  <Typography variant="body1" style={{ fontWeight: 600 }}>
+                    R$ {orderData.deliveryFee.toFixed(2).replace(".", ",")}
+                  </Typography>
+                </Box>
+              )}
               
               <Divider style={{ marginBottom: 12 }} />
               
@@ -1195,9 +1371,20 @@ const PublicMenuForm = ({
                   label="Metade 1"
                 >
                   <MenuItem value=""><em>Selecione</em></MenuItem>
-                  {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct).map((p) => (
-                    <MenuItem key={p.id} value={String(p.id)}>{p.name} - R$ {parseFloat(p.value || 0).toFixed(2)}</MenuItem>
-                  ))}
+                  {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct, halfAndHalfModalBaseVariation).map((p) => {
+                    // Obter o preço da variação se disponível, senão usar valor base
+                    let displayPrice = parseFloat(p.value || 0);
+                    if (halfAndHalfModalBaseVariation && p.variations && p.variations.length > 0) {
+                      const firstVariation = p.variations[0];
+                      const option = firstVariation?.options?.find((o) => o.label === halfAndHalfModalBaseVariation);
+                      if (option) displayPrice = parseFloat(option.value || 0);
+                    }
+                    return (
+                      <MenuItem key={p.id} value={String(p.id)}>
+                        {p.name} - R$ {displayPrice.toFixed(2).replace(".", ",")}
+                      </MenuItem>
+                    );
+                  })}
                 </Select>
               </FormControl>
               <FormControl fullWidth variant={fieldVariant} size="small" style={{ marginTop: 16 }}>
@@ -1208,9 +1395,20 @@ const PublicMenuForm = ({
                   label="Metade 2"
                 >
                   <MenuItem value=""><em>Selecione</em></MenuItem>
-                  {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct).map((p) => (
-                    <MenuItem key={p.id} value={String(p.id)}>{p.name} - R$ {parseFloat(p.value || 0).toFixed(2)}</MenuItem>
-                  ))}
+                  {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct, halfAndHalfModalBaseVariation).map((p) => {
+                    // Obter o preço da variação se disponível, senão usar valor base
+                    let displayPrice = parseFloat(p.value || 0);
+                    if (halfAndHalfModalBaseVariation && p.variations && p.variations.length > 0) {
+                      const firstVariation = p.variations[0];
+                      const option = firstVariation?.options?.find((o) => o.label === halfAndHalfModalBaseVariation);
+                      if (option) displayPrice = parseFloat(option.value || 0);
+                    }
+                    return (
+                      <MenuItem key={p.id} value={String(p.id)}>
+                        {p.name} - R$ {displayPrice.toFixed(2).replace(".", ",")}
+                      </MenuItem>
+                    );
+                  })}
                 </Select>
               </FormControl>
               <TextField
@@ -1234,6 +1432,33 @@ const PublicMenuForm = ({
           {activeTab === groups.length && (
             <form onSubmit={handleSubmit}>
               <Box style={{ marginTop: 24 }}>
+                {/* Listar todos os itens normais */}
+                {Object.keys(selectedItems).length > 0 && (
+                  <Box marginBottom={2} padding={2} bgcolor="action.hover" borderRadius={8}>
+                    <Typography variant="subtitle2" gutterBottom>Itens do pedido</Typography>
+                    {Object.keys(selectedItems).map((key) => {
+                      const { product, productValue, productName, optionLabel } = getItemDetailsByKey(key);
+                      const quantity = selectedItems[key];
+                      const subtotal = productValue * quantity;
+                      return (
+                        <Box key={key} display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 4 }}>
+                          <Typography variant="body2">
+                            {quantity}x {productName} — R$ {subtotal.toFixed(2).replace(".", ",")}
+                          </Typography>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => handleQuantityInput(key, 0)} 
+                            aria-label="Remover"
+                          >
+                            <RemoveIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                )}
+                
+                {/* Listar itens meio a meio */}
                 {halfAndHalfItems.length > 0 && (
                   <Box marginBottom={2} padding={2} bgcolor="action.hover" borderRadius={8}>
                     <Typography variant="subtitle2" gutterBottom>Itens meio a meio</Typography>
@@ -1241,7 +1466,7 @@ const PublicMenuForm = ({
                       const base = products.find((p) => p.id === item.baseProductId);
                       const h1 = products.find((p) => p.id === item.half1ProductId);
                       const h2 = products.find((p) => p.id === item.half2ProductId);
-                      const unitVal = computeHalfAndHalfUnitValue(base, h1, h2);
+                      const unitVal = computeHalfAndHalfUnitValue(base, h1, h2, item.half1OptionId, item.half2OptionId);
                       const label = base && h1 && h2
                         ? `${base.name}: ${h1.name} / ${h2.name}`
                         : "Meio a meio";
