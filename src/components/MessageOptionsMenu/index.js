@@ -3,13 +3,14 @@ import React, { useState, useContext } from "react";
 import MenuItem from "@material-ui/core/MenuItem";
 import Collapse from "@material-ui/core/Collapse";
 import IconButton from "@material-ui/core/IconButton";
-import { ExpandMore, ExpandLess } from "@material-ui/icons";
+import { ExpandMore, ExpandLess, Forward } from "@material-ui/icons";
 import Box from "@material-ui/core/Box";
 
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import ConfirmationModal from "../ConfirmationModal";
 import EditMessageModal from "../EditMessageModal";
+import ForwardMessageModal from "../ForwardMessageModal";
 import { Menu } from "@material-ui/core";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import toastError from "../../errors/toastError";
@@ -27,10 +28,11 @@ const isTextMessage = (msg) => {
 	return msg.mediaType === "conversation" || msg.mediaType === "extendedTextMessage";
 };
 
-const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorPosition, anchorOrigin }) => {
+const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorPosition, anchorOrigin, ticketId }) => {
 	const { setReplyingMessage } = useContext(ReplyMessageContext);
 	const [confirmationOpen, setConfirmationOpen] = useState(false);
 	const [editOpen, setEditOpen] = useState(false);
+	const [forwardOpen, setForwardOpen] = useState(false);
 	const [reactionsOpen, setReactionsOpen] = useState(false);
 
 	const handleDeleteMessage = async () => {
@@ -88,6 +90,11 @@ const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorPosition, an
 		handleClose();
 	};
 
+	const handleOpenForwardModal = () => {
+		setForwardOpen(true);
+		handleClose();
+	};
+
 	return (
 		<>
 			<ConfirmationModal
@@ -103,6 +110,12 @@ const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorPosition, an
 				onClose={() => setEditOpen(false)}
 				message={message}
 				onConfirm={handleEditMessage}
+			/>
+			<ForwardMessageModal
+				modalOpen={forwardOpen}
+				onClose={() => setForwardOpen(false)}
+				message={message}
+				currentTicketId={ticketId}
 			/>
 			<Menu
 				anchorReference="anchorPosition"
@@ -145,6 +158,10 @@ const MessageOptionsMenu = ({ message, menuOpen, handleClose, anchorPosition, an
 				</div>
 				<MenuItem onClick={hanldeReplyMessage}>
 					{i18n.t("messageOptionsMenu.reply")}
+				</MenuItem>
+				<MenuItem onClick={handleOpenForwardModal}>
+					<Forward fontSize="small" style={{ marginRight: 8, verticalAlign: "middle" }} />
+					{i18n.t("messageOptionsMenu.forward") || "Encaminhar"}
 				</MenuItem>
 			</Menu>
 		</>

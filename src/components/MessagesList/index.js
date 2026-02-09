@@ -1501,6 +1501,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
         anchorOrigin={menuAnchorOrigin}
         menuOpen={messageOptionsMenuOpen}
         handleClose={handleCloseMessageOptionsMenu}
+        ticketId={ticketId}
       />
       <div
         id="messagesList"
