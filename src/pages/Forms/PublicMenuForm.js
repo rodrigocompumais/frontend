@@ -1087,16 +1087,18 @@ const PublicMenuForm = ({
                         <Typography className={classes.productValue}>
                           R$ {parseFloat(product.value || 0).toFixed(2).replace(".", ",")}
                         </Typography>
-                        {isHalfAndHalf ? (
-                          <Button
-                            variant="outlined"
-                            color="primary"
-                            size="small"
-                            onClick={() => openHalfAndHalfModal(product)}
-                          >
-                            Meio a meio
-                          </Button>
-                        ) : (
+                        <Box display="flex" alignItems="center" flexWrap="wrap">
+                          {isHalfAndHalf && (
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              size="small"
+                              onClick={() => openHalfAndHalfModal(product)}
+                              style={{ marginRight: 8 }}
+                            >
+                              Meio a meio
+                            </Button>
+                          )}
                           <Box className={classes.quantityControl}>
                             <IconButton
                               size="small"
@@ -1121,7 +1123,7 @@ const PublicMenuForm = ({
                               <AddIcon />
                             </IconButton>
                           </Box>
-                        )}
+                        </Box>
                       </Box>
                         </Box>
                       </Box>

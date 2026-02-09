@@ -18,6 +18,10 @@ import {
   Grid,
   Tabs,
   Tab,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from "@material-ui/core";
 import AddIcon from "@material-ui/icons/Add";
 import RemoveIcon from "@material-ui/icons/Remove";
@@ -166,6 +170,13 @@ const Garcom = () => {
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [newContactInitial, setNewContactInitial] = useState({});
 
+  const [halfAndHalfItems, setHalfAndHalfItems] = useState([]);
+  const [halfAndHalfModalOpen, setHalfAndHalfModalOpen] = useState(false);
+  const [halfAndHalfModalProduct, setHalfAndHalfModalProduct] = useState(null);
+  const [halfAndHalfModalHalf1, setHalfAndHalfModalHalf1] = useState("");
+  const [halfAndHalfModalHalf2, setHalfAndHalfModalHalf2] = useState("");
+  const [halfAndHalfModalQty, setHalfAndHalfModalQty] = useState(1);
+
   useEffect(() => {
     if (!hasLanchonetes && !modulesLoading) {
       history.push("/dashboard");
@@ -303,15 +314,75 @@ const Garcom = () => {
     setOrderLines((prev) => prev.filter((_, i) => i !== lineIndex));
   };
 
-  const getTotalItems = () =>
-    orderLines.reduce((a, l) => a + l.quantity, 0);
+  const getFlavorProductsForHalfAndHalf = (baseProduct) => {
+    if (!baseProduct) return [];
+    const grupoFilter = baseProduct.halfAndHalfGrupo || baseProduct.grupo || null;
+    return products.filter((p) => {
+      if (p.id === baseProduct.id) return false;
+      if (grupoFilter) return (p.grupo || "Outros") === grupoFilter;
+      return true;
+    });
+  };
 
-  const calculateTotal = () =>
-    orderLines.reduce((acc, line) => {
+  const computeHalfAndHalfUnitValue = (base, half1, half2) => {
+    if (!base || !half1 || !half2) return 0;
+    const rule = base.halfAndHalfPriceRule || "max";
+    const v1 = parseFloat(half1.value) || 0;
+    const v2 = parseFloat(half2.value) || 0;
+    if (rule === "max") return Math.max(v1, v2);
+    if (rule === "fixed") return parseFloat(base.value) || 0;
+    if (rule === "average") return (v1 + v2) / 2;
+    return Math.max(v1, v2);
+  };
+
+  const openHalfAndHalfModal = (product) => {
+    setHalfAndHalfModalProduct(product);
+    setHalfAndHalfModalHalf1("");
+    setHalfAndHalfModalHalf2("");
+    setHalfAndHalfModalQty(1);
+    setHalfAndHalfModalOpen(true);
+  };
+
+  const addHalfAndHalfToCart = () => {
+    if (!halfAndHalfModalProduct || !halfAndHalfModalHalf1 || !halfAndHalfModalHalf2 || halfAndHalfModalHalf1 === halfAndHalfModalHalf2) {
+      toast.error("Selecione dois sabores diferentes");
+      return;
+    }
+    const qty = Math.max(1, parseInt(halfAndHalfModalQty, 10) || 1);
+    setHalfAndHalfItems((prev) => [
+      ...prev,
+      {
+        baseProductId: halfAndHalfModalProduct.id,
+        half1ProductId: parseInt(halfAndHalfModalHalf1, 10),
+        half2ProductId: parseInt(halfAndHalfModalHalf2, 10),
+        quantity: qty,
+      },
+    ]);
+    setHalfAndHalfModalOpen(false);
+    setHalfAndHalfModalProduct(null);
+  };
+
+  const removeHalfAndHalfItem = (index) => {
+    setHalfAndHalfItems((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const getTotalItems = () =>
+    orderLines.reduce((a, l) => a + l.quantity, 0) + halfAndHalfItems.reduce((a, i) => a + i.quantity, 0);
+
+  const calculateTotal = () => {
+    let total = orderLines.reduce((acc, line) => {
       const p = products.find((x) => x.id === line.productId);
       const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
       return acc + line.quantity * unit;
     }, 0);
+    halfAndHalfItems.forEach((item) => {
+      const base = products.find((p) => p.id === item.baseProductId);
+      const half1 = products.find((p) => p.id === item.half1ProductId);
+      const half2 = products.find((p) => p.id === item.half2ProductId);
+      total += computeHalfAndHalfUnitValue(base, half1, half2) * item.quantity;
+    });
+    return total;
+  };
 
   const handleContactCreated = (contact) => {
     setSelectedContact(contact);
@@ -343,6 +414,7 @@ const Garcom = () => {
       setMesaParaPedido(mesa);
       setContactParaPedido(contact);
       setOrderLines([]);
+      setHalfAndHalfItems([]);
       setOrderDialogTab(0);
       setOrderDialogOpen(true);
     } else {
@@ -385,6 +457,7 @@ const Garcom = () => {
       setMesaParaPedido(mesaAtualizada);
       setContactParaPedido(selectedContact);
       setOrderLines([]);
+      setHalfAndHalfItems([]);
       setOrderDialogTab(0);
       setOrderDialogOpen(true);
       setMesaParaOcupar(null);
@@ -411,7 +484,7 @@ const Garcom = () => {
     }
     setSubmitting(true);
     try {
-      const menuItems = orderLines.map((line) => {
+      const normalMenuItems = orderLines.map((line) => {
         const p = products.find((x) => x.id === line.productId);
         const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
         return {
@@ -422,6 +495,15 @@ const Garcom = () => {
           grupo: p?.grupo || "Outros",
         };
       });
+      const halfMenuItems = halfAndHalfItems.map((item) => ({
+        type: "halfAndHalf",
+        productId: item.baseProductId,
+        quantity: item.quantity,
+        half1ProductId: item.half1ProductId,
+        half2ProductId: item.half2ProductId,
+        grupo: products.find((p) => p.id === item.baseProductId)?.grupo || "Outros",
+      }));
+      const menuItems = [...normalMenuItems, ...halfMenuItems];
       const labelLower = (l) => (l || "").trim().toLowerCase();
       const fields = form.fields || [];
       const autoFields = fields.filter(
@@ -463,6 +545,7 @@ const Garcom = () => {
       });
       toast.success("Pedido enviado!");
       setOrderLines([]);
+      setHalfAndHalfItems([]);
       setOrderDialogOpen(false);
       setMesaParaPedido(null);
       setContactParaPedido(null);
@@ -569,6 +652,7 @@ const Garcom = () => {
             setMesaParaPedido(null);
             setContactParaPedido(null);
             setOrderLines([]);
+            setHalfAndHalfItems([]);
           }
         }}
         maxWidth="sm"
@@ -608,36 +692,52 @@ const Garcom = () => {
                 <Box>
                   {products
                     .filter((p) => (p.grupo || "Outros") === grupo)
-                    .map((product) => (
-                      <Card key={product.id} className={classes.productCard} variant="outlined">
-                        <CardContent style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px" }}>
-                          <Box>
-                            <Typography variant="body1">{product.name}</Typography>
-                            <Typography variant="body2" color="primary">
-                              {product.variablePrice
-                                ? "Preço variável"
-                                : `R$ ${(Number(product.value) || 0).toFixed(2)}`}
-                            </Typography>
-                          </Box>
-                          <Box className={classes.quantityControl}>
-                            <IconButton size="small" onClick={() => handleQuantityChange(product.id, -1, product)}>
-                              <RemoveIcon fontSize="small" />
-                            </IconButton>
-                            <Typography style={{ minWidth: 28, textAlign: "center", fontWeight: 600 }}>
-                              {getOrderLineCount(product.id)}
-                            </Typography>
-                            <IconButton size="small" onClick={() => handleQuantityChange(product.id, 1, product)}>
-                              <AddIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    ))}
+                    .map((product) => {
+                      const isHalfAndHalf = product.allowsHalfAndHalf === true;
+                      return (
+                        <Card key={product.id} className={classes.productCard} variant="outlined">
+                          <CardContent style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px" }}>
+                            <Box>
+                              <Typography variant="body1">{product.name}</Typography>
+                              <Typography variant="body2" color="primary">
+                                {product.variablePrice
+                                  ? "Preço variável"
+                                  : `R$ ${(Number(product.value) || 0).toFixed(2)}`}
+                              </Typography>
+                            </Box>
+                            <Box display="flex" alignItems="center" flexWrap="wrap">
+                              {isHalfAndHalf && (
+                                <Button
+                                  variant="outlined"
+                                  color="primary"
+                                  size="small"
+                                  onClick={() => openHalfAndHalfModal(product)}
+                                  style={{ marginRight: 8 }}
+                                >
+                                  Meio a meio
+                                </Button>
+                              )}
+                              <Box className={classes.quantityControl}>
+                                <IconButton size="small" onClick={() => handleQuantityChange(product.id, -1, product)}>
+                                  <RemoveIcon fontSize="small" />
+                                </IconButton>
+                                <Typography style={{ minWidth: 28, textAlign: "center", fontWeight: 600 }}>
+                                  {getOrderLineCount(product.id)}
+                                </Typography>
+                                <IconButton size="small" onClick={() => handleQuantityChange(product.id, 1, product)}>
+                                  <AddIcon fontSize="small" />
+                                </IconButton>
+                              </Box>
+                            </Box>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                 </Box>
               )}
             </div>
           ))}
-          {orderLines.length > 0 && (
+          {(orderLines.length > 0 || halfAndHalfItems.length > 0) && (
             <Box px={2} pt={1} pb={0}>
               <Typography variant="subtitle2" gutterBottom>
                 Itens do pedido
@@ -647,7 +747,7 @@ const Garcom = () => {
                 const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
                 const subtotal = line.quantity * unit;
                 return (
-                  <Box key={idx} className={classes.orderLineRow}>
+                  <Box key={`n-${idx}`} className={classes.orderLineRow}>
                     <Box>
                       <Typography variant="body2">
                         {p?.name || "Produto"} • {line.quantity}x R$ {unit.toFixed(2).replace(".", ",")} = R$ {subtotal.toFixed(2).replace(".", ",")}
@@ -659,6 +759,30 @@ const Garcom = () => {
                   </Box>
                 );
               })}
+              {halfAndHalfItems.length > 0 && (
+                <Box mt={1}>
+                  <Typography variant="caption" color="textSecondary" display="block" gutterBottom>
+                    Itens meio a meio
+                  </Typography>
+                  {halfAndHalfItems.map((item, idx) => {
+                    const base = products.find((p) => p.id === item.baseProductId);
+                    const h1 = products.find((p) => p.id === item.half1ProductId);
+                    const h2 = products.find((p) => p.id === item.half2ProductId);
+                    const unitVal = computeHalfAndHalfUnitValue(base, h1, h2);
+                    const label = base && h1 && h2 ? `${base.name}: ${h1.name} / ${h2.name}` : "Meio a meio";
+                    return (
+                      <Box key={`h-${idx}`} className={classes.orderLineRow} display="flex" alignItems="center" justifyContent="space-between">
+                        <Typography variant="body2">
+                          {item.quantity}x {label} — R$ {(unitVal * item.quantity).toFixed(2).replace(".", ",")}
+                        </Typography>
+                        <IconButton size="small" onClick={() => removeHalfAndHalfItem(idx)} aria-label="Remover meio a meio">
+                          <RemoveIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              )}
             </Box>
           )}
         </DialogContent>
@@ -714,6 +838,57 @@ const Garcom = () => {
             Cancelar
           </Button>
           <Button onClick={handleAddVariablePriceLine} color="primary" variant="contained">
+            Adicionar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={halfAndHalfModalOpen} onClose={() => setHalfAndHalfModalOpen(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Meio a meio - {halfAndHalfModalProduct?.name}</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth variant="outlined" size="small" style={{ marginTop: 8 }}>
+            <InputLabel>Metade 1</InputLabel>
+            <Select
+              value={halfAndHalfModalHalf1}
+              onChange={(e) => setHalfAndHalfModalHalf1(e.target.value)}
+              label="Metade 1"
+            >
+              <MenuItem value=""><em>Selecione</em></MenuItem>
+              {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct).map((p) => (
+                <MenuItem key={p.id} value={String(p.id)}>{p.name} - R$ {parseFloat(p.value || 0).toFixed(2)}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth variant="outlined" size="small" style={{ marginTop: 16 }}>
+            <InputLabel>Metade 2</InputLabel>
+            <Select
+              value={halfAndHalfModalHalf2}
+              onChange={(e) => setHalfAndHalfModalHalf2(e.target.value)}
+              label="Metade 2"
+            >
+              <MenuItem value=""><em>Selecione</em></MenuItem>
+              {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct).map((p) => (
+                <MenuItem key={p.id} value={String(p.id)}>{p.name} - R$ {parseFloat(p.value || 0).toFixed(2)}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <TextField
+            label="Quantidade"
+            type="number"
+            value={halfAndHalfModalQty}
+            onChange={(e) => setHalfAndHalfModalQty(e.target.value)}
+            inputProps={{ min: 1 }}
+            variant="outlined"
+            size="small"
+            fullWidth
+            style={{ marginTop: 16 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setHalfAndHalfModalOpen(false)} color="secondary">
+            Cancelar
+          </Button>
+          <Button onClick={addHalfAndHalfToCart} color="primary" variant="contained">
             Adicionar
           </Button>
         </DialogActions>

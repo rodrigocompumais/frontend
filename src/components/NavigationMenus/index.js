@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
 import {
   Button,
@@ -100,6 +100,23 @@ const NavigationMenus = () => {
   const [administracaoAnchor, setAdministracaoAnchor] = useState(null);
   const [sistemaAnchor, setSistemaAnchor] = useState(null);
 
+  // Expandir ao passar o mouse: timer para fechar ao sair (evita fechar ao mover para o dropdown)
+  const closeTimerRef = useRef(null);
+  const HOVER_CLOSE_DELAY = 150;
+  const clearCloseTimer = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  };
+  const openOnHover = (setAnchor, e) => {
+    clearCloseTimer();
+    setAnchor(e.currentTarget);
+  };
+  const scheduleClose = (setAnchor) => {
+    closeTimerRef.current = setTimeout(() => setAnchor(null), HOVER_CLOSE_DELAY);
+  };
+
   // Features do plano
   const [showCampaigns, setShowCampaigns] = useState(false);
   const [showKanban, setShowKanban] = useState(false);
@@ -157,6 +174,8 @@ const NavigationMenus = () => {
       <Button
         className={classes.menuButton}
         onClick={(e) => setAtendimentoAnchor(e.currentTarget)}
+        onMouseEnter={(e) => openOnHover(setAtendimentoAnchor, e)}
+        onMouseLeave={() => scheduleClose(setAtendimentoAnchor)}
         startIcon={
           <Badge badgeContent={totalNotifications > 0 ? totalNotifications : 0} color="error" max={99}>
             <HeadsetMicIcon />
@@ -168,11 +187,17 @@ const NavigationMenus = () => {
       <Menu
         anchorEl={atendimentoAnchor}
         open={Boolean(atendimentoAnchor)}
-        onClose={() => setAtendimentoAnchor(null)}
+        onClose={() => { clearCloseTimer(); setAtendimentoAnchor(null); }}
+        MenuListProps={{ onMouseLeave: () => scheduleClose(setAtendimentoAnchor) }}
+        MenuListProps={{ onMouseEnter: clearCloseTimer }}
         getContentAnchorEl={null}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
         className={classes.menu}
+        PaperProps={{
+          onMouseEnter: clearCloseTimer,
+          onMouseLeave: () => scheduleClose(setAtendimentoAnchor),
+        }}
       >
         <MenuItem
           className={classes.menuItem}
