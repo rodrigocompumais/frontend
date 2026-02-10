@@ -85,9 +85,17 @@ const useStyles = makeStyles((theme) => ({
   },
   paginationContainer: {
     display: "flex",
-    justifyContent: "center",
+    justifyContent: "space-between",
     alignItems: "center",
-    padding: theme.spacing(2),
+    padding: theme.spacing(1.5, 2),
+    backgroundColor: theme.palette.background.paper,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+  },
+  paginationControls: {
+    display: "flex",
+    alignItems: "center",
     gap: theme.spacing(1),
   },
   pageButton: {
@@ -95,11 +103,26 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(0.5, 1),
   },
   activePageButton: {
-    backgroundColor: theme.palette.primary.main,
-    color: theme.palette.primary.contrastText,
+    backgroundColor: "#f57c00", // Laranja para destacar a página atual
+    color: "#ffffff",
+    fontWeight: "bold",
+    boxShadow: theme.shadows[4],
+    border: "2px solid #e65100",
+    minWidth: 44,
     "&:hover": {
-      backgroundColor: theme.palette.primary.dark,
+      backgroundColor: "#e65100",
+      boxShadow: theme.shadows[6],
     },
+  },
+  pageInfo: {
+    fontSize: "0.875rem",
+    color: theme.palette.text.secondary,
+    fontWeight: 500,
+    marginLeft: theme.spacing(2),
+  },
+  loadingOverlay: {
+    position: "relative",
+    minHeight: 200,
   },
 }));
 
@@ -396,6 +419,59 @@ const Contacts = () => {
 
         </MainHeaderButtonsWrapper>
       </MainHeader>
+      {totalPages > 1 && (
+        <Box className={classes.paginationContainer}>
+          <Box className={classes.paginationControls}>
+            <IconButton
+              onClick={handlePreviousPage}
+              disabled={pageNumber === 1 || loading}
+              size="small"
+              title="Página anterior"
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+            {getPageNumbers().map((page, index) => {
+              if (page === "...") {
+                return (
+                  <span key={`ellipsis-${index}`} style={{ padding: "0 8px" }}>
+                    ...
+                  </span>
+                );
+              }
+              return (
+                <Button
+                  key={page}
+                  className={`${classes.pageButton} ${
+                    page === pageNumber ? classes.activePageButton : ""
+                  }`}
+                  variant={page === pageNumber ? "contained" : "outlined"}
+                  color={page === pageNumber ? "secondary" : "primary"}
+                  onClick={() => handlePageChange(page)}
+                  disabled={loading}
+                  size="small"
+                >
+                  {page}
+                </Button>
+              );
+            })}
+            <IconButton
+              onClick={handleNextPage}
+              disabled={pageNumber === totalPages || loading}
+              size="small"
+              title="Próxima página"
+            >
+              <ChevronRightIcon />
+            </IconButton>
+          </Box>
+          <Box className={classes.pageInfo}>
+            {totalCount > 0 && (
+              <span>
+                Página <strong>{pageNumber}</strong> de <strong>{totalPages}</strong> • {totalCount} {totalCount === 1 ? "contato" : "contatos"}
+              </span>
+            )}
+          </Box>
+        </Box>
+      )}
       <Paper
         className={classes.mainPaper}
         variant="outlined"
@@ -421,60 +497,71 @@ const Contacts = () => {
           </TableHead>
           <TableBody>
             <>
-              {contacts.map((contact) => (
-                <TableRow key={contact.id}>
-                  <TableCell style={{ paddingRight: 0 }}>
-                    <Avatar 
-                      src={contact.profilePicUrl}
-                      onClick={() => {
-                        setSelectedContact(contact);
-                        setAvatarModalOpen(true);
-                      }}
-                      style={{ cursor: "pointer" }}
-                    />
-                  </TableCell>
-                  <TableCell>{contact.name}</TableCell>
-                  <TableCell align="center">{contact.number}</TableCell>
-                  <TableCell align="center">{contact.email}</TableCell>
-                  <TableCell align="center">
-                    {contact.user ? contact.user.name : "-"}
-                  </TableCell>
-                  <TableCell align="center">
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        setContactTicket(contact);
-                        setNewTicketModalOpen(true);
-                      }}
-                    >
-                      <WhatsAppIcon />
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={() => hadleEditContact(contact.id)}
-                    >
-                      <EditIcon />
-                    </IconButton>
-                    <Can
-                      role={user.profile}
-                      perform="contacts-page:deleteContact"
-                      yes={() => (
+              {loading && contacts.length === 0 ? (
+                // Mostrar múltiplos skeletons enquanto carrega pela primeira vez
+                Array.from({ length: 10 }).map((_, index) => (
+                  <TableRowSkeleton key={`skeleton-${index}`} avatar columns={4} />
+                ))
+              ) : contacts.length > 0 ? (
+                <>
+                  {contacts.map((contact) => (
+                    <TableRow key={contact.id}>
+                      <TableCell style={{ paddingRight: 0 }}>
+                        <Avatar 
+                          src={contact.profilePicUrl}
+                          onClick={() => {
+                            setSelectedContact(contact);
+                            setAvatarModalOpen(true);
+                          }}
+                          style={{ cursor: "pointer" }}
+                        />
+                      </TableCell>
+                      <TableCell>{contact.name}</TableCell>
+                      <TableCell align="center">{contact.number}</TableCell>
+                      <TableCell align="center">{contact.email}</TableCell>
+                      <TableCell align="center">
+                        {contact.user ? contact.user.name : "-"}
+                      </TableCell>
+                      <TableCell align="center">
                         <IconButton
                           size="small"
-                          onClick={(e) => {
-                            setConfirmOpen(true);
-                            setDeletingContact(contact);
+                          onClick={() => {
+                            setContactTicket(contact);
+                            setNewTicketModalOpen(true);
                           }}
                         >
-                          <DeleteOutlineIcon />
+                          <WhatsAppIcon />
                         </IconButton>
-                      )}
-                    />
-                  </TableCell>
-                </TableRow>
-              ))}
-              {loading && <TableRowSkeleton avatar columns={3} />}
-              {!loading && contacts.length === 0 && (
+                        <IconButton
+                          size="small"
+                          onClick={() => hadleEditContact(contact.id)}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <Can
+                          role={user.profile}
+                          perform="contacts-page:deleteContact"
+                          yes={() => (
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                setConfirmOpen(true);
+                                setDeletingContact(contact);
+                              }}
+                            >
+                              <DeleteOutlineIcon />
+                            </IconButton>
+                          )}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {loading && (
+                    // Mostrar skeleton apenas na última linha quando já há contatos e está carregando mais
+                    <TableRowSkeleton avatar columns={4} />
+                  )}
+                </>
+              ) : (
                 <TableRow>
                   <TableCell colSpan={6} align="center">
                     {i18n.t("contacts.noContacts") || "Nenhum contato encontrado"}
@@ -485,55 +572,6 @@ const Contacts = () => {
           </TableBody>
         </Table>
       </Paper>
-      {totalPages > 1 && (
-        <Box className={classes.paginationContainer}>
-          <IconButton
-            onClick={handlePreviousPage}
-            disabled={pageNumber === 1 || loading}
-            size="small"
-          >
-            <ChevronLeftIcon />
-          </IconButton>
-          {getPageNumbers().map((page, index) => {
-            if (page === "...") {
-              return (
-                <span key={`ellipsis-${index}`} style={{ padding: "0 8px" }}>
-                  ...
-                </span>
-              );
-            }
-            return (
-              <Button
-                key={page}
-                className={`${classes.pageButton} ${
-                  page === pageNumber ? classes.activePageButton : ""
-                }`}
-                variant={page === pageNumber ? "contained" : "outlined"}
-                color="primary"
-                onClick={() => handlePageChange(page)}
-                disabled={loading}
-                size="small"
-              >
-                {page}
-              </Button>
-            );
-          })}
-          <IconButton
-            onClick={handleNextPage}
-            disabled={pageNumber === totalPages || loading}
-            size="small"
-          >
-            <ChevronRightIcon />
-          </IconButton>
-          <Box style={{ marginLeft: 16, fontSize: "0.875rem", color: "rgba(0, 0, 0, 0.54)" }}>
-            {totalCount > 0 && (
-              <span>
-                Página {pageNumber} de {totalPages} ({totalCount} {totalCount === 1 ? "contato" : "contatos"})
-              </span>
-            )}
-          </Box>
-        </Box>
-      )}
       <ContactAvatarModal
         open={avatarModalOpen}
         onClose={() => {
