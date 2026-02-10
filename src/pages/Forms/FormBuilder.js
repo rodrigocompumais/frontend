@@ -374,18 +374,35 @@ const FormBuilder = () => {
         ? (isMenuForm ? prepareFieldsForPayload(formData.settings?.finalizeFields) : [])
         : prepareFieldsForPayload(formData.fields);
 
+      // Preparar mesaPrintConfig - filtrar apenas linhas completamente configuradas
+      const mesaPrintConfig = Array.isArray(formData.settings?.mesaPrintConfig) 
+        ? formData.settings.mesaPrintConfig.filter(row => {
+            // Manter apenas linhas com printDeviceId válido E grupos configurados
+            const hasValidDevice = row.printDeviceId && row.printDeviceId > 0;
+            const hasValidGroups = Array.isArray(row.groupNames) && row.groupNames.length > 0;
+            return hasValidDevice && hasValidGroups;
+          })
+        : [];
+
       const payload = {
         ...formData,
         fields: fieldsToSend,
-        // Garantir que settings seja um objeto válido
-        settings: formData.settings || {
-          formType: "normal",
-          quotationItems: [],
-          finalizeFields: [],
-          whatsAppMessage: "",
-          finalizeFields: [],
+        // Garantir que settings seja um objeto válido e inclua mesaPrintConfig
+        settings: {
+          ...(formData.settings || {}),
+          // Incluir mesaPrintConfig mesmo que vazio (para substituir o valor do banco)
+          mesaPrintConfig: mesaPrintConfig,
+          // Garantir que deliveryPrintDeviceIds seja um array válido
+          deliveryPrintDeviceIds: Array.isArray(formData.settings?.deliveryPrintDeviceIds)
+            ? formData.settings.deliveryPrintDeviceIds.filter(id => id && id > 0)
+            : [],
         },
       };
+
+      // Log para debug
+      console.log("FormBuilder: Saving form with mesaPrintConfig:", payload.settings.mesaPrintConfig);
+      console.log("FormBuilder: Saving form with deliveryPrintDeviceIds:", payload.settings.deliveryPrintDeviceIds);
+      console.log("FormBuilder: Full settings being sent:", JSON.stringify(payload.settings, null, 2));
 
       if (isEdit) {
         await api.put(`/forms/${id}`, payload);
@@ -915,52 +932,72 @@ const FormBuilder = () => {
                     <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 12 }}>
                       {i18n.t("formBuilder.printConfig.mesaHint")}
                     </Typography>
-                    {(formData.settings?.mesaPrintConfig || []).map((row, idx) => (
-                      <Box key={idx} display="flex" alignItems="flex-start" flexWrap="wrap" gap={2} style={{ marginBottom: 12 }}>
-                        <FormControl variant="outlined" size="small" style={{ minWidth: 200 }}>
-                          <InputLabel>{i18n.t("formBuilder.printConfig.printer")}</InputLabel>
-                          <Select
-                            value={row.printDeviceId || ""}
-                            onChange={(e) => {
-                              const next = [...(formData.settings?.mesaPrintConfig || [])];
-                              next[idx] = { ...next[idx], printDeviceId: e.target.value ? Number(e.target.value) : "" };
-                              setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
-                            }}
-                            label={i18n.t("formBuilder.printConfig.printer")}
-                          >
-                            <MenuItem value="">
-                              <em>{i18n.t("formBuilder.printConfig.none")}</em>
-                            </MenuItem>
-                            {printDevices.map((device) => (
-                              <MenuItem key={device.id} value={device.id}>
-                                {device.name || device.deviceId}
+                    {(formData.settings?.mesaPrintConfig || []).map((row, idx) => {
+                      // Garantir que groupNames seja sempre um array válido
+                      const groupNames = Array.isArray(row.groupNames) ? row.groupNames : [];
+                      
+                      return (
+                        <Box key={`mesa-print-${idx}-${row.printDeviceId || 'new'}`} display="flex" alignItems="flex-start" flexWrap="wrap" gap={2} style={{ marginBottom: 12 }}>
+                          <FormControl variant="outlined" size="small" style={{ minWidth: 200 }}>
+                            <InputLabel>{i18n.t("formBuilder.printConfig.printer")}</InputLabel>
+                            <Select
+                              value={row.printDeviceId || ""}
+                              onChange={(e) => {
+                                const next = [...(formData.settings?.mesaPrintConfig || [])];
+                                next[idx] = { ...next[idx], printDeviceId: e.target.value ? Number(e.target.value) : "" };
+                                setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
+                              }}
+                              label={i18n.t("formBuilder.printConfig.printer")}
+                            >
+                              <MenuItem value="">
+                                <em>{i18n.t("formBuilder.printConfig.none")}</em>
                               </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        <FormControl variant="outlined" size="small" style={{ minWidth: 220 }}>
-                          <InputLabel>{i18n.t("formBuilder.printConfig.groups")}</InputLabel>
-                          <Select
-                            multiple
-                            value={row.groupNames || []}
-                            onChange={(e) => {
-                              const next = [...(formData.settings?.mesaPrintConfig || [])];
-                              const val = e.target.value;
-                              next[idx] = { ...next[idx], groupNames: val.includes("*") ? ["*"] : val };
-                              setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
-                            }}
-                            label={i18n.t("formBuilder.printConfig.groups")}
-                            renderValue={(sel) => (sel.includes("*") ? i18n.t("formBuilder.printConfig.allGroups") : sel.join(", "))}
-                          >
-                            <MenuItem value="*">{i18n.t("formBuilder.printConfig.allGroups")}</MenuItem>
-                            {productGroups.map((g) => (
-                              <MenuItem key={g} value={g}>
-                                <Checkbox checked={(row.groupNames || []).indexOf(g) > -1} />
-                                <span>{g}</span>
+                              {printDevices.map((device) => (
+                                <MenuItem key={device.id} value={device.id}>
+                                  {device.name || device.deviceId}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                          <FormControl variant="outlined" size="small" style={{ minWidth: 220 }}>
+                            <InputLabel>{i18n.t("formBuilder.printConfig.groups")}</InputLabel>
+                            <Select
+                              multiple
+                              value={groupNames}
+                              onChange={(e) => {
+                                const next = [...(formData.settings?.mesaPrintConfig || [])];
+                                const val = Array.isArray(e.target.value) ? e.target.value : [];
+                                // Se selecionar "*", remove outras seleções e mantém apenas "*"
+                                // Se selecionar qualquer outro grupo, remove "*"
+                                const hasAllGroups = val.includes("*");
+                                next[idx] = { 
+                                  ...next[idx], 
+                                  groupNames: hasAllGroups ? ["*"] : val.filter(v => v !== "*")
+                                };
+                                setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
+                              }}
+                              label={i18n.t("formBuilder.printConfig.groups")}
+                              renderValue={(sel) => {
+                                if (!sel || sel.length === 0) return "";
+                                return sel.includes("*") ? i18n.t("formBuilder.printConfig.allGroups") : sel.join(", ");
+                              }}
+                            >
+                              <MenuItem value="*">
+                                <Checkbox checked={groupNames.includes("*")} />
+                                <span>{i18n.t("formBuilder.printConfig.allGroups")}</span>
                               </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
+                              {productGroups && productGroups.length > 0 ? (
+                                productGroups.map((g) => (
+                                  <MenuItem key={g} value={g}>
+                                    <Checkbox checked={groupNames.includes(g)} />
+                                    <span>{g}</span>
+                                  </MenuItem>
+                                ))
+                              ) : (
+                                <MenuItem disabled>Nenhum grupo disponível</MenuItem>
+                              )}
+                            </Select>
+                          </FormControl>
                         <IconButton
                           size="small"
                           onClick={() => {
@@ -972,12 +1009,13 @@ const FormBuilder = () => {
                           <DeleteIcon fontSize="small" />
                         </IconButton>
                       </Box>
-                    ))}
+                    );
+                    })}
                     <Button
                       size="small"
                       startIcon={<AddIcon />}
                       onClick={() => {
-                        const next = [...(formData.settings?.mesaPrintConfig || []), { printDeviceId: "", groupNames: ["*"] }];
+                        const next = [...(formData.settings?.mesaPrintConfig || []), { printDeviceId: "", groupNames: [] }];
                         setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
                       }}
                     >

@@ -241,7 +241,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
   }, [socketManager, user?.companyId]);
 
   useEffect(() => {
-    if (!orderDialogOpen || !mesaParaPedido || !cardapioSlug) {
+    if (!orderDialogOpen || !mesaParaPedido) {
       if (!orderDialogOpen) {
         setOrderForm(null);
         setOrderProducts([]);
@@ -250,15 +250,29 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       }
       return;
     }
+    
+    // Usar o formulário vinculado à mesa, ou fallback para cardapioSlug genérico
+    const mesaFormSlug = mesaParaPedido?.form?.slug || cardapioSlug;
+    if (!mesaFormSlug) {
+      toast.error("Nenhum formulário de cardápio encontrado para esta mesa.");
+      return;
+    }
+    
     setOrderLoading(true);
     (async () => {
       try {
         const [{ data: formsData }, { data: productsData }] = await Promise.all([
           api.get("/forms?formType=cardapio"),
-          api.get(`/public/forms/${cardapioSlug}/products`).catch(() => ({ data: { products: [] } })),
+          api.get(`/public/forms/${mesaFormSlug}/products`).catch(() => ({ data: { products: [] } })),
         ]);
         const forms = formsData?.forms || [];
-        const form = forms.find((f) => f.slug === cardapioSlug) || forms[0] || null;
+        // Priorizar o formulário vinculado à mesa, depois o cardapioSlug, e por último o primeiro cardápio
+        const form = forms.find((f) => f.slug === mesaFormSlug) || forms.find((f) => f.slug === cardapioSlug) || forms[0] || null;
+        if (!form) {
+          toast.error("Formulário de cardápio não encontrado.");
+          return;
+        }
+        console.log(`Mesas: Using form for order - mesaFormSlug=${mesaFormSlug}, form.slug=${form.slug}, form.id=${form.id}`);
         setOrderForm(form);
         setOrderProducts(productsData?.products || []);
       } catch (err) {
@@ -267,7 +281,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         setOrderLoading(false);
       }
     })();
-  }, [orderDialogOpen, mesaParaPedido?.id, cardapioSlug]);
+  }, [orderDialogOpen, mesaParaPedido?.id, mesaParaPedido?.form?.slug, cardapioSlug]);
 
   const handleOpenOrderDialog = (mesa) => {
     if (mesa.status !== "ocupada" || !mesa.contact) {
