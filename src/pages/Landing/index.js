@@ -823,10 +823,21 @@ const Landing = () => {
     };
   }, []);
 
-  // Função para redirecionar para página de cadastro com plano selecionado
+  // Função para redirecionar para WhatsApp com mensagem sobre o plano selecionado
   const handleAcquirePlan = (plan) => {
-    // Redireciona para a página de signup com o planId como query parameter
-    history.push(`/signup?planId=${plan.id}`);
+    // Formata a mensagem com informações do plano
+    const message = encodeURIComponent(
+      `Olá! Tenho interesse no plano *${plan.name}*\n\n` +
+      `*Detalhes do plano:*\n` +
+      `• Usuários: ${plan.users || 0} + Gestor\n` +
+      `• Valor: R$ ${plan.value ? plan.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'Consulte'}/mês\n` +
+      `• Conexões: ${plan.connections || 1}\n\n` +
+      `Gostaria de mais informações sobre este plano.`
+    );
+    
+    // Redireciona para WhatsApp
+    const whatsappNumber = '553433511861';
+    window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
   };
 
   // Função para scroll suave para seções
