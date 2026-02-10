@@ -5,9 +5,11 @@ import {
   IconButton,
   Typography,
   InputAdornment,
+  Button,
   makeStyles,
 } from "@material-ui/core";
 import FileCopyIcon from "@material-ui/icons/FileCopy";
+import GetAppIcon from "@material-ui/icons/GetApp";
 import PrintDevicesManager from "./PrintDevicesManager";
 import { toast } from "react-toastify";
 import { i18n } from "../../translate/i18n";
@@ -120,6 +122,34 @@ export default function OptionsAPI() {
       </div>
 
       <PrintDevicesManager />
+
+      <Box style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid #e0e0e0" }}>
+        <Typography variant="h6" gutterBottom>
+          Agente de Impressão
+        </Typography>
+        <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+          Baixe o agente de impressão para Windows. Este aplicativo permite que impressoras locais ou de rede recebam pedidos via WebSocket.
+        </Typography>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<GetAppIcon />}
+          onClick={() => {
+            const link = document.createElement("a");
+            link.href = "/agent_printer/PrintAgent.exe";
+            link.download = "PrintAgent.exe";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            toast.success("Download do PrintAgent.exe iniciado");
+          }}
+        >
+          Baixar PrintAgent.exe
+        </Button>
+        <Typography variant="body2" color="textSecondary" style={{ marginTop: 8, fontSize: "0.875rem" }}>
+          Após o download, execute o arquivo e configure a URL WebSocket e as impressoras na interface local (http://localhost:5000).
+        </Typography>
+      </Box>
     </Box>
   );
 }
