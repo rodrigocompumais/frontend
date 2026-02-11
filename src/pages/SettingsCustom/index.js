@@ -106,7 +106,25 @@ const SettingsCustom = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Verificar se o usuário está tentando acessar a aba API sem permissão
+  useEffect(() => {
+    if (tab === "api" && currentUser.profile && !canAccessAPI()) {
+      toast.error("Você não tem permissão para acessar esta página.");
+      setTab("options");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, currentUser.profile, hasLanchonetes]);
+
   const handleTabChange = (event, newValue) => {
+    // Verificar se o usuário está tentando acessar a aba API sem permissão
+    if (newValue === "api") {
+      const userIsAdmin = currentUser.profile === "admin";
+      if (!userIsAdmin || !hasLanchonetes) {
+        toast.error("Você não tem permissão para acessar esta página. Apenas administradores com módulo lanchonete podem acessar.");
+        return;
+      }
+    }
+
     async function findData() {
       setLoading(true);
       try {
@@ -155,6 +173,14 @@ const SettingsCustom = () => {
     return currentUser.super;
   };
 
+  const isAdmin = () => {
+    return currentUser.profile === "admin";
+  };
+
+  const canAccessAPI = () => {
+    return isAdmin() && hasLanchonetes;
+  };
+
   return (
     <MainContainer className={classes.root}>
       <MainHeader>
@@ -172,7 +198,7 @@ const SettingsCustom = () => {
         >
           <Tab label={i18n.t("settings.tabs.options")} value={"options"} />
           <Tab label={i18n.t("settings.tabs.ai")} value={"ai"} />
-          <Tab label={i18n.t("settings.tabs.api")} value={"api"} />
+          {canAccessAPI() && <Tab label={i18n.t("settings.tabs.api")} value={"api"} />}
           {hasLanchonetes && <Tab label={i18n.t("settings.tabs.billing")} value={"billing"} />}
           {schedulesEnabled && <Tab label={i18n.t("settings.tabs.schedules")} value={"schedules"} />}
           {isSuper() ? <Tab label={i18n.t("settings.tabs.companies")} value={"companies"} /> : null}
@@ -254,9 +280,11 @@ const SettingsCustom = () => {
           <TabPanel className={classes.container} value={tab} name={"ai"}>
             <OptionsAI settings={settings} />
           </TabPanel>
-          <TabPanel className={classes.container} value={tab} name={"api"}>
-            <OptionsAPI />
-          </TabPanel>
+          {canAccessAPI() && (
+            <TabPanel className={classes.container} value={tab} name={"api"}>
+              <OptionsAPI />
+            </TabPanel>
+          )}
         </Paper>
       </Paper>
     </MainContainer>
