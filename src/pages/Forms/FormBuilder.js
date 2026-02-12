@@ -135,7 +135,7 @@ const FormBuilder = () => {
   const currentIdRef = useRef(null);
   const initializedRef = useRef(false);
   const { whatsApps } = useWhatsApps();
-  const { hasLanchonetes } = useCompanyModules();
+  const { hasLanchonetes, hasAgendamento } = useCompanyModules();
   const [printDevices, setPrintDevices] = useState([]);
   const [productGroups, setProductGroups] = useState([]);
 
@@ -387,9 +387,11 @@ const FormBuilder = () => {
       const payload = {
         ...formData,
         fields: fieldsToSend,
-        // Garantir que settings seja um objeto válido e inclua mesaPrintConfig
+        // Garantir que settings seja um objeto válido e inclua formType, mesaPrintConfig, etc.
         settings: {
           ...(formData.settings || {}),
+          // Garantir que formType seja sempre enviado (agendamento, cardapio, quotation, normal)
+          formType: formData.settings?.formType ?? "normal",
           // Incluir mesaPrintConfig mesmo que vazio (para substituir o valor do banco)
           mesaPrintConfig: mesaPrintConfig,
           // Garantir que deliveryPrintDeviceIds seja um array válido
@@ -724,9 +726,10 @@ const FormBuilder = () => {
                     value={formData.settings?.formType || "normal"}
                     onChange={(e) => {
                       const isCardapio = e.target.value === "cardapio";
+                      const isAgendamento = e.target.value === "agendamento";
                       setFormData({
                         ...formData,
-                        createContact: isCardapio ? true : formData.createContact,
+                        createContact: isCardapio || isAgendamento ? true : formData.createContact,
                         createTicket: isCardapio ? true : formData.createTicket,
                         settings: {
                           ...formData.settings,
@@ -749,9 +752,184 @@ const FormBuilder = () => {
                     {hasLanchonetes && (
                       <MenuItem value="cardapio">Cardápio (Módulo Lanchonetes)</MenuItem>
                     )}
+                    {hasAgendamento && (
+                      <MenuItem value="agendamento">Agendamento</MenuItem>
+                    )}
                   </Select>
                 </FormControl>
               </Grid>
+
+              {formData.settings?.formType === "agendamento" && (
+                <Grid container spacing={2} style={{ marginTop: 16 }}>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" style={{ marginBottom: 8 }}>Configurações do agendamento</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Hora início (ex: 8)"
+                      value={formData.settings?.agendamento?.startHour ?? 8}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            agendamento: {
+                              ...formData.settings?.agendamento,
+                              startHour: parseInt(e.target.value, 10) || 8,
+                            },
+                          },
+                        })
+                      }
+                      inputProps={{ min: 0, max: 23 }}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Hora fim (ex: 18)"
+                      value={formData.settings?.agendamento?.endHour ?? 18}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            agendamento: {
+                              ...formData.settings?.agendamento,
+                              endHour: parseInt(e.target.value, 10) || 18,
+                            },
+                          },
+                        })
+                      }
+                      inputProps={{ min: 0, max: 23 }}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Buffer entre agendamentos (min)"
+                      value={formData.settings?.agendamento?.bufferMinutes ?? 0}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            agendamento: {
+                              ...formData.settings?.agendamento,
+                              bufferMinutes: Math.max(0, parseInt(e.target.value, 10) || 0),
+                            },
+                          },
+                        })
+                      }
+                      inputProps={{ min: 0 }}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      label="Lembretes (horas antes, ex: 24, 1)"
+                      placeholder="24, 1"
+                      value={Array.isArray(formData.settings?.agendamento?.reminderHours) ? formData.settings.agendamento.reminderHours.join(", ") : "24, 1"}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/\s/g, "");
+                        const arr = raw ? raw.split(",").map((n) => parseInt(n, 10)).filter((n) => !isNaN(n) && n > 0) : [24, 1];
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            agendamento: {
+                              ...formData.settings?.agendamento,
+                              reminderHours: arr.length ? arr : [24, 1],
+                            },
+                          },
+                        });
+                      }}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Cancelamento gratuito até (horas antes)"
+                      value={formData.settings?.agendamento?.cancellationPolicyHours ?? 24}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            agendamento: {
+                              ...formData.settings?.agendamento,
+                              cancellationPolicyHours: Math.max(0, parseInt(e.target.value, 10) || 24),
+                            },
+                          },
+                        })
+                      }
+                      inputProps={{ min: 0 }}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Taxa de cancelamento após prazo (R$)"
+                      value={formData.settings?.agendamento?.cancellationFee ?? 0}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            agendamento: {
+                              ...formData.settings?.agendamento,
+                              cancellationFee: Math.max(0, parseFloat(e.target.value) || 0),
+                            },
+                          },
+                        })
+                      }
+                      inputProps={{ min: 0, step: 0.01 }}
+                      variant="outlined"
+                      size="small"
+                    />
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <FormControl fullWidth variant="outlined" size="small">
+                      <InputLabel>Tema do formulário público</InputLabel>
+                      <Select
+                        value={formData.settings?.agendamento?.theme ?? "dark"}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            settings: {
+                              ...formData.settings,
+                              agendamento: {
+                                ...formData.settings?.agendamento,
+                                theme: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                        label="Tema do formulário público"
+                      >
+                        <MenuItem value="dark">Escuro</MenuItem>
+                        <MenuItem value="light">Claro</MenuItem>
+                        <MenuItem value="auto">Automático (sistema)</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                </Grid>
+              )}
             </Grid>
           </Box>
         )}

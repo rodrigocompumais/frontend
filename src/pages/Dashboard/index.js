@@ -70,6 +70,8 @@ import api from "../../services/api";
 import RestaurantIcon from "@material-ui/icons/Restaurant";
 import QueueIcon from "@material-ui/icons/Queue";
 import HistoryIcon from "@material-ui/icons/History";
+import AccountBalanceIcon from "@material-ui/icons/AccountBalance";
+import PersonIcon from "@material-ui/icons/Person";
 
 import { isEmpty } from "lodash";
 import moment from "moment";
@@ -502,6 +504,8 @@ const Dashboard = () => {
   const { hasLanchonetes } = useCompanyModules();
   const history = useHistory();
   const [ordersStats, setOrdersStats] = useState({ pedidosHoje: 0, pedidosEmAndamento: 0, pedidosConfirmados: 0, firstCardapioFormId: null });
+  const [financialSummary, setFinancialSummary] = useState(null);
+  const [ticketsUsersData, setTicketsUsersData] = useState([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -568,6 +572,35 @@ const Dashboard = () => {
         } catch (err) {
           setOrdersStats({ pedidosHoje: 0, pedidosEmAndamento: 0, pedidosConfirmados: 0, firstCardapioFormId: null });
         }
+      }
+
+      // Resumo financeiro
+      try {
+        const { data: financial } = await api.get("/dashboard/financial-summary");
+        setFinancialSummary(financial);
+      } catch (err) {
+        setFinancialSummary(null);
+      }
+
+      // Atendimentos finalizados por atendente (mesmo período do dashboard)
+      let initialDateStr = "";
+      let finalDateStr = "";
+      if (!isEmpty(dateFrom) && moment(dateFrom).isValid()) initialDateStr = moment(dateFrom).format("YYYY-MM-DD");
+      if (!isEmpty(dateTo) && moment(dateTo).isValid()) finalDateStr = moment(dateTo).format("YYYY-MM-DD");
+      if (!initialDateStr || !finalDateStr) {
+        const days = period > 0 ? period : 7;
+        const start = moment().subtract(days, "days");
+        initialDateStr = initialDateStr || start.format("YYYY-MM-DD");
+        finalDateStr = finalDateStr || moment().format("YYYY-MM-DD");
+      }
+      try {
+        const { data: ticketsUsersRes } = await api.get("/dashboard/ticketsUsers", {
+          params: { initialDate: initialDateStr, finalDate: finalDateStr },
+        });
+        const list = Array.isArray(ticketsUsersRes?.data) ? ticketsUsersRes.data : [];
+        setTicketsUsersData(list.sort((a, b) => (b.quantidade || 0) - (a.quantidade || 0)));
+      } catch (err) {
+        setTicketsUsersData([]);
       }
 
       setLastUpdate(new Date());
@@ -1014,6 +1047,102 @@ const Dashboard = () => {
               color="#EC4899"
               subtext="novos contatos"
             />
+          </Grid>
+        </Grid>
+
+        {/* Informações financeiras */}
+        <Typography className={classes.sectionTitle} style={{ marginTop: 24 }}>
+          Informações financeiras
+        </Typography>
+        <Grid container spacing={2} className={classes.secondaryStats}>
+          <Grid item xs={12} md={6}>
+            <Paper elevation={2} style={{ padding: 20 }}>
+              <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" gap={2}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <AccountBalanceIcon style={{ color: "#0EA5E9", fontSize: 28 }} />
+                  <Typography variant="h6">Plano e vencimento</Typography>
+                </Box>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="primary"
+                  endIcon={<OpenInNewIcon />}
+                  onClick={() => history.push("/financeiro")}
+                >
+                  Ver Financeiro
+                </Button>
+              </Box>
+              <Box marginTop={2}>
+                {financialSummary ? (
+                  <>
+                    <Box display="flex" flexDirection="column" gap={1}>
+                      <Typography variant="body2" color="textSecondary">Plano: <strong>{financialSummary.planName}</strong></Typography>
+                      {financialSummary.planValue != null && (
+                        <Typography variant="body2" color="textSecondary">Valor: <strong>R$ {Number(financialSummary.planValue).toFixed(2)}</strong></Typography>
+                      )}
+                      <Typography variant="body2" color="textSecondary">
+                        Vencimento: <strong>{financialSummary.dueDate ? moment(financialSummary.dueDate).format("DD/MM/YYYY") : "—"}</strong>
+                      </Typography>
+                      <Box display="flex" alignItems="center" gap={1} marginTop={0.5}>
+                        <Chip
+                          size="small"
+                          label={financialSummary.status === "active" ? "Ativo" : financialSummary.status === "expired" ? "Vencido" : "—"}
+                          color={financialSummary.status === "active" ? "primary" : financialSummary.status === "expired" ? "secondary" : "default"}
+                        />
+                        {financialSummary.autoRenew && (
+                          <Chip size="small" label="Renovação automática" variant="outlined" />
+                        )}
+                      </Box>
+                      {financialSummary.lastInvoice && (
+                        <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 8 }}>
+                          Última fatura: {moment(financialSummary.lastInvoice.dueDate).format("DD/MM/YYYY")} — {financialSummary.lastInvoice.status} — R$ {Number(financialSummary.lastInvoice.value).toFixed(2)}
+                        </Typography>
+                      )}
+                    </Box>
+                  </>
+                ) : (
+                  <Typography variant="body2" color="textSecondary">Carregando...</Typography>
+                )}
+              </Box>
+            </Paper>
+          </Grid>
+        </Grid>
+
+        {/* Atendimentos finalizados por atendente */}
+        <Typography className={classes.sectionTitle} style={{ marginTop: 24 }}>
+          Atendimentos finalizados por atendente
+        </Typography>
+        <Grid container spacing={2} className={classes.secondaryStats}>
+          <Grid item xs={12}>
+            <Paper elevation={2}>
+              <Table size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell><strong>Atendente</strong></TableCell>
+                    <TableCell align="right"><strong>Quantidade</strong></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {ticketsUsersData.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={2} align="center" style={{ color: "var(--text-secondary)" }}>Nenhum dado no período</TableCell>
+                    </TableRow>
+                  ) : (
+                    ticketsUsersData.map((row, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <PersonIcon fontSize="small" style={{ opacity: 0.7 }} />
+                            {row.nome || "—"}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right">{row.quantidade ?? 0}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </Paper>
           </Grid>
         </Grid>
 

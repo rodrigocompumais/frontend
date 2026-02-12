@@ -1946,6 +1946,8 @@ const messages = {
           "Este contacto ya está en otra mesa. Libere la mesa actual antes de ocupar otra.",
         ERR_MESA_LINK_INVALID:
           "Enlace de mesa inválido o expirado. Use el código QR de la mesa para acceder al menú.",
+        ERR_FORM_NOT_AGENDAMENTO:
+          "Este formulario no está configurado para agendamiento. Edítelo en Formularios y defina el tipo como \"Agendamiento\".",
       },
       lanchonetes: {
         hubName: "Home",
@@ -1962,6 +1964,16 @@ const messages = {
         createCardapio: "Crear carta",
         goToCardapios: "Ir a Cartas",
         goToHub: "Ir al Home",
+      },
+      agendamento: {
+        hubName: "Agendamiento",
+        hubWelcome: "Bienvenido al Agendamiento",
+        hubWelcomeSubtitle: "Gestione servicios, formulario de agendamiento y visualice la agenda. Los clientes pueden agendar por el enlace del formulario.",
+        servicos: "Servicios",
+        formularioAgendamento: "Formulario Agendamiento",
+        agenda: "Agenda",
+        agendamentosHoje: "Agendamientos hoy",
+        pendentesConfirmacao: "Pendientes de confirmación",
       },
       mesas: {
         closeAccountTitle: "Cerrar cuenta - Mesa",

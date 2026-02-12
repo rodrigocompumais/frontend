@@ -1974,6 +1974,8 @@ const messages = {
         ERR_WAPP_GREETING_REQUIRED:
           "A mensagem de saudação é obrigatório quando há mais de uma fila.",
         ERR_MODULE_SLUG_EXISTS: "Já existe um módulo com este slug.",
+        ERR_FORM_NOT_AGENDAMENTO:
+          "Este formulário não está configurado para agendamento. Edite-o em Formulários e defina o tipo como \"Agendamento\".",
         ERR_MODULE_NOT_FOUND: "Módulo não encontrado.",
         ERR_MODULE_LANCHONETES_REQUIRED:
           "O Módulo Lanchonetes é necessário para este recurso. Contrate o módulo para usar cardápio, produtos e pedidos via WhatsApp.",
@@ -1997,6 +1999,16 @@ const messages = {
         createCardapio: "Criar cardápio",
         goToCardapios: "Ir para Cardápios",
         goToHub: "Ir para Home",
+      },
+      agendamento: {
+        hubName: "Agendamento",
+        hubWelcome: "Bem-vindo ao Agendamento",
+        hubWelcomeSubtitle: "Gerencie serviços, formulário de agendamento e visualize a agenda. Os clientes podem agendar pelo link do formulário.",
+        servicos: "Serviços",
+        formularioAgendamento: "Formulário Agendamento",
+        agenda: "Agenda",
+        agendamentosHoje: "Agendamentos hoje",
+        pendentesConfirmacao: "Pendentes de confirmação",
       },
       mesas: {
         closeAccountTitle: "Fechar conta - Mesa",

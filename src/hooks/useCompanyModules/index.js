@@ -3,6 +3,7 @@ import api from "../../services/api";
 import { AuthContext } from "../../context/Auth/AuthContext";
 
 const MODULE_LANCHONETES = "lanchonetes";
+const MODULE_AGENDAMENTO = "agendamento";
 
 const useCompanyModules = () => {
   const [modules, setModules] = useState([]);
@@ -40,15 +41,17 @@ const useCompanyModules = () => {
 
   const hasModule = (moduleName) => modules.includes(moduleName);
   const hasLanchonetes = hasModule(MODULE_LANCHONETES);
+  const hasAgendamento = hasModule(MODULE_AGENDAMENTO);
 
   return {
     modules,
     loading,
     hasModule,
     hasLanchonetes,
+    hasAgendamento,
     refetch: fetchModules,
   };
 };
 
 export default useCompanyModules;
-export { MODULE_LANCHONETES };
+export { MODULE_LANCHONETES, MODULE_AGENDAMENTO };

@@ -90,7 +90,7 @@ const NavigationMenus = () => {
   const { user } = useContext(AuthContext);
   const { whatsApps } = useContext(WhatsAppsContext);
   const { getPlanCompany } = usePlans();
-  const { hasLanchonetes } = useCompanyModules();
+  const { hasLanchonetes, hasAgendamento } = useCompanyModules();
   const { pendingTicketsCount, unreadMessagesCount, totalNotifications } = useNotificationCounts();
 
   // Estados para os dropdowns
@@ -319,6 +319,17 @@ const NavigationMenus = () => {
               <ListItemText primary="PDV" />
             </MenuItem>
           </>
+        )}
+        {hasAgendamento && (
+          <MenuItem
+            className={classes.menuItem}
+            onClick={() => handleNavigate('/agendamento', () => setGestaoAnchor(null))}
+          >
+            <ListItemIcon>
+              <EventIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary={i18n.t("agendamento.hubName")} />
+          </MenuItem>
         )}
         </Menu>
       </div>

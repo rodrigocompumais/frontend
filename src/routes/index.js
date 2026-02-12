@@ -52,6 +52,8 @@ import CustomProposalForm from "../pages/Landing/CustomProposalForm";
 import Forms from "../pages/Forms";
 import FormBuilder from "../pages/Forms/FormBuilder";
 import PublicForm from "../pages/Forms/PublicForm";
+import PublicAgendamentoCancelar from "../pages/Forms/PublicAgendamentoCancelar";
+import PublicAgendamentoReagendar from "../pages/Forms/PublicAgendamentoReagendar";
 import MesaRedirect from "../pages/MesaRedirect";
 import MesaCardapio from "../pages/MesaCardapio";
 import FormResponses from "../pages/Forms/FormResponses";
@@ -64,6 +66,7 @@ import Products from "../pages/Products";
 import Pedidos from "../pages/Pedidos";
 import Mesas from "../pages/Mesas";
 import LanchonetesHub from "../pages/LanchonetesHub";
+import AgendamentoHub from "../pages/AgendamentoHub";
 import Garcom from "../pages/Garcom";
 import Cozinha from "../pages/Cozinha";
 import Entregador from "../pages/Entregador";
@@ -88,6 +91,8 @@ const Routes = () => {
             <Switch>
             <Route exact path="/" component={Landing} />
             <Route exact path="/proposta-personalizada" component={CustomProposalForm} isPublic={true} />
+            <Route exact path="/f/:slug/cancelar" component={PublicAgendamentoCancelar} isPublic={true} />
+            <Route exact path="/f/:slug/reagendar" component={PublicAgendamentoReagendar} isPublic={true} />
             <Route exact path="/f/:slug" component={PublicForm} isPublic={true} />
             <Route exact path="/mesa/:mesaId/cardapio" component={MesaCardapio} isPublic={true} />
             <Route exact path="/mesa/:mesaId" component={MesaRedirect} isPublic={true} />
@@ -143,6 +148,7 @@ const Routes = () => {
                 <Route exact path="/files" component={Files} isPrivate />
                 <Route exact path="/products" component={Products} isPrivate />
                 <Route exact path="/lanchonetes" component={LanchonetesHub} isPrivate />
+                <Route exact path="/agendamento" component={AgendamentoHub} isPrivate />
                 <Route exact path="/garcom" component={Garcom} isPrivate />
                 <Route exact path="/cozinha" component={Cozinha} isPrivate />
                 <Route exact path="/entregador" component={Entregador} isPrivate />

@@ -120,11 +120,9 @@ export const ChatsUser = () => {
     const [finalDate, setFinalDate] = useState(new Date());
     const [ticketsData, setTicketsData] = useState({ data: [] });
 
-    const companyId = localStorage.getItem("companyId");
-
     useEffect(() => {
         handleGetTicketsInformation();
-    }, []);
+    }, [initialDate, finalDate]);
 
     const dataCharts = {
         labels: ticketsData && ticketsData?.data.length > 0 && ticketsData?.data.map((item) => item.nome),
@@ -146,7 +144,9 @@ export const ChatsUser = () => {
 
     const handleGetTicketsInformation = async () => {
         try {
-            const { data } = await api.get(`/dashboard/ticketsUsers?initialDate=${format(initialDate, 'yyyy-MM-dd')}&finalDate=${format(finalDate, 'yyyy-MM-dd')}&companyId=${companyId}`);
+            const { data } = await api.get("/dashboard/ticketsUsers", {
+            params: { initialDate: format(initialDate, "yyyy-MM-dd"), finalDate: format(finalDate, "yyyy-MM-dd") },
+        });
             setTicketsData(data);
         } catch (error) {
             toast.error(i18n.t("dashboard.toasts.userChartError"));

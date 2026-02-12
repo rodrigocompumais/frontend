@@ -31,6 +31,7 @@ import InputMask from "react-input-mask";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import PublicMenuForm from "./PublicMenuForm";
+import PublicAgendamentoForm from "./PublicAgendamentoForm";
 import { isFieldVisible } from "../../utils/formUtils";
 import { getFormAppearanceStyles, FONT_IMPORTS } from "../../utils/formAppearanceStyles";
 
@@ -553,6 +554,11 @@ const PublicForm = () => {
   // Se for formulário de cardápio, renderizar componente específico
   if (form.settings?.formType === "cardapio") {
     return <PublicMenuForm form={form} slug={slug} />;
+  }
+
+  // Se for formulário de agendamento, renderizar fluxo de agendamento
+  if (form.settings?.formType === "agendamento") {
+    return <PublicAgendamentoForm form={form} slug={slug} />;
   }
 
   if (submitted) {

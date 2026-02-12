@@ -82,7 +82,7 @@ const MobileNavigationMenu = () => {
   const { user } = useContext(AuthContext);
   const { whatsApps } = useContext(WhatsAppsContext);
   const { getPlanCompany } = usePlans();
-  const { hasLanchonetes } = useCompanyModules();
+  const { hasLanchonetes, hasAgendamento } = useCompanyModules();
 
   // Submenus
   const [openAutomacao, setOpenAutomacao] = useState(false);
@@ -222,6 +222,14 @@ const MobileNavigationMenu = () => {
               </ListItemIcon>
               <ListItemText primary={i18n.t("mainDrawer.listItems.tags")} />
             </ListItem>
+            {hasAgendamento && (
+              <ListItem button onClick={() => handleNavigate('/agendamento')}>
+                <ListItemIcon>
+                  <EventIcon />
+                </ListItemIcon>
+                <ListItemText primary={i18n.t("agendamento.hubName")} />
+              </ListItem>
+            )}
             {hasLanchonetes && (
               <>
                 <ListItem button onClick={() => handleNavigate('/products')}>

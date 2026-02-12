@@ -1,4 +1,5 @@
 import React, { useContext, useMemo } from "react";
+import { useLocation } from "react-router-dom";
 import { createTheme, ThemeProvider } from "@material-ui/core/styles";
 import { enUS, ptBR, esES } from "@material-ui/core/locale";
 import ColorModeContext from "../../layout/themeContext";
@@ -7,19 +8,26 @@ import useCompanyModules from "../../hooks/useCompanyModules";
 
 const PRIMARY_BLUE = "#0EA5E9";
 const PRIMARY_AMBER = "#F59E0B";
+const PRIMARY_AGENDAMENTO = "#171717";
 const BARRA_GRADIENT_BLUE = "linear-gradient(to right, #0EA5E9, #38BDF8)";
 const BARRA_GRADIENT_AMBER = "linear-gradient(to right, #F59E0B, #FBBF24)";
+const BARRA_GRADIENT_AGENDAMENTO = "linear-gradient(to right, #171717, #404040)";
 
 const ThemeWithModules = ({ children }) => {
   const { mode, locale } = useContext(ColorModeContext);
   const { user } = useContext(AuthContext);
-  const { hasLanchonetes } = useCompanyModules();
+  const { pathname } = useLocation();
+  const { hasLanchonetes, hasAgendamento } = useCompanyModules();
 
-  const useLanchonetesTheme = Boolean(user && hasLanchonetes);
+  const onAgendamentoRoute = pathname && pathname.startsWith("/agendamento");
+  const useAgendamentoTheme = Boolean(
+    user && hasAgendamento && (onAgendamentoRoute || !hasLanchonetes)
+  );
+  const useLanchonetesTheme = Boolean(user && hasLanchonetes && !useAgendamentoTheme);
 
   const theme = useMemo(() => {
-    const primaryMain = useLanchonetesTheme ? PRIMARY_AMBER : PRIMARY_BLUE;
-    const barraSuperior = useLanchonetesTheme ? BARRA_GRADIENT_AMBER : BARRA_GRADIENT_BLUE;
+    const primaryMain = useAgendamentoTheme ? PRIMARY_AGENDAMENTO : useLanchonetesTheme ? PRIMARY_AMBER : PRIMARY_BLUE;
+    const barraSuperior = useAgendamentoTheme ? BARRA_GRADIENT_AGENDAMENTO : useLanchonetesTheme ? BARRA_GRADIENT_AMBER : BARRA_GRADIENT_BLUE;
 
     return createTheme(
       {
@@ -88,7 +96,7 @@ const ThemeWithModules = ({ children }) => {
       },
       locale || ptBR
     );
-  }, [mode, locale, useLanchonetesTheme]);
+  }, [mode, locale, pathname, useLanchonetesTheme, useAgendamentoTheme]);
 
   return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
 };

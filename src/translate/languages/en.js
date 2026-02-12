@@ -1976,6 +1976,8 @@ const messages = {
           "This contact is already at another table. Free the current table before occupying another.",
         ERR_MESA_LINK_INVALID:
           "Invalid or expired table link. Use the table QR code to access the menu.",
+        ERR_FORM_NOT_AGENDAMENTO:
+          "This form is not set up for scheduling. Edit it in Forms and set the type to \"Scheduling\".",
       },
       lanchonetes: {
         hubName: "Home",
@@ -1992,6 +1994,16 @@ const messages = {
         createCardapio: "Create menu",
         goToCardapios: "Go to Menus",
         goToHub: "Go to Home",
+      },
+      agendamento: {
+        hubName: "Scheduling",
+        hubWelcome: "Welcome to Scheduling",
+        hubWelcomeSubtitle: "Manage services, scheduling form and view the agenda. Clients can book via the form link.",
+        servicos: "Services",
+        formularioAgendamento: "Scheduling Form",
+        agenda: "Agenda",
+        agendamentosHoje: "Appointments today",
+        pendentesConfirmacao: "Pending confirmation",
       },
       mesas: {
         closeAccountTitle: "Close account - Table",
