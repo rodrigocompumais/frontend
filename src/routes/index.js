@@ -21,6 +21,7 @@ import Queues from "../pages/Queues/";
 import Tags from "../pages/Tags/";
 import MessagesAPI from "../pages/MessagesAPI/";
 import Helps from "../pages/Helps/";
+import HelpArticles from "../pages/HelpArticles/";
 import ContactLists from "../pages/ContactLists/";
 import ContactListItems from "../pages/ContactListItems/";
 // import Companies from "../pages/Companies/";
@@ -144,6 +145,7 @@ const Routes = () => {
                 <Route exact path="/tags" component={Tags} isPrivate />
                 <Route exact path="/contacts" component={Contacts} isPrivate />
                 <Route exact path="/helps" component={Helps} isPrivate />
+                <Route exact path="/help-articles" component={HelpArticles} isPrivate />
                 <Route exact path="/users" component={Users} isPrivate />
                 <Route exact path="/files" component={Files} isPrivate />
                 <Route exact path="/products" component={Products} isPrivate />

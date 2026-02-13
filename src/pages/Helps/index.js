@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { makeStyles, Paper, Typography, Modal, IconButton } from "@material-ui/core";
+import { makeStyles, Paper, Typography, Modal, IconButton, Tabs, Tab, Chip, Box } from "@material-ui/core";
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
 import Title from "../../components/Title";
 import { i18n } from "../../translate/i18n";
 import useHelps from "../../hooks/useHelps";
+import useHelpArticles from "../../hooks/useHelpArticles";
+import HelpArticleSearch from "../../components/HelpArticleSearch";
+import HelpArticleView from "../../components/HelpArticleView";
 
 const useStyles = makeStyles(theme => ({
   mainPaperContainer: {
@@ -70,12 +73,50 @@ const useStyles = makeStyles(theme => ({
     borderRadius: theme.spacing(1),
     overflow: 'hidden',
   },
+  tabsContainer: {
+    marginBottom: theme.spacing(2),
+  },
+  articleCard: {
+    padding: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+    cursor: 'pointer',
+    transition: 'transform 0.2s, box-shadow 0.2s',
+    '&:hover': {
+      transform: 'translateY(-2px)',
+      boxShadow: theme.shadows[4],
+    },
+  },
+  articleTitle: {
+    fontWeight: 'bold',
+    marginBottom: theme.spacing(1),
+  },
+  articleSummary: {
+    color: theme.palette.text.secondary,
+    marginBottom: theme.spacing(1),
+  },
+  articleMeta: {
+    display: 'flex',
+    gap: theme.spacing(1),
+    flexWrap: 'wrap',
+    marginTop: theme.spacing(1),
+  },
+  emptyState: {
+    textAlign: 'center',
+    padding: theme.spacing(4),
+    color: theme.palette.text.secondary,
+  },
 }));
 
 const Helps = () => {
   const classes = useStyles();
+  const [tabValue, setTabValue] = useState(0);
   const [records, setRecords] = useState([]);
+  const [articles, setArticles] = useState([]);
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [searchParam, setSearchParam] = useState("");
+  const [category, setCategory] = useState("");
   const { list } = useHelps();
+  const { list: listArticles, show: showArticle } = useHelpArticles();
   const [selectedVideo, setSelectedVideo] = useState(null);
 
   useEffect(() => {
@@ -86,6 +127,24 @@ const Helps = () => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (tabValue === 1) {
+      async function fetchArticles() {
+        try {
+          const data = await listArticles({
+            searchParam,
+            category: category || undefined,
+          });
+          setArticles(data.records || []);
+        } catch (err) {
+          console.error("Erro ao buscar artigos:", err);
+        }
+      }
+      fetchArticles();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabValue, searchParam, category]);
 
   const openVideoModal = (video) => {
     setSelectedVideo(video);
@@ -131,7 +190,25 @@ const Helps = () => {
     );
   };
 
-  const renderHelps = () => {
+  const handleTabChange = (event, newValue) => {
+    setTabValue(newValue);
+    setSelectedArticle(null);
+  };
+
+  const handleArticleClick = async (articleId) => {
+    try {
+      const article = await showArticle(articleId);
+      setSelectedArticle(article);
+    } catch (err) {
+      console.error("Erro ao buscar artigo:", err);
+    }
+  };
+
+  const handleBackToArticles = () => {
+    setSelectedArticle(null);
+  };
+
+  const renderVideos = () => {
     return (
       <>
         <div className={`${classes.mainPaper} ${classes.mainPaperContainer}`}>
@@ -149,7 +226,63 @@ const Helps = () => {
                 {record.description}
               </Typography>
             </Paper>
-          )) : null}
+          )) : (
+            <Typography className={classes.emptyState}>
+              Nenhum vídeo disponível
+            </Typography>
+          )}
+        </div>
+      </>
+    );
+  };
+
+  const renderArticles = () => {
+    if (selectedArticle) {
+      return <HelpArticleView article={selectedArticle} onBack={handleBackToArticles} />;
+    }
+
+    return (
+      <>
+        <HelpArticleSearch
+          onSearch={setSearchParam}
+          onCategoryChange={setCategory}
+        />
+        <div className={classes.mainPaperContainer}>
+          {articles.length > 0 ? (
+            articles.map((article) => (
+              <Paper
+                key={article.id}
+                className={classes.articleCard}
+                onClick={() => handleArticleClick(article.id)}
+              >
+                <Typography variant="h6" className={classes.articleTitle}>
+                  {article.title}
+                </Typography>
+                {article.summary && (
+                  <Typography variant="body2" className={classes.articleSummary}>
+                    {article.summary}
+                  </Typography>
+                )}
+                <Box className={classes.articleMeta}>
+                  {article.category && (
+                    <Chip label={article.category} size="small" color="primary" />
+                  )}
+                  {article.keywords && article.keywords.split(",").slice(0, 3).map((keyword, idx) => (
+                    <Chip
+                      key={idx}
+                      label={keyword.trim()}
+                      size="small"
+                      variant="outlined"
+                    />
+                  ))}
+                </Box>
+              </Paper>
+            ))
+          ) : (
+            <Typography className={classes.emptyState}>
+              Nenhum artigo encontrado
+            </Typography>
+          )}
         </div>
       </>
     );
@@ -158,12 +291,23 @@ const Helps = () => {
   return (
     <MainContainer>
       <MainHeader>
-        <Title>{i18n.t("helps.title")} ({records.length})</Title>
+        <Title>
+          {i18n.t("helps.title")} ({tabValue === 0 ? records.length : articles.length})
+        </Title>
         <MainHeaderButtonsWrapper></MainHeaderButtonsWrapper>
       </MainHeader>
-      <div className={classes.mainPaper}>
-        {renderHelps()}
-      </div>
+      <Tabs
+        value={tabValue}
+        onChange={handleTabChange}
+        className={classes.tabsContainer}
+        indicatorColor="primary"
+        textColor="primary"
+      >
+        <Tab label="Vídeos" />
+        <Tab label="Artigos" />
+      </Tabs>
+      {tabValue === 0 && renderVideos()}
+      {tabValue === 1 && renderArticles()}
       {renderVideoModal()}
     </MainContainer>
   );

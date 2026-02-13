@@ -74,10 +74,44 @@ const useTicketNotifications = () => {
 
       // Prévia da mensagem (truncar se necessário)
       let messagePreview = message.body || "";
-      if (message.mediaType && message.mediaType !== "conversation") {
-        messagePreview = `📎 ${message.mediaType}`;
-      } else if (messagePreview.length > 50) {
+      
+      // Tipos de mensagem que são na verdade texto (não mídia)
+      const textMessageTypes = ["extendedTextMessage", "text", "conversation"];
+      const isTextMessageType = textMessageTypes.includes(message.mediaType);
+      
+      // Se não há texto mas há mídia, mostrar descrição amigável do tipo de mídia
+      if (!messagePreview && message.mediaType && !isTextMessageType) {
+        const mediaTypeMap = {
+          "image": "📷 Imagem",
+          "video": "🎥 Vídeo",
+          "audio": "🎵 Áudio",
+          "voice": "🎤 Áudio",
+          "ptt": "🎤 Áudio",
+          "document": "📄 Documento",
+          "application": "📄 Documento",
+          "pdf": "📄 PDF",
+          "sticker": "😀 Figurinha",
+          "location": "📍 Localização",
+          "vcard": "👤 Contato",
+          "contact": "👤 Contato",
+        };
+        
+        const mediaType = message.mediaType.toLowerCase();
+        messagePreview = mediaTypeMap[mediaType] || `📎 ${message.mediaType}`;
+      } else if (messagePreview && message.mediaType && !isTextMessageType) {
+        // Se há texto E mídia, mostrar o texto com indicador de mídia
+        if (messagePreview.length > 45) {
+          messagePreview = messagePreview.substring(0, 45) + "... 📎";
+        } else {
+          messagePreview = messagePreview + " 📎";
+        }
+      } else if (messagePreview && messagePreview.length > 50) {
         messagePreview = messagePreview.substring(0, 50) + "...";
+      }
+      
+      // Garantir que sempre há uma prévia
+      if (!messagePreview) {
+        messagePreview = "💬 Nova mensagem";
       }
 
       // Exibir toast

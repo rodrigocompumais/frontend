@@ -458,10 +458,17 @@ const TourGuide = () => {
       icon: '⚙️',
     },
     {
+      title: 'Central de Ajuda e Documentação 📚',
+      description:
+        'Aqui você encontra vídeos tutoriais e artigos de documentação completos sobre como usar o Compuchat! Explore os vídeos do YouTube e os artigos de ajuda com busca por palavras-chave. Esta é sua referência completa para tirar dúvidas e aprender mais sobre a plataforma.',
+      page: '/helps',
+      icon: '📚',
+    },
+    {
       title: 'Pronto para Começar! 🚀',
       description:
-        'Você conheceu as principais funcionalidades do Compuchat! Lembre-se: use o Compuchat AI no dashboard para tirar dúvidas, explore o menu para descobrir mais recursos e consulte o manual quando precisar. Boa sorte!',
-      page: '/dashboard',
+        'Você conheceu as principais funcionalidades do Compuchat! Lembre-se: use o Compuchat AI no dashboard para tirar dúvidas, explore o menu para descobrir mais recursos e consulte a Central de Ajuda sempre que precisar. Boa sorte!',
+      page: '/helps',
       icon: '🚀',
     },
   ];

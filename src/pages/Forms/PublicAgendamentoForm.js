@@ -341,7 +341,36 @@ const PublicAgendamentoForm = ({ form, slug }) => {
   const [serviceSearch, setServiceSearch] = useState("");
 
   const todayStr = useMemo(() => new Date().toISOString().slice(0, 10), []);
-  const weekDays = useMemo(() => getWeekDays(new Date(), 14), []);
+  
+  // Filtrar dias da semana baseado nos horários da empresa
+  const weekDays = useMemo(() => {
+    const allDays = getWeekDays(new Date(), 14);
+    const scheduleType = form?.scheduleType;
+    const companySchedules = form?.companySchedules || [];
+    
+    // Se scheduleType for "company" e houver horários configurados, filtrar dias
+    if (scheduleType === "company" && companySchedules.length > 0) {
+      const weekdayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+      
+      return allDays.filter((day) => {
+        const dayOfWeek = day.getDay();
+        const weekdayName = weekdayNames[dayOfWeek];
+        const daySchedule = companySchedules.find(
+          (s) => s?.weekdayEn?.toLowerCase() === weekdayName
+        );
+        
+        // Incluir dia se tiver horário configurado e não estiver vazio
+        return daySchedule && 
+               daySchedule.startTime && 
+               daySchedule.endTime && 
+               daySchedule.startTime !== "" && 
+               daySchedule.endTime !== "" &&
+               !(daySchedule.startTime === "00:00" && daySchedule.endTime === "00:00");
+      });
+    }
+    
+    return allDays;
+  }, [form?.scheduleType, form?.companySchedules]);
 
   const serviceGroupsAll = useMemo(() => groupServicesByName(services), [services]);
   const serviceGroups = useMemo(() => {

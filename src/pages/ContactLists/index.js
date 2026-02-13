@@ -21,6 +21,9 @@ import EditIcon from "@material-ui/icons/Edit";
 import PeopleIcon from "@material-ui/icons/People";
 import DownloadIcon from "@material-ui/icons/GetApp";
 
+import ChevronLeftIcon from "@material-ui/icons/ChevronLeft";
+import ChevronRightIcon from "@material-ui/icons/ChevronRight";
+import Box from "@material-ui/core/Box";
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
 import Title from "../../components/Title";
@@ -38,19 +41,8 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTLISTS") {
-    const contactLists = action.payload;
-    const newContactLists = [];
-
-    contactLists.forEach((contactList) => {
-      const contactListIndex = state.findIndex((u) => u.id === contactList.id);
-      if (contactListIndex !== -1) {
-        state[contactListIndex] = contactList;
-      } else {
-        newContactLists.push(contactList);
-      }
-    });
-
-    return [...state, ...newContactLists];
+    // Para paginação tradicional, substituir as listas ao invés de adicionar
+    return action.payload;
   }
 
   if (action.type === "UPDATE_CONTACTLIST") {
@@ -84,8 +76,45 @@ const useStyles = makeStyles((theme) => ({
   mainPaper: {
     flex: 1,
     padding: theme.spacing(1),
-    overflowY: "scroll",
+    overflowY: "auto",
     ...theme.scrollbarStyles,
+  },
+  paginationContainer: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: theme.spacing(1.5, 2),
+    backgroundColor: theme.palette.background.paper,
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+  },
+  paginationControls: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+  },
+  pageButton: {
+    minWidth: 40,
+    padding: theme.spacing(0.5, 1),
+  },
+  activePageButton: {
+    backgroundColor: "#f57c00", // Laranja para destacar a página atual
+    color: "#ffffff",
+    fontWeight: "bold",
+    boxShadow: theme.shadows[4],
+    border: "2px solid #e65100",
+    minWidth: 44,
+    "&:hover": {
+      backgroundColor: "#e65100",
+      boxShadow: theme.shadows[6],
+    },
+  },
+  pageInfo: {
+    fontSize: "0.875rem",
+    color: theme.palette.text.secondary,
+    fontWeight: 500,
+    marginLeft: theme.spacing(2),
   },
 }));
 
@@ -96,12 +125,16 @@ const ContactLists = () => {
   const [loading, setLoading] = useState(false);
   const [pageNumber, setPageNumber] = useState(1);
   const [hasMore, setHasMore] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
   const [selectedContactList, setSelectedContactList] = useState(null);
   const [deletingContactList, setDeletingContactList] = useState(null);
   const [contactListModalOpen, setContactListModalOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [searchParam, setSearchParam] = useState("");
   const [contactLists, dispatch] = useReducer(reducer, []);
+
+  const limit = 20; // Mesmo limite usado no backend
+  const totalPages = Math.ceil(totalCount / limit);
 
   const socketManager = useContext(SocketContext);
 
@@ -120,9 +153,12 @@ const ContactLists = () => {
           });
           dispatch({ type: "LOAD_CONTACTLISTS", payload: data.records });
           setHasMore(data.hasMore);
+          setTotalCount(data.count || 0);
           setLoading(false);
         } catch (err) {
           toastError(err);
+          setLoading(false);
+          setHasMore(false);
         }
       };
       fetchContactLists();
@@ -180,16 +216,68 @@ const ContactLists = () => {
     setPageNumber(1);
   };
 
-  const loadMore = () => {
-    setPageNumber((prevState) => prevState + 1);
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages && newPage !== pageNumber) {
+      setPageNumber(newPage);
+      // Scroll para o topo da tabela
+      const paperElement = document.querySelector(`.${classes.mainPaper}`);
+      if (paperElement) {
+        paperElement.scrollTop = 0;
+      }
+    }
   };
 
-  const handleScroll = (e) => {
-    if (!hasMore || loading) return;
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollHeight - (scrollTop + 100) < clientHeight) {
-      loadMore();
+  const handlePreviousPage = () => {
+    if (pageNumber > 1) {
+      handlePageChange(pageNumber - 1);
     }
+  };
+
+  const handleNextPage = () => {
+    if (pageNumber < totalPages) {
+      handlePageChange(pageNumber + 1);
+    }
+  };
+
+  // Gerar array de números de página para exibir
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 7;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Se há poucas páginas, mostrar todas
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      // Mostrar páginas com lógica de elipse
+      if (pageNumber <= 3) {
+        // Início: mostrar primeiras páginas
+        for (let i = 1; i <= 5; i++) {
+          pages.push(i);
+        }
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (pageNumber >= totalPages - 2) {
+        // Fim: mostrar últimas páginas
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 4; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        // Meio: mostrar páginas ao redor da atual
+        pages.push(1);
+        pages.push("...");
+        for (let i = pageNumber - 1; i <= pageNumber + 1; i++) {
+          pages.push(i);
+        }
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+    
+    return pages;
   };
 
   const goToContacts = (id) => {
@@ -254,10 +342,62 @@ const ContactLists = () => {
           </Grid>
         </Grid>
       </MainHeader>
+      {totalPages > 1 && (
+        <Box className={classes.paginationContainer}>
+          <Box className={classes.paginationControls}>
+            <IconButton
+              onClick={handlePreviousPage}
+              disabled={pageNumber === 1 || loading}
+              size="small"
+              title="Página anterior"
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+            {getPageNumbers().map((page, index) => {
+              if (page === "...") {
+                return (
+                  <span key={`ellipsis-${index}`} style={{ padding: "0 8px" }}>
+                    ...
+                  </span>
+                );
+              }
+              return (
+                <Button
+                  key={page}
+                  className={`${classes.pageButton} ${
+                    page === pageNumber ? classes.activePageButton : ""
+                  }`}
+                  variant={page === pageNumber ? "contained" : "outlined"}
+                  color={page === pageNumber ? "secondary" : "primary"}
+                  onClick={() => handlePageChange(page)}
+                  disabled={loading}
+                  size="small"
+                >
+                  {page}
+                </Button>
+              );
+            })}
+            <IconButton
+              onClick={handleNextPage}
+              disabled={pageNumber === totalPages || loading}
+              size="small"
+              title="Próxima página"
+            >
+              <ChevronRightIcon />
+            </IconButton>
+          </Box>
+          <Box className={classes.pageInfo}>
+            {totalCount > 0 && (
+              <span>
+                Página <strong>{pageNumber}</strong> de <strong>{totalPages}</strong> • {totalCount} {totalCount === 1 ? "lista" : "listas"}
+              </span>
+            )}
+          </Box>
+        </Box>
+      )}
       <Paper
         className={classes.mainPaper}
         variant="outlined"
-        onScroll={handleScroll}
       >
         <Table size="small">
           <TableHead>
@@ -275,46 +415,60 @@ const ContactLists = () => {
           </TableHead>
           <TableBody>
             <>
-              {contactLists.map((contactList) => (
-                <TableRow key={contactList.id}>
-                  <TableCell align="center">{contactList.name}</TableCell>
-                  <TableCell align="center">
-                    {contactList.contactsCount || 0}
-                  </TableCell>
-                  <TableCell align="center">
-                    <a href={planilhaExemplo} download="planilha.xlsx">
-                      <IconButton size="small" title="Baixar Planilha Exemplo">
-                        <DownloadIcon />
-                      </IconButton>
-                    </a>
+              {loading && contactLists.length === 0 ? (
+                Array.from({ length: 10 }).map((_, index) => (
+                  <TableRowSkeleton key={`skeleton-${index}`} columns={3} />
+                ))
+              ) : contactLists.length > 0 ? (
+                <>
+                  {contactLists.map((contactList) => (
+                    <TableRow key={contactList.id}>
+                      <TableCell align="center">{contactList.name}</TableCell>
+                      <TableCell align="center">
+                        {contactList.contactsCount || 0}
+                      </TableCell>
+                      <TableCell align="center">
+                        <a href={planilhaExemplo} download="planilha.xlsx">
+                          <IconButton size="small" title="Baixar Planilha Exemplo">
+                            <DownloadIcon />
+                          </IconButton>
+                        </a>
 
-                    <IconButton
-                      size="small"
-                      onClick={() => goToContacts(contactList.id)}
-                    >
-                      <PeopleIcon />
-                    </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => goToContacts(contactList.id)}
+                        >
+                          <PeopleIcon />
+                        </IconButton>
 
-                    <IconButton
-                      size="small"
-                      onClick={() => handleEditContactList(contactList)}
-                    >
-                      <EditIcon />
-                    </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleEditContactList(contactList)}
+                        >
+                          <EditIcon />
+                        </IconButton>
 
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        setConfirmModalOpen(true);
-                        setDeletingContactList(contactList);
-                      }}
-                    >
-                      <DeleteOutlineIcon />
-                    </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            setConfirmModalOpen(true);
+                            setDeletingContactList(contactList);
+                          }}
+                        >
+                          <DeleteOutlineIcon />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {loading && <TableRowSkeleton columns={3} />}
+                </>
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={3} align="center">
+                    Nenhuma lista encontrada
                   </TableCell>
                 </TableRow>
-              ))}
-              {loading && <TableRowSkeleton columns={3} />}
+              )}
             </>
           </TableBody>
         </Table>

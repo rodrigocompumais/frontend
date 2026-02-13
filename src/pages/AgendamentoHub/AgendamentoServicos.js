@@ -19,6 +19,9 @@ import {
   Typography,
   IconButton,
   Grid,
+  Checkbox,
+  ListItemText,
+  Chip,
 } from "@material-ui/core";
 import { Add as AddIcon, Edit as EditIcon, Delete as DeleteIcon } from "@material-ui/icons";
 import { toast } from "react-toastify";
@@ -39,6 +42,7 @@ const AgendamentoServicos = () => {
   const [value, setValue] = useState("");
   const [description, setDescription] = useState("");
   const [userId, setUserId] = useState("");
+  const [userIds, setUserIds] = useState([]);
   const [isActive, setIsActive] = useState(true);
   const [displayOrder, setDisplayOrder] = useState("");
   const { users, loading: usersLoading } = useUsers();
@@ -69,6 +73,7 @@ const AgendamentoServicos = () => {
       setValue(item.value != null ? String(item.value) : "");
       setDescription(item.description || "");
       setUserId(item.userId != null ? String(item.userId) : "");
+      setUserIds([]); // Na edição, não usamos múltiplos
       setIsActive(item.isActive !== false);
       setDisplayOrder(item.displayOrder != null ? String(item.displayOrder) : "");
     } else {
@@ -77,6 +82,7 @@ const AgendamentoServicos = () => {
       setValue("");
       setDescription("");
       setUserId("");
+      setUserIds([]);
       setIsActive(true);
       setDisplayOrder("");
     }
@@ -99,27 +105,46 @@ const AgendamentoServicos = () => {
       toast.error("Duração deve ser um número maior que zero");
       return;
     }
-    if (!userId) {
-      toast.error("Profissional é obrigatório");
+    
+    // Na edição, usar userId único; na criação, usar userIds múltiplos
+    const selectedUserIds = editing 
+      ? (userId ? [parseInt(userId, 10)] : [])
+      : (userIds.length > 0 ? userIds.map(id => parseInt(id, 10)) : []);
+    
+    if (selectedUserIds.length === 0) {
+      toast.error("Selecione pelo menos um profissional");
       return;
     }
+    
     setSaving(true);
     try {
-      const payload = {
+      const basePayload = {
         name: nameTrim,
         durationMinutes: duration,
         value: value === "" ? null : parseFloat(value) || null,
         description: description.trim() || null,
-        userId: parseInt(userId, 10),
         isActive,
         displayOrder: displayOrder === "" ? null : parseInt(displayOrder, 10) || null,
       };
+      
       if (editing) {
+        // Edição: atualizar um serviço com um usuário
+        const payload = {
+          ...basePayload,
+          userId: selectedUserIds[0],
+        };
         await api.put(`/appointment-services/${editing.id}`, payload);
         toast.success("Serviço atualizado");
       } else {
-        await api.post("/appointment-services", payload);
-        toast.success("Serviço criado");
+        // Criação: criar um serviço para cada usuário selecionado
+        const promises = selectedUserIds.map(userId => 
+          api.post("/appointment-services", {
+            ...basePayload,
+            userId,
+          })
+        );
+        await Promise.all(promises);
+        toast.success(`${selectedUserIds.length} serviço(s) criado(s) com sucesso`);
       }
       closeModal();
       fetchList();
@@ -220,22 +245,77 @@ const AgendamentoServicos = () => {
               onChange={(e) => setName(e.target.value)}
               required
             />
-            <FormControl fullWidth required>
-              <InputLabel>Profissional</InputLabel>
-              <Select
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
-                label="Profissional"
-                disabled={usersLoading}
-              >
-                <MenuItem value="">Selecione</MenuItem>
-                {(users || []).map((u) => (
-                  <MenuItem key={u.id} value={u.id}>
-                    {u.name}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            {editing ? (
+              <FormControl fullWidth required>
+                <InputLabel>Profissional</InputLabel>
+                <Select
+                  value={userId}
+                  onChange={(e) => setUserId(e.target.value)}
+                  label="Profissional"
+                  disabled={usersLoading}
+                >
+                  <MenuItem value="">Selecione</MenuItem>
+                  {(users || []).map((u) => (
+                    <MenuItem key={u.id} value={u.id}>
+                      {u.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            ) : (
+              <Box>
+                <Typography variant="subtitle2" style={{ marginBottom: 8, fontWeight: 600 }}>
+                  Profissionais *
+                </Typography>
+                <Box
+                  style={{
+                    maxHeight: 200,
+                    overflowY: "auto",
+                    border: `1px solid ${usersLoading ? "#ccc" : "#ddd"}`,
+                    borderRadius: 4,
+                    padding: 8,
+                  }}
+                >
+                  {usersLoading ? (
+                    <Box display="flex" justifyContent="center" padding={2}>
+                      <CircularProgress size={24} />
+                    </Box>
+                  ) : (users || []).length === 0 ? (
+                    <Typography variant="body2" color="textSecondary" style={{ padding: 8 }}>
+                      Nenhum usuário disponível
+                    </Typography>
+                  ) : (
+                    <Box display="flex" flexDirection="column">
+                      {(users || []).map((u) => (
+                        <FormControlLabel
+                          key={u.id}
+                          control={
+                            <Checkbox
+                              checked={userIds.indexOf(u.id) > -1}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setUserIds([...userIds, u.id]);
+                                } else {
+                                  setUserIds(userIds.filter((id) => id !== u.id));
+                                }
+                              }}
+                              color="primary"
+                            />
+                          }
+                          label={u.name}
+                          style={{ marginBottom: 4 }}
+                        />
+                      ))}
+                    </Box>
+                  )}
+                </Box>
+                {userIds.length === 0 && (
+                  <Typography variant="caption" color="error" style={{ marginTop: 4, display: "block" }}>
+                    Selecione pelo menos um profissional
+                  </Typography>
+                )}
+              </Box>
+            )}
             <TextField
               fullWidth
               label="Duração (minutos)"

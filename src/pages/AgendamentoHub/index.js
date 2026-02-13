@@ -21,6 +21,8 @@ import {
   CalendarToday as CalendarTodayIcon,
   Dashboard as DashboardIcon,
   Link as LinkIcon,
+  FileCopy as FileCopyIcon,
+  Edit as EditIcon,
 } from "@material-ui/icons";
 import MainContainer from "../../components/MainContainer";
 import api from "../../services/api";
@@ -37,38 +39,138 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     height: "100%",
-    backgroundColor: "#0d0d0d",
-    color: "#e8e8e8",
-    padding: theme.spacing(2),
+    width: "100%",
+    maxWidth: "100%",
+    backgroundColor: theme.palette.background.default,
+    color: theme.palette.text.primary,
+    padding: theme.spacing(3),
     borderRadius: 8,
+    overflowX: "hidden",
+    boxSizing: "border-box",
   },
   tabs: {
-    borderBottom: "1px solid #333",
-    marginBottom: theme.spacing(2),
-    overflowX: "auto",
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    marginBottom: theme.spacing(3),
     flexShrink: 0,
-    "& .MuiTab-root": { color: "#b0b0b0" },
-    "& .Mui-selected": { color: "#fff" },
-    "& .MuiTabs-indicator": { backgroundColor: "#fff" },
+    "& .MuiTab-root": { 
+      color: theme.palette.text.secondary,
+      minHeight: 64,
+      textTransform: "none",
+      fontSize: "0.95rem",
+      fontWeight: 500,
+    },
+    "& .Mui-selected": { 
+      color: theme.palette.primary.main,
+      fontWeight: 600,
+    },
+    "& .MuiTabs-indicator": { 
+      backgroundColor: theme.palette.primary.main,
+      height: 3,
+    },
   },
   tabPanel: {
     flex: 1,
     minHeight: 0,
     overflow: "auto",
+    overflowX: "hidden",
+    padding: theme.spacing(2, 0),
+    width: "100%",
+    maxWidth: "100%",
+    boxSizing: "border-box",
   },
   welcomeCard: {
-    padding: theme.spacing(3),
+    padding: theme.spacing(4),
+    marginBottom: theme.spacing(3),
+    background: `linear-gradient(135deg, ${theme.palette.primary.light}15 0%, ${theme.palette.primary.light}08 100%)`,
+    borderLeft: `4px solid ${theme.palette.primary.main}`,
+    borderRadius: theme.spacing(1.5),
+    boxShadow: theme.shadows[2],
+  },
+  welcomeTitle: {
+    fontWeight: 700,
+    fontSize: "1.5rem",
+    marginBottom: theme.spacing(1),
+    color: theme.palette.text.primary,
+  },
+  welcomeSubtitle: {
+    color: theme.palette.text.secondary,
+    fontSize: "1rem",
+    lineHeight: 1.6,
+  },
+  sectionTitle: {
+    fontWeight: 600,
+    fontSize: "1.25rem",
     marginBottom: theme.spacing(2),
-    background: "linear-gradient(135deg, rgba(34, 197, 94, 0.12) 0%, rgba(34, 197, 94, 0.04) 100%)",
-    borderLeft: "4px solid #22c55e",
-    color: "#e8e8e8",
+    marginTop: theme.spacing(3),
+    color: theme.palette.text.primary,
   },
   statCard: {
     height: "100%",
-    backgroundColor: "#1a1a1a",
-    color: "#e8e8e8",
-    border: "1px solid #333",
-    "& .MuiTypography-colorTextSecondary": { color: "#9e9e9e" },
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: theme.spacing(1.5),
+    boxShadow: theme.shadows[1],
+    transition: "all 0.3s ease",
+    "&:hover": {
+      boxShadow: theme.shadows[4],
+      transform: "translateY(-2px)",
+    },
+    "& .MuiTypography-colorTextSecondary": { 
+      color: theme.palette.text.secondary,
+      fontSize: "0.875rem",
+      fontWeight: 500,
+      marginBottom: theme.spacing(1),
+    },
+  },
+  statValue: {
+    fontWeight: 700,
+    fontSize: "2rem",
+    color: theme.palette.text.primary,
+    marginBottom: theme.spacing(1),
+  },
+  statButton: {
+    marginTop: theme.spacing(1),
+    textTransform: "none",
+    fontWeight: 500,
+  },
+  formLinkCard: {
+    padding: theme.spacing(2.5),
+    marginBottom: theme.spacing(2),
+    backgroundColor: theme.palette.background.paper,
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: theme.spacing(1.5),
+    boxShadow: theme.shadows[1],
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    flexWrap: "wrap",
+    gap: theme.spacing(2),
+    transition: "all 0.2s ease",
+    width: "100%",
+    maxWidth: "100%",
+    boxSizing: "border-box",
+    "&:hover": {
+      boxShadow: theme.shadows[3],
+    },
+  },
+  formLinkTitle: {
+    fontWeight: 600,
+    fontSize: "1rem",
+    color: theme.palette.text.primary,
+    marginBottom: theme.spacing(0.5),
+  },
+  formLinkUrl: {
+    color: theme.palette.text.secondary,
+    fontSize: "0.875rem",
+    fontFamily: "monospace",
+    wordBreak: "break-all",
+  },
+  linkButtons: {
+    display: "flex",
+    gap: theme.spacing(1),
+    flexWrap: "wrap",
+    maxWidth: "100%",
   },
 }));
 
@@ -142,8 +244,8 @@ const AgendamentoHub = () => {
   return (
     <MainContainer>
       <Box className={classes.root}>
-        <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" style={{ marginBottom: 16 }}>
-          <Typography variant="h5" style={{ fontWeight: 600, color: "#fff" }}>
+        <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" style={{ marginBottom: 24 }}>
+          <Typography variant="h4" style={{ fontWeight: 700 }}>
             {i18n.t("agendamento.hubName")}
           </Typography>
         </Box>
@@ -152,8 +254,7 @@ const AgendamentoHub = () => {
           value={tabValue}
           onChange={handleTabChange}
           className={classes.tabs}
-          variant="scrollable"
-          scrollButtons="auto"
+          variant="fullWidth"
         >
           <Tab label="Início" icon={<EventIcon />} />
           <Tab label={i18n.t("agendamento.servicos")} icon={<BuildIcon />} />
@@ -165,66 +266,114 @@ const AgendamentoHub = () => {
         <Box className={classes.tabPanel}>
           {tabValue === 0 && (
             <>
-              <Paper className={classes.welcomeCard}>
-                <Typography variant="h6" gutterBottom>
+              <Paper className={classes.welcomeCard} elevation={0}>
+                <Typography className={classes.welcomeTitle}>
                   {i18n.t("agendamento.hubWelcome")}
                 </Typography>
-                <Typography variant="body2" color="textSecondary">
+                <Typography className={classes.welcomeSubtitle}>
                   {i18n.t("agendamento.hubWelcomeSubtitle")}
                 </Typography>
               </Paper>
 
-              <Typography variant="h6" style={{ marginBottom: 16, marginTop: 8 }}>
+              <Typography className={classes.sectionTitle}>
                 Acesso rápido
               </Typography>
-              <Grid container spacing={2} style={{ marginBottom: 24 }}>
+              <Grid container spacing={3} style={{ marginBottom: 32 }}>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card className={classes.statCard} style={{ cursor: "pointer" }} onClick={() => handleTabChange(null, 3)}>
+                  <Card 
+                    className={classes.statCard} 
+                    style={{ cursor: "pointer" }} 
+                    onClick={() => handleTabChange(null, 3)}
+                    elevation={0}
+                  >
                     <CardContent>
                       <Typography color="textSecondary" gutterBottom>
                         {i18n.t("agendamento.agendamentosHoje")}
                       </Typography>
-                      <Typography variant="h4">{loadingStats ? "—" : stats.agendamentosHoje}</Typography>
-                      <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                      <Typography className={classes.statValue}>
+                        {loadingStats ? "—" : stats.agendamentosHoje}
+                      </Typography>
+                      <Button 
+                        size="small" 
+                        color="primary" 
+                        className={classes.statButton}
+                        variant="text"
+                      >
                         Ver agenda
                       </Button>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card className={classes.statCard} style={{ cursor: "pointer" }} onClick={() => handleTabChange(null, 3)}>
+                  <Card 
+                    className={classes.statCard} 
+                    style={{ cursor: "pointer" }} 
+                    onClick={() => handleTabChange(null, 3)}
+                    elevation={0}
+                  >
                     <CardContent>
                       <Typography color="textSecondary" gutterBottom>
                         {i18n.t("agendamento.pendentesConfirmacao")}
                       </Typography>
-                      <Typography variant="h4">{loadingStats ? "—" : stats.pendentesConfirmacao}</Typography>
-                      <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                      <Typography className={classes.statValue}>
+                        {loadingStats ? "—" : stats.pendentesConfirmacao}
+                      </Typography>
+                      <Button 
+                        size="small" 
+                        color="primary" 
+                        className={classes.statButton}
+                        variant="text"
+                      >
                         Ver agenda
                       </Button>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card className={classes.statCard} style={{ cursor: "pointer" }} onClick={() => handleTabChange(null, 1)}>
+                  <Card 
+                    className={classes.statCard} 
+                    style={{ cursor: "pointer" }} 
+                    onClick={() => handleTabChange(null, 1)}
+                    elevation={0}
+                  >
                     <CardContent>
                       <Typography color="textSecondary" gutterBottom>
                         {i18n.t("agendamento.servicos")}
                       </Typography>
-                      <Typography variant="body2">Cadastre serviços e profissionais</Typography>
-                      <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                      <Typography variant="body2" style={{ marginBottom: 8, color: "#666" }}>
+                        Cadastre serviços e profissionais
+                      </Typography>
+                      <Button 
+                        size="small" 
+                        color="primary" 
+                        className={classes.statButton}
+                        variant="text"
+                      >
                         Gerenciar
                       </Button>
                     </CardContent>
                   </Card>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Card className={classes.statCard} style={{ cursor: "pointer" }} onClick={() => handleTabChange(null, 4)}>
+                  <Card 
+                    className={classes.statCard} 
+                    style={{ cursor: "pointer" }} 
+                    onClick={() => handleTabChange(null, 4)}
+                    elevation={0}
+                  >
                     <CardContent>
                       <Typography color="textSecondary" gutterBottom>
                         Dashboard
                       </Typography>
-                      <Typography variant="body2">Resumo e estatísticas</Typography>
-                      <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                      <Typography variant="body2" style={{ marginBottom: 8, color: "#666" }}>
+                        Resumo e estatísticas
+                      </Typography>
+                      <Button 
+                        size="small" 
+                        color="primary" 
+                        className={classes.statButton}
+                        variant="text"
+                      >
                         Ver
                       </Button>
                     </CardContent>
@@ -233,8 +382,8 @@ const AgendamentoHub = () => {
               </Grid>
 
               {agendamentoForms.length > 0 && (
-                <Box mt={3}>
-                  <Typography variant="subtitle1" gutterBottom>
+                <Box>
+                  <Typography className={classes.sectionTitle}>
                     Links do formulário de agendamento
                   </Typography>
                   {agendamentoForms.map((form) => {
@@ -242,20 +391,33 @@ const AgendamentoHub = () => {
                     return (
                       <Paper
                         key={form.id}
-                        style={{ padding: 16, marginBottom: 8, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}
+                        className={classes.formLinkCard}
+                        elevation={0}
                       >
-                        <Box>
-                          <Typography variant="subtitle2">{form.name}</Typography>
-                          <Typography variant="caption" color="textSecondary" noWrap style={{ maxWidth: 280, display: "block" }}>
+                        <Box style={{ flex: 1, minWidth: 200 }}>
+                          <Typography className={classes.formLinkTitle}>
+                            {form.name}
+                          </Typography>
+                          <Typography className={classes.formLinkUrl}>
                             {link}
                           </Typography>
                         </Box>
-                        <Box>
-                          <Button size="small" startIcon={<LinkIcon />} onClick={() => handleCopyLink(link)}>
-                            Copiar link
+                        <Box className={classes.linkButtons}>
+                          <Button 
+                            size="small" 
+                            variant="outlined"
+                            startIcon={<FileCopyIcon />} 
+                            onClick={() => handleCopyLink(link)}
+                          >
+                            COPIAR LINK
                           </Button>
-                          <Button size="small" onClick={() => history.push(`/forms/${form.id}`)}>
-                            Editar
+                          <Button 
+                            size="small" 
+                            variant="outlined"
+                            startIcon={<EditIcon />}
+                            onClick={() => history.push(`/forms/${form.id}`)}
+                          >
+                            EDITAR
                           </Button>
                         </Box>
                       </Paper>
