@@ -142,8 +142,12 @@ const UserModal = ({ open, onClose, userId }) => {
 			if (!userId) return;
 			try {
 				const { data } = await api.get(`/users/${userId}`);
+				// Para o próprio usuário logado, priorizar preferência do localStorage (repetir som)
+				const isOwnProfile = userId === loggedInUser?.id;
+				const fromStorage = isOwnProfile ? localStorage.getItem(`repeatPendingChatSound_${userId}`) : null;
+				const repeatPendingChatSound = fromStorage !== null ? fromStorage === "true" : (data.repeatPendingChatSound !== false);
 				setUser(prevState => {
-					return { ...prevState, ...data };
+					return { ...prevState, ...data, repeatPendingChatSound };
 				});
 				const userQueueIds = data.queues?.map(queue => queue.id);
 				setSelectedQueueIds(userQueueIds);
@@ -175,7 +179,7 @@ const UserModal = ({ open, onClose, userId }) => {
 		if (userId) {
 			fetchUserContacts();
 		}
-	}, [userId, open]);
+	}, [userId, open, loggedInUser?.id]);
 
 	const handleClose = () => {
 		onClose();
@@ -227,6 +231,12 @@ const UserModal = ({ open, onClose, userId }) => {
 		try {
 			if (userId) {
 				await api.put(`/users/${userId}`, userData);
+				// Persistir no localStorage para o som de chat em espera não voltar ao recarregar a página
+				if (userId === loggedInUser?.id) {
+					try {
+						localStorage.setItem(`repeatPendingChatSound_${userId}`, String(!!values.repeatPendingChatSound));
+					} catch (e) {}
+				}
 			} else {
 				await api.post("/users", userData);
 			}

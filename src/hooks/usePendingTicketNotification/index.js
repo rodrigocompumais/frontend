@@ -4,6 +4,18 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 import newChatSound from "../../assets/new_chat.mp3";
 import api from "../../services/api";
 
+const STORAGE_KEY_PREFIX = "repeatPendingChatSound";
+
+const getStoredRepeatPreference = (userId) => {
+  if (!userId) return null;
+  try {
+    const stored = localStorage.getItem(`${STORAGE_KEY_PREFIX}_${userId}`);
+    return stored === null ? null : stored === "true";
+  } catch {
+    return null;
+  }
+};
+
 const usePendingTicketNotification = () => {
   const { user } = useContext(AuthContext);
   const socketManager = useContext(SocketContext);
@@ -11,25 +23,30 @@ const usePendingTicketNotification = () => {
   const isPlayingRef = useRef(false);
   const pendingTicketsRef = useRef(new Set());
 
-  // Inicializar elemento de áudio
+  // Ler preferência "repetir som" (localStorage tem prioridade para persistir após recarregar)
+  const getShouldRepeat = () => {
+    const stored = getStoredRepeatPreference(user?.id);
+    if (stored !== null) return stored;
+    const fromUser = user?.repeatPendingChatSound;
+    return fromUser !== false && fromUser !== undefined ? true : !!fromUser;
+  };
+
+  // Inicializar elemento de áudio e sincronizar preferência do backend para localStorage (primeira carga)
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio(newChatSound);
       audioRef.current.volume = 0.5;
     }
-    
-    // Atualizar loop baseado na configuração do usuário
-    // Se o campo não existir ou for undefined, assume true (comportamento padrão)
-    const shouldRepeat = user?.repeatPendingChatSound !== false && user?.repeatPendingChatSound !== undefined ? user.repeatPendingChatSound : true;
-    
-    if (audioRef.current) {
-      audioRef.current.loop = shouldRepeat;
+
+    const key = user?.id ? `${STORAGE_KEY_PREFIX}_${user.id}` : null;
+    if (key && localStorage.getItem(key) === null && user?.repeatPendingChatSound !== undefined) {
+      localStorage.setItem(key, String(!!user.repeatPendingChatSound));
     }
 
-    return () => {
-      // Não destruir o áudio aqui, apenas pausar
-    };
-  }, [user?.repeatPendingChatSound]);
+    if (audioRef.current) {
+      audioRef.current.loop = getShouldRepeat();
+    }
+  }, [user?.id, user?.repeatPendingChatSound]);
 
   // Limpar áudio ao desmontar
   useEffect(() => {
@@ -79,21 +96,19 @@ const usePendingTicketNotification = () => {
   // Controlar reprodução do áudio baseado no número de tickets pendentes
   const updateAudioState = () => {
     const hasPendingTickets = pendingTicketsRef.current.size > 0;
-    const shouldRepeat = user?.repeatPendingChatSound !== false; // Default true se não estiver definido
-    
+    const shouldRepeat = getShouldRepeat();
+
     if (audioRef.current) {
       audioRef.current.loop = shouldRepeat;
     }
-    
+
     if (hasPendingTickets && !isPlayingRef.current && audioRef.current) {
-      // Há tickets pendentes e o áudio não está tocando
       audioRef.current.play().catch(err => {
         console.warn("Não foi possível tocar o áudio:", err);
       });
       isPlayingRef.current = true;
       console.log("🔊 Áudio iniciado - tickets pendentes:", pendingTicketsRef.current.size, "Repetir:", shouldRepeat);
-      
-      // Se não deve repetir, parar após uma reprodução
+
       if (!shouldRepeat) {
         audioRef.current.onended = () => {
           isPlayingRef.current = false;
@@ -101,7 +116,6 @@ const usePendingTicketNotification = () => {
         };
       }
     } else if (!hasPendingTickets && isPlayingRef.current && audioRef.current) {
-      // Não há mais tickets pendentes, parar o áudio
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       isPlayingRef.current = false;
