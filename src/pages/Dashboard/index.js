@@ -70,6 +70,7 @@ import api from "../../services/api";
 import RestaurantIcon from "@material-ui/icons/Restaurant";
 import QueueIcon from "@material-ui/icons/Queue";
 import HistoryIcon from "@material-ui/icons/History";
+import ViewModuleIcon from "@material-ui/icons/ViewModule";
 
 import { isEmpty } from "lodash";
 import moment from "moment";
@@ -499,9 +500,10 @@ const Dashboard = () => {
   const [tasksLoading, setTasksLoading] = useState(false);
   const { find } = useDashboard();
   const { count: contactsCount } = useContacts({});
-  const { hasLanchonetes } = useCompanyModules();
+  const { modules: companyModuleSlugs, hasLanchonetes } = useCompanyModules();
   const history = useHistory();
   const [ordersStats, setOrdersStats] = useState({ pedidosHoje: 0, pedidosEmAndamento: 0, pedidosConfirmados: 0, firstCardapioFormId: null });
+  const [modulesWithDetails, setModulesWithDetails] = useState([]);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -581,6 +583,25 @@ const Dashboard = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  // Módulos da empresa com nome e descrição (funcionalidades)
+  useEffect(() => {
+    const loadModulesWithDetails = async () => {
+      if (!companyModuleSlugs?.length) {
+        setModulesWithDetails([]);
+        return;
+      }
+      try {
+        const { data } = await api.get("/company/modules/available");
+        const available = data.modules || [];
+        const list = available.filter((m) => companyModuleSlugs.includes(m.id));
+        setModulesWithDetails(list);
+      } catch (err) {
+        setModulesWithDetails([]);
+      }
+    };
+    loadModulesWithDetails();
+  }, [companyModuleSlugs]);
 
   // Listener para abrir resumo IA via evento customizado
   useEffect(() => {
@@ -1015,6 +1036,39 @@ const Dashboard = () => {
               subtext="novos contatos"
             />
           </Grid>
+        </Grid>
+
+        {/* Módulos */}
+        <Typography className={classes.sectionTitle}>
+          <ViewModuleIcon fontSize="small" />
+          Módulos
+        </Typography>
+        <Grid container spacing={2} className={classes.secondaryStats}>
+          {modulesWithDetails.length === 0 ? (
+            <Grid item xs={12}>
+              <Paper elevation={2} style={{ padding: 24, textAlign: "center" }}>
+                <Typography color="textSecondary">
+                  Nenhum módulo contratado ou carregando...
+                </Typography>
+              </Paper>
+            </Grid>
+          ) : (
+            modulesWithDetails.map((mod) => (
+              <Grid item xs={12} sm={6} md={4} key={mod.id}>
+                <Paper elevation={2} style={{ padding: 20, height: "100%", display: "flex", flexDirection: "column" }}>
+                  <Box display="flex" alignItems="center" gap={1} marginBottom={1.5}>
+                    <ViewModuleIcon style={{ color: "#6366F1", fontSize: 28 }} />
+                    <Typography variant="h6" style={{ fontWeight: 600 }}>
+                      {mod.name || mod.id}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="textSecondary" style={{ flex: 1, whiteSpace: "pre-wrap" }}>
+                    {mod.description || "Sem descrição."}
+                  </Typography>
+                </Paper>
+              </Grid>
+            ))
+          )}
         </Grid>
 
         {/* AI Tokens Section */}
