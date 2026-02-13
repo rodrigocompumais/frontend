@@ -142,10 +142,17 @@ const UserModal = ({ open, onClose, userId }) => {
 			if (!userId) return;
 			try {
 				const { data } = await api.get(`/users/${userId}`);
-				// Para o próprio usuário logado, priorizar preferência do localStorage (repetir som)
+				// Para o próprio usuário, priorizar localStorage; senão usar valor da API (true/false/1/0); padrão true
 				const isOwnProfile = userId === loggedInUser?.id;
 				const fromStorage = isOwnProfile ? localStorage.getItem(`repeatPendingChatSound_${userId}`) : null;
-				const repeatPendingChatSound = fromStorage !== null ? fromStorage === "true" : (data.repeatPendingChatSound !== false);
+				let repeatPendingChatSound = true;
+				if (fromStorage !== null) {
+					repeatPendingChatSound = fromStorage === "true";
+				} else {
+					const v = data.repeatPendingChatSound;
+					if (v === false || v === 0 || v === "false") repeatPendingChatSound = false;
+					else if (v === true || v === 1 || v === "true") repeatPendingChatSound = true;
+				}
 				setUser(prevState => {
 					return { ...prevState, ...data, repeatPendingChatSound };
 				});

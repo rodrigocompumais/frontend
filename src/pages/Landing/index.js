@@ -50,6 +50,7 @@ import CancelIcon from "@material-ui/icons/Cancel";
 import TranslateIcon from "@material-ui/icons/Translate";
 import DescriptionIcon from "@material-ui/icons/Description";
 import LocalOfferIcon from "@material-ui/icons/LocalOffer";
+import ViewModuleIcon from "@material-ui/icons/ViewModule";
 import ScrollReveal from "scrollreveal";
 
 import { Link as RouterLink, useHistory } from "react-router-dom";
@@ -786,6 +787,8 @@ const Landing = () => {
   const [plans, setPlans] = useState([]);
   const [loadingPlans, setLoadingPlans] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [modules, setModules] = useState([]);
+  const [loadingModules, setLoadingModules] = useState(true);
 
   // Fetch planos da API
   useEffect(() => {
@@ -800,6 +803,22 @@ const Landing = () => {
       }
     };
     fetchPlans();
+  }, []);
+
+  // Fetch módulos (público) para a seção Módulos na LP
+  useEffect(() => {
+    const fetchModules = async () => {
+      try {
+        const { data } = await api.get("/modules/public");
+        setModules(data.modules || []);
+      } catch (err) {
+        console.error("Erro ao carregar módulos:", err);
+        setModules([]);
+      } finally {
+        setLoadingModules(false);
+      }
+    };
+    fetchModules();
   }, []);
 
   // ScrollReveal otimizado - menos elementos
@@ -952,6 +971,12 @@ const Landing = () => {
             </Typography>
             <Typography
               className={classes.topNavLink}
+              onClick={() => scrollToSection("modules")}
+            >
+              Módulos
+            </Typography>
+            <Typography
+              className={classes.topNavLink}
               onClick={() => scrollToSection("plans")}
             >
               Planos
@@ -1028,6 +1053,9 @@ const Landing = () => {
           </ListItem>
           <ListItem button onClick={() => scrollToSection("forms")}>
             <ListItemText primary="Formulários" />
+          </ListItem>
+          <ListItem button onClick={() => scrollToSection("modules")}>
+            <ListItemText primary="Módulos" />
           </ListItem>
           <ListItem button onClick={() => scrollToSection("plans")}>
             <ListItemText primary="Planos" />
@@ -1381,6 +1409,61 @@ const Landing = () => {
               </Card>
             </Grid>
           </Grid>
+        </Container>
+      </Box>
+
+      {/* ===== MÓDULOS SECTION ===== */}
+      <Box id="modules" className={classes.section} style={{ scrollMarginTop: '80px' }}>
+        <Container maxWidth="lg">
+          <Box display="flex" flexDirection="column" alignItems="center">
+            <Box className={classes.aiSectionBadge}>
+              <ViewModuleIcon style={{ fontSize: 16, color: "#00D9FF" }} />
+              <Typography className={classes.aiSectionBadgeText}>
+                Módulos
+              </Typography>
+            </Box>
+            <Typography variant="h3" className={`${classes.sectionTitle} sr-section-title`}>
+              Módulos e funcionalidades
+            </Typography>
+            <Typography className={classes.sectionSubtitle}>
+              Conheça os módulos disponíveis na plataforma e o que cada um oferece para o seu negócio.
+            </Typography>
+          </Box>
+
+          {loadingModules ? (
+            <Box display="flex" justifyContent="center" padding={4}>
+              <CircularProgress style={{ color: "#00D9FF" }} />
+            </Box>
+          ) : modules.length === 0 ? (
+            <Typography align="center" style={{ color: "rgba(148, 163, 184, 0.7)", padding: 24 }}>
+              Nenhum módulo disponível no momento.
+            </Typography>
+          ) : (
+            <Grid container spacing={3} className={classes.cardGrid} style={{ marginTop: 24 }}>
+              {modules.map((mod) => (
+                <Grid item xs={12} sm={6} md={4} key={mod.id}>
+                  <Card className={`${classes.featureCard} sr-card`}>
+                    <CardContent>
+                      <Box className={classes.featureIconWrapper}>
+                        <ViewModuleIcon style={{ color: "#fff", fontSize: 28 }} />
+                      </Box>
+                      <Typography className={classes.featureTitle}>
+                        {mod.name || mod.id}
+                      </Typography>
+                      <Typography className={classes.featureDescription} style={{ whiteSpace: "pre-wrap" }}>
+                        {mod.description || "Módulo disponível na plataforma."}
+                      </Typography>
+                      {mod.price != null && Number(mod.price) > 0 && (
+                        <Typography variant="body2" style={{ marginTop: 8, color: "#00D9FF", fontWeight: 600 }}>
+                          A partir de R$ {Number(mod.price).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </Typography>
+                      )}
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          )}
         </Container>
       </Box>
 

@@ -23,15 +23,17 @@ const usePendingTicketNotification = () => {
   const isPlayingRef = useRef(false);
   const pendingTicketsRef = useRef(new Set());
 
-  // Ler preferência "repetir som" (localStorage tem prioridade para persistir após recarregar)
+  // Ler preferência "repetir som": localStorage tem prioridade; se nunca definido, padrão é true (repetir)
   const getShouldRepeat = () => {
     const stored = getStoredRepeatPreference(user?.id);
     if (stored !== null) return stored;
     const fromUser = user?.repeatPendingChatSound;
-    return fromUser !== false && fromUser !== undefined ? true : !!fromUser;
+    if (fromUser === true || fromUser === 1) return true;
+    if (fromUser === false || fromUser === 0) return false;
+    return true; // padrão quando backend não envia ou envia null
   };
 
-  // Inicializar elemento de áudio e sincronizar preferência do backend para localStorage (primeira carga)
+  // Inicializar elemento de áudio. Só preencher localStorage a partir do backend quando o valor for explícito (true/false)
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio(newChatSound);
@@ -39,8 +41,17 @@ const usePendingTicketNotification = () => {
     }
 
     const key = user?.id ? `${STORAGE_KEY_PREFIX}_${user.id}` : null;
-    if (key && localStorage.getItem(key) === null && user?.repeatPendingChatSound !== undefined) {
-      localStorage.setItem(key, String(!!user.repeatPendingChatSound));
+    const fromApi = user?.repeatPendingChatSound;
+    const explicitBool = fromApi === true || fromApi === false || fromApi === 1 || fromApi === 0;
+    if (key) {
+      const stored = localStorage.getItem(key);
+      if (stored === null && explicitBool) {
+        localStorage.setItem(key, String(fromApi === true || fromApi === 1));
+      }
+      // Se o backend não envia valor explícito e estava "false" por sync antigo, limpar para voltar ao padrão (true)
+      if (stored === "false" && !explicitBool) {
+        localStorage.removeItem(key);
+      }
     }
 
     if (audioRef.current) {
@@ -100,6 +111,14 @@ const usePendingTicketNotification = () => {
 
     if (audioRef.current) {
       audioRef.current.loop = shouldRepeat;
+      if (shouldRepeat) {
+        audioRef.current.onended = null;
+      } else {
+        audioRef.current.onended = () => {
+          isPlayingRef.current = false;
+          console.log("🔇 Áudio parado - reprodução única concluída");
+        };
+      }
     }
 
     if (hasPendingTickets && !isPlayingRef.current && audioRef.current) {
@@ -108,13 +127,6 @@ const usePendingTicketNotification = () => {
       });
       isPlayingRef.current = true;
       console.log("🔊 Áudio iniciado - tickets pendentes:", pendingTicketsRef.current.size, "Repetir:", shouldRepeat);
-
-      if (!shouldRepeat) {
-        audioRef.current.onended = () => {
-          isPlayingRef.current = false;
-          console.log("🔇 Áudio parado - reprodução única concluída");
-        };
-      }
     } else if (!hasPendingTickets && isPlayingRef.current && audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
