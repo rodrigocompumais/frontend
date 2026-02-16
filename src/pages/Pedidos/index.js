@@ -15,6 +15,14 @@ import {
   InputAdornment,
   TextField,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
 } from "@material-ui/core";
 import {
   ArrowBack as ArrowBackIcon,
@@ -161,6 +169,9 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
   const [mesas, setMesas] = useState([]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [orderModalOpen, setOrderModalOpen] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -266,6 +277,57 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
   };
 
   const orderStages = orderTypeFilter === "mesa" ? MESA_ORDER_STAGES : DELIVERY_ORDER_STAGES;
+
+  const getStagesForOrder = (order) => {
+    return order?.metadata?.orderType === "delivery" ? DELIVERY_ORDER_STAGES : MESA_ORDER_STAGES;
+  };
+
+  const getNextStage = (order) => {
+    const stages = getStagesForOrder(order);
+    const current = getOrderStatus(order);
+    const idx = stages.findIndex((s) => s.id === current);
+    if (idx < 0 || idx >= stages.length - 1) return null;
+    const next = stages[idx + 1];
+    return next.id === "cancelado" ? null : next;
+  };
+
+  const handleOpenOrderModal = (order) => {
+    setSelectedOrder(order);
+    setOrderModalOpen(true);
+  };
+
+  const handleCloseOrderModal = () => {
+    setOrderModalOpen(false);
+    setSelectedOrder(null);
+  };
+
+  const handleProximaEtapa = async () => {
+    if (!selectedOrder) return;
+    const next = getNextStage(selectedOrder);
+    if (!next) return;
+    const orderFormId = selectedOrder.formId || selectedOrder.form?.id;
+    if (!orderFormId) {
+      toast.error("Formulário do pedido não identificado.");
+      return;
+    }
+    setUpdatingStatus(true);
+    try {
+      await api.put(`/forms/${orderFormId}/responses/${selectedOrder.id}/order-status`, {
+        orderStatus: next.id,
+      });
+      setOrders((prev) =>
+        prev.map((o) =>
+          o.id === selectedOrder.id ? { ...o, orderStatus: next.id } : o
+        )
+      );
+      toast.success(`Pedido avançado para "${next.label}"`);
+      handleCloseOrderModal();
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
 
   // Pedidos cancelados somem da lista (mesa e delivery)
   const ordersToShow = orders.filter((o) => getOrderStatus(o) !== "cancelado");
@@ -396,6 +458,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                           {(provided, snapshot) => (
                             <PedidoKanbanCard
                               order={order}
+                              onCardClick={handleOpenOrderModal}
                               onViewDetails={handleViewDetails}
                               onWhatsApp={handleWhatsApp}
                               isDragging={snapshot.isDragging}
@@ -420,6 +483,68 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
     return (
       <Box className={`${classes.root} ${classes.rootMinimal}`} padding={0}>
         {kanban}
+        <Dialog
+          open={orderModalOpen}
+          onClose={handleCloseOrderModal}
+          maxWidth="sm"
+          fullWidth
+          scroll="paper"
+        >
+          <DialogTitle>
+            Pedido {selectedOrder?.protocol || (selectedOrder?.id ? `#${selectedOrder.id}` : "")}
+          </DialogTitle>
+          <DialogContent dividers>
+            {selectedOrder && (
+              <Box>
+                <Typography variant="subtitle2" color="textSecondary" gutterBottom>Cliente</Typography>
+                <Typography variant="body1" style={{ fontWeight: 600 }}>{selectedOrder.responderName || "Sem nome"}</Typography>
+                <Typography variant="body2" color="textSecondary">{selectedOrder.responderPhone || "Sem número"}</Typography>
+                <Box mt={2}>
+                  <Typography variant="subtitle2" color="textSecondary" gutterBottom>Tipo</Typography>
+                  <Typography variant="body2">
+                    {selectedOrder.metadata?.orderType === "delivery" ? "Delivery" : "Mesa"}
+                    {selectedOrder.metadata?.tableNumber != null && ` • Mesa ${selectedOrder.metadata.tableNumber}`}
+                  </Typography>
+                </Box>
+                <Box mt={2}>
+                  <Typography variant="subtitle2" color="textSecondary" gutterBottom>Itens</Typography>
+                  <List dense disablePadding>
+                    {(selectedOrder.metadata?.menuItems || []).map((item, idx) => (
+                      <ListItem key={idx} disableGutters style={{ paddingTop: 0, paddingBottom: 4 }}>
+                        <ListItemText
+                          primary={`${item.quantity}x ${item.productName || "Item"}`}
+                          secondary={item.observations ? `Obs: ${item.observations}` : null}
+                        />
+                        <Typography variant="body2">
+                          R$ {((Number(item.quantity) || 0) * (Number(item.productValue) || 0)).toFixed(2).replace(".", ",")}
+                        </Typography>
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+                <Divider style={{ margin: "12px 0" }} />
+                <Box display="flex" justifyContent="space-between" alignItems="center">
+                  <Typography variant="body2" color="textSecondary">
+                    Status: <strong style={{ color: (getStagesForOrder(selectedOrder).find((s) => s.id === getOrderStatus(selectedOrder)) || {}).color }}>
+                      {getStagesForOrder(selectedOrder).find((s) => s.id === getOrderStatus(selectedOrder))?.label || getOrderStatus(selectedOrder)}
+                    </strong>
+                  </Typography>
+                  <Typography variant="h6" color="primary">
+                    R$ {(selectedOrder.metadata?.total != null ? Number(selectedOrder.metadata.total) : (selectedOrder.metadata?.menuItems || []).reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.productValue) || 0), 0)).toFixed(2).replace(".", ",")}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseOrderModal}>Fechar</Button>
+            {selectedOrder && getNextStage(selectedOrder) && (
+              <Button variant="contained" color="primary" onClick={handleProximaEtapa} disabled={updatingStatus}>
+                {updatingStatus ? "Atualizando..." : `Próxima etapa (${getNextStage(selectedOrder)?.label})`}
+              </Button>
+            )}
+          </DialogActions>
+        </Dialog>
       </Box>
     );
   }
@@ -489,6 +614,88 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
         </Box>
       </MainHeader>
       {kanban}
+
+      <Dialog
+        open={orderModalOpen}
+        onClose={handleCloseOrderModal}
+        maxWidth="sm"
+        fullWidth
+        scroll="paper"
+      >
+        <DialogTitle>
+          Pedido {selectedOrder?.protocol || (selectedOrder?.id ? `#${selectedOrder.id}` : "")}
+        </DialogTitle>
+        <DialogContent dividers>
+          {selectedOrder && (
+            <Box>
+              <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                Cliente
+              </Typography>
+              <Typography variant="body1" style={{ fontWeight: 600 }}>
+                {selectedOrder.responderName || "Sem nome"}
+              </Typography>
+              <Typography variant="body2" color="textSecondary">
+                {selectedOrder.responderPhone || "Sem número"}
+              </Typography>
+              <Box mt={2}>
+                <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                  Tipo
+                </Typography>
+                <Typography variant="body2">
+                  {selectedOrder.metadata?.orderType === "delivery" ? "Delivery" : "Mesa"}
+                  {selectedOrder.metadata?.tableNumber != null && ` • Mesa ${selectedOrder.metadata.tableNumber}`}
+                </Typography>
+              </Box>
+              <Box mt={2}>
+                <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                  Itens
+                </Typography>
+                <List dense disablePadding>
+                  {(selectedOrder.metadata?.menuItems || []).map((item, idx) => (
+                    <ListItem key={idx} disableGutters style={{ paddingTop: 0, paddingBottom: 4 }}>
+                      <ListItemText
+                        primary={`${item.quantity}x ${item.productName || "Item"}`}
+                        secondary={item.observations ? `Obs: ${item.observations}` : null}
+                      />
+                      <Typography variant="body2">
+                        R$ {((Number(item.quantity) || 0) * (Number(item.productValue) || 0)).toFixed(2).replace(".", ",")}
+                      </Typography>
+                    </ListItem>
+                  ))}
+                </List>
+              </Box>
+              <Divider style={{ margin: "12px 0" }} />
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Typography variant="body2" color="textSecondary">
+                  Status atual:{" "}
+                  <strong style={{ color: (getStagesForOrder(selectedOrder).find((s) => s.id === getOrderStatus(selectedOrder)) || {}).color }}>
+                    {getStagesForOrder(selectedOrder).find((s) => s.id === getOrderStatus(selectedOrder))?.label || getOrderStatus(selectedOrder)}
+                  </strong>
+                </Typography>
+                <Typography variant="h6" color="primary">
+                  R$ {(selectedOrder.metadata?.total != null
+                    ? Number(selectedOrder.metadata.total)
+                    : (selectedOrder.metadata?.menuItems || []).reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.productValue) || 0), 0)
+                  ).toFixed(2).replace(".", ",")}
+                </Typography>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseOrderModal}>Fechar</Button>
+          {selectedOrder && getNextStage(selectedOrder) && (
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleProximaEtapa}
+              disabled={updatingStatus}
+            >
+              {updatingStatus ? "Atualizando..." : `Próxima etapa (${getNextStage(selectedOrder)?.label})`}
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </MainContainer>
   );
 };

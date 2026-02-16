@@ -571,6 +571,18 @@ const FormBuilder = () => {
   const isQuotationForm = formData.settings?.formType === "quotation";
   const isMenuForm = formData.settings?.formType === "cardapio";
 
+  const tabKeys = isMenuForm
+    ? ["gerais", "campos", "impressao", "quadro", "aparencia", "integracoes"]
+    : ["gerais", "campos", "aparencia", "integracoes"];
+  const currentTabKey = tabKeys[Math.min(tabValue, tabKeys.length - 1)];
+
+  // Ao trocar para um tipo que não é cardápio, ajustar índice para não ultrapassar as abas visíveis
+  useEffect(() => {
+    if (!isMenuForm && tabValue >= tabKeys.length) {
+      setTabValue(tabKeys.length - 1);
+    }
+  }, [isMenuForm, tabKeys.length, tabValue]);
+
   const DEFAULT_ORDER_STAGES = [
     { id: "novo", label: "Novo", color: "#6366F1" },
     { id: "confirmado", label: "Confirmado", color: "#3B82F6" },
@@ -605,18 +617,32 @@ const FormBuilder = () => {
 
       <Paper className={classes.content}>
         <Tabs
-          value={tabValue}
+          value={Math.min(tabValue, tabKeys.length - 1)}
           onChange={(e, newValue) => setTabValue(newValue)}
           indicatorColor="primary"
           textColor="primary"
         >
-          <Tab label="Configurações Gerais" />
-          <Tab label="Campos" />
-          <Tab label="Aparência" />
-          <Tab label="Integrações" />
+          {tabKeys.map((key) => (
+            <Tab
+              key={key}
+              label={
+                key === "gerais"
+                  ? "Configurações Gerais"
+                  : key === "campos"
+                  ? "Campos"
+                  : key === "impressao"
+                  ? "Impressão"
+                  : key === "quadro"
+                  ? "Quadro (estágios do pedido)"
+                  : key === "aparencia"
+                  ? "Aparência"
+                  : "Integrações"
+              }
+            />
+          ))}
         </Tabs>
 
-        {tabValue === 0 && (
+        {currentTabKey === "gerais" && (
           <Box className={classes.section} style={{ marginTop: 24 }}>
             <Typography className={classes.sectionTitle}>
               Informações Básicas
@@ -930,11 +956,145 @@ const FormBuilder = () => {
                   </Grid>
                 </Grid>
               )}
+
+              {formData.settings?.formType === "cardapio" && (
+                <Grid container spacing={2} style={{ marginTop: 24 }}>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 8 }}>
+                      Conexão para envio de notificações
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" style={{ marginBottom: 12 }}>
+                      Defina qual conexão WhatsApp será usada para enviar confirmações e notificações de status do pedido ao cliente.
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControl fullWidth variant="outlined">
+                      <InputLabel>Conexão WhatsApp para Envio</InputLabel>
+                      <Select
+                        value={formData.settings?.whatsappId || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            settings: {
+                              ...formData.settings,
+                              whatsappId: e.target.value ? Number(e.target.value) : null,
+                            },
+                          })
+                        }
+                        label="Conexão WhatsApp para Envio"
+                      >
+                        <MenuItem value="">
+                          <em>Usar conexão padrão</em>
+                        </MenuItem>
+                        {whatsApps
+                          .filter((w) => w.status === "CONNECTED")
+                          .map((whatsapp) => (
+                            <MenuItem key={whatsapp.id} value={whatsapp.id}>
+                              {whatsapp.name} {whatsapp.isDefault && "(Padrão)"}
+                            </MenuItem>
+                          ))}
+                      </Select>
+                    </FormControl>
+                    <Typography variant="caption" color="textSecondary" style={{ marginTop: 8, display: "block" }}>
+                      Selecione qual conexão será usada para enviar a confirmação do pedido e mensagens de status. Se não selecionar, será usada a conexão padrão.
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.settings?.mesas !== false}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                mesas: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                      }
+                      label="Aceita pedidos de mesa"
+                    />
+                    <Typography variant="caption" display="block" color="textSecondary">
+                      Permite que clientes façam pedidos para consumo na mesa.
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.settings?.delivery !== false}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                delivery: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                      }
+                      label="Aceita pedidos de delivery"
+                    />
+                    <Typography variant="caption" display="block" color="textSecondary">
+                      Permite que clientes façam pedidos para entrega.
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={!!formData.settings?.showMesaField}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                showMesaField: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                      }
+                      label="Exibir campo Número da mesa"
+                    />
+                    <Typography variant="caption" display="block" color="textSecondary">
+                      Permite que o cliente selecione ou digite a mesa ao finalizar o pedido.
+                    </Typography>
+                  </Grid>
+                  {formData.settings?.showMesaField && (
+                    <Grid item xs={12} md={6}>
+                      <FormControl fullWidth variant="outlined" size="small">
+                        <InputLabel>Modo do campo mesa</InputLabel>
+                        <Select
+                          value={formData.settings?.mesaFieldMode || "select"}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                mesaFieldMode: e.target.value,
+                              },
+                            })
+                          }
+                          label="Modo do campo mesa"
+                        >
+                          <MenuItem value="select">Select (lista de mesas)</MenuItem>
+                          <MenuItem value="input">Input livre (texto)</MenuItem>
+                        </Select>
+                      </FormControl>
+                    </Grid>
+                  )}
+                </Grid>
+              )}
             </Grid>
           </Box>
         )}
 
-        {tabValue === 1 && (
+        {currentTabKey === "campos" && (
           <Box className={classes.section} style={{ marginTop: 24 }}>
             {isQuotationForm ? (
               <>
@@ -1069,448 +1229,6 @@ const FormBuilder = () => {
                 <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
                   Estes campos aparecerão na aba "Finalizar" do formulário de cardápio, após o cliente selecionar os produtos.
                 </Typography>
-
-                <Grid container spacing={2} style={{ marginBottom: 24 }}>
-                  <Grid item xs={12} md={6}>
-                    <FormControl fullWidth variant="outlined">
-                      <InputLabel>Conexão WhatsApp para Envio</InputLabel>
-                      <Select
-                        value={formData.settings?.whatsappId || ""}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            settings: {
-                              ...formData.settings,
-                              whatsappId: e.target.value ? Number(e.target.value) : null,
-                            },
-                          })
-                        }
-                        label="Conexão WhatsApp para Envio"
-                      >
-                        <MenuItem value="">
-                          <em>Usar conexão padrão</em>
-                        </MenuItem>
-                        {whatsApps
-                          .filter((w) => w.status === "CONNECTED")
-                          .map((whatsapp) => (
-                            <MenuItem key={whatsapp.id} value={whatsapp.id}>
-                              {whatsapp.name} {whatsapp.isDefault && "(Padrão)"}
-                            </MenuItem>
-                          ))}
-                      </Select>
-                    </FormControl>
-                    <Typography variant="caption" color="textSecondary" style={{ marginTop: 8, display: "block" }}>
-                      Selecione qual conexão WhatsApp será usada para enviar a confirmação do pedido. Se não selecionar, será usada a conexão padrão.
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 8 }}>
-                      {i18n.t("formBuilder.printConfig.mesaTitle")}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 12 }}>
-                      {i18n.t("formBuilder.printConfig.mesaHint")}
-                    </Typography>
-                    {(formData.settings?.mesaPrintConfig || []).map((row, idx) => {
-                      // Garantir que groupNames seja sempre um array válido
-                      const groupNames = Array.isArray(row.groupNames) ? row.groupNames : [];
-                      
-                      return (
-                        <Box key={`mesa-print-${idx}-${row.printDeviceId || 'new'}`} display="flex" alignItems="flex-start" flexWrap="wrap" gap={2} style={{ marginBottom: 12 }}>
-                          <FormControl variant="outlined" size="small" style={{ minWidth: 200 }}>
-                            <InputLabel>{i18n.t("formBuilder.printConfig.printer")}</InputLabel>
-                            <Select
-                              value={row.printDeviceId || ""}
-                              onChange={(e) => {
-                                const next = [...(formData.settings?.mesaPrintConfig || [])];
-                                next[idx] = { ...next[idx], printDeviceId: e.target.value ? Number(e.target.value) : "" };
-                                setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
-                              }}
-                              label={i18n.t("formBuilder.printConfig.printer")}
-                            >
-                              <MenuItem value="">
-                                <em>{i18n.t("formBuilder.printConfig.none")}</em>
-                              </MenuItem>
-                              {printDevices.map((device) => (
-                                <MenuItem key={device.id} value={device.id}>
-                                  {device.name || device.deviceId}
-                                </MenuItem>
-                              ))}
-                            </Select>
-                          </FormControl>
-                          <FormControl variant="outlined" size="small" style={{ minWidth: 220 }}>
-                            <InputLabel>{i18n.t("formBuilder.printConfig.groups")}</InputLabel>
-                            <Select
-                              multiple
-                              value={groupNames}
-                              onChange={(e) => {
-                                const next = [...(formData.settings?.mesaPrintConfig || [])];
-                                const val = Array.isArray(e.target.value) ? e.target.value : [];
-                                // Se selecionar "*", remove outras seleções e mantém apenas "*"
-                                // Se selecionar qualquer outro grupo, remove "*"
-                                const hasAllGroups = val.includes("*");
-                                next[idx] = { 
-                                  ...next[idx], 
-                                  groupNames: hasAllGroups ? ["*"] : val.filter(v => v !== "*")
-                                };
-                                setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
-                              }}
-                              label={i18n.t("formBuilder.printConfig.groups")}
-                              renderValue={(sel) => {
-                                if (!sel || sel.length === 0) return "";
-                                return sel.includes("*") ? i18n.t("formBuilder.printConfig.allGroups") : sel.join(", ");
-                              }}
-                            >
-                              <MenuItem value="*">
-                                <Checkbox checked={groupNames.includes("*")} />
-                                <span>{i18n.t("formBuilder.printConfig.allGroups")}</span>
-                              </MenuItem>
-                              {productGroups && productGroups.length > 0 ? (
-                                productGroups.map((g) => (
-                                  <MenuItem key={g} value={g}>
-                                    <Checkbox checked={groupNames.includes(g)} />
-                                    <span>{g}</span>
-                                  </MenuItem>
-                                ))
-                              ) : (
-                                <MenuItem disabled>Nenhum grupo disponível</MenuItem>
-                              )}
-                            </Select>
-                          </FormControl>
-                        <IconButton
-                          size="small"
-                          onClick={() => {
-                            const next = (formData.settings?.mesaPrintConfig || []).filter((_, i) => i !== idx);
-                            setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
-                          }}
-                          aria-label={i18n.t("formBuilder.printConfig.remove")}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    );
-                    })}
-                    <Button
-                      size="small"
-                      startIcon={<AddIcon />}
-                      onClick={() => {
-                        const next = [...(formData.settings?.mesaPrintConfig || []), { printDeviceId: "", groupNames: [] }];
-                        setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
-                      }}
-                    >
-                      {i18n.t("formBuilder.printConfig.addPrinter")}
-                    </Button>
-                  </Grid>
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 8 }}>
-                      {i18n.t("formBuilder.printConfig.deliveryTitle")}
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 8 }}>
-                      {i18n.t("formBuilder.printConfig.deliveryHint")}
-                    </Typography>
-                    <FormGroup row>
-                      {printDevices.map((device) => (
-                        <FormControlLabel
-                          key={device.id}
-                          control={
-                            <Checkbox
-                              checked={((formData.settings?.deliveryPrintDeviceIds) || []).indexOf(device.id) > -1}
-                              onChange={(e) => {
-                                const prev = formData.settings?.deliveryPrintDeviceIds || [];
-                                const next = e.target.checked ? [...prev, device.id] : prev.filter((id) => id !== device.id);
-                                setFormData({ ...formData, settings: { ...formData.settings, deliveryPrintDeviceIds: next } });
-                              }}
-                            />
-                          }
-                          label={device.name || device.deviceId}
-                        />
-                      ))}
-                      {printDevices.length === 0 && (
-                        <Typography variant="body2" color="textSecondary">
-                          {i18n.t("formBuilder.printConfig.noDevices")}
-                        </Typography>
-                      )}
-                    </FormGroup>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      label="Tempo Médio de Entrega"
-                      placeholder="Ex: 30-45 minutos"
-                      value={formData.settings?.averageDeliveryTime || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          settings: {
-                            ...formData.settings,
-                            averageDeliveryTime: e.target.value,
-                          },
-                        })
-                      }
-                      helperText="Exibido na tela de confirmação do pedido"
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      type="number"
-                      inputProps={{ min: 0, step: 0.01 }}
-                      label="Taxa de Entrega (R$)"
-                      placeholder="0.00"
-                      value={formData.settings?.deliveryFee || ""}
-                      onChange={(e) => {
-                        const val = e.target.value === "" ? "" : parseFloat(e.target.value) || 0;
-                        setFormData({
-                          ...formData,
-                          settings: {
-                            ...formData.settings,
-                            deliveryFee: val,
-                          },
-                        });
-                      }}
-                      helperText="Valor da taxa de entrega que será adicionado aos pedidos de delivery"
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      type="number"
-                      inputProps={{ min: 0, step: 1 }}
-                      label="Avançar para 'Confirmado' automaticamente após (minutos)"
-                      placeholder="0 = desativado"
-                      value={formData.settings?.autoConfirmMinutes ?? ""}
-                      onChange={(e) => {
-                        const val = e.target.value === "" ? 0 : parseInt(e.target.value, 10) || 0;
-                        setFormData({
-                          ...formData,
-                          settings: {
-                            ...formData.settings,
-                            autoConfirmMinutes: val,
-                          },
-                        });
-                      }}
-                      helperText="0 = desativado. Pedidos em 'Novo' avançam automaticamente para 'Confirmado' após X minutos."
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.settings?.mesas !== false}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              settings: {
-                                ...formData.settings,
-                                mesas: e.target.checked,
-                              },
-                            })
-                          }
-                        />
-                      }
-                      label="Aceita pedidos de mesa"
-                    />
-                    <Typography variant="caption" display="block" color="textSecondary">
-                      Permite que clientes façam pedidos para consumo na mesa.
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={formData.settings?.delivery !== false}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              settings: {
-                                ...formData.settings,
-                                delivery: e.target.checked,
-                              },
-                            })
-                          }
-                        />
-                      }
-                      label="Aceita pedidos de delivery"
-                    />
-                    <Typography variant="caption" display="block" color="textSecondary">
-                      Permite que clientes façam pedidos para entrega.
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <FormControlLabel
-                      control={
-                        <Switch
-                          checked={!!formData.settings?.showMesaField}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              settings: {
-                                ...formData.settings,
-                                showMesaField: e.target.checked,
-                              },
-                            })
-                          }
-                        />
-                      }
-                      label="Exibir campo Número da mesa"
-                    />
-                    <Typography variant="caption" display="block" color="textSecondary">
-                      Permite que o cliente selecione ou digite a mesa ao finalizar o pedido.
-                    </Typography>
-                  </Grid>
-                  {formData.settings?.showMesaField && (
-                    <Grid item xs={12} md={6}>
-                      <FormControl fullWidth variant="outlined" size="small">
-                        <InputLabel>Modo do campo mesa</InputLabel>
-                        <Select
-                          value={formData.settings?.mesaFieldMode || "select"}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              settings: {
-                                ...formData.settings,
-                                mesaFieldMode: e.target.value,
-                              },
-                            })
-                          }
-                          label="Modo do campo mesa"
-                        >
-                          <MenuItem value="select">Select (lista de mesas)</MenuItem>
-                          <MenuItem value="input">Input livre (texto)</MenuItem>
-                        </Select>
-                      </FormControl>
-                    </Grid>
-                  )}
-                </Grid>
-
-                <Typography variant="subtitle2" style={{ marginTop: 24, marginBottom: 12 }}>
-                  Mensagens de notificação WhatsApp (ao alterar status do pedido)
-                </Typography>
-                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
-                  Deixe em branco para usar a mensagem padrão.
-                </Typography>
-                <Grid container spacing={2}>
-                  {[
-                    { key: "pronto", label: "Status: Pronto", placeholder: "Ex: Seu pedido está pronto para retirada!" },
-                    { key: "saiu_entrega", label: "Status: Saiu para entrega", placeholder: "Ex: Seu pedido saiu para entrega!" },
-                    { key: "entregue", label: "Status: Entregue", placeholder: "Ex: Obrigado! Seu pedido foi entregue." },
-                  ].map(({ key, label, placeholder }) => (
-                    <Grid item xs={12} key={key}>
-                      <TextField
-                        fullWidth
-                        variant="outlined"
-                        size="small"
-                        label={label}
-                        placeholder={placeholder}
-                        value={formData.settings?.orderStatusMessages?.[key] || ""}
-                        onChange={(e) =>
-                          setFormData({
-                            ...formData,
-                            settings: {
-                              ...formData.settings,
-                              orderStatusMessages: {
-                                ...(formData.settings?.orderStatusMessages || {}),
-                                [key]: e.target.value,
-                              },
-                            },
-                          })
-                        }
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-
-                <Typography variant="subtitle2" style={{ marginTop: 24, marginBottom: 12 }}>
-                  Estágios do pedido (Kanban)
-                </Typography>
-                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
-                  Personalize os estágios exibidos no Kanban de pedidos. O ID deve ser único (ex: novo, em_preparo).
-                </Typography>
-                {((formData.settings?.orderStages?.length > 0)
-                  ? formData.settings.orderStages
-                  : DEFAULT_ORDER_STAGES
-                ).map((stage, idx) => (
-                  <Box key={stage.id || idx} display="flex" gap={2} alignItems="center" style={{ marginBottom: 8 }}>
-                    <TextField
-                      size="small"
-                      label="ID"
-                      value={stage.id || ""}
-                      onChange={(e) => {
-                        const stages = formData.settings?.orderStages || DEFAULT_ORDER_STAGES;
-                        const next = [...stages];
-                        next[idx] = { ...next[idx], id: e.target.value };
-                        setFormData({
-                          ...formData,
-                          settings: { ...formData.settings, orderStages: next },
-                        });
-                      }}
-                      style={{ width: 120 }}
-                    />
-                    <TextField
-                      size="small"
-                      label="Label"
-                      value={stage.label || ""}
-                      onChange={(e) => {
-                        const stages = formData.settings?.orderStages || DEFAULT_ORDER_STAGES;
-                        const next = [...stages];
-                        next[idx] = { ...next[idx], label: e.target.value };
-                        setFormData({
-                          ...formData,
-                          settings: { ...formData.settings, orderStages: next },
-                        });
-                      }}
-                      style={{ flex: 1 }}
-                    />
-                    <TextField
-                      size="small"
-                      label="Cor"
-                      type="color"
-                      value={stage.color || "#6366F1"}
-                      onChange={(e) => {
-                        const stages = formData.settings?.orderStages || DEFAULT_ORDER_STAGES;
-                        const next = [...stages];
-                        next[idx] = { ...next[idx], color: e.target.value };
-                        setFormData({
-                          ...formData,
-                          settings: { ...formData.settings, orderStages: next },
-                        });
-                      }}
-                      InputProps={{ style: { height: 40, padding: 4 } }}
-                      style={{ width: 80 }}
-                    />
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        const stages = (formData.settings?.orderStages || DEFAULT_ORDER_STAGES).filter((_, i) => i !== idx);
-                        setFormData({
-                          ...formData,
-                          settings: { ...formData.settings, orderStages: stages },
-                        });
-                      }}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </Box>
-                ))}
-                <Button
-                  variant="outlined"
-                  size="small"
-                  startIcon={<AddIcon />}
-                  onClick={() => {
-                    const stages = formData.settings?.orderStages || DEFAULT_ORDER_STAGES;
-                    setFormData({
-                      ...formData,
-                      settings: {
-                        ...formData.settings,
-                        orderStages: [...stages, { id: "novo_estagio", label: "Novo estágio", color: "#6B7280" }],
-                      },
-                    });
-                  }}
-                >
-                  Adicionar estágio
-                </Button>
 
                 {(!formData.settings?.finalizeFields ||
                   formData.settings.finalizeFields.length === 0) && (
@@ -1678,7 +1396,342 @@ const FormBuilder = () => {
           </Box>
         )}
 
-        {tabValue === 2 && (
+        {currentTabKey === "impressao" && (
+          <Box className={classes.section} style={{ marginTop: 24 }}>
+            <Typography className={classes.sectionTitle}>Configurações de impressão</Typography>
+                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                  Configure as impressoras para pedidos de mesa e delivery. Essas configurações aplicam-se apenas a formulários do tipo Cardápio.
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 8 }}>
+                      {i18n.t("formBuilder.printConfig.mesaTitle")}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 12 }}>
+                      {i18n.t("formBuilder.printConfig.mesaHint")}
+                    </Typography>
+                    {(formData.settings?.mesaPrintConfig || []).map((row, idx) => {
+                      const groupNames = Array.isArray(row.groupNames) ? row.groupNames : [];
+                      return (
+                        <Box key={`mesa-print-${idx}-${row.printDeviceId || "new"}`} display="flex" alignItems="flex-start" flexWrap="wrap" gap={2} style={{ marginBottom: 12 }}>
+                          <FormControl variant="outlined" size="small" style={{ minWidth: 200 }}>
+                            <InputLabel>{i18n.t("formBuilder.printConfig.printer")}</InputLabel>
+                            <Select
+                              value={row.printDeviceId || ""}
+                              onChange={(e) => {
+                                const next = [...(formData.settings?.mesaPrintConfig || [])];
+                                next[idx] = { ...next[idx], printDeviceId: e.target.value ? Number(e.target.value) : "" };
+                                setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
+                              }}
+                              label={i18n.t("formBuilder.printConfig.printer")}
+                            >
+                              <MenuItem value="">
+                                <em>{i18n.t("formBuilder.printConfig.none")}</em>
+                              </MenuItem>
+                              {printDevices.map((device) => (
+                                <MenuItem key={device.id} value={device.id}>
+                                  {device.name || device.deviceId}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+                          <FormControl variant="outlined" size="small" style={{ minWidth: 220 }}>
+                            <InputLabel>{i18n.t("formBuilder.printConfig.groups")}</InputLabel>
+                            <Select
+                              multiple
+                              value={groupNames}
+                              onChange={(e) => {
+                                const next = [...(formData.settings?.mesaPrintConfig || [])];
+                                const val = Array.isArray(e.target.value) ? e.target.value : [];
+                                const hasAllGroups = val.includes("*");
+                                next[idx] = {
+                                  ...next[idx],
+                                  groupNames: hasAllGroups ? ["*"] : val.filter((v) => v !== "*"),
+                                };
+                                setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
+                              }}
+                              label={i18n.t("formBuilder.printConfig.groups")}
+                              renderValue={(sel) => {
+                                if (!sel || sel.length === 0) return "";
+                                return sel.includes("*") ? i18n.t("formBuilder.printConfig.allGroups") : sel.join(", ");
+                              }}
+                            >
+                              <MenuItem value="*">
+                                <Checkbox checked={groupNames.includes("*")} />
+                                <span>{i18n.t("formBuilder.printConfig.allGroups")}</span>
+                              </MenuItem>
+                              {productGroups && productGroups.length > 0
+                                ? productGroups.map((g) => (
+                                    <MenuItem key={g} value={g}>
+                                      <Checkbox checked={groupNames.includes(g)} />
+                                      <span>{g}</span>
+                                    </MenuItem>
+                                  ))
+                                : (
+                                    <MenuItem disabled>Nenhum grupo disponível</MenuItem>
+                                  )}
+                            </Select>
+                          </FormControl>
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              const next = (formData.settings?.mesaPrintConfig || []).filter((_, i) => i !== idx);
+                              setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
+                            }}
+                            aria-label={i18n.t("formBuilder.printConfig.remove")}
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      );
+                    })}
+                    <Button
+                      size="small"
+                      startIcon={<AddIcon />}
+                      onClick={() => {
+                        const next = [...(formData.settings?.mesaPrintConfig || []), { printDeviceId: "", groupNames: [] }];
+                        setFormData({ ...formData, settings: { ...formData.settings, mesaPrintConfig: next } });
+                      }}
+                    >
+                      {i18n.t("formBuilder.printConfig.addPrinter")}
+                    </Button>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 8 }}>
+                      {i18n.t("formBuilder.printConfig.deliveryTitle")}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 8 }}>
+                      {i18n.t("formBuilder.printConfig.deliveryHint")}
+                    </Typography>
+                    <FormGroup row>
+                      {printDevices.map((device) => (
+                        <FormControlLabel
+                          key={device.id}
+                          control={
+                            <Checkbox
+                              checked={((formData.settings?.deliveryPrintDeviceIds) || []).indexOf(device.id) > -1}
+                              onChange={(e) => {
+                                const prev = formData.settings?.deliveryPrintDeviceIds || [];
+                                const next = e.target.checked ? [...prev, device.id] : prev.filter((id) => id !== device.id);
+                                setFormData({ ...formData, settings: { ...formData.settings, deliveryPrintDeviceIds: next } });
+                              }}
+                            />
+                          }
+                          label={device.name || device.deviceId}
+                        />
+                      ))}
+                      {printDevices.length === 0 && (
+                        <Typography variant="body2" color="textSecondary">
+                          {i18n.t("formBuilder.printConfig.noDevices")}
+                        </Typography>
+                      )}
+                    </FormGroup>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      label="Tempo Médio de Entrega"
+                      placeholder="Ex: 30-45 minutos"
+                      value={formData.settings?.averageDeliveryTime || ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            averageDeliveryTime: e.target.value,
+                          },
+                        })
+                      }
+                      helperText="Exibido na tela de confirmação do pedido"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      type="number"
+                      inputProps={{ min: 0, step: 0.01 }}
+                      label="Taxa de Entrega (R$)"
+                      placeholder="0.00"
+                      value={formData.settings?.deliveryFee || ""}
+                      onChange={(e) => {
+                        const val = e.target.value === "" ? "" : parseFloat(e.target.value) || 0;
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            deliveryFee: val,
+                          },
+                        });
+                      }}
+                      helperText="Valor da taxa de entrega que será adicionado aos pedidos de delivery"
+                    />
+                  </Grid>
+                </Grid>
+          </Box>
+        )}
+
+        {currentTabKey === "quadro" && (
+          <Box className={classes.section} style={{ marginTop: 24 }}>
+            <Typography className={classes.sectionTitle}>Quadro – estágios do pedido</Typography>
+                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                  Personalize os estágios exibidos no Kanban de pedidos e as mensagens enviadas ao cliente quando o status mudar.
+                </Typography>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      type="number"
+                      inputProps={{ min: 0, step: 1 }}
+                      label="Avançar para 'Confirmado' automaticamente após (minutos)"
+                      placeholder="0 = desativado"
+                      value={formData.settings?.autoConfirmMinutes ?? ""}
+                      onChange={(e) => {
+                        const val = e.target.value === "" ? 0 : parseInt(e.target.value, 10) || 0;
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            autoConfirmMinutes: val,
+                          },
+                        });
+                      }}
+                      helperText="0 = desativado. Pedidos em 'Novo' avançam automaticamente para 'Confirmado' após X minutos."
+                    />
+                  </Grid>
+                </Grid>
+                <Typography variant="subtitle2" style={{ marginTop: 24, marginBottom: 12 }}>
+                  Mensagens de notificação WhatsApp (ao alterar status do pedido)
+                </Typography>
+                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                  Deixe em branco para usar a mensagem padrão.
+                </Typography>
+                <Grid container spacing={2}>
+                  {[
+                    { key: "em_preparo", label: "Status: Em preparo", placeholder: "Ex: Seu pedido está em preparo! Em breve estará pronto." },
+                    { key: "pronto", label: "Status: Pronto", placeholder: "Ex: Seu pedido está pronto para retirada!" },
+                    { key: "saiu_entrega", label: "Status: Saiu para entrega", placeholder: "Ex: Seu pedido saiu para entrega!" },
+                    { key: "entregue", label: "Status: Entregue", placeholder: "Ex: Obrigado! Seu pedido foi entregue." },
+                  ].map(({ key, label, placeholder }) => (
+                    <Grid item xs={12} key={key}>
+                      <TextField
+                        fullWidth
+                        variant="outlined"
+                        size="small"
+                        label={label}
+                        placeholder={placeholder}
+                        value={formData.settings?.orderStatusMessages?.[key] || ""}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            settings: {
+                              ...formData.settings,
+                              orderStatusMessages: {
+                                ...(formData.settings?.orderStatusMessages || {}),
+                                [key]: e.target.value,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </Grid>
+                  ))}
+                </Grid>
+                <Typography variant="subtitle2" style={{ marginTop: 24, marginBottom: 12 }}>
+                  Estágios do pedido (Kanban)
+                </Typography>
+                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                  Personalize os estágios exibidos no Kanban de pedidos. O ID deve ser único (ex: novo, em_preparo).
+                </Typography>
+                {((formData.settings?.orderStages?.length > 0)
+                  ? formData.settings.orderStages
+                  : DEFAULT_ORDER_STAGES
+                ).map((stage, idx) => (
+                  <Box key={stage.id || idx} display="flex" gap={2} alignItems="center" style={{ marginBottom: 8 }}>
+                    <TextField
+                      size="small"
+                      label="ID"
+                      value={stage.id || ""}
+                      onChange={(e) => {
+                        const stages = formData.settings?.orderStages || DEFAULT_ORDER_STAGES;
+                        const next = [...stages];
+                        next[idx] = { ...next[idx], id: e.target.value };
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, orderStages: next },
+                        });
+                      }}
+                      style={{ width: 120 }}
+                    />
+                    <TextField
+                      size="small"
+                      label="Label"
+                      value={stage.label || ""}
+                      onChange={(e) => {
+                        const stages = formData.settings?.orderStages || DEFAULT_ORDER_STAGES;
+                        const next = [...stages];
+                        next[idx] = { ...next[idx], label: e.target.value };
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, orderStages: next },
+                        });
+                      }}
+                      style={{ flex: 1 }}
+                    />
+                    <TextField
+                      size="small"
+                      label="Cor"
+                      type="color"
+                      value={stage.color || "#6366F1"}
+                      onChange={(e) => {
+                        const stages = formData.settings?.orderStages || DEFAULT_ORDER_STAGES;
+                        const next = [...stages];
+                        next[idx] = { ...next[idx], color: e.target.value };
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, orderStages: next },
+                        });
+                      }}
+                      InputProps={{ style: { height: 40, padding: 4 } }}
+                      style={{ width: 80 }}
+                    />
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        const stages = (formData.settings?.orderStages || DEFAULT_ORDER_STAGES).filter((_, i) => i !== idx);
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, orderStages: stages },
+                        });
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Box>
+                ))}
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    const stages = formData.settings?.orderStages || DEFAULT_ORDER_STAGES;
+                    setFormData({
+                      ...formData,
+                      settings: {
+                        ...formData.settings,
+                        orderStages: [...stages, { id: "novo_estagio", label: "Novo estágio", color: "#6B7280" }],
+                      },
+                    });
+                  }}
+                >
+                  Adicionar estágio
+                </Button>
+          </Box>
+        )}
+
+        {currentTabKey === "aparencia" && (
           <Box className={classes.section} style={{ marginTop: 24 }}>
             <Typography className={classes.sectionTitle}>Cores e logo</Typography>
             <Grid container spacing={2}>
@@ -2012,7 +2065,7 @@ const FormBuilder = () => {
           </Box>
         )}
 
-        {tabValue === 3 && (
+        {currentTabKey === "integracoes" && (
           <Box className={classes.section} style={{ marginTop: 24 }}>
             <Typography className={classes.sectionTitle}>Integrações</Typography>
             <Grid container spacing={2}>

@@ -128,6 +128,7 @@ const useStyles = makeStyles((theme) => ({
 
 const PedidoKanbanCard = ({
   order,
+  onCardClick,
   onViewDetails,
   onWhatsApp,
   isDragging = false,
@@ -166,12 +167,21 @@ const PedidoKanbanCard = ({
     }
   };
 
+  const handleCardClick = (e) => {
+    if (isDragging) return;
+    if (onCardClick && !e.defaultPrevented) {
+      onCardClick(order);
+    }
+  };
+
   return (
     <Card
       ref={provided?.innerRef}
       {...provided?.draggableProps}
       {...provided?.dragHandleProps}
       className={`${classes.card} ${isDragging ? classes.cardDragging : ""}`}
+      onClick={handleCardClick}
+      style={{ cursor: onCardClick ? "pointer" : undefined }}
     >
       <CardContent className={classes.cardContent}>
         <Box className={classes.header}>

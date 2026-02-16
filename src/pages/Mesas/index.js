@@ -250,37 +250,46 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       }
       return;
     }
-    
-    // Usar o formulário vinculado à mesa, ou fallback para cardapioSlug genérico
-    const mesaFormSlug = mesaParaPedido?.form?.slug || cardapioSlug;
-    if (!mesaFormSlug) {
-      toast.error("Nenhum formulário de cardápio encontrado para esta mesa.");
-      return;
-    }
-    
+
+    let cancelled = false;
     setOrderLoading(true);
-    (async () => {
+
+    const resolveSlugAndLoad = async () => {
+      let slugToUse = mesaParaPedido?.form?.slug || cardapioSlug;
+      if (!slugToUse) {
+        try {
+          const { data } = await api.get("/mesas/default-cardapio-form");
+          if (cancelled || !data?.slug) return;
+          slugToUse = data.slug;
+        } catch (err) {
+          if (!cancelled) toast.error("Nenhum formulário de cardápio encontrado para esta mesa.");
+          return;
+        }
+      }
+      if (cancelled) return;
       try {
         const [{ data: formsData }, { data: productsData }] = await Promise.all([
           api.get("/forms?formType=cardapio"),
-          api.get(`/public/forms/${mesaFormSlug}/products`).catch(() => ({ data: { products: [] } })),
+          api.get(`/public/forms/${slugToUse}/products`).catch(() => ({ data: { products: [] } })),
         ]);
+        if (cancelled) return;
         const forms = formsData?.forms || [];
-        // Priorizar o formulário vinculado à mesa, depois o cardapioSlug, e por último o primeiro cardápio
-        const form = forms.find((f) => f.slug === mesaFormSlug) || forms.find((f) => f.slug === cardapioSlug) || forms[0] || null;
+        const form = forms.find((f) => f.slug === slugToUse) || forms.find((f) => f.slug === cardapioSlug) || forms[0] || null;
         if (!form) {
           toast.error("Formulário de cardápio não encontrado.");
           return;
         }
-        console.log(`Mesas: Using form for order - mesaFormSlug=${mesaFormSlug}, form.slug=${form.slug}, form.id=${form.id}`);
         setOrderForm(form);
         setOrderProducts(productsData?.products || []);
       } catch (err) {
-        toastError(err);
+        if (!cancelled) toastError(err);
       } finally {
-        setOrderLoading(false);
+        if (!cancelled) setOrderLoading(false);
       }
-    })();
+    };
+
+    resolveSlugAndLoad();
+    return () => { cancelled = true; };
   }, [orderDialogOpen, mesaParaPedido?.id, mesaParaPedido?.form?.slug, cardapioSlug]);
 
   const handleOpenOrderDialog = (mesa) => {
@@ -597,7 +606,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         ) : (
           <>
             {(() => {
-              const formSlug = mesas.find((m) => m.form?.slug)?.form?.slug || cardapioSlug;
+              const formSlug = cardapioSlug;
               if (!formSlug) return null;
               const cardapioUrl = `${window.location.origin}/f/${formSlug}`;
               return (
@@ -889,7 +898,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       />
 
       {(() => {
-        const formSlug = mesas.find((m) => m.form?.slug)?.form?.slug || cardapioSlug;
+        const formSlug = cardapioSlug;
         if (!formSlug) return null;
         const cardapioUrl = `${window.location.origin}/f/${formSlug}`;
         return (
