@@ -8,6 +8,7 @@ import {
   Box,
   IconButton,
   Tooltip,
+  CircularProgress,
 } from "@material-ui/core";
 import {
   Visibility as VisibilityIcon,
@@ -35,10 +36,20 @@ const useStyles = makeStyles((theme) => ({
       cursor: "grabbing",
     },
   },
+  cardUpdating: {
+    opacity: 0.75,
+    cursor: "wait",
+  },
   cardDragging: {
     boxShadow: theme.shadows[8],
     transform: "rotate(3deg)",
     opacity: 0.9,
+  },
+  updatingIndicator: {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: theme.spacing(1),
   },
   cardContent: {
     padding: theme.spacing(1.5),
@@ -132,6 +143,7 @@ const PedidoKanbanCard = ({
   onViewDetails,
   onWhatsApp,
   isDragging = false,
+  isUpdating = false,
   provided,
 }) => {
   const classes = useStyles();
@@ -168,7 +180,7 @@ const PedidoKanbanCard = ({
   };
 
   const handleCardClick = (e) => {
-    if (isDragging) return;
+    if (isDragging || isUpdating) return;
     if (onCardClick && !e.defaultPrevented) {
       onCardClick(order);
     }
@@ -179,9 +191,9 @@ const PedidoKanbanCard = ({
       ref={provided?.innerRef}
       {...provided?.draggableProps}
       {...provided?.dragHandleProps}
-      className={`${classes.card} ${isDragging ? classes.cardDragging : ""}`}
+      className={`${classes.card} ${isDragging ? classes.cardDragging : ""} ${isUpdating ? classes.cardUpdating : ""}`}
       onClick={handleCardClick}
-      style={{ cursor: onCardClick ? "pointer" : undefined }}
+      style={{ cursor: isUpdating ? "wait" : (onCardClick ? "pointer" : undefined) }}
     >
       <CardContent className={classes.cardContent}>
         <Box className={classes.header}>
@@ -198,6 +210,13 @@ const PedidoKanbanCard = ({
               </Typography>
             )}
           </Box>
+          {isUpdating && (
+            <Tooltip title="Atualizando status...">
+              <span className={classes.updatingIndicator}>
+                <CircularProgress size={16} />
+              </span>
+            </Tooltip>
+          )}
         </Box>
         <Typography className={classes.contactNumber}>
           <WhatsAppIcon className={classes.whatsappIcon} fontSize="inherit" />

@@ -11,6 +11,7 @@ import {
   Select,
   MenuItem,
   CircularProgress,
+  LinearProgress,
   IconButton,
   InputAdornment,
   TextField,
@@ -172,9 +173,11 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
   const [orderModalOpen, setOrderModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [pendingStatusByOrderId, setPendingStatusByOrderId] = useState({});
 
-  const fetchOrders = useCallback(async () => {
-    setLoading(true);
+  const fetchOrders = useCallback(async (opts = {}) => {
+    const silent = !!opts.silent;
+    if (!silent) setLoading(true);
     try {
       const queryParams = new URLSearchParams();
       if (formIdFilter) queryParams.set("formId", formIdFilter);
@@ -223,7 +226,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
       setOrders([]);
       setForms([]);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [formIdFilter, orderTypeFilter, tableIdFilter]);
 
@@ -247,7 +250,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
       const orderType = response.metadata?.orderType === "delivery" ? "delivery" : "mesa";
       if (orderTypeFilter && orderType !== orderTypeFilter) return;
       if (action === "create" || action === "update" || action === "delete") {
-        fetchOrders();
+        fetchOrders({ silent: true });
       }
     };
 
@@ -317,7 +320,9 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
       });
       setOrders((prev) =>
         prev.map((o) =>
-          o.id === selectedOrder.id ? { ...o, orderStatus: next.id } : o
+          o.id === selectedOrder.id
+            ? { ...o, orderStatus: next.id, metadata: { ...(o.metadata || {}), orderStatus: next.id } }
+            : o
         )
       );
       toast.success(`Pedido avançado para "${next.label}"`);
@@ -337,7 +342,56 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
     orders: ordersToShow.filter((o) => getOrderStatus(o) === stage.id),
   }));
 
-  const handleDragEnd = async (result) => {
+  const applyOptimisticDndMove = (prevOrders, orderId, sourceStatus, destStatus, destIndex) => {
+    const stageIds = orderStages.map((s) => s.id);
+    const cancelled = prevOrders.filter((o) => getOrderStatus(o) === "cancelado");
+    const active = prevOrders.filter((o) => getOrderStatus(o) !== "cancelado");
+
+    // Construir listas por status respeitando a ordem atual (para bater com índices do DnD)
+    const byStatus = {};
+    stageIds.forEach((id) => { byStatus[id] = []; });
+    active.forEach((o) => {
+      const s = getOrderStatus(o);
+      if (!byStatus[s]) byStatus[s] = [];
+      byStatus[s].push(o);
+    });
+
+    const srcList = [...(byStatus[sourceStatus] || [])];
+    const dstList = sourceStatus === destStatus ? srcList : [...(byStatus[destStatus] || [])];
+
+    // Remover item (preferir por id para evitar mismatch de índice)
+    const removeIdx = srcList.findIndex((o) => o.id === orderId);
+    const [removed] = removeIdx >= 0 ? srcList.splice(removeIdx, 1) : [null];
+    if (!removed) return prevOrders;
+
+    const moved = {
+      ...removed,
+      orderStatus: destStatus,
+      metadata: { ...(removed.metadata || {}), orderStatus: destStatus },
+    };
+
+    const insertAt = Math.max(0, Math.min(destIndex, dstList.length));
+    dstList.splice(insertAt, 0, moved);
+
+    byStatus[sourceStatus] = srcList;
+    byStatus[destStatus] = dstList;
+
+    // Rebuild mantendo a ordem por colunas
+    const rebuilt = [];
+    stageIds.forEach((id) => {
+      (byStatus[id] || []).forEach((o) => rebuilt.push(o));
+    });
+    // Qualquer status fora do pipeline atual (fallback)
+    Object.keys(byStatus).forEach((id) => {
+      if (!stageIds.includes(id)) {
+        byStatus[id].forEach((o) => rebuilt.push(o));
+      }
+    });
+
+    return [...rebuilt, ...cancelled];
+  };
+
+  const handleDragEnd = (result) => {
     const { destination, source, draggableId } = result;
     if (!destination || (destination.droppableId === source.droppableId && destination.index === source.index)) return;
 
@@ -345,23 +399,42 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
     const newStatus = destination.droppableId;
     const order = orders.find((o) => o.id === orderId);
     if (!order) return;
+    if (pendingStatusByOrderId[orderId]) return;
     const orderFormId = order.formId || order.form?.id;
     if (!orderFormId) {
       toast.error("Formulário do pedido não identificado.");
       return;
     }
 
-    try {
-      await api.put(`/forms/${orderFormId}/responses/${orderId}/order-status`, {
-        orderStatus: newStatus,
+    const oldStatus = getOrderStatus(order);
+    setPendingStatusByOrderId((prev) => ({ ...prev, [orderId]: true }));
+
+    // Update otimista: mover o card imediatamente (sem travar a UI esperando API)
+    setOrders((prev) => applyOptimisticDndMove(prev, orderId, source.droppableId, newStatus, destination.index));
+
+    api
+      .put(`/forms/${orderFormId}/responses/${orderId}/order-status`, { orderStatus: newStatus })
+      .then(() => {
+        // Confirmação silenciosa (evitar spam de toast em movimentações rápidas)
+      })
+      .catch((err) => {
+        toastError(err);
+        // Reverter status (mantém o resto do board intacto)
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId
+              ? { ...o, orderStatus: oldStatus, metadata: { ...(o.metadata || {}), orderStatus: oldStatus } }
+              : o
+          )
+        );
+      })
+      .finally(() => {
+        setPendingStatusByOrderId((prev) => {
+          const next = { ...prev };
+          delete next[orderId];
+          return next;
+        });
       });
-      setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, orderStatus: newStatus } : o))
-      );
-      toast.success("Status atualizado!");
-    } catch (err) {
-      toastError(err);
-    }
   };
 
   const handleViewDetails = (order) => {
@@ -427,54 +500,63 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
           <CircularProgress />
         </Box>
       ) : (
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <Box
-            className={`${classes.boardContainer} ${minimal ? classes.boardContainerMinimal : ""}`}
-            style={{ gridTemplateColumns: `repeat(${orderStages.length}, minmax(180px, 1fr))` }}
-          >
-            {columnsWithOrders.map((column) => (
-              <Paper key={column.id} elevation={0} className={`${classes.column} ${minimal ? classes.columnMinimal : ""}`}>
-                <Box
-                  className={classes.columnHeader}
-                  style={{ backgroundColor: column.color }}
-                >
-                  {column.label} ({column.orders.length})
-                </Box>
-                <Droppable droppableId={column.id}>
-                  {(provided, snapshot) => (
-                    <Box
-                      ref={provided.innerRef}
-                      {...provided.droppableProps}
-                      className={`${classes.cardsContainer} ${
-                        snapshot.isDraggingOver ? classes.cardsContainerDraggingOver : ""
-                      }`}
-                    >
-                      {column.orders.map((order, index) => (
-                        <Draggable
-                          key={order.id}
-                          draggableId={String(order.id)}
-                          index={index}
-                        >
-                          {(provided, snapshot) => (
-                            <PedidoKanbanCard
-                              order={order}
-                              onCardClick={handleOpenOrderModal}
-                              onViewDetails={handleViewDetails}
-                              onWhatsApp={handleWhatsApp}
-                              isDragging={snapshot.isDragging}
-                              provided={provided}
-                            />
-                          )}
-                        </Draggable>
-                      ))}
-                      {provided.placeholder}
-                    </Box>
-                  )}
-                </Droppable>
-              </Paper>
-            ))}
-          </Box>
-        </DragDropContext>
+        <>
+          {Object.keys(pendingStatusByOrderId).length > 0 && (
+            <Box mb={1}>
+              <LinearProgress />
+            </Box>
+          )}
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <Box
+              className={`${classes.boardContainer} ${minimal ? classes.boardContainerMinimal : ""}`}
+              style={{ gridTemplateColumns: `repeat(${orderStages.length}, minmax(180px, 1fr))` }}
+            >
+              {columnsWithOrders.map((column) => (
+                <Paper key={column.id} elevation={0} className={`${classes.column} ${minimal ? classes.columnMinimal : ""}`}>
+                  <Box
+                    className={classes.columnHeader}
+                    style={{ backgroundColor: column.color }}
+                  >
+                    {column.label} ({column.orders.length})
+                  </Box>
+                  <Droppable droppableId={column.id}>
+                    {(provided, snapshot) => (
+                      <Box
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className={`${classes.cardsContainer} ${
+                          snapshot.isDraggingOver ? classes.cardsContainerDraggingOver : ""
+                        }`}
+                      >
+                        {column.orders.map((order, index) => (
+                          <Draggable
+                            key={order.id}
+                            draggableId={String(order.id)}
+                            index={index}
+                            isDragDisabled={!!pendingStatusByOrderId[order.id]}
+                          >
+                            {(provided, snapshot) => (
+                              <PedidoKanbanCard
+                                order={order}
+                                onCardClick={handleOpenOrderModal}
+                                onViewDetails={handleViewDetails}
+                                onWhatsApp={handleWhatsApp}
+                                isDragging={snapshot.isDragging}
+                                isUpdating={!!pendingStatusByOrderId[order.id]}
+                                provided={provided}
+                              />
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </Box>
+                    )}
+                  </Droppable>
+                </Paper>
+              ))}
+            </Box>
+          </DragDropContext>
+        </>
       )}
     </>
   );
