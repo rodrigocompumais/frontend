@@ -42,7 +42,7 @@ const useStyles = makeStyles((theme) => ({
   },
   cardDragging: {
     boxShadow: theme.shadows[8],
-    transform: "rotate(3deg)",
+    transform: "rotate(3deg) scale(1.02)",
     opacity: 0.9,
   },
   updatingIndicator: {
@@ -193,7 +193,10 @@ const PedidoKanbanCard = ({
       {...provided?.dragHandleProps}
       className={`${classes.card} ${isDragging ? classes.cardDragging : ""} ${isUpdating ? classes.cardUpdating : ""}`}
       onClick={handleCardClick}
-      style={{ cursor: isUpdating ? "wait" : (onCardClick ? "pointer" : undefined) }}
+      style={{
+        ...(provided?.draggableProps?.style || {}),
+        cursor: isUpdating ? "wait" : (onCardClick ? "pointer" : undefined),
+      }}
     >
       <CardContent className={classes.cardContent}>
         <Box className={classes.header}>

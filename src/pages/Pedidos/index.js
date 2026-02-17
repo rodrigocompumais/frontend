@@ -31,6 +31,7 @@ import {
   Restaurant as RestaurantIcon,
   Queue as QueueIcon,
 } from "@material-ui/icons";
+import ReactDOM from "react-dom";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
 import { toast } from "react-toastify";
 
@@ -536,15 +537,24 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                             isDragDisabled={!!pendingStatusByOrderId[order.id]}
                           >
                             {(provided, snapshot) => (
-                              <PedidoKanbanCard
-                                order={order}
-                                onCardClick={handleOpenOrderModal}
-                                onViewDetails={handleViewDetails}
-                                onWhatsApp={handleWhatsApp}
-                                isDragging={snapshot.isDragging}
-                                isUpdating={!!pendingStatusByOrderId[order.id]}
-                                provided={provided}
-                              />
+                            (() => {
+                              const card = (
+                                <PedidoKanbanCard
+                                  order={order}
+                                  onCardClick={handleOpenOrderModal}
+                                  onViewDetails={handleViewDetails}
+                                  onWhatsApp={handleWhatsApp}
+                                  isDragging={snapshot.isDragging}
+                                  isUpdating={!!pendingStatusByOrderId[order.id]}
+                                  provided={provided}
+                                />
+                              );
+
+                              // Renderiza em "camada acima" para não cortar por overflow e dar sensação de miniatura flutuante
+                              return snapshot.isDragging
+                                ? ReactDOM.createPortal(card, document.body)
+                                : card;
+                            })()
                             )}
                           </Draggable>
                         ))}
