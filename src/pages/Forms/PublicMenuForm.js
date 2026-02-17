@@ -10,18 +10,22 @@ import {
   makeStyles,
   CircularProgress,
   FormControl,
+  FormControlLabel,
   FormHelperText,
+  FormGroup,
   InputLabel,
   Select,
   MenuItem,
+  Radio,
+  RadioGroup,
   Tabs,
   Tab,
   Card,
   CardContent,
+  Checkbox,
   IconButton,
   InputAdornment,
   Divider,
-  Fab,
   Badge,
   Dialog,
   DialogTitle,
@@ -31,6 +35,8 @@ import {
 import AddIcon from "@material-ui/icons/Add";
 import RemoveIcon from "@material-ui/icons/Remove";
 import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
+import SearchIcon from "@material-ui/icons/Search";
+import ShareIcon from "@material-ui/icons/Share";
 
 import InputMask from "react-input-mask";
 import api from "../../services/api";
@@ -43,57 +49,132 @@ const useStyles = makeStyles((theme) => ({
     minHeight: "100vh",
     display: "flex",
     flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "flex-start",
-    padding: theme.spacing(3),
-    backgroundColor: theme.palette.type === "dark" ? "#121212" : "#f5f5f5",
+    alignItems: "stretch",
+    backgroundColor: "#f5f5f5",
+    paddingBottom: 72,
+  },
+  heroBanner: {
+    width: "100%",
+    height: "34vh",
+    minHeight: 200,
+    maxHeight: 320,
+    objectFit: "cover",
+    backgroundColor: "#eee",
+    [theme.breakpoints.down("xs")]: {
+      height: "30vh",
+      minHeight: 180,
+      maxHeight: 260,
+    },
+  },
+  carouselRow: {
+    width: "100%",
+    display: "flex",
+    overflowX: "auto",
+    gap: 2,
+    backgroundColor: "#fff",
+    borderBottom: "1px solid #eee",
+    "&::-webkit-scrollbar": { height: 0 },
+  },
+  carouselImg: {
+    height: 110,
+    width: 160,
+    objectFit: "cover",
+    flex: "0 0 auto",
+    backgroundColor: "#eee",
   },
   container: {
-    maxWidth: 900,
+    maxWidth: "100%",
     width: "100%",
-    marginTop: theme.spacing(4),
-    marginBottom: theme.spacing(4),
+    margin: 0,
+    flex: 1,
+    padding: 0,
   },
   formPaper: {
-    padding: theme.spacing(4),
-    borderRadius: theme.spacing(2),
-    boxShadow: theme.shadows[3],
+    padding: theme.spacing(2, 3),
+    borderRadius: 12,
+    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+    backgroundColor: "#fff",
+  },
+  storeBar: {
+    backgroundColor: "#fff",
+    padding: theme.spacing(1.5, 2),
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing(2),
+  },
+  storeLogo: {
+    height: 28,
+    maxWidth: 180,
+    objectFit: "contain",
+  },
+  storeSubInfo: {
+    backgroundColor: "#fff",
+    padding: theme.spacing(0, 2, 1.5),
+    color: "#666",
+    fontSize: "0.875rem",
+    borderBottom: "1px solid #eee",
+  },
+  promoBanner: {
+    margin: theme.spacing(1.5, 2, 0),
+    backgroundColor: "#e8f5e9",
+    borderRadius: 12,
+    padding: theme.spacing(1.5, 2),
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing(2),
+    color: "#1b5e20",
+    fontWeight: 700,
+  },
+  contentSection: {
+    backgroundColor: "#fff",
+    padding: theme.spacing(2),
+    marginTop: theme.spacing(1.5),
+  },
+  stickyTabs: {
+    position: "sticky",
+    top: 0,
+    zIndex: 1000,
+    backgroundColor: "#fff",
+    borderBottom: "1px solid #eee",
   },
   header: {
     textAlign: "center",
-    marginBottom: theme.spacing(4),
-  },
-  logo: {
-    maxWidth: 150,
-    maxHeight: 80,
     marginBottom: theme.spacing(2),
   },
-  title: {
-    fontSize: "1.75rem",
-    fontWeight: 600,
+  logo: {
+    maxWidth: 120,
+    maxHeight: 56,
     marginBottom: theme.spacing(1),
   },
-  description: {
-    color: theme.palette.text.secondary,
-    marginBottom: theme.spacing(3),
-  },
   tabsContainer: {
-    marginBottom: theme.spacing(3),
-    borderBottom: `1px solid ${theme.palette.divider}`,
+    marginBottom: 0,
+    borderBottom: "none",
+    minHeight: 48,
+  },
+  tab: {
+    minWidth: "auto",
+    padding: theme.spacing(1, 2),
+    textTransform: "none",
+    fontWeight: 600,
+    fontSize: "0.9rem",
   },
   productCard: {
     marginBottom: theme.spacing(2),
     cursor: "pointer",
-    transition: "all 0.2s",
+    transition: "box-shadow 0.2s",
+    borderRadius: 12,
+    overflow: "hidden",
     "&:hover": {
-      boxShadow: theme.shadows[4],
+      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
     },
   },
   productImage: {
-    width: 80,
-    height: 80,
+    width: 88,
+    height: 88,
     objectFit: "cover",
-    borderRadius: theme.spacing(1),
+    borderRadius: 10,
     marginRight: theme.spacing(2),
   },
   productCardContent: {
@@ -102,36 +183,37 @@ const useStyles = makeStyles((theme) => ({
   },
   productName: {
     fontWeight: 600,
+    fontSize: "1rem",
+    color: "#1a1a1a",
     marginBottom: theme.spacing(0.5),
   },
   productDescription: {
-    color: theme.palette.text.secondary,
-    fontSize: "0.875rem",
+    color: "#666",
+    fontSize: "0.8125rem",
     marginBottom: theme.spacing(1),
   },
   productValue: {
-    fontWeight: 600,
-    color: theme.palette.primary.main,
-    fontSize: "1.1rem",
+    fontWeight: 700,
+    fontSize: "1rem",
+    color: "#1a1a1a",
   },
   quantityControl: {
     display: "flex",
     alignItems: "center",
-    gap: theme.spacing(1),
+    gap: theme.spacing(0.5),
     marginTop: theme.spacing(1),
   },
   quantityInput: {
-    width: 80,
+    width: 72,
   },
   fieldContainer: {
-    marginBottom: theme.spacing(3),
+    marginBottom: theme.spacing(2),
   },
   summaryCard: {
-    marginTop: theme.spacing(3),
+    marginTop: theme.spacing(2),
     padding: theme.spacing(2),
-    backgroundColor: theme.palette.type === "dark" 
-      ? "rgba(255, 255, 255, 0.05)" 
-      : "rgba(0, 0, 0, 0.02)",
+    backgroundColor: "#f8f9fa",
+    borderRadius: 10,
   },
   summaryRow: {
     display: "flex",
@@ -139,10 +221,11 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(1),
   },
   submitButton: {
-    marginTop: theme.spacing(3),
+    marginTop: theme.spacing(2),
     padding: theme.spacing(1.5),
     fontSize: "1rem",
     fontWeight: 600,
+    borderRadius: 10,
   },
   successMessage: {
     padding: theme.spacing(3),
@@ -154,15 +237,89 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     minHeight: "50vh",
   },
-  fab: {
+  bottomNav: {
     position: "fixed",
-    bottom: theme.spacing(3),
-    right: theme.spacing(3),
-    zIndex: 1300,
-    [theme.breakpoints.up("sm")]: {
-      bottom: theme.spacing(4),
-      right: theme.spacing(4),
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 56,
+    backgroundColor: "#fff",
+    borderTop: "1px solid #e0e0e0",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-around",
+    zIndex: 1100,
+    paddingBottom: "env(safe-area-inset-bottom, 0)",
+  },
+  bottomNavItem: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+    padding: theme.spacing(1),
+    cursor: "pointer",
+    color: "#666",
+    "&.active": {
+      color: "#1a1a1a",
+      fontWeight: 600,
     },
+  },
+  sectionTitle: {
+    fontSize: "1rem",
+    fontWeight: 700,
+    color: "#1a1a1a",
+    marginBottom: theme.spacing(1.5),
+  },
+  mostOrderedScroll: {
+    display: "flex",
+    gap: theme.spacing(2),
+    overflowX: "auto",
+    paddingBottom: theme.spacing(1),
+    marginBottom: theme.spacing(2),
+    "&::-webkit-scrollbar": { height: 6 },
+    "&::-webkit-scrollbar-thumb": { backgroundColor: "#ccc", borderRadius: 3 },
+  },
+  mostOrderedCard: {
+    flex: "0 0 150px",
+    borderRadius: 10,
+    overflow: "hidden",
+    backgroundColor: "#fff",
+    boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+    display: "flex",
+    flexDirection: "column",
+    cursor: "pointer",
+    transition: "box-shadow 0.2s",
+    "&:hover": { boxShadow: "0 2px 8px rgba(0,0,0,0.12)" },
+  },
+  mostOrderedImage: {
+    width: "100%",
+    height: 110,
+    objectFit: "cover",
+    backgroundColor: "#eee",
+  },
+  mostOrderedCardBody: {
+    padding: theme.spacing(1),
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+  },
+  mostOrderedName: {
+    fontSize: "0.8125rem",
+    fontWeight: 600,
+    color: "#1a1a1a",
+    marginBottom: 4,
+    lineHeight: 1.2,
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+  },
+  mostOrderedPrice: {
+    fontSize: "0.875rem",
+    fontWeight: 700,
+    color: "#1a1a1a",
+    marginTop: "auto",
   },
 }));
 
@@ -177,13 +334,17 @@ const PublicMenuForm = ({
   const classes = useStyles();
   const location = useLocation();
   const { slug: urlSlug } = useParams();
-  const slug = form?.slug || formSlug || urlSlug;
+  // Atenção: para rotas públicas, o identificador agora é o publicId (não o slug "legível").
+  const slug = form?.publicId || formSlug || urlSlug;
+
+  const pieceAgainEnabled = form?.settings?.enablePieceAgain === true;
 
   const [loading, setLoading] = useState(!initialProducts);
   const [submitting, setSubmitting] = useState(false);
   const [products, setProducts] = useState(initialProducts || []);
   const [selectedItems, setSelectedItems] = useState({});
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeGroup, setActiveGroup] = useState(0);
+  const [view, setView] = useState("menu"); // "menu" | "checkout"
   const [answers, setAnswers] = useState({});
   const [errors, setErrors] = useState({});
   const [submitted, setSubmitted] = useState(false);
@@ -204,9 +365,160 @@ const PublicMenuForm = ({
   const [selectedVariationOption, setSelectedVariationOption] = useState({});
   /** Variação selecionada do produto base quando abre o modal meio a meio */
   const [halfAndHalfModalBaseVariation, setHalfAndHalfModalBaseVariation] = useState(null);
+  /** IDs dos produtos mais pedidos (ordem de popularidade) */
+  const [mostOrderedProductIds, setMostOrderedProductIds] = useState([]);
+
+  /** Peça de novo (por telefone) */
+  const [pieceAgainProductIds, setPieceAgainProductIds] = useState([]);
+  const [pieceAgainLoading, setPieceAgainLoading] = useState(false);
+  const [pieceAgainPhone, setPieceAgainPhone] = useState("");
+  const [pieceAgainModalOpen, setPieceAgainModalOpen] = useState(false);
+  const [pieceAgainPhoneInput, setPieceAgainPhoneInput] = useState("");
 
   const appStyles = form ? getFormAppearanceStyles(form) : null;
   const fieldVariant = appStyles?.fieldVariant || "outlined";
+
+  const PIECE_AGAIN_COOKIE_DAYS = 30;
+  const getPieceAgainCookieKey = () => `compuchat_piece_again_${slug || "unknown"}`;
+  const setCookie = (name, value, days) => {
+    const d = new Date();
+    d.setTime(d.getTime() + days * 24 * 60 * 60 * 1000);
+    const expires = `expires=${d.toUTCString()}`;
+    document.cookie = `${name}=${encodeURIComponent(value)};${expires};path=/;SameSite=Lax`;
+  };
+  const getCookie = (name) => {
+    const cookieName = `${name}=`;
+    const decodedCookie = decodeURIComponent(document.cookie || "");
+    const ca = decodedCookie.split(";");
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i];
+      while (c.charAt(0) === " ") c = c.substring(1);
+      if (c.indexOf(cookieName) === 0) return c.substring(cookieName.length, c.length);
+    }
+    return "";
+  };
+  const normalizePhone = (input) => {
+    const digits = String(input || "").replace(/\D/g, "");
+    if (!digits) return "";
+    if (digits.startsWith("55")) {
+      if (digits.length === 12) return digits.slice(0, 4) + "9" + digits.slice(4);
+      if (digits.length === 14 && digits[4] === "9" && digits[5] === "9") return digits.slice(0, 4) + digits.slice(5);
+      return digits;
+    }
+    if (digits.length === 10) return `55${digits.slice(0, 2)}9${digits.slice(2)}`;
+    if (digits.length === 11) return `55${digits}`;
+    return digits;
+  };
+  const normalizeLabelKey = (label) => String(label || "").trim().toLowerCase();
+  const isSensitiveLabel = (label) =>
+    /cpf|cart[aã]o|card|senha|password|cvv|cvc|token|c[oó]digo|pin/i.test(String(label || ""));
+
+  const decodeMaybeJson = (val) => {
+    if (val == null) return "";
+    if (typeof val === "string" && val.startsWith("__json__:")) {
+      try {
+        return JSON.parse(val.replace("__json__:", ""));
+      } catch {
+        return val;
+      }
+    }
+    return val;
+  };
+
+  const getFinalizeFieldsFromForm = () => {
+    const all = form?.fields || [];
+    return all.filter((f) => !f.metadata?.isAutoField && f.order >= 2);
+  };
+
+  const applyPrefillByLabel = (prefillByLabel) => {
+    const entries = prefillByLabel && typeof prefillByLabel === "object" ? prefillByLabel : {};
+    const normalizedMap = {};
+    Object.keys(entries).forEach((k) => {
+      normalizedMap[normalizeLabelKey(k)] = entries[k];
+    });
+    const finalize = getFinalizeFieldsFromForm();
+    if (!finalize || finalize.length === 0) return;
+    setAnswers((prev) => {
+      const next = { ...prev };
+      finalize.forEach((field) => {
+        const key = normalizeLabelKey(field.label);
+        if (!key) return;
+        const val = normalizedMap[key];
+        if (val === undefined || val === null || val === "") return;
+        const current = next[field.id];
+        const isEmpty =
+          current === undefined ||
+          current === null ||
+          current === "" ||
+          (Array.isArray(current) && current.length === 0);
+        if (isEmpty) {
+          next[field.id] = decodeMaybeJson(val);
+        }
+      });
+      return next;
+    });
+  };
+
+  const setAutoPhoneAnswer = (phoneValue) => {
+    const phoneField = (form?.fields || []).find((f) => f.metadata?.autoFieldType === "phone");
+    if (!phoneField) return;
+    setAnswers((prev) => ({ ...prev, [phoneField.id]: phoneValue }));
+  };
+  const setAutoNameAnswer = (nameValue) => {
+    const nameField = (form?.fields || []).find((f) => f.metadata?.autoFieldType === "name");
+    if (!nameField) return;
+    setAnswers((prev) => ({ ...prev, [nameField.id]: nameValue }));
+  };
+
+  const fetchPieceAgainData = async (phoneNormalized) => {
+    if (!slug || !phoneNormalized) return;
+    setPieceAgainLoading(true);
+    try {
+      const { data } = await api.get(`/public/forms/${slug}/repeat-data`, {
+        params: { phone: phoneNormalized },
+      });
+      const ids = data?.productIds || [];
+      setPieceAgainProductIds(Array.isArray(ids) ? ids : []);
+      if (data?.prefillByLabel) {
+        applyPrefillByLabel(data.prefillByLabel);
+      }
+      if (data?.contactName) {
+        setAutoNameAnswer(String(data.contactName));
+      }
+    } catch (err) {
+      // Não bloquear o usuário: apenas seguir sem histórico
+      setPieceAgainProductIds([]);
+    } finally {
+      setPieceAgainLoading(false);
+    }
+  };
+
+  const confirmPieceAgainPhone = async () => {
+    const phoneNorm = normalizePhone(pieceAgainPhoneInput);
+    if (!phoneNorm || phoneNorm.length < 10) {
+      toast.error("Informe um telefone válido com DDD.");
+      return;
+    }
+    setPieceAgainPhone(phoneNorm);
+    setAutoPhoneAnswer(phoneNorm);
+    try {
+      const cookieKey = getPieceAgainCookieKey();
+      const currentPrefill = {};
+      setCookie(
+        cookieKey,
+        JSON.stringify({
+          phone: phoneNorm,
+          prefillByLabel: currentPrefill,
+          savedAt: new Date().toISOString(),
+        }),
+        PIECE_AGAIN_COOKIE_DAYS
+      );
+    } catch {
+      // ignore
+    }
+    setPieceAgainModalOpen(false);
+    await fetchPieceAgainData(phoneNorm);
+  };
 
   useEffect(() => {
     const app = form?.settings?.appearance || {};
@@ -247,6 +559,40 @@ const PublicMenuForm = ({
       }).catch(() => setMesas([]));
     }
   }, [form?.settings?.showMesaField, form?.settings?.mesaFieldMode, slug]);
+
+  useEffect(() => {
+    if (!form || !slug) return;
+    api.get(`/public/forms/${slug}/most-ordered`)
+      .then(({ data }) => setMostOrderedProductIds(data.productIds || []))
+      .catch(() => setMostOrderedProductIds([]));
+  }, [form?.id, slug]);
+
+  // Peça de novo: ler cookie e/ou solicitar telefone
+  useEffect(() => {
+    if (!pieceAgainEnabled || !form || !slug) return;
+    const key = getPieceAgainCookieKey();
+    const raw = getCookie(key);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        const phone = normalizePhone(parsed?.phone || "");
+        const name = parsed?.name || "";
+        const prefill = parsed?.prefillByLabel || {};
+        if (phone) {
+          setPieceAgainPhone(phone);
+          setPieceAgainPhoneInput(phone);
+          setAutoPhoneAnswer(phone);
+          if (name) setAutoNameAnswer(String(name));
+          applyPrefillByLabel(prefill);
+          fetchPieceAgainData(phone);
+          return;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    setPieceAgainModalOpen(true);
+  }, [pieceAgainEnabled, form?.id, slug]);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -318,21 +664,26 @@ const PublicMenuForm = ({
     
     // Preencher campos automáticos se vierem na URL
     if (form?.fields) {
-      const initialAnswers = {};
-      form.fields.forEach((field) => {
-        if (field.metadata?.autoFieldType === "name") {
-          initialAnswers[field.id] = urlName || "";
-        } else if (field.metadata?.autoFieldType === "phone") {
-          // Pré-preencher com "55" se não vier da URL
-          initialAnswers[field.id] = urlPhone || "55";
-        } else {
-          // Inicializar outros campos vazios
-          initialAnswers[field.id] = "";
-        }
+      setAnswers((prev) => {
+        const next = { ...prev };
+        form.fields.forEach((field) => {
+          if (field.metadata?.autoFieldType === "name") {
+            if (urlName && (next[field.id] == null || next[field.id] === "")) {
+              next[field.id] = urlName;
+            }
+          } else if (field.metadata?.autoFieldType === "phone") {
+            if (urlPhone) {
+              next[field.id] = urlPhone;
+            } else if (next[field.id] == null || next[field.id] === "") {
+              // Se Peça de novo estiver ativo, deixar em branco e solicitar no gate
+              next[field.id] = pieceAgainEnabled ? "" : "55";
+            }
+          }
+        });
+        return next;
       });
-      setAnswers(initialAnswers);
     }
-  }, [form, location.search]);
+  }, [form, location.search, pieceAgainEnabled]);
 
   const loadProducts = async () => {
     try {
@@ -507,6 +858,21 @@ const PublicMenuForm = ({
     setSubmitting(true);
 
     try {
+      // Se "Peça de novo" está ativo, garantir que temos telefone para histórico/cookies
+      if (pieceAgainEnabled) {
+        const phoneField = (form?.fields || []).find((f) => f.metadata?.autoFieldType === "phone");
+        const rawPhone = phoneField ? (answers[phoneField.id] || pieceAgainPhone) : pieceAgainPhone;
+        const phoneNorm = normalizePhone(rawPhone);
+        if (!phoneNorm || phoneNorm.length < 10) {
+          setPieceAgainModalOpen(true);
+          toast.info("Informe seu telefone para continuar.");
+          setSubmitting(false);
+          return;
+        }
+        setPieceAgainPhone(phoneNorm);
+        setAutoPhoneAnswer(phoneNorm);
+      }
+
       // Preparar menuItems (normais + com variação + meio a meio)
       const normalMenuItems = Object.keys(selectedItems).map((key) => {
         const productId = key.includes("_") ? parseInt(key.split("_")[0], 10) : parseInt(key, 10);
@@ -537,6 +903,45 @@ const PublicMenuForm = ({
         };
       });
       const menuItems = [...normalMenuItems, ...halfMenuItems];
+
+      // Atualizar cookie (30 dias): telefone + respostas por label (não sensíveis)
+      if (pieceAgainEnabled) {
+        const phoneField = (form?.fields || []).find((f) => f.metadata?.autoFieldType === "phone");
+        const nameField = (form?.fields || []).find((f) => f.metadata?.autoFieldType === "name");
+        const rawPhone = phoneField ? (answers[phoneField.id] || pieceAgainPhone) : pieceAgainPhone;
+        const phoneNorm = normalizePhone(rawPhone);
+        const nameVal = nameField ? (answers[nameField.id] || "") : "";
+        const prefillByLabel = {};
+        const finalize = getFinalizeFieldsFromForm();
+        finalize.forEach((field) => {
+          const label = String(field.label || "").trim();
+          if (!label || isSensitiveLabel(label)) return;
+          const val = answers[field.id];
+          if (val === undefined || val === null || val === "") return;
+          if (Array.isArray(val)) {
+            if (val.length === 0) return;
+            prefillByLabel[label] = "__json__:" + JSON.stringify(val);
+          } else {
+            const s = String(val);
+            if (!s.trim()) return;
+            prefillByLabel[label] = s;
+          }
+        });
+        try {
+          setCookie(
+            getPieceAgainCookieKey(),
+            JSON.stringify({
+              phone: phoneNorm,
+              name: nameVal ? String(nameVal) : "",
+              prefillByLabel,
+              savedAt: new Date().toISOString(),
+            }),
+            PIECE_AGAIN_COOKIE_DAYS
+          );
+        } catch {
+          // ignore
+        }
+      }
 
       // Preparar answers - incluir TODOS os campos do formulário (automáticos + customizados)
       const allFormFields = form.fields || [];
@@ -579,7 +984,7 @@ const PublicMenuForm = ({
       const orderMetadata = getOrderMetadata();
 
       // Enviar formulário (orderToken garante que o pedido vá para a mesa do link assinado)
-      const response = await api.post(`/public/forms/${form.slug}/submit`, {
+      const response = await api.post(`/public/forms/${slug}/submit`, {
         answers: answersArray,
         menuItems,
         ...(Object.keys(orderMetadata).length > 0 && { metadata: orderMetadata }),
@@ -680,9 +1085,11 @@ const PublicMenuForm = ({
         const phoneValue = field.metadata?.autoFieldType === "phone"
           ? (value || "55")
           : value;
+        const digits = String(phoneValue || "").replace(/\D/g, "");
+        const phoneMask = digits.length > 12 ? "55(99)99999-9999" : "55(99)9999-9999";
         return (
           <InputMask
-            mask="55(99)9999-9999"
+            mask={phoneMask}
             maskChar={null}
             value={phoneValue}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
@@ -693,7 +1100,7 @@ const PublicMenuForm = ({
                 fullWidth
                 variant={fieldVariant}
                 type="text"
-                placeholder="55(99)9999-9999"
+                placeholder="55(99)99999-9999"
                 error={hasError}
                 helperText={error || field.helpText}
                 required={field.isRequired}
@@ -761,6 +1168,95 @@ const PublicMenuForm = ({
             )}
           </FormControl>
         );
+
+      case "radio":
+        return (
+          <FormControl component="fieldset" fullWidth error={hasError} required={field.isRequired}>
+            <Typography variant="subtitle2" style={{ marginBottom: 8 }}>
+              {field.label}
+            </Typography>
+            <RadioGroup
+              value={value}
+              onChange={(e) => handleFieldChange(field.id, e.target.value)}
+            >
+              {(field.options || []).map((option, index) => (
+                <FormControlLabel
+                  key={index}
+                  value={option}
+                  control={<Radio color="primary" />}
+                  label={option}
+                />
+              ))}
+            </RadioGroup>
+            {(error || field.helpText) && (
+              <FormHelperText>{error || field.helpText}</FormHelperText>
+            )}
+          </FormControl>
+        );
+
+      case "checkbox": {
+        // Se houver opções: tratar como múltipla seleção (array)
+        const options = field.options || [];
+        if (options.length > 0) {
+          const current = Array.isArray(answers[field.id]) ? answers[field.id] : [];
+          const toggle = (option) => {
+            const normalized = (val) => String(val ?? "").trim();
+            const exists = current.some((v) => normalized(v) === normalized(option));
+            const next = exists
+              ? current.filter((v) => normalized(v) !== normalized(option))
+              : [...current, option];
+            handleFieldChange(field.id, next);
+          };
+          return (
+            <FormControl component="fieldset" fullWidth error={hasError} required={field.isRequired}>
+              <Typography variant="subtitle2" style={{ marginBottom: 8 }}>
+                {field.label}
+              </Typography>
+              <FormGroup>
+                {options.map((option, index) => {
+                  const checked = current.some((v) => String(v ?? "").trim() === String(option ?? "").trim());
+                  return (
+                    <FormControlLabel
+                      key={index}
+                      control={
+                        <Checkbox
+                          color="primary"
+                          checked={checked}
+                          onChange={() => toggle(option)}
+                        />
+                      }
+                      label={option}
+                    />
+                  );
+                })}
+              </FormGroup>
+              {(error || field.helpText) && (
+                <FormHelperText>{error || field.helpText}</FormHelperText>
+              )}
+            </FormControl>
+          );
+        }
+
+        // Sem opções: tratar como booleano simples
+        const checked = Boolean(answers[field.id]);
+        return (
+          <FormControl component="fieldset" fullWidth error={hasError} required={field.isRequired}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  color="primary"
+                  checked={checked}
+                  onChange={(e) => handleFieldChange(field.id, e.target.checked)}
+                />
+              }
+              label={field.label}
+            />
+            {(error || field.helpText) && (
+              <FormHelperText>{error || field.helpText}</FormHelperText>
+            )}
+          </FormControl>
+        );
+      }
 
       default:
         return null;
@@ -970,6 +1466,58 @@ const PublicMenuForm = ({
     let orderMetadata = {};
     const mesasEnabled = form.settings?.mesas !== false;
     const deliveryEnabled = form.settings?.delivery !== false;
+    const feeCond = form.settings?.deliveryFeeCondition;
+
+    const getAnswerValue = (fieldId) => {
+      if (fieldId == null || fieldId === "") return undefined;
+      return answers[fieldId] ?? answers[String(fieldId)] ?? answers[Number(fieldId)];
+    };
+
+    const isConditionMet = (cond) => {
+      if (!cond || cond.fieldId == null || cond.fieldId === "") return false;
+      const operator = cond.operator || "equals";
+      const expectedValue = cond.value;
+      const answerValue = getAnswerValue(cond.fieldId);
+      const normStr = (val) => String(val ?? "").trim().toLowerCase();
+
+      const isEmpty = (val) => {
+        if (val === undefined || val === null) return true;
+        if (Array.isArray(val) && val.length === 0) return true;
+        if (typeof val === "string" && val.trim() === "") return true;
+        return false;
+      };
+
+      switch (operator) {
+        case "equals":
+          if (expectedValue === undefined || expectedValue === null) return false;
+          if (Array.isArray(answerValue)) return answerValue.map(normStr).includes(normStr(expectedValue));
+          return normStr(answerValue) === normStr(expectedValue);
+        case "notEquals":
+          if (expectedValue === undefined || expectedValue === null) return false;
+          if (Array.isArray(answerValue)) return !answerValue.map(normStr).includes(normStr(expectedValue));
+          return normStr(answerValue) !== normStr(expectedValue);
+        case "contains":
+          if (expectedValue === undefined || expectedValue === null) return false;
+          return String(answerValue || "").toLowerCase().includes(String(expectedValue || "").toLowerCase());
+        case "isEmpty":
+          return isEmpty(answerValue);
+        case "isNotEmpty":
+          return !isEmpty(answerValue);
+        case "isTrue": {
+          if (Array.isArray(answerValue)) return answerValue.length > 0;
+          const strVal = String(answerValue || "").toLowerCase();
+          return strVal === "true" || strVal === "sim" || strVal === "yes" || strVal === "1" || answerValue === true;
+        }
+        case "isFalse": {
+          if (Array.isArray(answerValue)) return answerValue.length === 0;
+          const strVal2 = String(answerValue || "").toLowerCase();
+          return strVal2 === "false" || strVal2 === "não" || strVal2 === "nao" || strVal2 === "no" || strVal2 === "0" || answerValue === false || isEmpty(answerValue);
+        }
+        default:
+          return false;
+      }
+    };
+
     if (mesaFromQR && mesaValue) {
       orderMetadata.tableId = mesaFromQR.id;
       orderMetadata.tableNumber = mesaFromQR.number || mesaFromQR.name || String(mesaFromQR.id);
@@ -982,16 +1530,14 @@ const PublicMenuForm = ({
       if (mesaId) orderMetadata.tableId = mesaId;
       orderMetadata.tableNumber = mesaNumber;
       orderMetadata.orderType = "mesa";
-    } else if (mesaValue && mesasEnabled) {
-      const mesaIdNum = parseInt(mesaValue, 10);
-      if (!Number.isNaN(mesaIdNum)) {
-        orderMetadata.tableId = mesaIdNum;
-        orderMetadata.tableNumber = mesas.find((m) => m.id === mesaIdNum)?.number || mesas.find((m) => m.id === mesaIdNum)?.name || mesaValue;
-        orderMetadata.orderType = "mesa";
-      }
     }
     if (!orderMetadata.tableId && deliveryEnabled) {
-      orderMetadata.orderType = "delivery";
+      // Se existir condição vinculada a campo, só marcar como delivery quando a condição for verdadeira
+      if (feeCond?.fieldId) {
+        orderMetadata.orderType = isConditionMet(feeCond) ? "delivery" : (mesasEnabled ? "mesa" : "delivery");
+      } else {
+        orderMetadata.orderType = "delivery";
+      }
     } else if (!orderMetadata.tableId) {
       orderMetadata.orderType = mesasEnabled ? "mesa" : "delivery";
     }
@@ -1228,43 +1774,221 @@ const PublicMenuForm = ({
     (f) => !f.metadata?.isAutoField && f.order >= 2
   );
 
+  const bannerUrl = form?.settings?.bannerUrl;
+  const carouselImages = bannerUrl
+    ? []
+    : (products || []).map((p) => p.imageUrl).filter(Boolean).slice(0, 8);
+  if (carouselImages.length === 0 && !bannerUrl && form?.logoUrl) {
+    carouselImages.push(form.logoUrl);
+  }
+
+  const orderedIds = mostOrderedProductIds.filter((id) => products.some((p) => p.id === id));
+  const mostOrderedProducts = orderedIds
+    .map((id) => products.find((p) => p.id === id))
+    .filter(Boolean);
+  const pieceAgainOrderedIds = pieceAgainEnabled
+    ? pieceAgainProductIds.filter((id) => products.some((p) => p.id === id))
+    : [];
+  const pieceAgainProducts = pieceAgainOrderedIds
+    .map((id) => products.find((p) => p.id === id))
+    .filter(Boolean);
+
   return (
     <Box className={classes.root} style={appStyles?.rootStyle}>
-      <Box className={classes.container} style={appStyles?.containerStyle}>
-        <Paper className={classes.formPaper} style={appStyles?.formPaperStyle}>
-          {form.logoUrl && form.logoPosition !== "none" && (
-            <Box className={classes.header}>
-              <img src={form.logoUrl} alt="Logo" className={classes.logo} />
-            </Box>
-          )}
+      {/* Banner grande (hero) quando configurado */}
+      {bannerUrl && (
+        <img
+          src={bannerUrl}
+          alt="Banner"
+          className={classes.heroBanner}
+          onError={(e) => { e.target.style.display = "none"; }}
+        />
+      )}
 
-          <Box className={classes.header}>
-            <Typography className={classes.title} style={appStyles?.titleStyle}>
-              {form.name}
-            </Typography>
-            {form.description && (
-              <Typography className={classes.description}>{form.description}</Typography>
-            )}
-          </Box>
+      {/* Topo tipo Anota Aí: carrossel de imagens (itens do cardápio) */}
+      {!bannerUrl && carouselImages.length > 0 && (
+        <Box className={classes.carouselRow}>
+          {carouselImages.map((src, idx) => (
+            <img
+              key={`${src}-${idx}`}
+              src={src}
+              alt="Banner"
+              className={classes.carouselImg}
+              onError={(e) => { e.target.style.display = "none"; }}
+            />
+          ))}
+        </Box>
+      )}
 
-          <Tabs
-            value={activeTab}
-            onChange={(e, newValue) => setActiveTab(newValue)}
+      {/* Barra da loja */}
+      <Box className={classes.storeBar}>
+        {form.logoUrl ? (
+          <img src={form.logoUrl} alt="Logo" className={classes.storeLogo} />
+        ) : (
+          <Box flex={1} />
+        )}
+        <Box>
+          <IconButton size="small" aria-label="Buscar">
+            <SearchIcon />
+          </IconButton>
+          <IconButton
+            size="small"
+            aria-label="Compartilhar"
+            onClick={() => {
+              const url = window.location?.href || "";
+              if (navigator.share) {
+                navigator.share({ title: form.name, url }).catch(() => {});
+              } else if (navigator.clipboard && url) {
+                navigator.clipboard.writeText(url).then(() => toast.success("Link copiado!")).catch(() => {});
+              }
+            }}
+          >
+            <ShareIcon />
+          </IconButton>
+        </Box>
+      </Box>
+
+      {form.description && (
+        <Box className={classes.storeSubInfo}>
+          {form.description}
+        </Box>
+      )}
+
+      {/* Promo opcional (se configurar em settings.promoText) */}
+      {form.settings?.promoText && (
+        <Box className={classes.promoBanner}>
+          <span>{form.settings.promoText}</span>
+          {form.settings?.promoCta ? <span>{form.settings.promoCta}</span> : null}
+        </Box>
+      )}
+
+      {/* Categorias (sticky) */}
+      <Box className={classes.stickyTabs}>
+        <Tabs
+            value={activeGroup}
+            onChange={(e, newValue) => {
+              setActiveGroup(newValue);
+              setView("menu");
+            }}
             variant="scrollable"
             scrollButtons="auto"
             className={classes.tabsContainer}
             indicatorColor="primary"
             textColor="primary"
+            TabIndicatorProps={{ style: { height: 3 } }}
           >
             {groups.map((grupo) => (
-              <Tab key={grupo} label={grupo} />
+              <Tab key={grupo} label={grupo} className={classes.tab} />
             ))}
-            <Tab label="Finalizar" />
           </Tabs>
+      </Box>
 
-          {activeTab < groups.length && (
-            <Box style={{ marginTop: 24 }}>
-              {getProductsByGroup(groups[activeTab]).map((product) => {
+      <Box className={classes.container} style={appStyles?.containerStyle}>
+        {/* Seções do topo (somente no menu) */}
+        {view === "menu" && pieceAgainProducts.length > 0 && (
+          <Box className={classes.contentSection}>
+            <Typography className={classes.sectionTitle}>Peça de novo</Typography>
+            <Box className={classes.mostOrderedScroll}>
+              {pieceAgainProducts.map((product) => {
+                const itemKey = getItemKey(product);
+                const { productValue: displayPrice } = getItemDetailsByKey(itemKey);
+                return (
+                  <Card key={`again-${product.id}`} className={classes.mostOrderedCard} onClick={() => handleQuantityChange(itemKey, 1)}>
+                    {product.imageUrl ? (
+                      <img src={product.imageUrl} alt={product.name} className={classes.mostOrderedImage} />
+                    ) : (
+                      <Box className={classes.mostOrderedImage} />
+                    )}
+                    <Box className={classes.mostOrderedCardBody}>
+                      <Typography className={classes.mostOrderedName}>{product.name}</Typography>
+                      <Typography className={classes.mostOrderedPrice}>
+                        R$ {displayPrice.toFixed(2).replace(".", ",")}
+                      </Typography>
+                      <Typography variant="caption" color="textSecondary" style={{ marginTop: 6 }}>
+                        Adicionar ao carrinho
+                      </Typography>
+                    </Box>
+                  </Card>
+                );
+              })}
+            </Box>
+          </Box>
+        )}
+
+        {view === "menu" && mostOrderedProducts.length > 0 && (
+          <Box className={classes.contentSection}>
+            <Typography className={classes.sectionTitle}>Os mais pedidos</Typography>
+            <Box className={classes.mostOrderedScroll}>
+              {mostOrderedProducts.map((product) => {
+                const itemKey = getItemKey(product);
+                const quantity = selectedItems[itemKey] || 0;
+                const { productValue: displayPrice } = getItemDetailsByKey(itemKey);
+                return (
+                  <Card key={`top-${product.id}`} className={classes.mostOrderedCard}>
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.name}
+                        className={classes.mostOrderedImage}
+                        onError={(e) => { e.target.style.display = "none"; }}
+                      />
+                    ) : (
+                      <Box className={classes.mostOrderedImage} />
+                    )}
+                    <Box className={classes.mostOrderedCardBody}>
+                      <Typography className={classes.mostOrderedName}>{product.name}</Typography>
+                      <Typography className={classes.mostOrderedPrice}>
+                        R$ {displayPrice.toFixed(2).replace(".", ",")}
+                      </Typography>
+                      <Box display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 8 }}>
+                        {quantity > 0 ? (
+                          <Box className={classes.quantityControl}>
+                            <IconButton size="small" onClick={() => handleQuantityChange(itemKey, -1)}>
+                              <RemoveIcon fontSize="small" />
+                            </IconButton>
+                            <TextField
+                              className={classes.quantityInput}
+                              type="number"
+                              value={quantity}
+                              onChange={(e) => handleQuantityInput(itemKey, e.target.value)}
+                              inputProps={{ min: 0 }}
+                              variant="outlined"
+                              size="small"
+                              style={{ width: 52 }}
+                            />
+                            <IconButton size="small" onClick={() => handleQuantityChange(itemKey, 1)}>
+                              <AddIcon fontSize="small" />
+                            </IconButton>
+                          </Box>
+                        ) : (
+                          <Button
+                            variant="contained"
+                            color="primary"
+                            size="small"
+                            fullWidth
+                            onClick={() => handleQuantityChange(itemKey, 1)}
+                            style={{ fontSize: "0.75rem" }}
+                          >
+                            Adicionar
+                          </Button>
+                        )}
+                      </Box>
+                    </Box>
+                  </Card>
+                );
+              })}
+            </Box>
+          </Box>
+        )}
+
+        <Box className={classes.contentSection}>
+
+          {view === "menu" && groups[activeGroup] && (
+            <Box style={{ marginTop: 8 }}>
+              <Typography className={classes.sectionTitle} style={{ marginBottom: 12 }}>
+                {groups[activeGroup]}
+              </Typography>
+              {getProductsByGroup(groups[activeGroup]).map((product) => {
                 const itemKey = getItemKey(product);
                 const quantity = selectedItems[itemKey] || 0;
                 const isHalfAndHalf = product.allowsHalfAndHalf === true;
@@ -1360,6 +2084,40 @@ const PublicMenuForm = ({
             </Box>
           )}
 
+          {/* Gate de telefone (Peça de novo) */}
+          <Dialog
+            open={pieceAgainEnabled && pieceAgainModalOpen}
+            onClose={() => {}}
+            maxWidth="xs"
+            fullWidth
+          >
+            <DialogTitle>Digite seu telefone</DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: 12 }}>
+                Isso permite buscar suas últimas compras e preencher seus dados automaticamente.
+              </Typography>
+              <TextField
+                autoFocus
+                fullWidth
+                variant="outlined"
+                label="Telefone (com DDD)"
+                placeholder="Ex: 55(34)99999-9999"
+                value={pieceAgainPhoneInput}
+                onChange={(e) => setPieceAgainPhoneInput(e.target.value)}
+              />
+            </DialogContent>
+            <DialogActions>
+              <Button
+                onClick={confirmPieceAgainPhone}
+                color="primary"
+                variant="contained"
+                disabled={pieceAgainLoading}
+              >
+                {pieceAgainLoading ? "Buscando..." : "Continuar"}
+              </Button>
+            </DialogActions>
+          </Dialog>
+
           <Dialog open={halfAndHalfModalOpen} onClose={() => setHalfAndHalfModalOpen(false)} maxWidth="sm" fullWidth>
             <DialogTitle>Meio a meio - {halfAndHalfModalProduct?.name}</DialogTitle>
             <DialogContent>
@@ -1429,7 +2187,7 @@ const PublicMenuForm = ({
             </DialogActions>
           </Dialog>
 
-          {activeTab === groups.length && (
+          {view === "checkout" && (
             <form onSubmit={handleSubmit}>
               <Box style={{ marginTop: 24 }}>
                 {/* Listar todos os itens normais */}
@@ -1559,16 +2317,44 @@ const PublicMenuForm = ({
                     <Typography variant="h6" gutterBottom>
                       Resumo do Pedido
                     </Typography>
+                    {(() => {
+                      const orderMetadataForDisplay = getOrderMetadata();
+                      const fee = orderMetadataForDisplay?.orderType === "delivery" && form?.settings?.deliveryFee
+                        ? (parseFloat(form.settings.deliveryFee) || 0)
+                        : 0;
+                      const total = calculateTotal();
+                      const subtotal = Math.max(0, total - fee);
+                      return (
+                        <>
                     <Box className={classes.summaryRow}>
                       <Typography>Total de itens:</Typography>
                       <Typography fontWeight={600}>{getTotalItems()}</Typography>
                     </Box>
+                    {fee > 0 && (
+                      <>
+                        <Box className={classes.summaryRow}>
+                          <Typography>Subtotal:</Typography>
+                          <Typography fontWeight={600}>
+                            R$ {subtotal.toFixed(2).replace(".", ",")}
+                          </Typography>
+                        </Box>
+                        <Box className={classes.summaryRow}>
+                          <Typography>Taxa de entrega:</Typography>
+                          <Typography fontWeight={600}>
+                            R$ {fee.toFixed(2).replace(".", ",")}
+                          </Typography>
+                        </Box>
+                      </>
+                    )}
                     <Box className={classes.summaryRow}>
                       <Typography variant="h6">Total:</Typography>
                       <Typography variant="h6" style={{ color: form.primaryColor }}>
-                        R$ {calculateTotal().toFixed(2).replace(".", ",")}
+                        R$ {total.toFixed(2).replace(".", ",")}
                       </Typography>
                     </Box>
+                        </>
+                      );
+                    })()}
                   </Paper>
                 )}
 
@@ -1592,22 +2378,34 @@ const PublicMenuForm = ({
               </Box>
             </form>
           )}
-        </Paper>
+        </Box>
       </Box>
 
-      {/* Botão flutuante: ir para Finalizar */}
+      {/* Barra inferior estilo Anota Aí: Início | Carrinho */}
       {!submitted && form && groups.length > 0 && (
-        <Fab
-          color="primary"
-          aria-label="Finalizar pedido"
-          className={classes.fab}
-          onClick={() => setActiveTab(groups.length)}
-          style={appStyles?.primaryColor ? { backgroundColor: appStyles.primaryColor } : {}}
-        >
-          <Badge badgeContent={getTotalItems()} color="secondary">
-            <ShoppingCartIcon />
-          </Badge>
-        </Fab>
+        <nav className={classes.bottomNav}>
+          <div
+            className={`${classes.bottomNavItem} ${view === "menu" ? "active" : ""}`}
+            onClick={() => setView("menu")}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === "Enter" && setView("menu")}
+          >
+            <span style={{ fontSize: "0.75rem" }}>Início</span>
+          </div>
+          <div
+            className={`${classes.bottomNavItem} ${view === "checkout" ? "active" : ""}`}
+            onClick={() => setView("checkout")}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === "Enter" && setView("checkout")}
+          >
+            <Badge badgeContent={getTotalItems()} color="primary" style={{ marginBottom: 2 }}>
+              <ShoppingCartIcon style={{ fontSize: 24 }} />
+            </Badge>
+            <span style={{ fontSize: "0.75rem" }}>Carrinho</span>
+          </div>
+        </nav>
       )}
     </Box>
   );

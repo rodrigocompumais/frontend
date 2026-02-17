@@ -92,9 +92,9 @@ const Routes = () => {
             <Switch>
             <Route exact path="/" component={Landing} />
             <Route exact path="/proposta-personalizada" component={CustomProposalForm} isPublic={true} />
-            <Route exact path="/f/:slug/cancelar" component={PublicAgendamentoCancelar} isPublic={true} />
-            <Route exact path="/f/:slug/reagendar" component={PublicAgendamentoReagendar} isPublic={true} />
-            <Route exact path="/f/:slug" component={PublicForm} isPublic={true} />
+            <Route exact path="/f/:publicId/cancelar" component={PublicAgendamentoCancelar} isPublic={true} />
+            <Route exact path="/f/:publicId/reagendar" component={PublicAgendamentoReagendar} isPublic={true} />
+            <Route exact path="/f/:publicId" component={PublicForm} isPublic={true} />
             <Route exact path="/mesa/:mesaId/cardapio" component={MesaCardapio} isPublic={true} />
             <Route exact path="/mesa/:mesaId" component={MesaRedirect} isPublic={true} />
             <Route exact path="/login" component={Login} />

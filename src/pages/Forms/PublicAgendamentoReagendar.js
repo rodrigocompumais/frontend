@@ -84,7 +84,7 @@ function getWeekDays(fromDate, count = 14) {
 
 const PublicAgendamentoReagendar = () => {
   const classes = useStyles();
-  const { slug } = useParams();
+  const { publicId } = useParams();
   const location = useLocation();
   const token = new URLSearchParams(location.search).get("token");
 
@@ -112,7 +112,7 @@ const PublicAgendamentoReagendar = () => {
     }
     const fetchData = async () => {
       try {
-        const { data: res } = await api.get(`/public/forms/${slug}/appointments/by-token`, {
+        const { data: res } = await api.get(`/public/forms/${publicId}/appointments/by-token`, {
           params: { token },
         });
         setData(res);
@@ -124,7 +124,7 @@ const PublicAgendamentoReagendar = () => {
       }
     };
     fetchData();
-  }, [slug, token]);
+  }, [publicId, token]);
 
   useEffect(() => {
     if (!data?.appointment || !selectedDate) {
@@ -138,7 +138,7 @@ const PublicAgendamentoReagendar = () => {
       setSlots([]);
       setSelectedSlot(null);
       try {
-        const { data: slotData } = await api.get(`/public/forms/${slug}/availability`, {
+        const { data: slotData } = await api.get(`/public/forms/${publicId}/availability`, {
           params: {
             serviceId: apt.appointmentService?.id,
             userId: apt.assignedUser?.id,
@@ -153,13 +153,13 @@ const PublicAgendamentoReagendar = () => {
       }
     };
     fetchSlots();
-  }, [data, slug, selectedDate]);
+  }, [data, publicId, selectedDate]);
 
   const handleReschedule = async () => {
     if (!token || !data || !selectedSlot) return;
     setSubmitting(true);
     try {
-      await api.put(`/public/forms/${slug}/appointments/reschedule`, {
+      await api.put(`/public/forms/${publicId}/appointments/reschedule`, {
         token,
         startTime: selectedSlot.start,
         endTime: selectedSlot.end,
@@ -201,7 +201,7 @@ const PublicAgendamentoReagendar = () => {
         <Box className={classes.container}>
           <div className={classes.paper}>
             <Alert severity="success">Seu agendamento foi reagendado. Você receberá uma confirmação por WhatsApp.</Alert>
-            <Button variant="contained" color="primary" href={`/f/${slug}`} style={{ marginTop: 16 }}>
+            <Button variant="contained" color="primary" href={`/f/${publicId}`} style={{ marginTop: 16 }}>
               Novo agendamento
             </Button>
           </div>
@@ -226,7 +226,7 @@ const PublicAgendamentoReagendar = () => {
           </Typography>
 
           <div className={classes.header}>
-            <IconButton style={{ color: "#fff" }} size="small" href={`/f/${slug}/cancelar?token=${token}`}>
+            <IconButton style={{ color: "#fff" }} size="small" href={`/f/${publicId}/cancelar?token=${token}`}>
               <ArrowBackIcon />
             </IconButton>
             <Typography style={{ color: "#fff", fontWeight: 600 }}>{headerMonthYear}</Typography>
@@ -282,7 +282,7 @@ const PublicAgendamentoReagendar = () => {
           )}
 
           <div className={classes.actions}>
-            <Button variant="outlined" style={{ color: "#9e9e9e" }} href={`/f/${slug}/cancelar?token=${token}`} disabled={submitting}>
+            <Button variant="outlined" style={{ color: "#9e9e9e" }} href={`/f/${publicId}/cancelar?token=${token}`} disabled={submitting}>
               Cancelar agendamento
             </Button>
             <Button

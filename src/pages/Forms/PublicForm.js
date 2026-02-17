@@ -106,7 +106,7 @@ const useStyles = makeStyles((theme) => ({
 
 const PublicForm = () => {
   const classes = useStyles();
-  const { slug } = useParams();
+  const { publicId } = useParams();
   const history = useHistory();
   const location = useLocation();
 
@@ -120,7 +120,7 @@ const PublicForm = () => {
 
   useEffect(() => {
     loadForm();
-  }, [slug]);
+  }, [publicId]);
 
   useEffect(() => {
     const font = form?.settings?.appearance?.fontFamily;
@@ -135,7 +135,7 @@ const PublicForm = () => {
 
   const loadForm = async () => {
     try {
-      const { data } = await api.get(`/public/forms/${slug}`);
+      const { data } = await api.get(`/public/forms/${publicId}`);
       setForm(data);
       
       // Ler parâmetros da URL (para tracking via WhatsApp)
@@ -329,7 +329,7 @@ const PublicForm = () => {
         }));
       }
 
-      await api.post(`/public/forms/${slug}/submit`, {
+      await api.post(`/public/forms/${publicId}/submit`, {
         answers: answersArray,
         quotationItems: isQuotationForm ? quotationItems : undefined,
       });
@@ -355,9 +355,14 @@ const PublicForm = () => {
 
     switch (field.fieldType) {
       case "phone":
+        // Máscara dinâmica: aceita 8 ou 9 dígitos após o DDD
+        // 12 dígitos: 55 + DDD + 8 (fixo) | 13 dígitos: 55 + DDD + 9 (celular)
+        // No submit, o backend normaliza e completa o 9 quando necessário.
+        const digits = String(value || "").replace(/\D/g, "");
+        const phoneMask = digits.length > 12 ? "55(99)99999-9999" : "55(99)9999-9999";
         return (
           <InputMask
-            mask="55(99)9999-9999"
+            mask={phoneMask}
             maskChar={null}
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
@@ -368,7 +373,7 @@ const PublicForm = () => {
                 fullWidth
                 variant={fieldVariant}
                 type="text"
-                placeholder="55(99)9999-9999"
+                placeholder="55(99)99999-9999"
                 error={hasError}
                 helperText={error || field.helpText}
                 inputProps={{
@@ -553,12 +558,12 @@ const PublicForm = () => {
 
   // Se for formulário de cardápio, renderizar componente específico
   if (form.settings?.formType === "cardapio") {
-    return <PublicMenuForm form={form} slug={slug} />;
+    return <PublicMenuForm form={form} slug={publicId} />;
   }
 
   // Se for formulário de agendamento, renderizar fluxo de agendamento
   if (form.settings?.formType === "agendamento") {
-    return <PublicAgendamentoForm form={form} slug={slug} />;
+    return <PublicAgendamentoForm form={form} slug={publicId} />;
   }
 
   if (submitted) {

@@ -577,7 +577,7 @@ const LanchonetesHub = () => {
                     Links do cardápio
                   </Typography>
                   {cardapioForms.map((form) => {
-                    const link = `${window.location.origin}/f/${form.slug}`;
+                    const link = `${window.location.origin}/f/${form.publicId}`;
                     return (
                       <Paper
                         key={form.id}
@@ -657,7 +657,7 @@ const LanchonetesHub = () => {
                 </Paper>
               ) : (
                 cardapioForms.map((form) => {
-                  const link = `${window.location.origin}/f/${form.slug}`;
+                  const link = `${window.location.origin}/f/${form.publicId}`;
                   return (
                     <Paper
                       key={form.id}
@@ -722,8 +722,8 @@ const LanchonetesHub = () => {
             <Mesas
               cardapioSlugFromHub={
                 params.get("formId")
-                  ? (cardapioForms.find((f) => String(f.id) === params.get("formId"))?.slug)
-                  : cardapioForms[0]?.slug
+                  ? (cardapioForms.find((f) => String(f.id) === params.get("formId"))?.publicId)
+                  : cardapioForms[0]?.publicId
               }
             />
           )}

@@ -193,7 +193,7 @@ const CampaignModal = ({
 
   // Função para inserir link de formulário
   const insertFormLink = (fieldName, form) => {
-    const formLink = `${window.location.origin}/f/${form.slug}`;
+    const formLink = `${window.location.origin}/f/${form.publicId}`;
     insertVariable(fieldName, formLink);
     setFormLinkMenuAnchor(prev => ({ ...prev, [fieldName]: null }));
   };

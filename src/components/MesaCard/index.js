@@ -126,14 +126,15 @@ const MesaCard = ({
   const classes = useStyles();
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const isOcupada = mesa.status === "ocupada";
-  const slug = mesa.form?.slug || cardapioSlug;
+  // Identificador público do formulário (slug "legível" não é mais usado em URL pública)
+  const publicId = mesa.form?.publicId || cardapioSlug;
   const sectionClass = mesa.section === "varanda" ? classes.sectionVaranda
     : mesa.section === "area_externa" ? classes.sectionAreaExterna
     : mesa.section === "salao" ? classes.sectionSalao : "";
 
   const handleCopyLink = (e) => {
     e.stopPropagation();
-    const url = mesa.linkUrl || (slug ? `${window.location.origin}/f/${slug}?mesa=${mesa.id}` : null);
+    const url = mesa.linkUrl || (publicId ? `${window.location.origin}/f/${publicId}?mesa=${mesa.id}` : null);
     if (!url) return;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url).then(() => {
@@ -230,7 +231,7 @@ const MesaCard = ({
               Ocupar
             </Button>
           )}
-          {(slug || mesa.linkUrl) && (
+          {(publicId || mesa.linkUrl) && (
             <>
               <Tooltip title="Ver QR Code do cardápio para esta mesa">
                 <IconButton

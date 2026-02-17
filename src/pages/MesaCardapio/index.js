@@ -29,14 +29,14 @@ const MesaCardapio = () => {
         setLoading(true);
         setError(null);
         const { data: mesaRes } = await api.get(`/public/mesas/${mesaId}`, { params: t ? { t } : {} });
-        const formSlug = mesaRes.formSlug;
-        if (!formSlug) {
+        const formPublicId = mesaRes.formPublicId;
+        if (!formPublicId) {
           setError("Configure um formulário de cardápio na empresa para usar o link da mesa.");
           return;
         }
 
         const [formData, productsData] = await Promise.all([
-          api.get(`/public/forms/${formSlug}`).then((r) => r.data),
+          api.get(`/public/forms/${formPublicId}`).then((r) => r.data),
           api.get(`/public/mesas/${mesaId}/products`, { params: t ? { t } : {} }).then((r) => r.data),
         ]);
 
@@ -89,7 +89,7 @@ const MesaCardapio = () => {
   return (
     <PublicMenuForm
       form={form}
-      slug={form.slug}
+      slug={form.publicId}
       initialProducts={products}
       initialMesaFromQR={mesaData}
       initialOrderToken={orderToken}

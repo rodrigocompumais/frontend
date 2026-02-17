@@ -157,7 +157,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
   const cardapioQRRef = useRef(null);
   const [liberarModalOpen, setLiberarModalOpen] = useState(false);
   const [mesaParaLiberar, setMesaParaLiberar] = useState(null);
-  const [cardapioSlugFetched, setCardapioSlugFetched] = useState(null);
+  const [cardapioSlugFetched, setCardapioSlugFetched] = useState(null); // agora armazena publicId
 
   const [mesaParaPedido, setMesaParaPedido] = useState(null);
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
@@ -173,14 +173,14 @@ const Mesas = ({ cardapioSlugFromHub }) => {
   const [variablePriceUnit, setVariablePriceUnit] = useState("");
   const [orderProductSearch, setOrderProductSearch] = useState("");
 
-  const cardapioSlug = cardapioSlugFromHub ?? cardapioSlugFetched;
+  const cardapioSlug = cardapioSlugFromHub ?? cardapioSlugFetched; // publicId do cardápio padrão
 
   useEffect(() => {
     if (cardapioSlugFromHub) return;
     api.get("/forms?formType=cardapio").then(({ data }) => {
       const forms = data.forms || [];
-      const slug = forms.length ? (forms.sort((a, b) => (a.id || 0) - (b.id || 0))[0]?.slug) : null;
-      if (slug) setCardapioSlugFetched(slug);
+      const publicId = forms.length ? (forms.sort((a, b) => (a.id || 0) - (b.id || 0))[0]?.publicId) : null;
+      if (publicId) setCardapioSlugFetched(publicId);
     }).catch(() => {});
   }, [cardapioSlugFromHub]);
 
@@ -255,12 +255,12 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     setOrderLoading(true);
 
     const resolveSlugAndLoad = async () => {
-      let slugToUse = mesaParaPedido?.form?.slug || cardapioSlug;
+      let slugToUse = mesaParaPedido?.form?.publicId || cardapioSlug;
       if (!slugToUse) {
         try {
           const { data } = await api.get("/mesas/default-cardapio-form");
-          if (cancelled || !data?.slug) return;
-          slugToUse = data.slug;
+          if (cancelled || !data?.publicId) return;
+          slugToUse = data.publicId;
         } catch (err) {
           if (!cancelled) toast.error("Nenhum formulário de cardápio encontrado para esta mesa.");
           return;
@@ -274,7 +274,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         ]);
         if (cancelled) return;
         const forms = formsData?.forms || [];
-        const form = forms.find((f) => f.slug === slugToUse) || forms.find((f) => f.slug === cardapioSlug) || forms[0] || null;
+        const form = forms.find((f) => f.publicId === slugToUse) || forms.find((f) => f.publicId === cardapioSlug) || forms[0] || null;
         if (!form) {
           toast.error("Formulário de cardápio não encontrado.");
           return;
@@ -290,7 +290,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
 
     resolveSlugAndLoad();
     return () => { cancelled = true; };
-  }, [orderDialogOpen, mesaParaPedido?.id, mesaParaPedido?.form?.slug, cardapioSlug]);
+  }, [orderDialogOpen, mesaParaPedido?.id, mesaParaPedido?.form?.publicId, cardapioSlug]);
 
   const handleOpenOrderDialog = (mesa) => {
     if (mesa.status !== "ocupada" || !mesa.contact) {
@@ -381,7 +381,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     }, 0);
 
   const submitOrder = async () => {
-    if (!orderForm?.slug || !mesaParaPedido) return;
+    if (!orderForm?.publicId || !mesaParaPedido) return;
     if (getOrderTotalItems() === 0) {
       toast.error("Adicione itens ao pedido");
       return;
@@ -434,7 +434,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         orderType: "mesa",
         garcomName: user?.name || "",
       };
-      await api.post(`/public/forms/${orderForm.slug}/submit`, {
+      await api.post(`/public/forms/${orderForm.publicId}/submit`, {
         answers,
         menuItems,
         metadata,

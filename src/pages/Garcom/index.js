@@ -205,8 +205,8 @@ const Garcom = () => {
         const forms = formsRes.data?.forms || [];
         const firstForm = forms[0];
         setForm(firstForm || null);
-        if (firstForm?.slug) {
-          const { data } = await api.get(`/public/forms/${firstForm.slug}/products`);
+        if (firstForm?.publicId) {
+          const { data } = await api.get(`/public/forms/${firstForm.publicId}/products`);
           setProducts(data.products || []);
         }
       } catch (err) {
@@ -710,7 +710,7 @@ const Garcom = () => {
         orderType: "mesa",
         garcomName: user?.name || "",
       };
-      await api.post(`/public/forms/${form.slug}/submit`, {
+      await api.post(`/public/forms/${form.publicId}/submit`, {
         answers,
         menuItems,
         metadata,

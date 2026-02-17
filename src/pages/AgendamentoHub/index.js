@@ -387,7 +387,7 @@ const AgendamentoHub = () => {
                     Links do formulário de agendamento
                   </Typography>
                   {agendamentoForms.map((form) => {
-                    const link = `${window.location.origin}/f/${form.slug}`;
+                    const link = `${window.location.origin}/f/${form.publicId}`;
                     return (
                       <Paper
                         key={form.id}
@@ -446,7 +446,7 @@ const AgendamentoHub = () => {
                 </Paper>
               ) : (
                 agendamentoForms.map((form) => {
-                  const link = `${window.location.origin}/f/${form.slug}`;
+                  const link = `${window.location.origin}/f/${form.publicId}`;
                   return (
                     <Paper key={form.id} style={{ padding: 20, marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
                       <Box>

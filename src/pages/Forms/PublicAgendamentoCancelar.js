@@ -33,7 +33,7 @@ const useStyles = makeStyles((theme) => ({
 
 const PublicAgendamentoCancelar = () => {
   const classes = useStyles();
-  const { slug } = useParams();
+  const { publicId } = useParams();
   const location = useLocation();
   const token = new URLSearchParams(location.search).get("token");
 
@@ -51,7 +51,7 @@ const PublicAgendamentoCancelar = () => {
     }
     const fetchData = async () => {
       try {
-        const { data: res } = await api.get(`/public/forms/${slug}/appointments/by-token`, {
+        const { data: res } = await api.get(`/public/forms/${publicId}/appointments/by-token`, {
           params: { token },
         });
         setData(res);
@@ -63,13 +63,13 @@ const PublicAgendamentoCancelar = () => {
       }
     };
     fetchData();
-  }, [slug, token]);
+  }, [publicId, token]);
 
   const handleCancel = async () => {
     if (!token || !data) return;
     setSubmitting(true);
     try {
-      await api.put(`/public/forms/${slug}/appointments/cancel`, { token });
+      await api.put(`/public/forms/${publicId}/appointments/cancel`, { token });
       toast.success("Agendamento cancelado com sucesso.");
       setDone(true);
     } catch (err) {
@@ -145,7 +145,7 @@ const PublicAgendamentoCancelar = () => {
             Tem certeza que deseja cancelar este agendamento?
           </Typography>
           <div className={classes.actions}>
-            <Button variant="outlined" style={{ color: "#9e9e9e" }} href={`/f/${slug}`} disabled={submitting}>
+            <Button variant="outlined" style={{ color: "#9e9e9e" }} href={`/f/${publicId}`} disabled={submitting}>
               Voltar
             </Button>
             <Button variant="contained" color="secondary" onClick={handleCancel} disabled={submitting}>

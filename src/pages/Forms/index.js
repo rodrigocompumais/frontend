@@ -164,13 +164,13 @@ const Forms = () => {
   };
 
   const handleCopyLink = (form) => {
-    const link = `${window.location.origin}/f/${form.slug}`;
+    const link = `${window.location.origin}/f/${form.publicId}`;
     navigator.clipboard.writeText(link);
     toast.success(`Link copiado: ${link}`);
   };
 
   const handleViewPublic = (form) => {
-    window.open(`/f/${form.slug}`, "_blank");
+    window.open(`/f/${form.publicId}`, "_blank");
   };
 
   const handleExportForm = async (form) => {

@@ -52,6 +52,8 @@ import DeleteIcon from "@material-ui/icons/Delete";
 import EditIcon from "@material-ui/icons/Edit";
 import DragIndicatorIcon from "@material-ui/icons/DragIndicator";
 import CloseIcon from "@material-ui/icons/Close";
+import CloudUploadIcon from "@material-ui/icons/CloudUpload";
+import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -103,6 +105,19 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.shape.borderRadius,
     minHeight: 200,
   },
+  logoPreview: {
+    maxWidth: 200,
+    maxHeight: 100,
+    objectFit: "contain",
+    marginBottom: theme.spacing(2),
+    borderRadius: theme.shape.borderRadius,
+  },
+  logoUploadBox: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: theme.spacing(2),
+  },
 }));
 
 const fieldTypes = [
@@ -138,6 +153,10 @@ const FormBuilder = () => {
   const { hasLanchonetes, hasAgendamento } = useCompanyModules();
   const [printDevices, setPrintDevices] = useState([]);
   const [productGroups, setProductGroups] = useState([]);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [bannerUploading, setBannerUploading] = useState(false);
+  const logoInputRef = useRef(null);
+  const bannerInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -168,6 +187,9 @@ const FormBuilder = () => {
       deliveryPrintDeviceIds: [], // IDs das impressoras para pedidos delivery
       autoConfirmMinutes: 0, // Avançar novo->confirmado após X minutos (0=desativado)
       averageDeliveryTime: "", // Tempo médio de entrega (ex: "30-45 minutos")
+      enablePieceAgain: false, // Habilita "Peça de novo" por telefone + auto-preenchimento
+      pieceAgainMaxOrders: 5, // Últimos N pedidos para agregação
+      pieceAgainMaxItems: 6, // Máx. itens exibidos na seção
       showMesaField: false, // Exibir campo Número da mesa no cardápio
       mesaFieldMode: "select", // select = dropdown com mesas, input = campo livre
       appearance: {
@@ -570,6 +592,9 @@ const FormBuilder = () => {
 
   const isQuotationForm = formData.settings?.formType === "quotation";
   const isMenuForm = formData.settings?.formType === "cardapio";
+  const deliveryConditionFields = isMenuForm
+    ? (formData.settings?.finalizeFields || []).filter((f) => f && f.id)
+    : [];
 
   const tabKeys = isMenuForm
     ? ["gerais", "campos", "impressao", "quadro", "aparencia", "integracoes"]
@@ -1043,6 +1068,279 @@ const FormBuilder = () => {
                       Permite que clientes façam pedidos para entrega.
                     </Typography>
                   </Grid>
+
+                  {/* Peça de novo (Configurações Gerais) */}
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginTop: 8, marginBottom: 8 }}>
+                      Peça de novo
+                    </Typography>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={!!formData.settings?.enablePieceAgain}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                enablePieceAgain: e.target.checked,
+                                pieceAgainMaxOrders: formData.settings?.pieceAgainMaxOrders ?? 5,
+                                pieceAgainMaxItems: formData.settings?.pieceAgainMaxItems ?? 6,
+                              },
+                            })
+                          }
+                        />
+                      }
+                      label="Ativar “Peça de novo” (por telefone) e auto-preenchimento"
+                    />
+                    <Typography variant="caption" display="block" color="textSecondary">
+                      Quando ativo, o cardápio pede o telefone ao abrir, sugere itens dos últimos pedidos e salva dados para preencher automaticamente os campos nas próximas compras.
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      type="number"
+                      inputProps={{ min: 1, max: 30, step: 1 }}
+                      label="Buscar últimos pedidos (N)"
+                      value={formData.settings?.pieceAgainMaxOrders ?? 5}
+                      onChange={(e) => {
+                        const val = Math.max(1, Math.min(30, parseInt(e.target.value, 10) || 1));
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, pieceAgainMaxOrders: val },
+                        });
+                      }}
+                      helperText="Quantos pedidos anteriores usar para montar a seção"
+                      disabled={!formData.settings?.enablePieceAgain}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      type="number"
+                      inputProps={{ min: 1, max: 50, step: 1 }}
+                      label="Máximo de itens na seção"
+                      value={formData.settings?.pieceAgainMaxItems ?? 6}
+                      onChange={(e) => {
+                        const val = Math.max(1, Math.min(50, parseInt(e.target.value, 10) || 1));
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, pieceAgainMaxItems: val },
+                        });
+                      }}
+                      helperText="Quantos produtos mostrar no “Peça de novo”"
+                      disabled={!formData.settings?.enablePieceAgain}
+                    />
+                  </Grid>
+
+                  {/* Taxa de entrega e condição (Configurações Gerais) */}
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginTop: 8, marginBottom: 8 }}>
+                      Taxa de entrega
+                    </Typography>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          fullWidth
+                          variant="outlined"
+                          label="Tempo Médio de Entrega"
+                          placeholder="Ex: 30-45 minutos"
+                          value={formData.settings?.averageDeliveryTime || ""}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                averageDeliveryTime: e.target.value,
+                              },
+                            })
+                          }
+                          helperText="Exibido na tela de confirmação do pedido"
+                          disabled={formData.settings?.delivery === false}
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          fullWidth
+                          variant="outlined"
+                          type="number"
+                          inputProps={{ min: 0, step: 0.01 }}
+                          label="Taxa de Entrega (R$)"
+                          placeholder="0.00"
+                          value={formData.settings?.deliveryFee || ""}
+                          onChange={(e) => {
+                            const val = e.target.value === "" ? "" : parseFloat(e.target.value) || 0;
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                deliveryFee: val,
+                              },
+                            });
+                          }}
+                          helperText="Valor adicionado ao total quando a condição de delivery for verdadeira"
+                          disabled={formData.settings?.delivery === false}
+                        />
+                      </Grid>
+
+                      <Grid item xs={12}>
+                        <Typography variant="subtitle2" style={{ fontWeight: 600, marginTop: 8 }}>
+                          Condição para aplicar a taxa de entrega
+                        </Typography>
+                        <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 12 }}>
+                          A taxa só será somada quando a condição abaixo for verdadeira (ex.: campo “Entrega?” = “Sim”). Funciona como campos condicionais.
+                          Dica: se você acabou de criar o formulário, salve primeiro para os campos ganharem ID.
+                        </Typography>
+
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} md={4}>
+                            <FormControl fullWidth variant="outlined">
+                              <InputLabel>Campo</InputLabel>
+                              <Select
+                                value={formData.settings?.deliveryFeeCondition?.fieldId || ""}
+                                onChange={(e) =>
+                                  setFormData({
+                                    ...formData,
+                                    settings: {
+                                      ...formData.settings,
+                                      deliveryFeeCondition: {
+                                        ...(formData.settings?.deliveryFeeCondition || {}),
+                                        fieldId: e.target.value ? Number(e.target.value) : "",
+                                        operator: (formData.settings?.deliveryFeeCondition?.operator || "equals"),
+                                        value: (formData.settings?.deliveryFeeCondition?.value ?? ""),
+                                      },
+                                    },
+                                  })
+                                }
+                                label="Campo"
+                                disabled={formData.settings?.delivery === false}
+                              >
+                                <MenuItem value="">
+                                  <em>Nenhum (aplica em todo delivery)</em>
+                                </MenuItem>
+                                {deliveryConditionFields.map((f) => (
+                                  <MenuItem key={f.id} value={f.id}>
+                                    {f.label} ({f.fieldType})
+                                  </MenuItem>
+                                ))}
+                              </Select>
+                            </FormControl>
+                          </Grid>
+
+                          <Grid item xs={12} md={4}>
+                            <FormControl fullWidth variant="outlined">
+                              <InputLabel>Operador</InputLabel>
+                              <Select
+                                value={formData.settings?.deliveryFeeCondition?.operator || "equals"}
+                                onChange={(e) =>
+                                  setFormData({
+                                    ...formData,
+                                    settings: {
+                                      ...formData.settings,
+                                      deliveryFeeCondition: {
+                                        ...(formData.settings?.deliveryFeeCondition || {}),
+                                        operator: e.target.value,
+                                        fieldId: (formData.settings?.deliveryFeeCondition?.fieldId || ""),
+                                        value: (formData.settings?.deliveryFeeCondition?.value ?? ""),
+                                      },
+                                    },
+                                  })
+                                }
+                                label="Operador"
+                                disabled={formData.settings?.delivery === false}
+                              >
+                                <MenuItem value="equals">Igual a</MenuItem>
+                                <MenuItem value="notEquals">Diferente de</MenuItem>
+                                <MenuItem value="contains">Contém</MenuItem>
+                                <MenuItem value="isEmpty">Está vazio</MenuItem>
+                                <MenuItem value="isNotEmpty">Não está vazio</MenuItem>
+                                <MenuItem value="isTrue">É verdadeiro (Sim/True/1)</MenuItem>
+                                <MenuItem value="isFalse">É falso (Não/False/0)</MenuItem>
+                              </Select>
+                            </FormControl>
+                          </Grid>
+
+                          <Grid item xs={12} md={4}>
+                            {(() => {
+                              const operator = formData.settings?.deliveryFeeCondition?.operator || "equals";
+                              const fieldId = formData.settings?.deliveryFeeCondition?.fieldId;
+                              const selectedField = deliveryConditionFields.find((f) => Number(f.id) === Number(fieldId));
+                              const needsValue = !["isEmpty", "isNotEmpty", "isTrue", "isFalse"].includes(operator);
+                              if (!needsValue) {
+                                return (
+                                  <TextField
+                                    fullWidth
+                                    variant="outlined"
+                                    label="Valor"
+                                    value="—"
+                                    disabled
+                                    helperText="Este operador não precisa de valor"
+                                  />
+                                );
+                              }
+                              if (selectedField?.options?.length) {
+                                return (
+                                  <FormControl fullWidth variant="outlined">
+                                    <InputLabel>Valor</InputLabel>
+                                    <Select
+                                      value={formData.settings?.deliveryFeeCondition?.value ?? ""}
+                                      onChange={(e) =>
+                                        setFormData({
+                                          ...formData,
+                                          settings: {
+                                            ...formData.settings,
+                                            deliveryFeeCondition: {
+                                              ...(formData.settings?.deliveryFeeCondition || {}),
+                                              value: e.target.value,
+                                            },
+                                          },
+                                        })
+                                      }
+                                      label="Valor"
+                                      disabled={formData.settings?.delivery === false}
+                                    >
+                                      {(selectedField.options || []).map((opt, idx) => (
+                                        <MenuItem key={idx} value={opt}>
+                                          {opt}
+                                        </MenuItem>
+                                      ))}
+                                    </Select>
+                                  </FormControl>
+                                );
+                              }
+                              return (
+                                <TextField
+                                  fullWidth
+                                  variant="outlined"
+                                  label="Valor"
+                                  placeholder='Ex.: "Sim"'
+                                  value={formData.settings?.deliveryFeeCondition?.value ?? ""}
+                                  onChange={(e) =>
+                                    setFormData({
+                                      ...formData,
+                                      settings: {
+                                        ...formData.settings,
+                                        deliveryFeeCondition: {
+                                          ...(formData.settings?.deliveryFeeCondition || {}),
+                                          value: e.target.value,
+                                        },
+                                      },
+                                    })
+                                  }
+                                  helperText="Valor comparado com a resposta do campo"
+                                  disabled={formData.settings?.delivery === false}
+                                />
+                              );
+                            })()}
+                          </Grid>
+                        </Grid>
+                      </Grid>
+                    </Grid>
+                  </Grid>
+
                   <Grid item xs={12} md={6}>
                     <FormControlLabel
                       control={
@@ -1527,47 +1825,6 @@ const FormBuilder = () => {
                       )}
                     </FormGroup>
                   </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      label="Tempo Médio de Entrega"
-                      placeholder="Ex: 30-45 minutos"
-                      value={formData.settings?.averageDeliveryTime || ""}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          settings: {
-                            ...formData.settings,
-                            averageDeliveryTime: e.target.value,
-                          },
-                        })
-                      }
-                      helperText="Exibido na tela de confirmação do pedido"
-                    />
-                  </Grid>
-                  <Grid item xs={12} md={6}>
-                    <TextField
-                      fullWidth
-                      variant="outlined"
-                      type="number"
-                      inputProps={{ min: 0, step: 0.01 }}
-                      label="Taxa de Entrega (R$)"
-                      placeholder="0.00"
-                      value={formData.settings?.deliveryFee || ""}
-                      onChange={(e) => {
-                        const val = e.target.value === "" ? "" : parseFloat(e.target.value) || 0;
-                        setFormData({
-                          ...formData,
-                          settings: {
-                            ...formData.settings,
-                            deliveryFee: val,
-                          },
-                        });
-                      }}
-                      helperText="Valor da taxa de entrega que será adicionado aos pedidos de delivery"
-                    />
-                  </Grid>
                 </Grid>
           </Box>
         )}
@@ -1733,46 +1990,210 @@ const FormBuilder = () => {
 
         {currentTabKey === "aparencia" && (
           <Box className={classes.section} style={{ marginTop: 24 }}>
+            {isMenuForm && (
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                Estilo padrão do cardápio (igual ao Anota Aí). Apenas logo, banner e cor primária.
+              </Typography>
+            )}
             <Typography className={classes.sectionTitle}>Cores e logo</Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Cor Primária"
-                  type="color"
-                  fullWidth
-                  value={formData.primaryColor}
-                  onChange={(e) =>
-                    setFormData({ ...formData, primaryColor: e.target.value })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  variant="outlined"
-                />
-              </Grid>
-              <Grid item xs={12} md={6}>
-                <TextField
-                  label="Cor Secundária"
-                  type="color"
-                  fullWidth
-                  value={formData.secondaryColor}
-                  onChange={(e) =>
-                    setFormData({ ...formData, secondaryColor: e.target.value })
-                  }
-                  InputLabelProps={{ shrink: true }}
-                  variant="outlined"
-                />
-              </Grid>
+              {!isMenuForm && (
+                <>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Cor Primária"
+                      type="color"
+                      fullWidth
+                      value={formData.primaryColor}
+                      onChange={(e) =>
+                        setFormData({ ...formData, primaryColor: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      variant="outlined"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextField
+                      label="Cor Secundária"
+                      type="color"
+                      fullWidth
+                      value={formData.secondaryColor}
+                      onChange={(e) =>
+                        setFormData({ ...formData, secondaryColor: e.target.value })
+                      }
+                      InputLabelProps={{ shrink: true }}
+                      variant="outlined"
+                    />
+                  </Grid>
+                </>
+              )}
+              {isMenuForm && (
+                <Grid item xs={12} md={6}>
+                  <TextField
+                    label="Cor primária (botões e destaques)"
+                    type="color"
+                    fullWidth
+                    value={formData.primaryColor}
+                    onChange={(e) =>
+                      setFormData({ ...formData, primaryColor: e.target.value })
+                    }
+                    InputLabelProps={{ shrink: true }}
+                    variant="outlined"
+                  />
+                </Grid>
+              )}
               <Grid item xs={12}>
-                <TextField
-                  label="URL do Logo (opcional)"
-                  fullWidth
-                  value={formData.logoUrl}
-                  onChange={(e) =>
-                    setFormData({ ...formData, logoUrl: e.target.value })
-                  }
-                  variant="outlined"
-                  placeholder="https://exemplo.com/logo.png"
-                />
+                <Typography variant="subtitle2" color="textSecondary" style={{ marginBottom: 8 }}>
+                  Logo do formulário (opcional)
+                </Typography>
+                <Box className={classes.logoUploadBox}>
+                  <input
+                    type="file"
+                    ref={logoInputRef}
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                    style={{ display: "none" }}
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setLogoUploading(true);
+                      try {
+                        const data = new FormData();
+                        data.append("logo", file);
+                        const { data: res } = await api.post("/forms/upload-logo", data);
+                        setFormData({ ...formData, logoUrl: res.logoUrl });
+                        toast.success("Logo enviada com sucesso.");
+                      } catch (err) {
+                        toastError(err);
+                      } finally {
+                        setLogoUploading(false);
+                        e.target.value = "";
+                      }
+                    }}
+                  />
+                  {formData.logoUrl ? (
+                    <>
+                      <img
+                        src={formData.logoUrl}
+                        alt="Logo"
+                        className={classes.logoPreview}
+                      />
+                      <Box display="flex" gap={1}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          startIcon={<CloudUploadIcon />}
+                          onClick={() => logoInputRef.current?.click()}
+                          disabled={logoUploading}
+                        >
+                          {logoUploading ? "Enviando…" : "Alterar logo"}
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          color="secondary"
+                          startIcon={<DeleteOutlineIcon />}
+                          onClick={() => setFormData({ ...formData, logoUrl: "" })}
+                        >
+                          Remover logo
+                        </Button>
+                      </Box>
+                    </>
+                  ) : (
+                    <Button
+                      variant="outlined"
+                      startIcon={<CloudUploadIcon />}
+                      onClick={() => logoInputRef.current?.click()}
+                      disabled={logoUploading}
+                    >
+                      {logoUploading ? "Enviando…" : "Enviar logo"}
+                    </Button>
+                  )}
+                </Box>
               </Grid>
+              {isMenuForm && (
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" color="textSecondary" style={{ marginBottom: 8 }}>
+                    Banner do cardápio (imagem no topo, estilo Anota Aí)
+                  </Typography>
+                  <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 12 }}>
+                    Tamanho sugerido: <strong>1200×360</strong> (proporção 10:3). Alternativa: <strong>1080×320</strong>. Máx. 2MB (JPG/PNG/WEBP).
+                  </Typography>
+                  <Box className={classes.logoUploadBox}>
+                    <input
+                      type="file"
+                      ref={bannerInputRef}
+                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                      style={{ display: "none" }}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setBannerUploading(true);
+                        try {
+                          const data = new FormData();
+                          data.append("logo", file);
+                          const { data: res } = await api.post("/forms/upload-logo", data);
+                          setFormData({
+                            ...formData,
+                            settings: {
+                              ...formData.settings,
+                              bannerUrl: res.logoUrl,
+                            },
+                          });
+                          toast.success("Banner enviado com sucesso.");
+                        } catch (err) {
+                          toastError(err);
+                        } finally {
+                          setBannerUploading(false);
+                          e.target.value = "";
+                        }
+                      }}
+                    />
+                    {(formData.settings?.bannerUrl) ? (
+                      <>
+                        <img
+                          src={formData.settings.bannerUrl}
+                          alt="Banner"
+                          className={classes.logoPreview}
+                          style={{ maxHeight: 120 }}
+                        />
+                        <Box display="flex" gap={1}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<CloudUploadIcon />}
+                            onClick={() => bannerInputRef.current?.click()}
+                            disabled={bannerUploading}
+                          >
+                            {bannerUploading ? "Enviando…" : "Alterar banner"}
+                          </Button>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            color="secondary"
+                            startIcon={<DeleteOutlineIcon />}
+                            onClick={() => setFormData({
+                              ...formData,
+                              settings: { ...formData.settings, bannerUrl: "" },
+                            })}
+                          >
+                            Remover banner
+                          </Button>
+                        </Box>
+                      </>
+                    ) : (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<CloudUploadIcon />}
+                        onClick={() => bannerInputRef.current?.click()}
+                        disabled={bannerUploading}
+                      >
+                        {bannerUploading ? "Enviando…" : "Enviar banner"}
+                      </Button>
+                    )}
+                  </Box>
+                </Grid>
+              )}
               <Grid item xs={12}>
                 <FormControl fullWidth variant="outlined">
                   <InputLabel>Posição do Logo</InputLabel>
@@ -1791,6 +2212,8 @@ const FormBuilder = () => {
               </Grid>
             </Grid>
 
+            {!isMenuForm && (
+              <>
             <Typography className={classes.sectionTitle} style={{ marginTop: 32 }}>
               Personalização visual
             </Typography>
@@ -2062,6 +2485,8 @@ const FormBuilder = () => {
                 </FormControl>
               </Grid>
             </Grid>
+              </>
+            )}
           </Box>
         )}
 

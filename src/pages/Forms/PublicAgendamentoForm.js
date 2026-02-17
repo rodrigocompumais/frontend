@@ -313,7 +313,7 @@ function partitionSlots(slots) {
   return { manha, tarde };
 }
 
-const PublicAgendamentoForm = ({ form, slug }) => {
+const PublicAgendamentoForm = ({ form, slug: publicId }) => {
   const isLight = useMemo(() => {
     const t = form?.settings?.agendamento?.theme;
     if (t === "light") return true;
@@ -388,7 +388,7 @@ const PublicAgendamentoForm = ({ form, slug }) => {
     const fetchServices = async () => {
       setLoadingServices(true);
       try {
-        const { data } = await api.get(`/public/forms/${slug}/appointment-services`);
+        const { data } = await api.get(`/public/forms/${publicId}/appointment-services`);
         setServices(data.services || []);
       } catch (err) {
         toastError(err);
@@ -397,7 +397,7 @@ const PublicAgendamentoForm = ({ form, slug }) => {
       }
     };
     fetchServices();
-  }, [slug]);
+  }, [publicId]);
 
   useEffect(() => {
     if (!selectedAppointmentService || !selectedDate) {
@@ -410,7 +410,7 @@ const PublicAgendamentoForm = ({ form, slug }) => {
       setSlots([]);
       setSelectedSlot(null);
       try {
-        const { data } = await api.get(`/public/forms/${slug}/availability`, {
+        const { data } = await api.get(`/public/forms/${publicId}/availability`, {
           params: {
             serviceId: selectedAppointmentService.id,
             userId: selectedAppointmentService.userId,
@@ -425,7 +425,7 @@ const PublicAgendamentoForm = ({ form, slug }) => {
       }
     };
     fetchSlots();
-  }, [slug, selectedAppointmentService, selectedDate]);
+  }, [publicId, selectedAppointmentService, selectedDate]);
 
   useEffect(() => {
     const initial = {};
@@ -450,7 +450,7 @@ const PublicAgendamentoForm = ({ form, slug }) => {
       }));
     setSubmitting(true);
     try {
-      const { data } = await api.post(`/public/forms/${slug}/submit`, {
+      const { data } = await api.post(`/public/forms/${publicId}/submit`, {
         answers: answersArray,
         metadata: {
           appointmentServiceId: selectedAppointmentService.id,
@@ -498,7 +498,7 @@ const PublicAgendamentoForm = ({ form, slug }) => {
     if (!selectedAppointmentService || !selectedDate) return;
     setWaitlistSubmitting(true);
     try {
-      await api.post(`/public/forms/${slug}/waitlist`, {
+      await api.post(`/public/forms/${publicId}/waitlist`, {
         appointmentServiceId: selectedAppointmentService.id,
         assignedUserId: selectedAppointmentService.userId,
         preferredDate: selectedDate,
@@ -521,9 +521,9 @@ const PublicAgendamentoForm = ({ form, slug }) => {
 
   if (submitted) {
     const token = submitResponse?.appointmentToken;
-    const icalUrl = token ? `${process.env.REACT_APP_BACKEND_URL || ""}/public/forms/${slug}/appointments/ical?token=${encodeURIComponent(token)}` : null;
-    const rescheduleUrl = token ? `${window.location.origin}/f/${slug}/reagendar?token=${encodeURIComponent(token)}` : null;
-    const cancelUrl = token ? `${window.location.origin}/f/${slug}/cancelar?token=${encodeURIComponent(token)}` : null;
+    const icalUrl = token ? `${process.env.REACT_APP_BACKEND_URL || ""}/public/forms/${publicId}/appointments/ical?token=${encodeURIComponent(token)}` : null;
+    const rescheduleUrl = token ? `${window.location.origin}/f/${publicId}/reagendar?token=${encodeURIComponent(token)}` : null;
+    const cancelUrl = token ? `${window.location.origin}/f/${publicId}/cancelar?token=${encodeURIComponent(token)}` : null;
     const startDate = selectedSlot ? new Date(selectedSlot.start) : null;
     const successDateStr = startDate ? startDate.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }) : "";
     const successTimeStr = startDate ? startDate.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "";
