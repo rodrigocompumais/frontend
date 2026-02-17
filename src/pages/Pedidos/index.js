@@ -84,10 +84,29 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     minHeight: 0,
     alignSelf: "stretch",
+    // Tablet-friendly: scroll horizontal suave e colunas “snap”
+    display: "flex",
+    gap: theme.spacing(2),
+    padding: theme.spacing(1.5),
+    overflowX: "auto",
+    overflowY: "hidden",
+    scrollSnapType: "x mandatory",
+    WebkitOverflowScrolling: "touch",
+    overscrollBehaviorX: "contain",
   },
   columnMinimal: {
     minHeight: 0,
     maxHeight: "100%",
+    height: "100%",
+    flex: "0 0 84vw",
+    maxWidth: 460,
+    scrollSnapAlign: "start",
+    [theme.breakpoints.up("sm")]: {
+      flexBasis: 360,
+    },
+    [theme.breakpoints.up("md")]: {
+      flexBasis: 420,
+    },
   },
   headerActions: {
     display: "flex",
@@ -126,6 +145,10 @@ const useStyles = makeStyles((theme) => ({
     color: "#fff",
     fontWeight: 600,
     fontSize: "0.95rem",
+    [theme.breakpoints.up("sm")]: {
+      fontSize: "1.05rem",
+      padding: theme.spacing(2),
+    },
   },
   cardsContainer: {
     flex: 1,
@@ -133,6 +156,9 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(1.5),
     overflowY: "auto",
     ...theme.scrollbarStylesSoft,
+    [theme.breakpoints.up("sm")]: {
+      padding: theme.spacing(2),
+    },
   },
   cardsContainerDraggingOver: {
     background: theme.palette.type === "dark"
@@ -295,6 +321,15 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
     return next.id === "cancelado" ? null : next;
   };
 
+  const getPrevStage = (order) => {
+    const stages = getStagesForOrder(order);
+    const current = getOrderStatus(order);
+    const idx = stages.findIndex((s) => s.id === current);
+    if (idx <= 0) return null;
+    const prev = stages[idx - 1];
+    return prev.id === "cancelado" ? null : prev;
+  };
+
   const handleOpenOrderModal = (order) => {
     setSelectedOrder(order);
     setOrderModalOpen(true);
@@ -342,6 +377,50 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
     ...stage,
     orders: ordersToShow.filter((o) => getOrderStatus(o) === stage.id),
   }));
+
+  const commitOrderStatusChange = ({
+    order,
+    orderId,
+    orderFormId,
+    newStatus,
+    oldStatus,
+    setOptimisticOrders,
+    toastSuccess = false,
+  }) => {
+    if (!orderId || !orderFormId) return;
+    if (pendingStatusByOrderId[orderId]) return;
+    if (!newStatus || newStatus === oldStatus) return;
+
+    setPendingStatusByOrderId((prev) => ({ ...prev, [orderId]: true }));
+
+    // Update otimista (UI primeiro)
+    setOrders(setOptimisticOrders);
+
+    api
+      .put(`/forms/${orderFormId}/responses/${orderId}/order-status`, { orderStatus: newStatus })
+      .then(() => {
+        if (toastSuccess) toast.success("Status atualizado!");
+      })
+      .catch((err) => {
+        toastError(err);
+        // Reverter e sincronizar em background para evitar inconsistência
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId
+              ? { ...o, orderStatus: oldStatus, metadata: { ...(o.metadata || {}), orderStatus: oldStatus } }
+              : o
+          )
+        );
+        fetchOrders({ silent: true });
+      })
+      .finally(() => {
+        setPendingStatusByOrderId((prev) => {
+          const next = { ...prev };
+          delete next[orderId];
+          return next;
+        });
+      });
+  };
 
   const applyOptimisticDndMove = (prevOrders, orderId, sourceStatus, destStatus, destIndex) => {
     const stageIds = orderStages.map((s) => s.id);
@@ -408,34 +487,15 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
     }
 
     const oldStatus = getOrderStatus(order);
-    setPendingStatusByOrderId((prev) => ({ ...prev, [orderId]: true }));
-
-    // Update otimista: mover o card imediatamente (sem travar a UI esperando API)
-    setOrders((prev) => applyOptimisticDndMove(prev, orderId, source.droppableId, newStatus, destination.index));
-
-    api
-      .put(`/forms/${orderFormId}/responses/${orderId}/order-status`, { orderStatus: newStatus })
-      .then(() => {
-        // Confirmação silenciosa (evitar spam de toast em movimentações rápidas)
-      })
-      .catch((err) => {
-        toastError(err);
-        // Reverter status (mantém o resto do board intacto)
-        setOrders((prev) =>
-          prev.map((o) =>
-            o.id === orderId
-              ? { ...o, orderStatus: oldStatus, metadata: { ...(o.metadata || {}), orderStatus: oldStatus } }
-              : o
-          )
-        );
-      })
-      .finally(() => {
-        setPendingStatusByOrderId((prev) => {
-          const next = { ...prev };
-          delete next[orderId];
-          return next;
-        });
-      });
+    commitOrderStatusChange({
+      order,
+      orderId,
+      orderFormId,
+      newStatus,
+      oldStatus,
+      setOptimisticOrders: (prev) => applyOptimisticDndMove(prev, orderId, source.droppableId, newStatus, destination.index),
+      toastSuccess: false,
+    });
   };
 
   const handleViewDetails = (order) => {
@@ -538,12 +598,63 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                           >
                             {(provided, snapshot) => (
                             (() => {
+                              const nextStage = getNextStage(order);
+                              const prevStage = getPrevStage(order);
                               const card = (
                                 <PedidoKanbanCard
                                   order={order}
                                   onCardClick={handleOpenOrderModal}
                                   onViewDetails={handleViewDetails}
                                   onWhatsApp={handleWhatsApp}
+                                  showStageButtons={minimal}
+                                  canBack={!!prevStage}
+                                  canAdvance={!!nextStage}
+                                  onBack={() => {
+                                    if (!prevStage) return;
+                                    const orderFormId = order.formId || order.form?.id;
+                                    if (!orderFormId) {
+                                      toast.error("Formulário do pedido não identificado.");
+                                      return;
+                                    }
+                                    const oldStatus = getOrderStatus(order);
+                                    commitOrderStatusChange({
+                                      order,
+                                      orderId: order.id,
+                                      orderFormId,
+                                      newStatus: prevStage.id,
+                                      oldStatus,
+                                      setOptimisticOrders: (prev) =>
+                                        prev.map((o) =>
+                                          o.id === order.id
+                                            ? { ...o, orderStatus: prevStage.id, metadata: { ...(o.metadata || {}), orderStatus: prevStage.id } }
+                                            : o
+                                        ),
+                                      toastSuccess: true,
+                                    });
+                                  }}
+                                  onAdvance={() => {
+                                    if (!nextStage) return;
+                                    const orderFormId = order.formId || order.form?.id;
+                                    if (!orderFormId) {
+                                      toast.error("Formulário do pedido não identificado.");
+                                      return;
+                                    }
+                                    const oldStatus = getOrderStatus(order);
+                                    commitOrderStatusChange({
+                                      order,
+                                      orderId: order.id,
+                                      orderFormId,
+                                      newStatus: nextStage.id,
+                                      oldStatus,
+                                      setOptimisticOrders: (prev) =>
+                                        prev.map((o) =>
+                                          o.id === order.id
+                                            ? { ...o, orderStatus: nextStage.id, metadata: { ...(o.metadata || {}), orderStatus: nextStage.id } }
+                                            : o
+                                        ),
+                                      toastSuccess: true,
+                                    });
+                                  }}
                                   isDragging={snapshot.isDragging}
                                   isUpdating={!!pendingStatusByOrderId[order.id]}
                                   provided={provided}

@@ -19,6 +19,23 @@ const useStyles = makeStyles((theme) => ({
     flexShrink: 0,
     borderBottom: `1px solid ${theme.palette.divider}`,
     backgroundColor: theme.palette.background.paper,
+    minHeight: 64,
+    [theme.breakpoints.up("sm")]: {
+      minHeight: 72,
+    },
+  },
+  tabRoot: {
+    minHeight: 64,
+    padding: theme.spacing(1, 2),
+    fontWeight: 700,
+    [theme.breakpoints.up("sm")]: {
+      minHeight: 72,
+      fontSize: "1rem",
+    },
+  },
+  tabWrapper: {
+    flexDirection: "row",
+    gap: theme.spacing(1),
   },
   tabPanel: {
     flex: 1,
@@ -53,8 +70,16 @@ const Cozinha = () => {
         indicatorColor="primary"
         textColor="primary"
       >
-        <Tab label="Pedidos mesa" icon={<EventSeatIcon />} />
-        <Tab label="Pedidos delivery" icon={<LocalShippingIcon />} />
+        <Tab
+          label="Pedidos mesa"
+          icon={<EventSeatIcon />}
+          classes={{ root: classes.tabRoot, wrapper: classes.tabWrapper }}
+        />
+        <Tab
+          label="Pedidos delivery"
+          icon={<LocalShippingIcon />}
+          classes={{ root: classes.tabRoot, wrapper: classes.tabWrapper }}
+        />
       </Tabs>
       <Box className={classes.tabPanel} role="tabpanel" hidden={tabValue !== 0} style={{ display: tabValue !== 0 ? "none" : "flex" }}>
         {tabValue === 0 && (

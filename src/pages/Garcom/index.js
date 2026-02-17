@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useHistory } from "react-router-dom";
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
 import {
   Box,
   Typography,
@@ -23,6 +23,7 @@ import {
   Select,
   MenuItem,
   InputAdornment,
+  useMediaQuery,
 } from "@material-ui/core";
 import SearchIcon from "@material-ui/icons/Search";
 import AddIcon from "@material-ui/icons/Add";
@@ -50,9 +51,36 @@ const useStyles = makeStyles((theme) => ({
     maxWidth: 960,
     margin: "0 auto",
     paddingBottom: 24,
+    [theme.breakpoints.down("xs")]: {
+      padding: theme.spacing(1),
+      paddingBottom: theme.spacing(3),
+      maxWidth: "100%",
+    },
+  },
+  headerRow: {
+    display: "flex",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginBottom: theme.spacing(2),
+    gap: 8,
+    [theme.breakpoints.down("xs")]: {
+      flexDirection: "column",
+      alignItems: "stretch",
+      gap: theme.spacing(1),
+    },
+  },
+  headerFormControl: {
+    minWidth: 140,
+    [theme.breakpoints.down("xs")]: {
+      width: "100%",
+      minWidth: 0,
+    },
   },
   mesaGrid: {
     marginTop: theme.spacing(2),
+    [theme.breakpoints.down("xs")]: {
+      marginTop: theme.spacing(1),
+    },
   },
   mesaCard: {
     height: "100%",
@@ -108,11 +136,19 @@ const useStyles = makeStyles((theme) => ({
     maxHeight: "60vh",
     overflowY: "auto",
     paddingTop: 8,
+    [theme.breakpoints.down("xs")]: {
+      maxHeight: "none",
+      paddingLeft: theme.spacing(1.5),
+      paddingRight: theme.spacing(1.5),
+    },
   },
   orderTabs: {
     borderBottom: `1px solid ${theme.palette.divider}`,
     marginBottom: theme.spacing(2),
     minHeight: 40,
+    [theme.breakpoints.down("xs")]: {
+      marginBottom: theme.spacing(1.5),
+    },
   },
   orderTabPanel: {
     paddingTop: theme.spacing(1),
@@ -128,6 +164,12 @@ const useStyles = makeStyles((theme) => ({
     flexWrap: "wrap",
     gap: theme.spacing(1),
     backgroundColor: theme.palette.background.paper,
+    [theme.breakpoints.down("xs")]: {
+      position: "sticky",
+      bottom: 0,
+      zIndex: 2,
+      paddingBottom: `calc(${theme.spacing(2)}px + env(safe-area-inset-bottom))`,
+    },
   },
   orderLineRow: {
     display: "flex",
@@ -141,6 +183,8 @@ const useStyles = makeStyles((theme) => ({
 const Garcom = () => {
   const classes = useStyles();
   const history = useHistory();
+  const theme = useTheme();
+  const isXs = useMediaQuery(theme.breakpoints.down("xs"));
   const { user } = useAuth();
   const socketManager = useContext(SocketContext);
   const { hasLanchonetes, loading: modulesLoading } = useCompanyModules();
@@ -771,11 +815,11 @@ const Garcom = () => {
           </Paper>
         ) : (
           <>
-            <Box display="flex" alignItems="center" flexWrap="wrap" gap={8} marginBottom={2}>
+            <Box className={classes.headerRow}>
               <Typography variant="body2" color="textSecondary">
                 Clique em &quot;Fazer pedido&quot; na mesa. Se estiver livre, informe o cliente primeiro.
               </Typography>
-              <FormControl size="small" style={{ minWidth: 140 }}>
+              <FormControl size="small" className={classes.headerFormControl}>
                 <InputLabel>Exibir mesas</InputLabel>
                 <Select
                   value={mesaStatusFilter}
@@ -868,6 +912,7 @@ const Garcom = () => {
         maxWidth="sm"
         fullWidth
         scroll="paper"
+        fullScreen={isXs}
       >
         <DialogTitle>
           Pedido - Mesa {mesaParaPedido?.number || mesaParaPedido?.name}
@@ -1073,7 +1118,13 @@ const Garcom = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={variablePriceDialogOpen} onClose={() => setVariablePriceDialogOpen(false)} maxWidth="xs" fullWidth>
+      <Dialog
+        open={variablePriceDialogOpen}
+        onClose={() => setVariablePriceDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        fullScreen={isXs}
+      >
         <DialogTitle>Valor unitário</DialogTitle>
         <DialogContent>
           {variablePriceProduct && (
@@ -1115,7 +1166,13 @@ const Garcom = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={halfAndHalfModalOpen} onClose={() => setHalfAndHalfModalOpen(false)} maxWidth="sm" fullWidth>
+      <Dialog
+        open={halfAndHalfModalOpen}
+        onClose={() => setHalfAndHalfModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        fullScreen={isXs}
+      >
         <DialogTitle>Meio a meio - {halfAndHalfModalProduct?.name}</DialogTitle>
         <DialogContent>
           <FormControl fullWidth variant="outlined" size="small" style={{ marginTop: 8 }}>
@@ -1199,6 +1256,7 @@ const Garcom = () => {
         }}
         maxWidth="sm"
         fullWidth
+        fullScreen={isXs}
       >
         <DialogTitle>Ocupar mesa {mesaParaOcupar?.number || mesaParaOcupar?.name} - Informe o cliente</DialogTitle>
         <DialogContent>

@@ -9,12 +9,15 @@ import {
   IconButton,
   Tooltip,
   CircularProgress,
+  Button,
 } from "@material-ui/core";
 import {
   Visibility as VisibilityIcon,
   WhatsApp as WhatsAppIcon,
   AccessTime as TimeIcon,
   EventSeat as EventSeatIcon,
+  ArrowBack as ArrowBackIcon,
+  ArrowForward as ArrowForwardIcon,
 } from "@material-ui/icons";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -27,6 +30,7 @@ const useStyles = makeStyles((theme) => ({
     transition: "all 0.2s ease",
     background: theme.palette.background.paper,
     border: `1px solid ${theme.palette.divider}`,
+    touchAction: "manipulation",
     "&:hover": {
       transform: "translateY(-2px)",
       boxShadow: theme.shadows[4],
@@ -56,6 +60,12 @@ const useStyles = makeStyles((theme) => ({
     "&:last-child": {
       paddingBottom: theme.spacing(1.5),
     },
+    [theme.breakpoints.up("sm")]: {
+      padding: theme.spacing(2),
+      "&:last-child": {
+        paddingBottom: theme.spacing(2),
+      },
+    },
   },
   header: {
     display: "flex",
@@ -67,6 +77,9 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 600,
     fontSize: "0.9rem",
     color: theme.palette.text.primary,
+    [theme.breakpoints.up("sm")]: {
+      fontSize: "1.05rem",
+    },
   },
   contactNumber: {
     fontSize: "0.75rem",
@@ -74,6 +87,9 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     alignItems: "center",
     gap: 4,
+    [theme.breakpoints.up("sm")]: {
+      fontSize: "0.85rem",
+    },
   },
   itemsPreview: {
     fontSize: "0.8rem",
@@ -84,6 +100,10 @@ const useStyles = makeStyles((theme) => ({
     WebkitBoxOrient: "vertical",
     overflow: "hidden",
     lineHeight: 1.4,
+    [theme.breakpoints.up("sm")]: {
+      fontSize: "0.9rem",
+      WebkitLineClamp: 3,
+    },
   },
   totalRow: {
     display: "flex",
@@ -95,6 +115,9 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 700,
     fontSize: "1rem",
     color: theme.palette.primary.main,
+    [theme.breakpoints.up("sm")]: {
+      fontSize: "1.15rem",
+    },
   },
   timeInfo: {
     display: "flex",
@@ -109,10 +132,38 @@ const useStyles = makeStyles((theme) => ({
     gap: 2,
     marginTop: theme.spacing(1),
   },
+  stageButtonsRow: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: theme.spacing(1),
+    marginTop: theme.spacing(1.25),
+    [theme.breakpoints.up("sm")]: {
+      gap: theme.spacing(1.5),
+      marginTop: theme.spacing(1.5),
+    },
+  },
+  stageButton: {
+    borderRadius: 12,
+    paddingTop: theme.spacing(1),
+    paddingBottom: theme.spacing(1),
+    fontWeight: 800,
+    textTransform: "none",
+    [theme.breakpoints.up("sm")]: {
+      paddingTop: theme.spacing(1.25),
+      paddingBottom: theme.spacing(1.25),
+      fontSize: "0.95rem",
+    },
+  },
   actionButton: {
-    padding: 4,
+    padding: 6,
     "& svg": {
       fontSize: "1rem",
+    },
+    [theme.breakpoints.up("sm")]: {
+      padding: 10,
+      "& svg": {
+        fontSize: "1.15rem",
+      },
     },
   },
   whatsappIcon: {
@@ -142,6 +193,11 @@ const PedidoKanbanCard = ({
   onCardClick,
   onViewDetails,
   onWhatsApp,
+  showStageButtons = false,
+  canBack = false,
+  canAdvance = false,
+  onBack,
+  onAdvance,
   isDragging = false,
   isUpdating = false,
   provided,
@@ -291,6 +347,38 @@ const PedidoKanbanCard = ({
             </Tooltip>
           )}
         </Box>
+        {showStageButtons && (
+          <Box className={classes.stageButtonsRow}>
+            <Button
+              variant="outlined"
+              color="default"
+              startIcon={<ArrowBackIcon />}
+              className={classes.stageButton}
+              disabled={!canBack || isUpdating}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onBack) onBack(order);
+              }}
+              fullWidth
+            >
+              Voltar
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              endIcon={<ArrowForwardIcon />}
+              className={classes.stageButton}
+              disabled={!canAdvance || isUpdating}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onAdvance) onAdvance(order);
+              }}
+              fullWidth
+            >
+              Avançar
+            </Button>
+          </Box>
+        )}
       </CardContent>
     </Card>
   );

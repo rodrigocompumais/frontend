@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -37,6 +37,7 @@ import RemoveIcon from "@material-ui/icons/Remove";
 import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
 import SearchIcon from "@material-ui/icons/Search";
 import ShareIcon from "@material-ui/icons/Share";
+import CloseIcon from "@material-ui/icons/Close";
 
 import InputMask from "react-input-mask";
 import api from "../../services/api";
@@ -107,6 +108,11 @@ const useStyles = makeStyles((theme) => ({
     height: 28,
     maxWidth: 180,
     objectFit: "contain",
+  },
+  searchBar: {
+    backgroundColor: "#fff",
+    padding: theme.spacing(0, 2, 1.5),
+    borderBottom: "1px solid #eee",
   },
   storeSubInfo: {
     backgroundColor: "#fff",
@@ -375,6 +381,14 @@ const PublicMenuForm = ({
   const [pieceAgainModalOpen, setPieceAgainModalOpen] = useState(false);
   const [pieceAgainPhoneInput, setPieceAgainPhoneInput] = useState("");
 
+  // Busca (cardápio)
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const searchInputRef = useRef(null);
+
+  // Âncora para rolar até o começo dos itens ao trocar grupo
+  const itemsStartRef = useRef(null);
+
   const appStyles = form ? getFormAppearanceStyles(form) : null;
   const fieldVariant = appStyles?.fieldVariant || "outlined";
 
@@ -401,11 +415,23 @@ const PublicMenuForm = ({
     const digits = String(input || "").replace(/\D/g, "");
     if (!digits) return "";
     if (digits.startsWith("55")) {
-      if (digits.length === 12) return digits.slice(0, 4) + "9" + digits.slice(4);
+      if (digits.length === 12) {
+        const local8 = digits.slice(4);
+        const first = local8[0];
+        if (first === "9") return digits;
+        if (first === "6" || first === "7" || first === "8") return digits.slice(0, 4) + "9" + digits.slice(4);
+        return digits;
+      }
       if (digits.length === 14 && digits[4] === "9" && digits[5] === "9") return digits.slice(0, 4) + digits.slice(5);
       return digits;
     }
-    if (digits.length === 10) return `55${digits.slice(0, 2)}9${digits.slice(2)}`;
+    if (digits.length === 10) {
+      const local8 = digits.slice(2);
+      const first = local8[0];
+      if (first === "9") return `55${digits}`;
+      if (first === "6" || first === "7" || first === "8") return `55${digits.slice(0, 2)}9${digits.slice(2)}`;
+      return `55${digits}`;
+    }
     if (digits.length === 11) return `55${digits}`;
     return digits;
   };
@@ -865,6 +891,7 @@ const PublicMenuForm = ({
         const phoneNorm = normalizePhone(rawPhone);
         if (!phoneNorm || phoneNorm.length < 10) {
           setPieceAgainModalOpen(true);
+          setPieceAgainPhoneInput((prev) => (String(prev || "").trim() ? prev : "55"));
           toast.info("Informe seu telefone para continuar.");
           setSubmitting(false);
           return;
@@ -1264,7 +1291,14 @@ const PublicMenuForm = ({
   };
 
   const getProductsByGroup = (grupo) => {
-    return products.filter((p) => (p.grupo || "Outros") === grupo);
+    const q = String(searchQuery || "").trim().toLowerCase();
+    return products.filter((p) => {
+      if ((p.grupo || "Outros") !== grupo) return false;
+      if (!q) return true;
+      const name = String(p.name || "").toLowerCase();
+      const desc = String(p.description || "").toLowerCase();
+      return name.includes(q) || desc.includes(q);
+    });
   };
 
   const getFlavorProductsForHalfAndHalf = (baseProduct, baseVariationLabel = null) => {
@@ -1550,6 +1584,45 @@ const PublicMenuForm = ({
     return normal + half;
   };
 
+  const scrollToItemsStart = () => {
+    const el = itemsStartRef.current;
+    if (!el) return;
+    try {
+      const top = el.getBoundingClientRect().top + (window.pageYOffset || 0);
+      // compensar barra sticky (tabs)
+      const offset = 72;
+      window.scrollTo({ top: Math.max(0, top - offset), behavior: "smooth" });
+    } catch {
+      // ignore
+    }
+  };
+
+  const getPieceAgainPhoneMask = () => {
+    const digits = String(pieceAgainPhoneInput || "").replace(/\D/g, "");
+    // 12 dígitos: 55 + DDD + 8 (fixo) | 13 dígitos: 55 + DDD + 9 (celular)
+    return digits.length > 12 ? "55(99)99999-9999" : "55(99)9999-9999";
+  };
+
+  useEffect(() => {
+    if (!pieceAgainEnabled) return;
+    if (!pieceAgainModalOpen) return;
+    setPieceAgainPhoneInput((prev) => (String(prev || "").trim() ? prev : "55"));
+  }, [pieceAgainEnabled, pieceAgainModalOpen]);
+
+  useEffect(() => {
+    if (!searchOpen) return;
+    const t = setTimeout(() => {
+      try {
+        if (searchInputRef.current && typeof searchInputRef.current.focus === "function") {
+          searchInputRef.current.focus();
+        }
+      } catch {
+        // ignore
+      }
+    }, 50);
+    return () => clearTimeout(t);
+  }, [searchOpen]);
+
   if (loading) {
     return (
       <Box className={classes.root} style={appStyles?.rootStyle}>
@@ -1828,7 +1901,16 @@ const PublicMenuForm = ({
           <Box flex={1} />
         )}
         <Box>
-          <IconButton size="small" aria-label="Buscar">
+          <IconButton
+            size="small"
+            aria-label="Buscar"
+            onClick={() => {
+              setView("menu");
+              setSearchOpen(true);
+              // ajuda a levar o usuário para a lista quando ele busca
+              setTimeout(() => scrollToItemsStart(), 50);
+            }}
+          >
             <SearchIcon />
           </IconButton>
           <IconButton
@@ -1847,6 +1929,41 @@ const PublicMenuForm = ({
           </IconButton>
         </Box>
       </Box>
+
+      {searchOpen && (
+        <Box className={classes.searchBar}>
+          <TextField
+            inputRef={searchInputRef}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar no cardápio..."
+            variant="outlined"
+            size="small"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    size="small"
+                    aria-label="Limpar busca"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSearchOpen(false);
+                    }}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
+      )}
 
       {form.description && (
         <Box className={classes.storeSubInfo}>
@@ -1869,6 +1986,8 @@ const PublicMenuForm = ({
             onChange={(e, newValue) => {
               setActiveGroup(newValue);
               setView("menu");
+              // Ao tocar no grupo, levar para o começo dos itens
+              setTimeout(() => scrollToItemsStart(), 50);
             }}
             variant="scrollable"
             scrollButtons="auto"
@@ -1981,7 +2100,7 @@ const PublicMenuForm = ({
           </Box>
         )}
 
-        <Box className={classes.contentSection}>
+        <Box className={classes.contentSection} ref={itemsStartRef}>
 
           {view === "menu" && groups[activeGroup] && (
             <Box style={{ marginTop: 8 }}>
@@ -2096,15 +2215,26 @@ const PublicMenuForm = ({
               <Typography variant="body2" color="textSecondary" style={{ marginBottom: 12 }}>
                 Isso permite buscar suas últimas compras e preencher seus dados automaticamente.
               </Typography>
-              <TextField
-                autoFocus
-                fullWidth
-                variant="outlined"
-                label="Telefone (com DDD)"
-                placeholder="Ex: 55(34)99999-9999"
+              <InputMask
+                mask={getPieceAgainPhoneMask()}
+                maskChar={null}
                 value={pieceAgainPhoneInput}
                 onChange={(e) => setPieceAgainPhoneInput(e.target.value)}
-              />
+              >
+                {(inputProps) => (
+                  <TextField
+                    {...inputProps}
+                    autoFocus
+                    fullWidth
+                    variant="outlined"
+                    label="Telefone (com DDD)"
+                    placeholder="Ex: +55(34)99999-9999"
+                    InputProps={{
+                      startAdornment: <InputAdornment position="start">+</InputAdornment>,
+                    }}
+                  />
+                )}
+              </InputMask>
             </DialogContent>
             <DialogActions>
               <Button
