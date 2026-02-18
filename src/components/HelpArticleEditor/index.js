@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   makeStyles,
   Paper,
@@ -57,7 +57,6 @@ const CATEGORIES = [
 
 const HelpArticleEditor = ({ onSubmit, onCancel, initialValue, loading }) => {
   const classes = useStyles();
-  const editorRef = useRef(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [record, setRecord] = useState(initialValue || {
     title: "",
@@ -76,6 +75,47 @@ const HelpArticleEditor = ({ onSubmit, onCancel, initialValue, loading }) => {
       setMarkdownContent(initialValue.content || "");
     }
   }, [initialValue]);
+
+  // Função para fazer upload de imagem
+  const uploadImage = useCallback(async (file) => {
+    try {
+      setUploadingImage(true);
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await api.post("/help-articles/upload-image", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      const imageUrl = response.data.url;
+      return imageUrl;
+    } catch (err) {
+      toastError(err);
+      throw err;
+    } finally {
+      setUploadingImage(false);
+    }
+  }, []);
+
+  // Função para inserir imagem no markdown com tamanho
+  const insertImageMarkdown = useCallback((imageUrl, width = null, height = null) => {
+    let imageMarkdown = "";
+    
+    if (width || height) {
+      // Usar HTML para controlar tamanho
+      const style = [];
+      if (width) style.push(`width: ${width}px`);
+      if (height) style.push(`height: ${height}px`);
+      imageMarkdown = `<img src="${imageUrl}" style="${style.join('; ')}" alt="Imagem" />`;
+    } else {
+      // Markdown padrão
+      imageMarkdown = `![Imagem](${imageUrl})`;
+    }
+
+    return imageMarkdown;
+  }, []);
 
   // Adicionar event listener para paste global no editor
   useEffect(() => {
@@ -118,47 +158,6 @@ const HelpArticleEditor = ({ onSubmit, onCancel, initialValue, loading }) => {
       document.removeEventListener('paste', handleGlobalPaste);
     };
   }, [uploadImage, insertImageMarkdown]);
-
-  // Função para fazer upload de imagem
-  const uploadImage = useCallback(async (file) => {
-    try {
-      setUploadingImage(true);
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await api.post("/help-articles/upload-image", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      const imageUrl = response.data.url;
-      return imageUrl;
-    } catch (err) {
-      toastError(err);
-      throw err;
-    } finally {
-      setUploadingImage(false);
-    }
-  }, []);
-
-  // Função para inserir imagem no markdown com tamanho
-  const insertImageMarkdown = useCallback((imageUrl, width = null, height = null) => {
-    let imageMarkdown = "";
-    
-    if (width || height) {
-      // Usar HTML para controlar tamanho
-      const style = [];
-      if (width) style.push(`width: ${width}px`);
-      if (height) style.push(`height: ${height}px`);
-      imageMarkdown = `<img src="${imageUrl}" style="${style.join('; ')}" alt="Imagem" />`;
-    } else {
-      // Markdown padrão
-      imageMarkdown = `![Imagem](${imageUrl})`;
-    }
-
-    return imageMarkdown;
-  }, []);
 
 
   // Função para inserir imagem com tamanho customizado

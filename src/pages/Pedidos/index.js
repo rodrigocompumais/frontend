@@ -733,7 +733,13 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                     </strong>
                   </Typography>
                   <Typography variant="h6" color="primary">
-                    R$ {(selectedOrder.metadata?.total != null ? Number(selectedOrder.metadata.total) : (selectedOrder.metadata?.menuItems || []).reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.productValue) || 0), 0)).toFixed(2).replace(".", ",")}
+                    R$ {(() => {
+                      const metadata = selectedOrder.metadata || {};
+                      if (metadata.total != null) return Number(metadata.total);
+                      const itemsTotal = (metadata.menuItems || []).reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.productValue) || 0), 0);
+                      const deliveryFee = Number(metadata.deliveryFee) || 0;
+                      return itemsTotal + deliveryFee;
+                    })().toFixed(2).replace(".", ",")}
                   </Typography>
                 </Box>
               </Box>
@@ -876,10 +882,13 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                   </strong>
                 </Typography>
                 <Typography variant="h6" color="primary">
-                  R$ {(selectedOrder.metadata?.total != null
-                    ? Number(selectedOrder.metadata.total)
-                    : (selectedOrder.metadata?.menuItems || []).reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.productValue) || 0), 0)
-                  ).toFixed(2).replace(".", ",")}
+                  R$ {(() => {
+                    const metadata = selectedOrder.metadata || {};
+                    if (metadata.total != null) return Number(metadata.total);
+                    const itemsTotal = (metadata.menuItems || []).reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.productValue) || 0), 0);
+                    const deliveryFee = Number(metadata.deliveryFee) || 0;
+                    return itemsTotal + deliveryFee;
+                  })().toFixed(2).replace(".", ",")}
                 </Typography>
               </Box>
             </Box>

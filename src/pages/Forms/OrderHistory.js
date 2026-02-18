@@ -117,13 +117,20 @@ const getOrderStatusLabels = (form) => {
 
 const getOrderTotal = (order) => {
   const metadata = order?.metadata || {};
+  // Se já tem total salvo, usar ele (já inclui taxa de entrega)
   if (metadata.total != null) return Number(metadata.total);
+  
+  // Caso contrário, calcular: soma dos itens + taxa de entrega
   const items = metadata.menuItems || [];
-  return items.reduce((sum, item) => {
+  const itemsTotal = items.reduce((sum, item) => {
     const qty = Number(item.quantity) || 0;
     const val = Number(item.productValue) || 0;
     return sum + qty * val;
   }, 0);
+  
+  // Adicionar taxa de entrega se existir
+  const deliveryFee = Number(metadata.deliveryFee) || 0;
+  return itemsTotal + deliveryFee;
 };
 
 const getOrderStatus = (order) => {

@@ -1009,12 +1009,27 @@ const PublicMenuForm = ({
 
       // Metadata com mesa e orderType (QR da mesa ou campo mesa configurado)
       const orderMetadata = getOrderMetadata();
+      
+      // Calcular total com taxa de entrega para salvar no metadata
+      const orderMetadataForSave = getOrderMetadata();
+      const totalWithDelivery = calculateTotal();
+      const deliveryFee = orderMetadataForSave?.orderType === "delivery" && form?.settings?.deliveryFee 
+        ? (parseFloat(form.settings.deliveryFee) || 0) 
+        : 0;
+      
+      // Adicionar total e deliveryFee ao metadata
+      const metadataWithTotal = {
+        ...orderMetadata,
+        total: totalWithDelivery,
+        deliveryFee: deliveryFee,
+        subtotal: totalWithDelivery - deliveryFee,
+      };
 
       // Enviar formulário (orderToken garante que o pedido vá para a mesa do link assinado)
       const response = await api.post(`/public/forms/${slug}/submit`, {
         answers: answersArray,
         menuItems,
-        ...(Object.keys(orderMetadata).length > 0 && { metadata: orderMetadata }),
+        ...(Object.keys(metadataWithTotal).length > 0 && { metadata: metadataWithTotal }),
         ...(orderToken && { orderToken }),
       });
 
