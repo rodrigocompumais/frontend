@@ -1062,14 +1062,14 @@ const PublicMenuForm = ({
         };
       });
       const orderMetadataForDisplay = getOrderMetadata();
-      const subtotal = calculateTotal() - (orderMetadataForDisplay?.orderType === "delivery" && form?.settings?.deliveryFee ? (parseFloat(form.settings.deliveryFee) || 0) : 0);
-      const deliveryFee = orderMetadataForDisplay?.orderType === "delivery" && form?.settings?.deliveryFee ? (parseFloat(form.settings.deliveryFee) || 0) : 0;
+      const deliveryFeeForDisplay = orderMetadataForDisplay?.orderType === "delivery" && form?.settings?.deliveryFee ? (parseFloat(form.settings.deliveryFee) || 0) : 0;
+      const subtotal = calculateTotal() - deliveryFeeForDisplay;
       
       const orderInfo = {
         menuItems: displayMenuItems,
         total: calculateTotal(),
         subtotal: subtotal,
-        deliveryFee: deliveryFee,
+        deliveryFee: deliveryFeeForDisplay,
         totalItems: getTotalItems(),
         customerName,
         customerPhone: answers[autoFields.find((f) => f.metadata?.autoFieldType === "phone")?.id] || "",
