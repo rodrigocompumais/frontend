@@ -330,8 +330,21 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
     return prev.id === "cancelado" ? null : prev;
   };
 
-  const handleOpenOrderModal = (order) => {
-    setSelectedOrder(order);
+  const handleOpenOrderModal = async (order) => {
+    // Carregar detalhes completos do pedido incluindo answers
+    try {
+      const orderFormId = order.formId || order.form?.id;
+      if (orderFormId && order.id) {
+        const { data } = await api.get(`/forms/${orderFormId}/responses/${order.id}`);
+        setSelectedOrder(data);
+      } else {
+        setSelectedOrder(order);
+      }
+    } catch (err) {
+      // Se falhar, usar o pedido básico
+      console.warn("Erro ao carregar detalhes do pedido:", err);
+      setSelectedOrder(order);
+    }
     setOrderModalOpen(true);
   };
 
@@ -706,23 +719,40 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                   <Typography variant="subtitle2" color="textSecondary" gutterBottom>Tipo</Typography>
                   <Typography variant="body2">
                     {selectedOrder.metadata?.orderType === "delivery" ? "Delivery" : "Mesa"}
-                    {selectedOrder.metadata?.tableNumber != null && ` • Mesa ${selectedOrder.metadata.tableNumber}`}
+                    {selectedOrder.metadata?.tableNumber != null && (() => {
+                      const tableNumber = String(selectedOrder.metadata.tableNumber).trim();
+                      // Remover prefixo "Mesa " ou "Comanda " se existir para evitar duplicação
+                      const tableNumberLower = tableNumber.toLowerCase();
+                      const cleanTableNumber = tableNumberLower.startsWith("mesa ") 
+                        ? tableNumber.substring(5) 
+                        : tableNumberLower.startsWith("comanda ")
+                        ? tableNumber.substring(8)
+                        : tableNumber;
+                      return ` • ${cleanTableNumber}`;
+                    })()}
                   </Typography>
                 </Box>
                 <Box mt={2}>
                   <Typography variant="subtitle2" color="textSecondary" gutterBottom>Itens</Typography>
                   <List dense disablePadding>
-                    {(selectedOrder.metadata?.menuItems || []).map((item, idx) => (
-                      <ListItem key={idx} disableGutters style={{ paddingTop: 0, paddingBottom: 4 }}>
-                        <ListItemText
-                          primary={`${item.quantity}x ${item.productName || "Item"}`}
-                          secondary={item.observations ? `Obs: ${item.observations}` : null}
-                        />
-                        <Typography variant="body2">
-                          R$ {((Number(item.quantity) || 0) * (Number(item.productValue) || 0)).toFixed(2).replace(".", ",")}
-                        </Typography>
-                      </ListItem>
-                    ))}
+                    {(selectedOrder.metadata?.menuItems || []).map((item, idx) => {
+                      const observations = item.observations || item.observation || item.obs || "";
+                      return (
+                        <ListItem key={idx} disableGutters style={{ paddingTop: 0, paddingBottom: observations ? 8 : 4 }}>
+                          <ListItemText
+                            primary={`${item.quantity}x ${item.productName || "Item"}`}
+                            secondary={observations ? (
+                              <Typography variant="caption" color="textSecondary" style={{ fontStyle: "italic", marginTop: 4 }}>
+                                Obs: {observations}
+                              </Typography>
+                            ) : null}
+                          />
+                          <Typography variant="body2">
+                            R$ {((Number(item.quantity) || 0) * (Number(item.productValue) || 0)).toFixed(2).replace(".", ",")}
+                          </Typography>
+                        </ListItem>
+                      );
+                    })}
                   </List>
                 </Box>
                 <Divider style={{ margin: "12px 0" }} />
@@ -852,7 +882,17 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                 </Typography>
                 <Typography variant="body2">
                   {selectedOrder.metadata?.orderType === "delivery" ? "Delivery" : "Mesa"}
-                  {selectedOrder.metadata?.tableNumber != null && ` • Mesa ${selectedOrder.metadata.tableNumber}`}
+                  {selectedOrder.metadata?.tableNumber != null && (() => {
+                    const tableNumber = String(selectedOrder.metadata.tableNumber).trim();
+                    // Remover prefixo "Mesa " ou "Comanda " se existir para evitar duplicação
+                    const tableNumberLower = tableNumber.toLowerCase();
+                    const cleanTableNumber = tableNumberLower.startsWith("mesa ") 
+                      ? tableNumber.substring(5) 
+                      : tableNumberLower.startsWith("comanda ")
+                      ? tableNumber.substring(8)
+                      : tableNumber;
+                    return ` • ${cleanTableNumber}`;
+                  })()}
                 </Typography>
               </Box>
               <Box mt={2}>
@@ -860,20 +900,81 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                   Itens
                 </Typography>
                 <List dense disablePadding>
-                  {(selectedOrder.metadata?.menuItems || []).map((item, idx) => (
-                    <ListItem key={idx} disableGutters style={{ paddingTop: 0, paddingBottom: 4 }}>
-                      <ListItemText
-                        primary={`${item.quantity}x ${item.productName || "Item"}`}
-                        secondary={item.observations ? `Obs: ${item.observations}` : null}
-                      />
-                      <Typography variant="body2">
-                        R$ {((Number(item.quantity) || 0) * (Number(item.productValue) || 0)).toFixed(2).replace(".", ",")}
-                      </Typography>
-                    </ListItem>
-                  ))}
+                  {(selectedOrder.metadata?.menuItems || []).map((item, idx) => {
+                    const observations = item.observations || item.observation || item.obs || "";
+                    return (
+                      <ListItem key={idx} disableGutters style={{ paddingTop: 0, paddingBottom: observations ? 8 : 4 }}>
+                        <ListItemText
+                          primary={`${item.quantity}x ${item.productName || "Item"}`}
+                          secondary={observations ? (
+                            <Typography variant="caption" color="textSecondary" style={{ fontStyle: "italic", marginTop: 4 }}>
+                              Obs: {observations}
+                            </Typography>
+                          ) : null}
+                        />
+                        <Typography variant="body2">
+                          R$ {((Number(item.quantity) || 0) * (Number(item.productValue) || 0)).toFixed(2).replace(".", ",")}
+                        </Typography>
+                      </ListItem>
+                    );
+                  })}
                 </List>
               </Box>
-              <Divider style={{ margin: "12px 0" }} />
+              {/* Campos adicionais do formulário (observações) */}
+              {selectedOrder.answers && selectedOrder.answers.length > 0 && (() => {
+                // Filtrar campos que não são nome, telefone, tipo de pedido, etc
+                const excludedAutoFieldTypes = ["name", "phone"];
+                const additionalAnswers = selectedOrder.answers.filter((answer) => {
+                  const field = answer.field;
+                  if (!field) return false;
+                  // Excluir campos automáticos (nome, telefone)
+                  if (field.metadata?.autoFieldType && excludedAutoFieldTypes.includes(field.metadata.autoFieldType)) {
+                    return false;
+                  }
+                  // Excluir campos de tipo de pedido
+                  const labelLower = (field.label || "").toLowerCase();
+                  if (labelLower.includes("tipo") && labelLower.includes("pedido")) {
+                    return false;
+                  }
+                  // Excluir campos vazios
+                  if (!answer.answer || String(answer.answer).trim() === "") {
+                    return false;
+                  }
+                  return true;
+                });
+                
+                if (additionalAnswers.length === 0) return null;
+                
+                return (
+                  <>
+                    <Box mt={2}>
+                      <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                        Observações / Informações Adicionais
+                      </Typography>
+                      <List dense disablePadding>
+                        {additionalAnswers.map((answer, idx) => {
+                          const field = answer.field;
+                          const fieldLabel = field?.label || `Campo ${idx + 1}`;
+                          const answerValue = answer.answer || "";
+                          return (
+                            <ListItem key={idx} disableGutters style={{ paddingTop: 0, paddingBottom: 4 }}>
+                              <ListItemText
+                                primary={fieldLabel}
+                                secondary={
+                                  <Typography variant="body2" color="textSecondary" style={{ fontStyle: "italic" }}>
+                                    {answerValue}
+                                  </Typography>
+                                }
+                              />
+                            </ListItem>
+                          );
+                        })}
+                      </List>
+                    </Box>
+                    <Divider style={{ margin: "12px 0" }} />
+                  </>
+                );
+              })()}
               <Box display="flex" justifyContent="space-between" alignItems="center">
                 <Typography variant="body2" color="textSecondary">
                   Status atual:{" "}

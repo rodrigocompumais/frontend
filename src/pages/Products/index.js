@@ -31,6 +31,7 @@ import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
 import AddIcon from "@material-ui/icons/Add";
 import CategoryIcon from "@material-ui/icons/Category";
+import FileCopyIcon from "@material-ui/icons/FileCopy";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -212,6 +213,23 @@ const Products = () => {
         setDeletingProduct(null);
         setConfirmModalOpen(false);
         fetchProducts();
+    };
+
+    const handleDuplicateProduct = async (productId) => {
+        try {
+            const { data } = await api.post(`/products/${productId}/duplicate`);
+            toast.success("Produto clonado com sucesso");
+            // Atualizar lista primeiro
+            fetchProducts();
+            // Abrir modal de edição com o produto clonado
+            setSelectedProduct(data);
+            // Usar setTimeout para garantir que o estado seja atualizado antes de abrir o modal
+            setTimeout(() => {
+                setProductModalOpen(true);
+            }, 100);
+        } catch (err) {
+            toastError(err);
+        }
     };
 
     const loadMore = () => {
@@ -425,8 +443,16 @@ const Products = () => {
                                         <IconButton
                                             size="small"
                                             onClick={() => handleEditProduct(product)}
+                                            title="Editar produto"
                                         >
                                             <EditIcon />
+                                        </IconButton>
+                                        <IconButton
+                                            size="small"
+                                            onClick={() => handleDuplicateProduct(product.id)}
+                                            title="Clonar produto"
+                                        >
+                                            <FileCopyIcon />
                                         </IconButton>
                                         <IconButton
                                             size="small"
@@ -434,6 +460,7 @@ const Products = () => {
                                                 setConfirmModalOpen(true);
                                                 setDeletingProduct(product);
                                             }}
+                                            title="Excluir produto"
                                         >
                                             <DeleteOutlineIcon />
                                         </IconButton>

@@ -3,6 +3,7 @@ import { makeStyles, Paper, Typography, IconButton, Chip, Box } from "@material-
 import ArrowBackIcon from "@material-ui/icons/ArrowBack";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 
 const useStyles = makeStyles((theme) => ({
   container: {
@@ -69,6 +70,13 @@ const useStyles = makeStyles((theme) => ({
       fontStyle: "italic",
       color: theme.palette.text.secondary,
     },
+    "& img": {
+      maxWidth: "100%",
+      height: "auto",
+      marginTop: theme.spacing(2),
+      marginBottom: theme.spacing(2),
+      borderRadius: theme.spacing(1),
+    },
   },
 }));
 
@@ -129,6 +137,7 @@ const HelpArticleView = ({ article, onBack }) => {
         <ReactMarkdown
           className={classes.markdownContent}
           remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeRaw]}
         >
           {article.content}
         </ReactMarkdown>

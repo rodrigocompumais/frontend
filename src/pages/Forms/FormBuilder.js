@@ -426,6 +426,7 @@ const FormBuilder = () => {
       // Log para debug
       console.log("FormBuilder: Saving form with mesaPrintConfig:", payload.settings.mesaPrintConfig);
       console.log("FormBuilder: Saving form with deliveryPrintDeviceIds:", payload.settings.deliveryPrintDeviceIds);
+      console.log("FormBuilder: requireMesaOccupation:", payload.settings.requireMesaOccupation);
       console.log("FormBuilder: Full settings being sent:", JSON.stringify(payload.settings, null, 2));
 
       if (isEdit) {
@@ -1044,6 +1045,28 @@ const FormBuilder = () => {
                     />
                     <Typography variant="caption" display="block" color="textSecondary">
                       Permite que clientes façam pedidos para consumo na mesa.
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={formData.settings?.requireMesaOccupation !== false}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                requireMesaOccupation: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                      }
+                      label="Requer ocupação de mesa ao fazer pedido"
+                    />
+                    <Typography variant="caption" display="block" color="textSecondary">
+                      Quando desativado, permite fazer pedidos sem ocupar a mesa automaticamente. A mesa permanece livre e os pedidos são apenas associados a ela.
                     </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>

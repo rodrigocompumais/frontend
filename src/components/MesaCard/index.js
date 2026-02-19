@@ -9,6 +9,7 @@ import {
   Tooltip,
   Chip,
   Button,
+  Badge,
 } from "@material-ui/core";
 import {
   Edit as EditIcon,
@@ -19,6 +20,7 @@ import {
   AccessTime as TimeIcon,
   Link as LinkIcon,
   AddCircle as AddCircleIcon,
+  ShoppingCart as ShoppingCartIcon,
 } from "@material-ui/icons";
 import { QrCode2 as QrCodeIcon } from "@mui/icons-material";
 import { formatDistanceToNow } from "date-fns";
@@ -122,6 +124,8 @@ const MesaCard = ({
   onCopyLink,
   onAdicionarPedido,
   cardapioSlug,
+  pendingOrdersCount = 0,
+  onVerPedido,
 }) => {
   const classes = useStyles();
   const [qrModalOpen, setQrModalOpen] = useState(false);
@@ -143,14 +147,27 @@ const MesaCard = ({
     }
   };
 
+  // Verificar se o nome já contém o prefixo para evitar duplicação (ex: "Mesa Mesa 1")
+  const displayName = (mesa.name || mesa.number || "").trim();
+  const expectedPrefix = mesa.type === "comanda" ? "Comanda " : "Mesa ";
+  const displayNameLower = displayName.toLowerCase();
+  const alreadyHasPrefix = displayNameLower.startsWith("mesa ") || displayNameLower.startsWith("comanda ");
+  const finalDisplayName = alreadyHasPrefix ? displayName : (expectedPrefix + displayName);
+
   return (
     <Card className={`${classes.card} ${isOcupada ? classes.cardOcupada : classes.cardLivree} ${sectionClass}`}>
       <CardContent className={classes.cardContent}>
         <Box className={classes.header}>
           <Box display="flex" alignItems="center" flexWrap="wrap" gap={1}>
-            <Typography className={classes.mesaNumber}>
-              {(mesa.type === "comanda" ? "Comanda " : "Mesa ") + (mesa.name || mesa.number)}
-            </Typography>
+            <Badge
+              badgeContent={pendingOrdersCount}
+              color="error"
+              invisible={pendingOrdersCount === 0}
+            >
+              <Typography className={classes.mesaNumber}>
+                {finalDisplayName}
+              </Typography>
+            </Badge>
             <Chip size="small" label={mesa.type === "comanda" ? "Comanda" : "Mesa"} variant="outlined" style={{ fontSize: "0.7rem" }} />
           </Box>
           <Chip
@@ -187,6 +204,18 @@ const MesaCard = ({
         )}
 
         <Box className={classes.actions}>
+          {pendingOrdersCount > 0 && onVerPedido && (
+            <Button
+              size="small"
+              color="secondary"
+              variant="contained"
+              startIcon={<ShoppingCartIcon />}
+              onClick={() => onVerPedido()}
+              style={{ marginBottom: 8 }}
+            >
+              Ver pedido
+            </Button>
+          )}
           {isOcupada ? (
             <>
               {onAdicionarPedido && (

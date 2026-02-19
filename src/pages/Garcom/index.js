@@ -24,6 +24,7 @@ import {
   MenuItem,
   InputAdornment,
   useMediaQuery,
+  Badge,
 } from "@material-ui/core";
 import SearchIcon from "@material-ui/icons/Search";
 import AddIcon from "@material-ui/icons/Add";
@@ -31,6 +32,7 @@ import RemoveIcon from "@material-ui/icons/Remove";
 import AddCircleIcon from "@material-ui/icons/AddCircle";
 import EventSeatIcon from "@material-ui/icons/EventSeat";
 import PersonIcon from "@material-ui/icons/Person";
+import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
 import { toast } from "react-toastify";
 import Autocomplete, { createFilterOptions } from "@material-ui/lab/Autocomplete";
 import MainContainer from "../../components/MainContainer";
@@ -40,8 +42,10 @@ import useCompanyModules from "../../hooks/useCompanyModules";
 import useAuth from "../../hooks/useAuth.js";
 import { useContext } from "react";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import { AuthContext } from "../../context/Auth/AuthContext";
 import ContactModal from "../../components/ContactModal";
 import LiberarMesaModal from "../../components/LiberarMesaModal";
+import OrderNotificationPopup from "../../components/OrderNotificationPopup";
 
 const filter = createFilterOptions({ trim: true });
 
@@ -186,6 +190,7 @@ const Garcom = () => {
   const theme = useTheme();
   const isXs = useMediaQuery(theme.breakpoints.down("xs"));
   const { user } = useAuth();
+  const { user: authUser } = useContext(AuthContext);
   const socketManager = useContext(SocketContext);
   const { hasLanchonetes, loading: modulesLoading } = useCompanyModules();
   const [mesas, setMesas] = useState([]);
@@ -193,6 +198,9 @@ const Garcom = () => {
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingOrders, setPendingOrders] = useState([]); // Pedidos pendentes (orderStatus: "novo")
+  const [notificationOrder, setNotificationOrder] = useState(null); // Pedido para mostrar no popup
+  const [notificationOpen, setNotificationOpen] = useState(false);
 
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
   const [mesaParaPedido, setMesaParaPedido] = useState(null);
@@ -289,6 +297,49 @@ const Garcom = () => {
     socket.on(`company-${companyId}-mesa`, handler);
     return () => socket.off(`company-${companyId}-mesa`, handler);
   }, [socketManager, user?.companyId]);
+
+  // Listener para novos pedidos pendentes
+  useEffect(() => {
+    const companyId = authUser?.companyId || user?.companyId;
+    const socket = companyId ? socketManager?.getSocket?.(companyId) : null;
+    if (!socket) return;
+    
+    const handleFormResponse = (data) => {
+      if (data.action === "create" && data.response) {
+        const response = data.response;
+        const formType = response.form?.settings?.formType || response.metadata?.formType;
+        const orderStatus = response.orderStatus || response.metadata?.orderStatus;
+        
+        // Filtrar apenas pedidos de cardápio com status "novo"
+        if (formType === "cardapio" && orderStatus === "novo") {
+          setPendingOrders((prev) => {
+            // Evitar duplicatas
+            const exists = prev.some((o) => o.id === response.id);
+            if (exists) return prev;
+            return [...prev, response];
+          });
+          
+          // Mostrar popup de notificação
+          setNotificationOrder(response);
+          setNotificationOpen(true);
+        }
+      } else if (data.action === "update" && data.response) {
+        const response = data.response;
+        const orderStatus = response.orderStatus || response.metadata?.orderStatus;
+        
+        // Se pedido foi atualizado e não está mais pendente, remover da lista
+        if (orderStatus !== "novo") {
+          setPendingOrders((prev) => prev.filter((o) => o.id !== response.id));
+        }
+      }
+    };
+    
+    socket.on(`company-${companyId}-formResponse`, handleFormResponse);
+    
+    return () => {
+      socket.off(`company-${companyId}-formResponse`, handleFormResponse);
+    };
+  }, [socketManager, authUser?.companyId, user?.companyId]);
 
   useEffect(() => {
     if (!clienteDialogOpen || searchContact.length < 2) {
@@ -816,9 +867,16 @@ const Garcom = () => {
         ) : (
           <>
             <Box className={classes.headerRow}>
-              <Typography variant="body2" color="textSecondary">
-                Clique em &quot;Fazer pedido&quot; na mesa. Se estiver livre, informe o cliente primeiro.
-              </Typography>
+              <Box display="flex" alignItems="center" gap={1}>
+                <Typography variant="body2" color="textSecondary">
+                  Clique em &quot;Fazer pedido&quot; na mesa. Se estiver livre, informe o cliente primeiro.
+                </Typography>
+                {pendingOrders.length > 0 && (
+                  <Badge badgeContent={pendingOrders.length} color="error">
+                    <ShoppingCartIcon color="action" />
+                  </Badge>
+                )}
+              </Box>
               <FormControl size="small" className={classes.headerFormControl}>
                 <InputLabel>Exibir mesas</InputLabel>
                 <Select
@@ -1330,6 +1388,20 @@ const Garcom = () => {
           setMesaParaLiberar(null);
         }}
         onSuccess={fetchMesasForLiberar}
+      />
+
+      <OrderNotificationPopup
+        open={notificationOpen}
+        order={notificationOrder}
+        onView={() => {
+          setNotificationOpen(false);
+          // Redirecionar para página de pedidos ou abrir modal
+          history.push("/pedidos");
+        }}
+        onClose={() => {
+          setNotificationOpen(false);
+          setNotificationOrder(null);
+        }}
       />
     </MainContainer>
   );

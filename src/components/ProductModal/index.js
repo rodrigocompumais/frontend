@@ -131,6 +131,36 @@ const ProductModal = ({ open, onClose, productId }) => {
     const [loadingGroups, setLoadingGroups] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
     const imageInputRef = React.useRef(null);
+    
+    // Adicionar grupos do produto aos grupos disponíveis quando o produto mudar
+    useEffect(() => {
+        if (product.grupo && product.grupo.trim() !== "") {
+            setAvailableGroups((prevGroups) => {
+                const grupo = product.grupo.trim();
+                if (!prevGroups.includes(grupo)) {
+                    const newGroups = [...prevGroups, grupo].sort((a, b) => a.localeCompare(b));
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProductModal/index.js:137',message:'Added grupo from product state',data:{grupo,prevCount:prevGroups.length,newCount:newGroups.length},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                    // #endregion
+                    return newGroups;
+                }
+                return prevGroups;
+            });
+        }
+        if (product.halfAndHalfGrupo && product.halfAndHalfGrupo.trim() !== "") {
+            setAvailableGroups((prevGroups) => {
+                const grupo = product.halfAndHalfGrupo.trim();
+                if (!prevGroups.includes(grupo)) {
+                    const newGroups = [...prevGroups, grupo].sort((a, b) => a.localeCompare(b));
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProductModal/index.js:147',message:'Added halfAndHalfGrupo from product state',data:{grupo,prevCount:prevGroups.length,newCount:newGroups.length},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+                    // #endregion
+                    return newGroups;
+                }
+                return prevGroups;
+            });
+        }
+    }, [product.grupo, product.halfAndHalfGrupo]);
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -145,6 +175,48 @@ const ProductModal = ({ open, onClose, productId }) => {
                     name: v.name || "",
                     options: (v.options || []).map((o) => ({ label: o.label || "", value: parseFloat(o.value) || 0 })),
                 }));
+                
+                const productGrupo = (data.grupo || "").trim();
+                const productHalfAndHalfGrupo = (data.halfAndHalfGrupo || "").trim();
+                
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProductModal/index.js:148',message:'Product loaded with groups',data:{productId:data?.id,productGrupo,productHalfAndHalfGrupo},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                // #endregion
+                
+                // Adicionar grupos do produto aos grupos disponíveis ANTES de setProduct
+                // para garantir que estejam disponíveis quando o Formik renderizar
+                setAvailableGroups((prevGroups) => {
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProductModal/index.js:152',message:'Updating availableGroups before setProduct',data:{prevGroupsCount:prevGroups.length,productGrupo,productHalfAndHalfGrupo},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                    // #endregion
+                    const newGroups = [...prevGroups];
+                    let updated = false;
+                    if (productGrupo && !newGroups.includes(productGrupo)) {
+                        newGroups.push(productGrupo);
+                        updated = true;
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProductModal/index.js:157',message:'Added productGrupo to availableGroups',data:{grupo:productGrupo,newGroupsCount:newGroups.length},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                        // #endregion
+                    }
+                    if (productHalfAndHalfGrupo && !newGroups.includes(productHalfAndHalfGrupo)) {
+                        newGroups.push(productHalfAndHalfGrupo);
+                        updated = true;
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProductModal/index.js:163',message:'Added productHalfAndHalfGrupo to availableGroups',data:{grupo:productHalfAndHalfGrupo,newGroupsCount:newGroups.length},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                        // #endregion
+                    }
+                    if (updated) {
+                        newGroups.sort((a, b) => a.localeCompare(b));
+                    }
+                    // #region agent log
+                    fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ProductModal/index.js:168',message:'Final availableGroups state before setProduct',data:{finalGroupsCount:newGroups.length,finalGroups:newGroups},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+                    // #endregion
+                    return newGroups;
+                });
+                
+                // Aguardar um tick para garantir que availableGroups foi atualizado
+                await new Promise(resolve => setTimeout(resolve, 0));
+                
                 setProduct({
                     name: data.name || "",
                     description: data.description || "",
@@ -154,8 +226,8 @@ const ProductModal = ({ open, onClose, productId }) => {
                     variablePrice: data.variablePrice || false,
                     allowsHalfAndHalf: data.allowsHalfAndHalf || false,
                     halfAndHalfPriceRule: data.halfAndHalfPriceRule || "",
-                    halfAndHalfGrupo: data.halfAndHalfGrupo || "",
-                    grupo: data.grupo || "",
+                    halfAndHalfGrupo: productHalfAndHalfGrupo,
+                    grupo: productGrupo,
                     imageUrl: data.imageUrl || "",
                     variations,
                 });

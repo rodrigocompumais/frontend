@@ -505,6 +505,18 @@ const PublicMenuForm = ({
       });
       const ids = data?.productIds || [];
       setPieceAgainProductIds(Array.isArray(ids) ? ids : []);
+      
+      // Restaurar variações selecionadas dos pedidos anteriores
+      if (data?.productData && Array.isArray(data.productData)) {
+        const variationsMap = {};
+        data.productData.forEach((item) => {
+          if (item.productId && item.variationOptionId) {
+            variationsMap[item.productId] = item.variationOptionId;
+          }
+        });
+        setSelectedVariationOption((prev) => ({ ...prev, ...variationsMap }));
+      }
+      
       if (data?.prefillByLabel) {
         applyPrefillByLabel(data.prefillByLabel);
       }
@@ -2024,7 +2036,13 @@ const PublicMenuForm = ({
             <Typography className={classes.sectionTitle}>Peça de novo</Typography>
             <Box className={classes.mostOrderedScroll}>
               {pieceAgainProducts.map((product) => {
-                const itemKey = getItemKey(product);
+                // Para "Peça de novo", usar a variação selecionada do pedido anterior se disponível
+                const savedVariationOptionId = selectedVariationOption[product.id];
+                let itemKey = getItemKey(product);
+                // Se temos uma variação salva e o produto tem variações, garantir que o itemKey use essa variação
+                if (savedVariationOptionId && product.variations && product.variations.length > 0) {
+                  itemKey = `${product.id}_${savedVariationOptionId}`;
+                }
                 const { productValue: displayPrice } = getItemDetailsByKey(itemKey);
                 return (
                   <Card key={`again-${product.id}`} className={classes.mostOrderedCard} onClick={() => handleQuantityChange(itemKey, 1)}>
