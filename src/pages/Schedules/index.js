@@ -529,6 +529,13 @@ const Schedules = () => {
           endAccessor="end"
           style={{ height: 500 }}
           eventPropGetter={eventStyleGetter}
+          onSelectEvent={(event) => {
+            if (event.type === "appointment" && event.resource) {
+              handleEditAppointment(event.resource);
+            } else if (event.type === "dispatch" && event.resource) {
+              handleEditSchedule(event.resource);
+            }
+          }}
         />
       </Paper>
     </MainContainer>
