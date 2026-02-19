@@ -39,6 +39,7 @@ import QueueSelect from "../QueueSelect";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
 import useWhatsApps from "../../hooks/useWhatsApps";
+import UserAvailabilitySettings from "../UserAvailabilitySettings";
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -500,11 +501,13 @@ const UserModal = ({ open, onClose, userId }) => {
 								/>
 
 								{userId && (
-									<div className={classes.contactsSection}>
-										<Divider style={{ marginTop: 16, marginBottom: 16 }} />
-										<Typography variant="subtitle2" gutterBottom>
-											Contatos Vinculados ({userContacts.length})
-										</Typography>
+									<>
+										<UserAvailabilitySettings userId={userId} />
+										<div className={classes.contactsSection}>
+											<Divider style={{ marginTop: 16, marginBottom: 16 }} />
+											<Typography variant="subtitle2" gutterBottom>
+												Contatos Vinculados ({userContacts.length})
+											</Typography>
 										{loadingContacts ? (
 											<div className={classes.noContacts}>
 												<CircularProgress size={24} />
@@ -551,6 +554,7 @@ const UserModal = ({ open, onClose, userId }) => {
 											</div>
 										)}
 									</div>
+									</>
 								)}
 								
 							</DialogContent>
