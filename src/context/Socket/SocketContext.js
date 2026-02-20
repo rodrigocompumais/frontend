@@ -13,7 +13,9 @@ class ManagedSocket {
       if (!this.rawSocket.recovered) {
         const refreshJoinsOnReady = () => {
           for (const j of this.joins) {
-            console.debug("refreshing join", j);
+            if (process.env.NODE_ENV !== 'production') {
+              console.debug("refreshing join", j);
+            }
             this.rawSocket.emit(`join${j.event}`, ...j.params);
           }
           this.rawSocket.off("ready", refreshJoinsOnReady);
@@ -45,7 +47,9 @@ class ManagedSocket {
   emit(event, ...params) {
     if (event.startsWith("join")) {
       this.joins.push({ event: event.substring(4), params });
-      console.log("Joining", { event: event.substring(4), params});
+      if (process.env.NODE_ENV !== 'production') {
+        console.log("Joining", { event: event.substring(4), params});
+      }
     }
     return this.rawSocket.emit(event, ...params);
   }
@@ -91,7 +95,9 @@ const SocketManager = {
 
     if (companyId !== this.currentCompanyId || userId !== this.currentUserId) {
       if (this.currentSocket) {
-        console.warn("closing old socket - company or user changed");
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn("closing old socket - company or user changed");
+        }
         this.currentSocket.removeAllListeners();
         this.currentSocket.disconnect();
         this.currentSocket = null;
@@ -101,7 +107,9 @@ const SocketManager = {
       const { exp } = jwt.decode(token) ?? {};
 
       if ( Date.now() >= exp*1000) {
-        console.warn("Expired token, reload after refresh");
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn("Expired token, reload after refresh");
+        }
         setTimeout(() => {
           window.location.reload();
         },1000);
@@ -112,19 +120,23 @@ const SocketManager = {
       this.currentUserId = userId;
       
       if (!token) {
-        console.error("❌ [Socket] Token não encontrado no localStorage");
+        if (process.env.NODE_ENV !== 'production') {
+          console.error("❌ [Socket] Token não encontrado no localStorage");
+        }
         return new DummySocket();
       }
       
       const backendUrl = process.env.REACT_APP_BACKEND_URL;
-      console.log("🔌 [Socket] Tentando conectar ao backend:", {
-        backendUrl: backendUrl,
-        companyId: companyId,
-        userId: userId,
-        hasToken: !!token,
-        tokenLength: token ? token.length : 0,
-        currentOrigin: window.location.origin
-      });
+      if (process.env.NODE_ENV !== 'production') {
+        console.log("🔌 [Socket] Tentando conectar ao backend:", {
+          backendUrl: backendUrl,
+          companyId: companyId,
+          userId: userId,
+          hasToken: !!token,
+          tokenLength: token ? token.length : 0,
+          currentOrigin: window.location.origin
+        });
+      }
       
       this.currentSocket = openSocket(backendUrl, {
         transports: ["polling"],
@@ -134,36 +146,46 @@ const SocketManager = {
       });
       
       this.currentSocket.on("connect", (...params) => {
-        console.log("✅ [Socket] Conectado com sucesso:", {
-          socketId: this.currentSocket.id,
-          params: params,
-          backendUrl: backendUrl
-        });
+        if (process.env.NODE_ENV !== 'production') {
+          console.log("✅ [Socket] Conectado com sucesso:", {
+            socketId: this.currentSocket.id,
+            params: params,
+            backendUrl: backendUrl
+          });
+        }
       });
       
       this.currentSocket.on("connect_error", (error) => {
-        console.error("❌ [Socket] Erro ao conectar:", {
-          error: error.message,
-          type: error.type,
-          description: error.description,
-          backendUrl: backendUrl,
-          currentOrigin: window.location.origin
-        });
+        if (process.env.NODE_ENV !== 'production') {
+          console.error("❌ [Socket] Erro ao conectar:", {
+            error: error.message,
+            type: error.type,
+            description: error.description,
+            backendUrl: backendUrl,
+            currentOrigin: window.location.origin
+          });
+        }
       });
       
       this.currentSocket.on("disconnect", (reason) => {
-        console.warn(`⚠️ [Socket] Desconectado:`, {
-          reason: reason,
-          socketId: this.currentSocket?.id,
-          backendUrl: backendUrl
-        });
+        if (process.env.NODE_ENV !== 'production') {
+          console.warn(`⚠️ [Socket] Desconectado:`, {
+            reason: reason,
+            socketId: this.currentSocket?.id,
+            backendUrl: backendUrl
+          });
+        }
         
         if (reason.startsWith("io ")) {
-          console.warn("🔄 [Socket] Tentando reconectar...", this.currentSocket);
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn("🔄 [Socket] Tentando reconectar...", this.currentSocket);
+          }
           
           const { exp } = jwt.decode(token);
           if ( Date.now()-180 >= exp*1000) {
-            console.warn("⏰ [Socket] Token expirado, recarregando app");
+            if (process.env.NODE_ENV !== 'production') {
+              console.warn("⏰ [Socket] Token expirado, recarregando app");
+            }
             window.location.reload();
             return;
           }
@@ -173,11 +195,13 @@ const SocketManager = {
       });
       
       this.currentSocket.onAny((event, ...args) => {
-        console.debug("📨 [Socket] Evento recebido:", { 
-          event: event, 
-          args: args,
-          socketId: this.currentSocket?.id 
-        });
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug("📨 [Socket] Evento recebido:", { 
+            event: event, 
+            args: args,
+            socketId: this.currentSocket?.id 
+          });
+        }
       });
       
       this.onReady(() => {

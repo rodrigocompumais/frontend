@@ -139,11 +139,13 @@ export default function ChatPopover() {
   useEffect(() => {
     soundAlertRef.current = play;
 
-    if (!("Notification" in window)) {
-      console.log("This browser doesn't support notifications");
-    } else {
-      Notification.requestPermission();
-    }
+		if (!("Notification" in window)) {
+			if (process.env.NODE_ENV !== 'production') {
+				console.log("This browser doesn't support notifications");
+			}
+		} else {
+			Notification.requestPermission();
+		}
   }, [play]);
 
   useEffect(() => {

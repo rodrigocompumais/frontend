@@ -123,7 +123,6 @@ const UserModal = ({ open, onClose, userId }) => {
 		password: "",
 		profile: "user",
 		allTicket: "desabled",
-		repeatPendingChatSound: true,
 		defaultRoute: ""
 	};
 
@@ -143,19 +142,8 @@ const UserModal = ({ open, onClose, userId }) => {
 			if (!userId) return;
 			try {
 				const { data } = await api.get(`/users/${userId}`);
-				// Para o próprio usuário, priorizar localStorage; senão usar valor da API (true/false/1/0); padrão true
-				const isOwnProfile = userId === loggedInUser?.id;
-				const fromStorage = isOwnProfile ? localStorage.getItem(`repeatPendingChatSound_${userId}`) : null;
-				let repeatPendingChatSound = true;
-				if (fromStorage !== null) {
-					repeatPendingChatSound = fromStorage === "true";
-				} else {
-					const v = data.repeatPendingChatSound;
-					if (v === false || v === 0 || v === "false") repeatPendingChatSound = false;
-					else if (v === true || v === 1 || v === "true") repeatPendingChatSound = true;
-				}
 				setUser(prevState => {
-					return { ...prevState, ...data, repeatPendingChatSound };
+					return { ...prevState, ...data };
 				});
 				const userQueueIds = data.queues?.map(queue => queue.id);
 				setSelectedQueueIds(userQueueIds);
@@ -233,18 +221,11 @@ const UserModal = ({ open, onClose, userId }) => {
 			whatsappId,
 			queueIds: selectedQueueIds,
 			allTicket: values.allTicket,
-			repeatPendingChatSound: values.repeatPendingChatSound,
 			defaultRoute: values.defaultRoute || null
 		};
 		try {
 			if (userId) {
 				await api.put(`/users/${userId}`, userData);
-				// Persistir no localStorage para o som de chat em espera não voltar ao recarregar a página
-				if (userId === loggedInUser?.id) {
-					try {
-						localStorage.setItem(`repeatPendingChatSound_${userId}`, String(!!values.repeatPendingChatSound));
-					} catch (e) {}
-				}
 			} else {
 				await api.post("/users", userData);
 			}
@@ -480,23 +461,6 @@ const UserModal = ({ open, onClose, userId }) => {
 											</FormControl>
 										</div>
 
-									)}
-								/>
-								
-								<Can
-									role={loggedInUser.profile}
-									perform="user-modal:editProfile"
-									yes={() => (
-										<FormControlLabel
-											control={
-												<Field
-													as={Switch}
-													name="repeatPendingChatSound"
-													color="primary"
-												/>
-											}
-											label="Repetir som de chat em espera"
-										/>
 									)}
 								/>
 

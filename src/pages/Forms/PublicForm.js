@@ -575,10 +575,27 @@ const PublicForm = () => {
               {form.successMessage || "Obrigado! Sua resposta foi enviada com sucesso."}
             </Alert>
             {form.successRedirectUrl && (
-              <Typography variant="body2" color="textSecondary">
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
                 Você será redirecionado em instantes...
               </Typography>
             )}
+            {/* Link para CompuChat na mensagem de sucesso */}
+            <Box style={{ marginTop: 24, textAlign: "center", paddingTop: 16, borderTop: "1px solid #e0e0e0" }}>
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: 8 }}>
+                Formulário criado com
+              </Typography>
+              <Button
+                href="https://www.compuchat.cloud"
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="text"
+                color="primary"
+                size="small"
+                style={{ textTransform: "none" }}
+              >
+                CompuChat
+              </Button>
+            </Box>
           </Box>
         </Paper>
       </Box>
@@ -765,6 +782,24 @@ const PublicForm = () => {
                 "Enviar"
               )}
             </Button>
+
+            {/* Link para CompuChat no final do formulário */}
+            <Box style={{ marginTop: 24, textAlign: "center", paddingTop: 16, borderTop: "1px solid #e0e0e0" }}>
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: 8 }}>
+                Formulário criado com
+              </Typography>
+              <Button
+                href="https://www.compuchat.cloud"
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="text"
+                color="primary"
+                size="small"
+                style={{ textTransform: "none" }}
+              >
+                CompuChat
+              </Button>
+            </Box>
           </form>
         </Paper>
       </Box>

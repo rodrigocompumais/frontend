@@ -102,9 +102,22 @@ const NotificationsPopOver = (volume) => {
 		soundAlertRef.current = play;
 
 		if (!("Notification" in window)) {
-			console.log("This browser doesn't support notifications");
+			if (process.env.NODE_ENV !== 'production') {
+				console.log("This browser doesn't support notifications");
+			}
 		} else {
-			Notification.requestPermission();
+			// Solicitar permissão se ainda não foi concedida
+			if (Notification.permission === "default") {
+				Notification.requestPermission().then(permission => {
+					if (process.env.NODE_ENV !== 'production') {
+						if (permission === "granted") {
+							console.log("Permissão de notificação concedida");
+						} else {
+							console.warn("Permissão de notificação negada");
+						}
+					}
+				});
+			}
 		}
 	}, [play]);
 
@@ -159,7 +172,6 @@ const NotificationsPopOver = (volume) => {
 		socket.on(`company-${user.companyId}-appMessage`, data => {
 			if (
 				data.action === "create" && !data.message.fromMe && 
-				(data.ticket.status !== "pending" ) &&
 				(!data.message.read || data.ticket.status === "pending") &&
 				(data.ticket.userId === user?.id || !data.ticket.userId) &&
 				(user?.queues?.some(queue => (queue.id === data.ticket.queueId)) || !data.ticket.queueId)
@@ -222,37 +234,68 @@ const NotificationsPopOver = (volume) => {
 		const safeContact = contact || {};
 		const bodyText = getNotificationBody(message);
 
+		// Usar tag única combinando ticket.id e message.id para permitir múltiplas notificações
+		const uniqueTag = `ticket-${ticket.id}-msg-${message.id || Date.now()}`;
+
 		const options = {
 			body: `${bodyText} - ${format(new Date(), "HH:mm")}`,
 			icon: safeContact.urlPicture,
-			tag: ticket.id,
+			tag: uniqueTag,
 			renotify: true,
+			requireInteraction: false, // Permite que a notificação desapareça automaticamente
 		};
 
-		const notification = new Notification(
-			getNotificationTitle(safeContact),
-			options
-		);
-
-		notification.onclick = e => {
-			e.preventDefault();
-			window.focus();
-			historyRef.current.push(`/tickets/${ticket.uuid}`);
-			// handleChangeTab(null, ticket.isGroup? "group" : "open");
-		};
-
-		setDesktopNotifications(prevState => {
-			const notfiticationIndex = prevState.findIndex(
-				n => n.tag === notification.tag
-			);
-			if (notfiticationIndex !== -1) {
-				prevState[notfiticationIndex] = notification;
-				return [...prevState];
+		// Verificar permissão antes de criar notificação
+		if (Notification.permission !== "granted") {
+			if (process.env.NODE_ENV !== 'production') {
+				console.warn("Permissão de notificação não concedida");
 			}
-			return [notification, ...prevState];
-		});
+			return;
+		}
 
-		soundAlertRef.current();
+		try {
+			const notification = new Notification(
+				getNotificationTitle(safeContact),
+				options
+			);
+
+			notification.onclick = e => {
+				e.preventDefault();
+				window.focus();
+				notification.close();
+				historyRef.current.push(`/tickets/${ticket.uuid}`);
+				// handleChangeTab(null, ticket.isGroup? "group" : "open");
+			};
+
+			// Fechar notificação automaticamente após 10 segundos
+			setTimeout(() => {
+				notification.close();
+			}, 10000);
+
+			setDesktopNotifications(prevState => {
+				// Remover notificações antigas do mesmo ticket (manter apenas as últimas 3)
+				const ticketNotifications = prevState.filter(
+					n => n.tag && n.tag.startsWith(`ticket-${ticket.id}-`)
+				);
+				
+				if (ticketNotifications.length >= 3) {
+					// Fechar a mais antiga
+					const oldest = ticketNotifications[ticketNotifications.length - 1];
+					if (oldest) {
+						oldest.close();
+					}
+					// Remover do estado
+					prevState = prevState.filter(n => n !== oldest);
+				}
+
+				// Adicionar nova notificação
+				return [notification, ...prevState];
+			});
+
+			soundAlertRef.current();
+		} catch (error) {
+			console.error("Erro ao criar notificação:", error);
+		}
 	};
 
 	const handleClick = () => {

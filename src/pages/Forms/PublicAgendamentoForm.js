@@ -564,6 +564,23 @@ const PublicAgendamentoForm = ({ form, slug: publicId }) => {
                 Redirecionando...
               </Typography>
             )}
+
+            {/* Link para CompuChat na mensagem de sucesso */}
+            <Box style={{ marginTop: 24, textAlign: "center", paddingTop: 16, borderTop: "1px solid #333" }}>
+              <Typography variant="body2" style={{ color: "#9e9e9e", marginBottom: 8 }}>
+                Formulário criado com
+              </Typography>
+              <Button
+                href="https://www.compuchat.cloud"
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="text"
+                size="small"
+                style={{ textTransform: "none", color: "#4caf50" }}
+              >
+                CompuChat
+              </Button>
+            </Box>
           </div>
         </Box>
       </Box>
@@ -987,6 +1004,23 @@ const PublicAgendamentoForm = ({ form, slug: publicId }) => {
                 )}
               </Button>
             </div>
+
+            {/* Link para CompuChat no final do formulário */}
+            <Box style={{ marginTop: 24, textAlign: "center", paddingTop: 16, borderTop: "1px solid #333" }}>
+              <Typography variant="body2" style={{ color: "#9e9e9e", marginBottom: 8 }}>
+                Formulário criado com
+              </Typography>
+              <Button
+                href="https://www.compuchat.cloud"
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="text"
+                size="small"
+                style={{ textTransform: "none", color: "#4caf50" }}
+              >
+                CompuChat
+              </Button>
+            </Box>
           </>
         )}
       </Box>

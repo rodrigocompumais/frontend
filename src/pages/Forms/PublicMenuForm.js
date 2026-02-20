@@ -1843,6 +1843,24 @@ const PublicMenuForm = ({
                 </Typography>
               </Box>
             )}
+
+            {/* Link para CompuChat na mensagem de sucesso */}
+            <Box style={{ marginTop: 24, textAlign: "center", paddingTop: 16, borderTop: "1px solid #e0e0e0" }}>
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: 8 }}>
+                Formulário criado com
+              </Typography>
+              <Button
+                href="https://www.compuchat.cloud"
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="text"
+                color="primary"
+                size="small"
+                style={{ textTransform: "none" }}
+              >
+                CompuChat
+              </Button>
+            </Box>
           </Box>
         </Paper>
       </Box>
@@ -1857,6 +1875,23 @@ const PublicMenuForm = ({
             <Typography variant="h5" gutterBottom>
               {form.successMessage || "Obrigado! Seu pedido foi enviado com sucesso."}
             </Typography>
+            {/* Link para CompuChat na mensagem de sucesso */}
+            <Box style={{ marginTop: 24, textAlign: "center", paddingTop: 16, borderTop: "1px solid #e0e0e0" }}>
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: 8 }}>
+                Formulário criado com
+              </Typography>
+              <Button
+                href="https://www.compuchat.cloud"
+                target="_blank"
+                rel="noopener noreferrer"
+                variant="text"
+                color="primary"
+                size="small"
+                style={{ textTransform: "none" }}
+              >
+                CompuChat
+              </Button>
+            </Box>
           </Box>
         </Paper>
       </Box>
@@ -2538,6 +2573,24 @@ const PublicMenuForm = ({
                 >
                   {submitting ? "Enviando..." : "Finalizar Pedido"}
                 </Button>
+
+                {/* Link para CompuChat no final do formulário */}
+                <Box style={{ marginTop: 24, textAlign: "center", paddingTop: 16, borderTop: "1px solid #e0e0e0" }}>
+                  <Typography variant="body2" color="textSecondary" style={{ marginBottom: 8 }}>
+                    Formulário criado com
+                  </Typography>
+                  <Button
+                    href="https://www.compuchat.cloud"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    variant="text"
+                    color="primary"
+                    size="small"
+                    style={{ textTransform: "none" }}
+                  >
+                    CompuChat
+                  </Button>
+                </Box>
               </Box>
             </form>
           )}
