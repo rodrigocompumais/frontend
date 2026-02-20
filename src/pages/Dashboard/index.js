@@ -47,8 +47,13 @@ import FormControl from "@material-ui/core/FormControl";
 import InputLabel from "@material-ui/core/InputLabel";
 import toastError from "../../errors/toastError";
 import SettingsIcon from "@material-ui/icons/Settings";
+import Tabs from "@material-ui/core/Tabs";
+import Tab from "@material-ui/core/Tab";
+import DashboardIcon from "@material-ui/icons/Dashboard";
+import BarChartIcon from "@material-ui/icons/BarChart";
+import EventIcon from "@material-ui/icons/Event";
 
-import { makeStyles } from "@material-ui/core/styles";
+import { makeStyles, useTheme } from "@material-ui/core/styles";
 import { toast } from "react-toastify";
 
 import TableAttendantsStatus from "../../components/Dashboard/TableAttendantsStatus";
@@ -81,18 +86,28 @@ const useStyles = makeStyles((theme) => ({
     width: '100%',
     minHeight: "calc(100vh - 48px)",
     background: theme.palette.type === "dark" 
-      ? "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)"
-      : "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
-    paddingBottom: theme.spacing(4),
+      ? "#0F172A"
+      : "#FAFBFC",
+    paddingBottom: theme.spacing(6),
   },
   container: {
     maxWidth: '100%',
     width: '100%',
-    paddingTop: theme.spacing(3),
-    paddingBottom: theme.spacing(4),
-    paddingLeft: theme.spacing(3),
-    paddingRight: theme.spacing(3),
+    paddingTop: theme.spacing(4),
+    paddingBottom: theme.spacing(6),
+    paddingLeft: theme.spacing(6),
+    paddingRight: theme.spacing(6),
+    backgroundColor: "transparent",
+    [theme.breakpoints.down('md')]: {
+      paddingLeft: theme.spacing(4),
+      paddingRight: theme.spacing(4),
+    },
     [theme.breakpoints.down('sm')]: {
+      paddingLeft: theme.spacing(3),
+      paddingRight: theme.spacing(3),
+      paddingTop: theme.spacing(3),
+    },
+    [theme.breakpoints.down('xs')]: {
       paddingLeft: theme.spacing(2),
       paddingRight: theme.spacing(2),
     },
@@ -101,7 +116,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: theme.spacing(3),
+    marginBottom: theme.spacing(4),
     flexWrap: "wrap",
     gap: theme.spacing(2),
   },
@@ -109,21 +124,26 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
   },
   title: {
-    fontSize: "1.75rem",
+    fontSize: "1.5rem",
     fontWeight: 700,
     color: theme.palette.text.primary,
     marginBottom: theme.spacing(0.5),
+    lineHeight: 1.2,
+    letterSpacing: "-0.02em",
   },
   subtitle: {
-    fontSize: "0.85rem",
+    fontSize: "0.875rem",
     color: theme.palette.text.secondary,
     display: "flex",
     alignItems: "center",
     gap: theme.spacing(1),
+    lineHeight: 1.5,
+    fontWeight: 400,
   },
   lastUpdate: {
     fontSize: "0.75rem",
     color: theme.palette.text.disabled,
+    fontWeight: 400,
   },
   actions: {
     display: "flex",
@@ -139,30 +159,50 @@ const useStyles = makeStyles((theme) => ({
     },
   },
   refreshButton: {
-    backgroundColor: theme.palette.background.paper,
-    border: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.type === "dark" ? "#1E293B" : "#FFFFFF",
+    border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
+    boxShadow: theme.palette.type === "dark" ? "none" : "0 1px 2px 0 rgba(0, 0, 0, 0.05)",
+    transition: "all 0.2s ease",
     "&:hover": {
-      backgroundColor: theme.palette.action.hover,
+      backgroundColor: theme.palette.type === "dark" ? "#334155" : "#F9FAFB",
+      borderColor: theme.palette.type === "dark" ? "#475569" : "#D1D5DB",
+      transform: "translateY(-1px)",
+      boxShadow: theme.palette.type === "dark" ? "0 4px 6px -1px rgba(0, 0, 0, 0.3)" : "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
     },
   },
   statsSection: {
-    marginBottom: theme.spacing(3),
+    marginBottom: theme.spacing(4),
+    "& > *": {
+      animation: "$fadeIn 0.4s ease-out",
+      "&:nth-of-type(1)": { animationDelay: "0.05s" },
+      "&:nth-of-type(2)": { animationDelay: "0.1s" },
+      "&:nth-of-type(3)": { animationDelay: "0.15s" },
+      "&:nth-of-type(4)": { animationDelay: "0.2s" },
+      "&:nth-of-type(5)": { animationDelay: "0.25s" },
+      "&:nth-of-type(6)": { animationDelay: "0.3s" },
+    },
   },
   secondaryStats: {
-    marginBottom: theme.spacing(3),
+    marginBottom: theme.spacing(4),
+    "& > *": {
+      animation: "$fadeIn 0.4s ease-out",
+    },
   },
   sectionTitle: {
-    fontSize: "1rem",
+    fontSize: "0.875rem",
     fontWeight: 600,
-    color: theme.palette.text.primary,
-    marginBottom: theme.spacing(2),
-    marginTop: theme.spacing(3),
+    color: theme.palette.text.secondary,
+    marginBottom: theme.spacing(2.5),
+    marginTop: theme.spacing(4),
     display: "flex",
     alignItems: "center",
     gap: theme.spacing(1),
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
+    lineHeight: 1.2,
   },
   chartsSection: {
-    marginBottom: theme.spacing(3),
+    marginBottom: theme.spacing(4),
   },
   spinning: {
     animation: "$spin 1s linear infinite",
@@ -170,6 +210,45 @@ const useStyles = makeStyles((theme) => ({
   "@keyframes spin": {
     "0%": { transform: "rotate(0deg)" },
     "100%": { transform: "rotate(360deg)" },
+  },
+  "@keyframes fadeIn": {
+    "0%": {
+      opacity: 0,
+      transform: "translateY(8px)",
+    },
+    "100%": {
+      opacity: 1,
+      transform: "translateY(0)",
+    },
+  },
+  "@keyframes slideIn": {
+    "0%": {
+      opacity: 0,
+      transform: "translateX(-8px)",
+    },
+    "100%": {
+      opacity: 1,
+      transform: "translateX(0)",
+    },
+  },
+  cardAnimation: {
+    animation: "$fadeIn 0.3s ease-out",
+  },
+  modernCard: {
+    padding: theme.spacing(3),
+    backgroundColor: theme.palette.type === "dark" ? "#1E293B" : "#FFFFFF",
+    border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
+    borderRadius: theme.spacing(2),
+    boxShadow: theme.palette.type === "dark" 
+      ? "0 1px 3px 0 rgba(0, 0, 0, 0.3)" 
+      : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      boxShadow: theme.palette.type === "dark"
+        ? "0 4px 6px -1px rgba(0, 0, 0, 0.4)"
+        : "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+      borderColor: theme.palette.type === "dark" ? "#475569" : "#D1D5DB",
+    },
   },
   summaryButton: {
     background: "linear-gradient(135deg, #0EA5E9 0%, #38BDF8 100%)",
@@ -197,11 +276,12 @@ const useStyles = makeStyles((theme) => ({
   },
   summaryBox: {
     backgroundColor: theme.palette.type === "dark" 
-      ? "rgba(255, 255, 255, 0.03)" 
-      : "rgba(0, 0, 0, 0.02)",
+      ? "#1E293B" 
+      : "#FFFFFF",
     borderRadius: theme.spacing(1.5),
     padding: theme.spacing(3),
     marginBottom: theme.spacing(2),
+    border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
   },
   summarySection: {
     marginBottom: theme.spacing(3),
@@ -257,8 +337,8 @@ const useStyles = makeStyles((theme) => ({
     cursor: "pointer",
     "&:hover": {
       backgroundColor: theme.palette.type === "dark" 
-        ? "rgba(255, 255, 255, 0.05)" 
-        : "rgba(0, 0, 0, 0.02)",
+        ? "#334155" 
+        : "#F9FAFB",
     },
   },
   taskPriority: {
@@ -280,20 +360,6 @@ const useStyles = makeStyles((theme) => ({
     justifyContent: "center",
     padding: theme.spacing(6),
     gap: theme.spacing(2),
-  },
-  summaryBox: {
-    backgroundColor: theme.palette.type === "dark" 
-      ? "rgba(255, 255, 255, 0.03)" 
-      : "rgba(0, 0, 0, 0.02)",
-    borderRadius: theme.spacing(1.5),
-    padding: theme.spacing(3),
-    marginBottom: theme.spacing(2),
-  },
-  summarySection: {
-    marginBottom: theme.spacing(3),
-    "&:last-child": {
-      marginBottom: 0,
-    },
   },
   summaryTitle: {
     fontWeight: 600,
@@ -325,6 +391,44 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.spacing(1),
     borderLeft: `3px solid ${theme.palette.primary.main}`,
     marginBottom: theme.spacing(2),
+  },
+  tabsContainer: {
+    backgroundColor: theme.palette.type === "dark" ? "#1E293B" : "#FFFFFF",
+    borderRadius: theme.spacing(2),
+    marginBottom: theme.spacing(4),
+    boxShadow: theme.palette.type === "dark" 
+      ? "0 1px 3px 0 rgba(0, 0, 0, 0.3)" 
+      : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
+    border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
+    "& .MuiTabs-indicator": {
+      height: 2,
+      borderRadius: "2px 2px 0 0",
+    },
+    "& .MuiTab-root": {
+      textTransform: "none",
+      fontWeight: 500,
+      fontSize: "0.875rem",
+      minHeight: 48,
+      padding: theme.spacing(1.5, 2),
+      transition: "all 0.2s ease",
+      "&:hover": {
+        color: theme.palette.primary.main,
+      },
+    },
+  },
+  tabPanel: {
+    paddingTop: theme.spacing(4),
+    animation: "$fadeIn 0.3s ease-in",
+  },
+  "@keyframes fadeIn": {
+    "0%": {
+      opacity: 0,
+      transform: "translateY(8px)",
+    },
+    "100%": {
+      opacity: 1,
+      transform: "translateY(0)",
+    },
   },
 }));
 
@@ -475,6 +579,7 @@ const FormattedSummary = ({ text, classes }) => {
 
 const Dashboard = () => {
   const classes = useStyles();
+  const theme = useTheme();
   const [counters, setCounters] = useState({});
   const [extendedData, setExtendedData] = useState({});
   const [attendants, setAttendants] = useState([]);
@@ -489,6 +594,8 @@ const Dashboard = () => {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryText, setSummaryText] = useState("");
   const [summaryAgentName, setSummaryAgentName] = useState("");
+  const [generalSummary, setGeneralSummary] = useState("");
+  const [generalSummaryLoading, setGeneralSummaryLoading] = useState(false);
   // Estados para modal de tickets por status
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [ticketModalTitle, setTicketModalTitle] = useState("");
@@ -498,6 +605,12 @@ const Dashboard = () => {
   // Estados para tarefas pendentes
   const [pendingTasks, setPendingTasks] = useState([]);
   const [tasksLoading, setTasksLoading] = useState(false);
+  // Estados para aba de tarefas
+  const [allTasks, setAllTasks] = useState([]);
+  const [appointments, setAppointments] = useState([]);
+  const [tasksTabLoading, setTasksTabLoading] = useState(false);
+  // Estado para aba ativa
+  const [activeTab, setActiveTab] = useState(0);
   const { find } = useDashboard();
   const { count: contactsCount } = useContacts({});
   const { modules: companyModuleSlugs, hasLanchonetes } = useCompanyModules();
@@ -627,6 +740,47 @@ const Dashboard = () => {
     return () => clearInterval(interval);
   }, [autoRefresh, fetchData]);
 
+
+  // Buscar tarefas e agendamentos quando a aba Tarefas for aberta
+  useEffect(() => {
+    if (activeTab === 4) {
+      fetchTasksAndAppointments();
+    }
+  }, [activeTab]); // eslint-disable-line
+
+  const fetchTasksAndAppointments = async () => {
+    setTasksTabLoading(true);
+    try {
+      // Buscar todas as tarefas
+      const { data: tasksData } = await api.get("/tasks", {
+        params: {
+          showAll: true,
+          limit: 100,
+        },
+      });
+      setAllTasks(tasksData.tasks || []);
+
+      // Buscar agendamentos
+      try {
+        const { data: appointmentsData } = await api.get("/user-appointments", {
+          params: {
+            pageNumber: 1,
+            filterType: "all",
+          },
+        });
+        setAppointments(appointmentsData.appointments || []);
+      } catch (err) {
+        console.log("Agendamentos não disponíveis");
+        setAppointments([]);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar tarefas:", err);
+      setAllTasks([]);
+    } finally {
+      setTasksTabLoading(false);
+    }
+  };
+
   function formatTime(minutes) {
     return moment()
       .startOf("day")
@@ -635,30 +789,19 @@ const Dashboard = () => {
   }
 
   const handleGenerateSummary = async () => {
-    // Abrir o modal primeiro para mostrar a tela de carregamento
+    // Gerar resumo por atendente
     setSummaryLoading(true);
     setSummaryText("");
     
-    // Se tiver atendente selecionado, buscar nome dele, senão é resumo geral
-    if (selectedAgentId) {
-      const selectedAgent = attendants.find((a) => a.id === Number(selectedAgentId));
-      setSummaryAgentName(selectedAgent?.name || "Atendente");
-    } else {
-      setSummaryAgentName("Resumo Geral da Operação");
-    }
-    
-    // Abrir o modal imediatamente para mostrar o loading
+    const selectedAgent = attendants.find((a) => a.id === Number(selectedAgentId));
+    setSummaryAgentName(selectedAgent?.name || "Atendente");
     setSummaryModalOpen(true);
 
     try {
       const params = {
         maxMessages: 200,
+        agentId: Number(selectedAgentId),
       };
-
-      // Só enviar agentId se tiver selecionado
-      if (selectedAgentId) {
-        params.agentId = Number(selectedAgentId);
-      }
 
       if (!isEmpty(dateFrom) && moment(dateFrom).isValid()) {
         params.dateStart = moment(dateFrom).format("YYYY-MM-DD");
@@ -682,10 +825,44 @@ const Dashboard = () => {
       } else {
         toastError(err);
       }
-      // Fechar o modal em caso de erro
       setSummaryModalOpen(false);
     } finally {
       setSummaryLoading(false);
+    }
+  };
+
+  const handleGenerateGeneralSummary = async () => {
+    setGeneralSummaryLoading(true);
+    setGeneralSummary("");
+    try {
+      const params = {
+        maxMessages: 200,
+      };
+
+      if (!isEmpty(dateFrom) && moment(dateFrom).isValid()) {
+        params.dateStart = moment(dateFrom).format("YYYY-MM-DD");
+      }
+
+      if (!isEmpty(dateTo) && moment(dateTo).isValid()) {
+        params.dateEnd = moment(dateTo).format("YYYY-MM-DD");
+      }
+
+      if (period > 0 && isEmpty(dateFrom) && isEmpty(dateTo)) {
+        const startDate = moment().subtract(period, "days");
+        params.dateStart = startDate.format("YYYY-MM-DD");
+        params.dateEnd = moment().format("YYYY-MM-DD");
+      }
+
+      const { data } = await api.post("/ai/summary/agent", params);
+      setGeneralSummary(data.summary || "Nenhum resumo disponível.");
+    } catch (err) {
+      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
+        toast.error("Configure a API Key do Gemini em Configurações → Integrações");
+      } else {
+        toastError(err);
+      }
+    } finally {
+      setGeneralSummaryLoading(false);
     }
   };
 
@@ -778,26 +955,27 @@ const Dashboard = () => {
                   color="primary"
                 />
               }
-              label="Auto"
+              label={<Typography variant="caption" style={{ fontSize: "0.75rem" }}>Auto</Typography>}
             />
 
-            <Tooltip title="Atualizar">
+            <Tooltip title="Atualizar dados">
               <IconButton
                 className={classes.refreshButton}
                 onClick={fetchData}
                 disabled={loading}
                 size="small"
               >
-                <RefreshIcon className={loading ? classes.spinning : ""} />
+                <RefreshIcon className={loading ? classes.spinning : ""} style={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
 
-            <Tooltip title="Configurar Botões de Acesso Rápido">
+            <Tooltip title="Configurações">
               <IconButton
                 onClick={() => history.push("/quick-access-buttons-settings")}
                 size="small"
+                className={classes.refreshButton}
               >
-                <SettingsIcon />
+                <SettingsIcon style={{ fontSize: 18 }} />
               </IconButton>
             </Tooltip>
 
@@ -814,8 +992,29 @@ const Dashboard = () => {
           </Box>
         </Box>
 
-        {/* Primary Stats */}
-        <Grid container spacing={2} className={classes.statsSection}>
+        {/* Tabs */}
+        <Paper className={classes.tabsContainer} elevation={0}>
+          <Tabs
+            value={activeTab}
+            onChange={(e, newValue) => setActiveTab(newValue)}
+            indicatorColor="primary"
+            textColor="primary"
+            variant="scrollable"
+            scrollButtons="auto"
+          >
+            <Tab icon={<DashboardIcon />} label="Visão Geral" />
+            <Tab icon={<BarChartIcon />} label="Análises" />
+            <Tab icon={<PeopleIcon />} label="Atendentes" />
+            <Tab icon={<GeminiIcon />} label="IA" />
+            <Tab icon={<AssignmentIcon />} label="Tarefas" />
+          </Tabs>
+        </Paper>
+
+        {/* Tab Panel - Visão Geral */}
+        {activeTab === 0 && (
+          <Box className={classes.tabPanel}>
+            {/* Primary Stats */}
+            <Grid container spacing={3} className={classes.statsSection}>
           <Grid item xs={6} sm={4} md={2}>
             <StatCard
               title="Em Atendimento"
@@ -882,7 +1081,7 @@ const Dashboard = () => {
         </Grid>
 
         {/* Secondary Stats */}
-        <Grid container spacing={2} className={classes.secondaryStats}>
+        <Grid container spacing={3} className={classes.secondaryStats}>
           <Grid item xs={6} sm={4} md={3}>
             <MiniStatCard
               title="Tickets Hoje"
@@ -924,15 +1123,6 @@ const Dashboard = () => {
             />
           </Grid>
 
-          <Grid item xs={6} sm={4} md={3}>
-            <MiniStatCard
-              title="Tarefas Pendentes"
-              value={extendedData.pendingTasks || 0}
-              icon={AssignmentIcon}
-              color="#EF4444"
-              subtext="aguardando"
-            />
-          </Grid>
 
           {hasLanchonetes && (
             <>
@@ -964,13 +1154,13 @@ const Dashboard = () => {
                 />
               </Grid>
               <Grid item xs={12}>
-                <Box display="flex" gap={2} flexWrap="wrap" marginTop={1}>
+                <Box display="flex" gap={2} flexWrap="wrap" marginTop={2}>
                   <Button
                     variant="contained"
                     color="primary"
                     startIcon={<AssignmentIcon />}
                     onClick={() => history.push("/pedidos")}
-                    style={{ textTransform: "none" }}
+                    style={{ textTransform: "none", borderRadius: 8 }}
                   >
                     Kanban de Pedidos
                   </Button>
@@ -980,7 +1170,7 @@ const Dashboard = () => {
                         variant="outlined"
                         startIcon={<QueueIcon />}
                         onClick={() => history.push(`/forms/${ordersStats.firstCardapioFormId}/fila-pedidos`)}
-                        style={{ textTransform: "none" }}
+                        style={{ textTransform: "none", borderRadius: 8 }}
                       >
                         Fila de Pedidos
                       </Button>
@@ -988,7 +1178,7 @@ const Dashboard = () => {
                         variant="outlined"
                         startIcon={<HistoryIcon />}
                         onClick={() => history.push(`/forms/${ordersStats.firstCardapioFormId}/historico-pedidos`)}
-                        style={{ textTransform: "none" }}
+                        style={{ textTransform: "none", borderRadius: 8 }}
                       >
                         Histórico de Pedidos
                       </Button>
@@ -998,7 +1188,7 @@ const Dashboard = () => {
                     variant="outlined"
                     startIcon={<RestaurantIcon />}
                     onClick={() => history.push("/forms")}
-                    style={{ textTransform: "none" }}
+                    style={{ textTransform: "none", borderRadius: 8 }}
                   >
                     Formulários
                   </Button>
@@ -1037,165 +1227,16 @@ const Dashboard = () => {
             />
           </Grid>
         </Grid>
+          </Box>
+        )}
 
-        {/* Módulos */}
-        <Typography className={classes.sectionTitle}>
-          <ViewModuleIcon fontSize="small" />
-          Módulos
-        </Typography>
-        <Grid container spacing={2} className={classes.secondaryStats}>
-          {modulesWithDetails.length === 0 ? (
-            <Grid item xs={12}>
-              <Paper elevation={2} style={{ padding: 24, textAlign: "center" }}>
-                <Typography color="textSecondary">
-                  Nenhum módulo contratado ou carregando...
-                </Typography>
-              </Paper>
-            </Grid>
-          ) : (
-            modulesWithDetails.map((mod) => (
-              <Grid item xs={12} sm={6} md={4} key={mod.id}>
-                <Paper elevation={2} style={{ padding: 20, height: "100%", display: "flex", flexDirection: "column" }}>
-                  <Box display="flex" alignItems="center" gap={1} marginBottom={1.5}>
-                    <ViewModuleIcon style={{ color: "#6366F1", fontSize: 28 }} />
-                    <Typography variant="h6" style={{ fontWeight: 600 }}>
-                      {mod.name || mod.id}
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="textSecondary" style={{ flex: 1, whiteSpace: "pre-wrap" }}>
-                    {mod.description || "Sem descrição."}
-                  </Typography>
-                </Paper>
-              </Grid>
-            ))
-          )}
-        </Grid>
-
-        {/* AI Tokens Section */}
-        <Typography className={classes.sectionTitle}>
-          🤖 Status das APIs de IA
-        </Typography>
-        <Grid container spacing={2} className={classes.secondaryStats}>
-          <Grid item xs={12} sm={6} md={6}>
-            <Paper 
-              elevation={2} 
-              style={{ 
-                padding: 16, 
-                backgroundColor: extendedData.geminiTokens?.available 
-                  ? (extendedData.geminiTokens?.quotaExceeded ? "#FEF3C7" : "#D1FAE5") 
-                  : "#FEE2E2",
-                borderLeft: `4px solid ${
-                  extendedData.geminiTokens?.available 
-                    ? (extendedData.geminiTokens?.quotaExceeded ? "#F59E0B" : "#22C55E") 
-                    : "#EF4444"
-                }`
-              }}
-            >
-              <Box style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                <GeminiIcon style={{ fontSize: 24 }} />
-                <Typography variant="h6" style={{ fontWeight: 600, flex: 1 }}>
-                  Gemini API
-                </Typography>
-                <Chip
-                  label={extendedData.geminiTokens?.available 
-                    ? (extendedData.geminiTokens?.quotaExceeded ? "Quota Excedida" : "Disponível") 
-                    : "Indisponível"}
-                  size="small"
-                  style={{
-                    backgroundColor: extendedData.geminiTokens?.available 
-                      ? (extendedData.geminiTokens?.quotaExceeded ? "#F59E0B" : "#22C55E") 
-                      : "#EF4444",
-                    color: "#FFFFFF",
-                    fontWeight: 600
-                  }}
-                />
-              </Box>
-              <Typography variant="body2" color="textSecondary" style={{ marginTop: 4 }}>
-                {extendedData.geminiTokens?.error || 
-                 (extendedData.geminiTokens?.available 
-                   ? (extendedData.geminiTokens?.quotaExceeded 
-                       ? "A quota da API foi excedida. Verifique seu plano." 
-                       : "API funcionando normalmente")
-                   : "API não configurada ou indisponível")}
-              </Typography>
-              {extendedData.geminiTokens?.tokensUsed !== undefined && (
-                <Box style={{ marginTop: 8 }}>
-                  <Typography variant="caption" color="textSecondary" style={{ display: "block" }}>
-                    Tokens usados (última chamada): <strong>{extendedData.geminiTokens.tokensUsed.toLocaleString()}</strong>
-                  </Typography>
-                  {extendedData.geminiTokens?.tokensTotal !== undefined && (
-                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 2 }}>
-                      Tokens restantes: <strong>{extendedData.geminiTokens.tokensRemaining?.toLocaleString() || "N/A"}</strong> / {extendedData.geminiTokens.tokensTotal.toLocaleString()}
-                    </Typography>
-                  )}
-                </Box>
-              )}
-            </Paper>
-          </Grid>
-
-          <Grid item xs={12} sm={6} md={6}>
-            <Paper 
-              elevation={2} 
-              style={{ 
-                padding: 16, 
-                backgroundColor: extendedData.openAITokens?.available 
-                  ? (extendedData.openAITokens?.quotaExceeded ? "#FEF3C7" : "#D1FAE5") 
-                  : "#FEE2E2",
-                borderLeft: `4px solid ${
-                  extendedData.openAITokens?.available 
-                    ? (extendedData.openAITokens?.quotaExceeded ? "#F59E0B" : "#22C55E") 
-                    : "#EF4444"
-                }`
-              }}
-            >
-              <Box style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 8 }}>
-                <ExtensionIcon style={{ fontSize: 24 }} />
-                <Typography variant="h6" style={{ fontWeight: 600, flex: 1 }}>
-                  OpenAI API
-                </Typography>
-                <Chip
-                  label={extendedData.openAITokens?.available 
-                    ? (extendedData.openAITokens?.quotaExceeded ? "Quota Excedida" : "Disponível") 
-                    : "Indisponível"}
-                  size="small"
-                  style={{
-                    backgroundColor: extendedData.openAITokens?.available 
-                      ? (extendedData.openAITokens?.quotaExceeded ? "#F59E0B" : "#22C55E") 
-                      : "#EF4444",
-                    color: "#FFFFFF",
-                    fontWeight: 600
-                  }}
-                />
-              </Box>
-              <Typography variant="body2" color="textSecondary" style={{ marginTop: 4 }}>
-                {extendedData.openAITokens?.error || 
-                 (extendedData.openAITokens?.available 
-                   ? (extendedData.openAITokens?.quotaExceeded 
-                       ? "A quota da API foi excedida. Verifique seu plano." 
-                       : "API funcionando normalmente")
-                   : "API não configurada ou indisponível")}
-              </Typography>
-              {extendedData.openAITokens?.tokensUsed !== undefined && (
-                <Box style={{ marginTop: 8 }}>
-                  <Typography variant="caption" color="textSecondary" style={{ display: "block" }}>
-                    Tokens usados (última chamada): <strong>{extendedData.openAITokens.tokensUsed.toLocaleString()}</strong>
-                  </Typography>
-                  {extendedData.openAITokens?.tokensTotal !== undefined && (
-                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 2 }}>
-                      Tokens restantes: <strong>{extendedData.openAITokens.tokensRemaining?.toLocaleString() || "N/A"}</strong> / {extendedData.openAITokens.tokensTotal.toLocaleString()}
-                    </Typography>
-                  )}
-                </Box>
-              )}
-            </Paper>
-          </Grid>
-        </Grid>
-
-        {/* Charts Section */}
-        <Typography className={classes.sectionTitle}>
-          📊 Análises e Gráficos
-        </Typography>
-        <Grid container spacing={3} className={classes.chartsSection}>
+        {/* Tab Panel - Análises */}
+        {activeTab === 1 && (
+          <Box className={classes.tabPanel}>
+            <Typography className={classes.sectionTitle}>
+              📊 Análises e Gráficos
+            </Typography>
+            <Grid container spacing={3} className={classes.chartsSection}>
           <Grid item xs={12} md={8}>
             <LineChartComponent
               data={extendedData.ticketsByDay || []}
@@ -1233,131 +1274,490 @@ const Dashboard = () => {
             />
           </Grid>
         </Grid>
+          </Box>
+        )}
 
-        {/* Pending Tasks Section */}
-        {pendingTasks.length > 0 && (
-          <>
+        {/* Tab Panel - Atendentes */}
+        {activeTab === 2 && (
+          <Box className={classes.tabPanel}>
+            {attendants.length > 0 && (
+              <>
+                <Typography className={classes.sectionTitle}>
+                  👥 Status dos Atendentes
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12}>
+                    <TableAttendantsStatus
+                      attendants={attendants}
+                      loading={loading}
+                    />
+                  </Grid>
+                </Grid>
+              </>
+            )}
+            {attendants.length === 0 && (
+              <Box textAlign="center" py={6}>
+                <Typography variant="h6" color="textSecondary">
+                  Nenhum atendente encontrado
+                </Typography>
+              </Box>
+            )}
+          </Box>
+        )}
+
+        {/* Tab Panel - IA */}
+        {activeTab === 3 && (
+          <Box className={classes.tabPanel}>
+            {/* Geração de Resumos com IA */}
             <Typography className={classes.sectionTitle}>
-              📋 Tarefas Pendentes
+              🤖 Resumos Automáticos com IA
             </Typography>
-            <Grid container spacing={3} className={classes.tasksSection}>
-              <Grid item xs={12}>
-                <Paper elevation={2} className={classes.tasksTable}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell><strong>Tarefa</strong></TableCell>
-                        <TableCell><strong>Prioridade</strong></TableCell>
-                        <TableCell><strong>Categoria</strong></TableCell>
-                        <TableCell><strong>Prazo</strong></TableCell>
-                        <TableCell><strong>Responsável</strong></TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {pendingTasks.map((task) => (
-                        <TableRow
-                          key={task.id}
-                          className={classes.taskRow}
-                          onClick={() => history.push("/todolist")}
-                        >
-                          <TableCell>
-                            <Typography variant="body2" style={{ fontWeight: 500 }}>
-                              {task.title || "Sem título"}
-                            </Typography>
-                            {task.description && (
-                              <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 4 }}>
-                                {task.description.length > 60 
-                                  ? `${task.description.substring(0, 60)}...` 
-                                  : task.description}
-                              </Typography>
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Chip
-                              label={task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
-                              size="small"
-                              className={`${classes.taskPriority} ${
-                                task.priority === "high" 
-                                  ? classes.taskPriorityHigh 
-                                  : task.priority === "medium" 
-                                  ? classes.taskPriorityMedium 
-                                  : classes.taskPriorityLow
-                              }`}
-                              style={{
-                                backgroundColor: task.priority === "high" 
-                                  ? "rgba(239, 68, 68, 0.1)" 
-                                  : task.priority === "medium" 
-                                  ? "rgba(245, 158, 11, 0.1)" 
-                                  : "rgba(34, 197, 94, 0.1)",
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" color="textSecondary">
-                              {task.category || "-"}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" color="textSecondary">
-                              {task.dueDate 
-                                ? moment(task.dueDate).format("DD/MM/YYYY")
-                                : "-"}
-                            </Typography>
-                            {task.dueDate && moment(task.dueDate).isBefore(moment(), 'day') && (
-                              <Chip
-                                label="Atrasada"
-                                size="small"
-                                style={{
-                                  backgroundColor: "#EF4444",
-                                  color: "#FFFFFF",
-                                  marginTop: 4,
-                                  fontSize: "0.7rem",
-                                }}
-                              />
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            <Typography variant="body2" color="textSecondary">
-                              {task.user?.name || "Não atribuída"}
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
+            <Grid container spacing={3}>
+              {/* Resumo por Atendente */}
+              <Grid item xs={12} md={6}>
+                <Paper 
+                  elevation={0}
+                  className={classes.modernCard}
+                >
+                  <Box display="flex" alignItems="center" gap={2} marginBottom={2}>
+                    <Box
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 12,
+                        backgroundColor: "rgba(139, 92, 246, 0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <PeopleIcon style={{ fontSize: 24, color: "#8B5CF6" }} />
+                    </Box>
+                    <Box flex={1}>
+                      <Typography variant="h6" style={{ fontWeight: 600, marginBottom: 4, fontSize: "1rem" }}>
+                        Resumo por Atendente
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary" style={{ fontSize: "0.875rem", lineHeight: 1.5 }}>
+                        Gere resumos específicos para cada atendente
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <FormControl fullWidth style={{ marginTop: 16 }}>
+                    <InputLabel>Selecione o Atendente</InputLabel>
+                    <Select
+                      value={selectedAgentId}
+                      onChange={(e) => setSelectedAgentId(e.target.value)}
+                      label="Selecione o Atendente"
+                    >
+                      {attendants.map((attendant) => (
+                        <MenuItem key={attendant.id} value={String(attendant.id)}>
+                          {attendant.name}
+                        </MenuItem>
                       ))}
-                    </TableBody>
-                  </Table>
-                  {pendingTasks.length >= 10 && (
-                    <Box p={2} textAlign="center">
-                      <Button
-                        variant="outlined"
-                        color="primary"
-                        onClick={() => history.push("/todolist")}
-                        endIcon={<OpenInNewIcon />}
+                    </Select>
+                  </FormControl>
+                  <Button
+                    variant="outlined"
+                    color="primary"
+                    fullWidth
+                    onClick={handleGenerateSummary}
+                    disabled={summaryLoading || !selectedAgentId}
+                    startIcon={summaryLoading ? <CircularProgress size={20} /> : <PeopleIcon />}
+                    style={{ marginTop: 16, textTransform: "none", borderRadius: 8, padding: "10px 16px" }}
+                  >
+                    {summaryLoading ? "Gerando..." : "Gerar Resumo do Atendente"}
+                  </Button>
+                  {summaryText && (
+                    <Box marginTop={3}>
+                      <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2}>
+                        <Typography variant="h6" style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+                          📄 Resumo: {summaryAgentName}
+                        </Typography>
+                        <Box display="flex" gap={1}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={handleDownloadSummary}
+                            startIcon={<GetAppIcon />}
+                            style={{ textTransform: "none", borderRadius: 8 }}
+                          >
+                            Baixar
+                          </Button>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => setSummaryText("")}
+                            style={{ 
+                              backgroundColor: "transparent",
+                            }}
+                          >
+                            <CloseIcon />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                      <Box 
+                        style={{ 
+                          maxHeight: "400px", 
+                          overflowY: "auto", 
+                          padding: 16,
+                          backgroundColor: theme.palette.type === "dark" 
+                            ? "#1E293B" 
+                            : "#FFFFFF",
+                          borderRadius: 12,
+                          border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
+                          ...classes.scrollbarStyles
+                        }}
                       >
-                        Ver todas as tarefas
-                      </Button>
+                        <FormattedSummary text={summaryText} classes={classes} />
+                      </Box>
+                    </Box>
+                  )}
+                </Paper>
+              </Grid>
+
+              {/* Resumo Geral */}
+              <Grid item xs={12} md={6}>
+                <Paper 
+                  elevation={0}
+                  className={classes.modernCard}
+                >
+                  <Box display="flex" alignItems="center" gap={2} marginBottom={2}>
+                    <Box
+                      style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: 12,
+                        backgroundColor: "rgba(14, 165, 233, 0.1)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      <GeminiIcon style={{ fontSize: 24, color: "#0EA5E9" }} />
+                    </Box>
+                    <Box flex={1}>
+                      <Typography variant="h6" style={{ fontWeight: 600, marginBottom: 4, fontSize: "1rem" }}>
+                        Resumo Geral da Operação
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary" style={{ fontSize: "0.875rem", lineHeight: 1.5 }}>
+                        Gere um resumo completo das conversas e atividades do período selecionado
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    fullWidth
+                    onClick={handleGenerateGeneralSummary}
+                    disabled={generalSummaryLoading}
+                    startIcon={generalSummaryLoading ? <CircularProgress size={20} /> : <GeminiIcon />}
+                    style={{ marginTop: 16, textTransform: "none", borderRadius: 8, padding: "10px 16px" }}
+                  >
+                    {generalSummaryLoading ? "Gerando Resumo..." : "Gerar Resumo Geral"}
+                  </Button>
+                  {generalSummary && (
+                    <Box marginTop={3}>
+                      <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2}>
+                        <Typography variant="h6" style={{ fontWeight: 600, fontSize: "0.875rem" }}>
+                          📄 Resumo Geral
+                        </Typography>
+                        <Box display="flex" gap={1}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => {
+                              const blob = new Blob([generalSummary], { type: "text/plain" });
+                              const url = URL.createObjectURL(blob);
+                              const link = document.createElement("a");
+                              link.href = url;
+                              link.download = `resumo-geral-${moment().format("YYYY-MM-DD")}.txt`;
+                              document.body.appendChild(link);
+                              link.click();
+                              document.body.removeChild(link);
+                              URL.revokeObjectURL(url);
+                            }}
+                            startIcon={<GetAppIcon />}
+                            style={{ textTransform: "none", borderRadius: 8 }}
+                          >
+                            Baixar
+                          </Button>
+                          <IconButton 
+                            size="small" 
+                            onClick={() => setGeneralSummary("")}
+                            style={{ 
+                              backgroundColor: "transparent",
+                            }}
+                          >
+                            <CloseIcon />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                      <Box 
+                        style={{ 
+                          maxHeight: "400px", 
+                          overflowY: "auto", 
+                          padding: 16,
+                          backgroundColor: theme.palette.type === "dark" 
+                            ? "#1E293B" 
+                            : "#FFFFFF",
+                          borderRadius: 12,
+                          border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
+                          ...classes.scrollbarStyles
+                        }}
+                      >
+                        <FormattedSummary text={generalSummary} classes={classes} />
+                      </Box>
                     </Box>
                   )}
                 </Paper>
               </Grid>
             </Grid>
-          </>
+          </Box>
         )}
 
-        {/* Attendants Table */}
-        {attendants.length > 0 && (
-          <>
+        {/* Tab Panel - Tarefas */}
+        {activeTab === 4 && (
+          <Box className={classes.tabPanel}>
             <Typography className={classes.sectionTitle}>
-              👥 Status dos Atendentes
+              📋 Tarefas e Agendamentos
             </Typography>
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <TableAttendantsStatus
-                  attendants={attendants}
-                  loading={loading}
-                />
+            
+            {tasksTabLoading ? (
+              <Box display="flex" justifyContent="center" py={6}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <Grid container spacing={3}>
+                {/* Seção de Tarefas */}
+                <Grid item xs={12} md={6}>
+                  <Paper elevation={0} className={classes.modernCard}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2}>
+                      <Box display="flex" alignItems="center" gap={1.5}>
+                        <AssignmentIcon style={{ fontSize: 24, color: "#0EA5E9" }} />
+                        <Typography variant="h6" style={{ fontWeight: 600, fontSize: "1rem" }}>
+                          Tarefas
+                        </Typography>
+                      </Box>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => history.push("/todolist")}
+                        endIcon={<OpenInNewIcon />}
+                        style={{ textTransform: "none", borderRadius: 8 }}
+                      >
+                        Ver todas
+                      </Button>
+                    </Box>
+                    {allTasks.length > 0 ? (
+                      <Box>
+                        <Table>
+                          <TableHead>
+                            <TableRow>
+                              <TableCell style={{ fontWeight: 500, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", color: theme.palette.text.secondary, padding: "8px 16px" }}>
+                                Tarefa
+                              </TableCell>
+                              <TableCell style={{ fontWeight: 500, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", color: theme.palette.text.secondary, padding: "8px 16px" }}>
+                                Status
+                              </TableCell>
+                              <TableCell style={{ fontWeight: 500, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", color: theme.palette.text.secondary, padding: "8px 16px" }}>
+                                Prioridade
+                              </TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {allTasks.slice(0, 10).map((task) => (
+                              <TableRow
+                                key={task.id}
+                                className={classes.taskRow}
+                                onClick={() => history.push("/todolist")}
+                                style={{ cursor: "pointer" }}
+                              >
+                                <TableCell style={{ padding: "12px 16px" }}>
+                                  <Typography variant="body2" style={{ fontWeight: 500 }}>
+                                    {task.title || "Sem título"}
+                                  </Typography>
+                                  {task.description && (
+                                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 4 }}>
+                                      {task.description.length > 50 
+                                        ? `${task.description.substring(0, 50)}...` 
+                                        : task.description}
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell style={{ padding: "12px 16px" }}>
+                                  <Chip
+                                    label={task.status === "pending" ? "Pendente" : task.status === "inProgress" ? "Em Progresso" : task.status === "completed" ? "Concluída" : "Cancelada"}
+                                    size="small"
+                                    style={{
+                                      backgroundColor: task.status === "completed" 
+                                        ? "rgba(34, 197, 94, 0.1)" 
+                                        : task.status === "inProgress"
+                                        ? "rgba(59, 130, 246, 0.1)"
+                                        : task.status === "cancelled"
+                                        ? "rgba(239, 68, 68, 0.1)"
+                                        : "rgba(245, 158, 11, 0.1)",
+                                      color: task.status === "completed" 
+                                        ? "#22C55E" 
+                                        : task.status === "inProgress"
+                                        ? "#3B82F6"
+                                        : task.status === "cancelled"
+                                        ? "#EF4444"
+                                        : "#F59E0B",
+                                      fontSize: "0.7rem",
+                                    }}
+                                  />
+                                </TableCell>
+                                <TableCell style={{ padding: "12px 16px" }}>
+                                  <Chip
+                                    label={task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
+                                    size="small"
+                                    style={{
+                                      backgroundColor: task.priority === "high" 
+                                        ? "rgba(239, 68, 68, 0.1)" 
+                                        : task.priority === "medium" 
+                                        ? "rgba(245, 158, 11, 0.1)" 
+                                        : "rgba(34, 197, 94, 0.1)",
+                                      color: task.priority === "high" 
+                                        ? "#EF4444" 
+                                        : task.priority === "medium" 
+                                        ? "#F59E0B" 
+                                        : "#22C55E",
+                                      fontSize: "0.7rem",
+                                    }}
+                                  />
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                        {allTasks.length > 10 && (
+                          <Box p={2} textAlign="center">
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              onClick={() => history.push("/todolist")}
+                              endIcon={<OpenInNewIcon />}
+                              style={{ textTransform: "none", borderRadius: 8 }}
+                            >
+                              Ver todas as tarefas ({allTasks.length})
+                            </Button>
+                          </Box>
+                        )}
+                      </Box>
+                    ) : (
+                      <Box py={4} textAlign="center">
+                        <AssignmentIcon style={{ fontSize: 48, color: theme.palette.text.disabled, marginBottom: 2 }} />
+                        <Typography variant="body2" color="textSecondary">
+                          Nenhuma tarefa encontrada
+                        </Typography>
+                      </Box>
+                    )}
+                  </Paper>
+                </Grid>
+
+                {/* Seção de Agendamentos */}
+                <Grid item xs={12} md={6}>
+                  <Paper elevation={0} className={classes.modernCard}>
+                    <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2}>
+                      <Box display="flex" alignItems="center" gap={1.5}>
+                        <EventIcon style={{ fontSize: 24, color: "#8B5CF6" }} />
+                        <Typography variant="h6" style={{ fontWeight: 600, fontSize: "1rem" }}>
+                          Agendamentos
+                        </Typography>
+                      </Box>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => history.push("/schedules")}
+                        endIcon={<OpenInNewIcon />}
+                        style={{ textTransform: "none", borderRadius: 8 }}
+                      >
+                        Ver todos
+                      </Button>
+                    </Box>
+                    {appointments.length > 0 ? (
+                      <Box>
+                        <Table>
+                          <TableHead>
+                            <TableRow>
+                              <TableCell style={{ fontWeight: 500, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", color: theme.palette.text.secondary, padding: "8px 16px" }}>
+                                Agendamento
+                              </TableCell>
+                              <TableCell style={{ fontWeight: 500, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", color: theme.palette.text.secondary, padding: "8px 16px" }}>
+                                Data/Hora
+                              </TableCell>
+                              <TableCell style={{ fontWeight: 500, fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", color: theme.palette.text.secondary, padding: "8px 16px" }}>
+                                Contato
+                              </TableCell>
+                            </TableRow>
+                          </TableHead>
+                          <TableBody>
+                            {appointments.slice(0, 10).map((appointment) => (
+                              <TableRow
+                                key={appointment.id}
+                                className={classes.taskRow}
+                                onClick={() => history.push("/schedules")}
+                                style={{ cursor: "pointer" }}
+                              >
+                                <TableCell style={{ padding: "12px 16px" }}>
+                                  <Typography variant="body2" style={{ fontWeight: 500 }}>
+                                    {appointment.title || appointment.contact?.name || "Sem título"}
+                                  </Typography>
+                                  {appointment.description && (
+                                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 4 }}>
+                                      {appointment.description.length > 50 
+                                        ? `${appointment.description.substring(0, 50)}...` 
+                                        : appointment.description}
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell style={{ padding: "12px 16px" }}>
+                                  <Typography variant="body2" color="textSecondary">
+                                    {appointment.startDate 
+                                      ? moment(appointment.startDate).format("DD/MM/YYYY HH:mm")
+                                      : "-"}
+                                  </Typography>
+                                  {appointment.endDate && (
+                                    <Typography variant="caption" color="textSecondary" style={{ display: "block" }}>
+                                      até {moment(appointment.endDate).format("HH:mm")}
+                                    </Typography>
+                                  )}
+                                </TableCell>
+                                <TableCell style={{ padding: "12px 16px" }}>
+                                  <Typography variant="body2" color="textSecondary">
+                                    {appointment.contact?.name || "-"}
+                                  </Typography>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                        {appointments.length > 10 && (
+                          <Box p={2} textAlign="center">
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              onClick={() => history.push("/schedules")}
+                              endIcon={<OpenInNewIcon />}
+                              style={{ textTransform: "none", borderRadius: 8 }}
+                            >
+                              Ver todos os agendamentos ({appointments.length})
+                            </Button>
+                          </Box>
+                        )}
+                      </Box>
+                    ) : (
+                      <Box py={4} textAlign="center">
+                        <EventIcon style={{ fontSize: 48, color: theme.palette.text.disabled, marginBottom: 2 }} />
+                        <Typography variant="body2" color="textSecondary">
+                          Nenhum agendamento encontrado
+                        </Typography>
+                      </Box>
+                    )}
+                  </Paper>
+                </Grid>
               </Grid>
-            </Grid>
-          </>
+            )}
+          </Box>
         )}
 
         {/* Summary Modal */}

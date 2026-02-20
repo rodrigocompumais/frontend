@@ -6,111 +6,99 @@ const useStyles = makeStyles((theme) => ({
   card: {
     padding: theme.spacing(3),
     height: "100%",
-    minHeight: "120px",
+    minHeight: "140px",
     position: "relative",
     overflow: "hidden",
-    borderRadius: theme.spacing(2),
-    transition: "all 0.3s ease-in-out",
-    cursor: "pointer",
+    borderRadius: theme.spacing(2.5),
+    transition: "all 0.2s ease",
     display: "flex",
     flexDirection: "column",
     justifyContent: "space-between",
+    backgroundColor: theme.palette.type === "dark" ? "#1E293B" : "#FFFFFF",
+    border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
+    boxShadow: theme.palette.type === "dark" 
+      ? "0 1px 3px 0 rgba(0, 0, 0, 0.3)" 
+      : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
     [theme.breakpoints.down('sm')]: {
-      padding: theme.spacing(2),
-      minHeight: "100px",
+      padding: theme.spacing(2.5),
+      minHeight: "120px",
     },
     [theme.breakpoints.down('xs')]: {
-      padding: theme.spacing(1.5),
-      minHeight: "90px",
+      padding: theme.spacing(2),
+      minHeight: "110px",
     },
     "&:hover": {
-      transform: "translateY(-4px)",
-      boxShadow: theme.shadows[8],
+      transform: "translateY(-2px)",
+      boxShadow: theme.palette.type === "dark"
+        ? "0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3)"
+        : "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+      borderColor: theme.palette.type === "dark" ? "#475569" : "#D1D5DB",
     },
-  },
-  gradientOverlay: {
-    position: "absolute",
-    top: 0,
-    right: 0,
-    width: "120px",
-    height: "120px",
-    borderRadius: "50%",
-    opacity: 0.1,
-    filter: "blur(40px)",
   },
   content: {
     position: "relative",
     zIndex: 1,
+    flex: 1,
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "space-between",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: theme.spacing(2),
   },
   title: {
-    fontSize: "0.875rem",
+    fontSize: "0.75rem",
     fontWeight: 500,
-    color: theme.palette.type === "dark" 
-      ? "rgba(255, 255, 255, 0.7)" 
-      : "rgba(0, 0, 0, 0.6)",
-    marginBottom: theme.spacing(1),
+    color: theme.palette.text.secondary,
     textTransform: "uppercase",
-    letterSpacing: "0.5px",
+    letterSpacing: "0.05em",
+    lineHeight: 1.4,
     [theme.breakpoints.down('sm')]: {
-      fontSize: "0.75rem",
-      marginBottom: theme.spacing(0.5),
-    },
-    [theme.breakpoints.down('xs')]: {
       fontSize: "0.7rem",
-      letterSpacing: "0.3px",
     },
   },
   value: {
-    fontSize: "2rem",
+    fontSize: "2.25rem",
     fontWeight: 700,
     lineHeight: 1.2,
-    marginBottom: theme.spacing(0.5),
+    color: theme.palette.text.primary,
+    letterSpacing: "-0.02em",
     [theme.breakpoints.down('sm')]: {
-      fontSize: "1.5rem",
+      fontSize: "1.875rem",
     },
     [theme.breakpoints.down('xs')]: {
-      fontSize: "1.25rem",
+      fontSize: "1.5rem",
     },
   },
   iconContainer: {
-    position: "absolute",
-    top: theme.spacing(2),
-    right: theme.spacing(2),
-    width: "56px",
-    height: "56px",
-    borderRadius: "12px",
+    width: "48px",
+    height: "48px",
+    borderRadius: theme.spacing(1.5),
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    opacity: 0.9,
+    flexShrink: 0,
     "& svg": {
-      fontSize: "28px",
+      fontSize: "24px",
       [theme.breakpoints.down('sm')]: {
-        fontSize: "24px",
-      },
-      [theme.breakpoints.down('xs')]: {
         fontSize: "20px",
       },
     },
     [theme.breakpoints.down('sm')]: {
       width: "40px",
       height: "40px",
-      top: theme.spacing(1.5),
-      right: theme.spacing(1.5),
-    },
-    [theme.breakpoints.down('xs')]: {
-      width: "32px",
-      height: "32px",
-      top: theme.spacing(1),
-      right: theme.spacing(1),
     },
   },
   trendIndicator: {
     display: "flex",
     alignItems: "center",
-    marginTop: theme.spacing(1),
+    marginTop: theme.spacing(1.5),
     fontSize: "0.75rem",
     fontWeight: 500,
+    gap: theme.spacing(0.5),
   },
 }));
 
@@ -126,55 +114,55 @@ const StatCard = ({
 }) => {
   const classes = useStyles();
 
-  const gradientColors = gradient || [color, color];
+  const iconBgColor = `${color}15`;
+  const iconColor = color;
 
   return (
     <Paper
       className={classes.card}
-      style={{
-        background: `linear-gradient(135deg, ${gradientColors[0]} 0%, ${gradientColors[1]} 100%)`,
-        color: "#FFFFFF",
-      }}
-      elevation={2}
+      elevation={0}
       onClick={onClick}
+      style={{ cursor: onClick ? "pointer" : "default" }}
     >
-      <Box
-        className={classes.gradientOverlay}
-        style={{
-          background: color,
-        }}
-      />
-      
       <Box className={classes.content}>
-        <Typography className={classes.title} variant="body2">
-          {title}
-        </Typography>
-        
-        <Typography className={classes.value} variant="h4">
-          {value}
-        </Typography>
-
-        {trend && trendValue && (
-          <Box className={classes.trendIndicator}>
-            <span style={{ marginRight: 4 }}>
-              {trend === "up" ? "↑" : "↓"}
-            </span>
-            <span>{trendValue}</span>
-          </Box>
-        )}
-      </Box>
-
-      {Icon && (
-        <Box
-          className={classes.iconContainer}
-          style={{
-            backgroundColor: "rgba(255, 255, 255, 0.2)",
-            backdropFilter: "blur(10px)",
-          }}
-        >
-          <Icon style={{ fontSize: 28, color: "#FFFFFF" }} />
+        <Box className={classes.header}>
+          <Typography className={classes.title}>
+            {title}
+          </Typography>
+          {Icon && (
+            <Box
+              className={classes.iconContainer}
+              style={{
+                backgroundColor: iconBgColor,
+              }}
+            >
+              <Icon style={{ color: iconColor }} />
+            </Box>
+          )}
         </Box>
-      )}
+        
+        <Box>
+          <Typography className={classes.value}>
+            {value}
+          </Typography>
+
+          {trend && trendValue && (
+            <Box className={classes.trendIndicator}>
+              <span style={{ 
+                color: trend === "up" ? "#22C55E" : "#EF4444",
+                fontSize: "0.875rem"
+              }}>
+                {trend === "up" ? "↑" : "↓"}
+              </span>
+              <span style={{ 
+                color: trend === "up" ? "#22C55E" : "#EF4444",
+              }}>
+                {trendValue}
+              </span>
+            </Box>
+          )}
+        </Box>
+      </Box>
     </Paper>
   );
 };

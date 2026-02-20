@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useReducer, useRef, useContext } from "react";
+import React, { useState, useEffect, useReducer, useRef, useContext, useMemo, useCallback } from "react";
 
 import { isSameDay, parseISO, format } from "date-fns";
 import clsx from "clsx";
@@ -414,7 +414,7 @@ const reducer = (state, action) => {
   }
 };
 
-const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTranslationEnabled = true, scrollToMessageId, onScrollToMessageDone, onScrollToMessageRequest }) => {
+const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTranslationEnabled = false, scrollToMessageId, onScrollToMessageDone, onScrollToMessageRequest }) => {
   const classes = useStyles();
 
   const [messagesList, dispatch] = useReducer(reducer, []);
@@ -471,7 +471,8 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
   }, [authCompanyLanguage]);
 
   // Função para gerar cor consistente baseada em uma string (contactId ou participant)
-  const generateColorFromString = (str) => {
+  // Memoizada para evitar recálculos desnecessários
+  const generateColorFromString = useCallback((str) => {
     if (!str) return "#dcf8c6"; // Cor padrão
     
     // Hash simples da string para gerar um número
@@ -501,10 +502,11 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
     
     const index = Math.abs(hash) % colors.length;
     return colors[index];
-  };
+  }, []);
 
   // Função para gerar cor da borda (mais escura) baseada na cor de fundo
-  const generateBorderColor = (backgroundColor) => {
+  // Memoizada para evitar recálculos desnecessários
+  const generateBorderColor = useCallback((backgroundColor) => {
     // Converte hex para RGB e escurece
     const hex = backgroundColor.replace("#", "");
     const r = parseInt(hex.substr(0, 2), 16);
@@ -515,7 +517,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
     const darken = (val) => Math.max(0, Math.floor(val * 0.7));
     
     return `rgb(${darken(r)}, ${darken(g)}, ${darken(b)})`;
-  };
+  }, []);
 
   // Função para extrair nome do usuário da empresa
   const getCompanyUserName = (message) => {
@@ -541,6 +543,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
 
   useEffect(() => {
     setLoading(true);
+    // Reduzir delay para carregamento mais rápido
     const delayDebounceFn = setTimeout(() => {
       const fetchMessages = async () => {
         if (ticketId === undefined) return;
@@ -564,7 +567,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
         }
       };
       fetchMessages();
-    }, 500);
+    }, 200);
     return () => {
       clearTimeout(delayDebounceFn);
     };
@@ -638,24 +641,24 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
     }
   };
 
-  const handleOpenMessageOptionsMenu = (e, message) => {
+  const handleOpenMessageOptionsMenu = useCallback((e, message) => {
     const rect = e.currentTarget.getBoundingClientRect();
     setAnchorPosition({ left: rect.right, top: rect.bottom });
     setMenuAnchorOrigin({ vertical: "top", horizontal: "right" });
     setSelectedMessage(message);
-  };
+  }, []);
 
-  const handleContextMenu = (e, message) => {
+  const handleContextMenu = useCallback((e, message) => {
     e.preventDefault();
     e.stopPropagation();
     setAnchorPosition({ left: e.clientX, top: e.clientY });
     setMenuAnchorOrigin({ vertical: "top", horizontal: "left" });
     setSelectedMessage(message);
-  };
+  }, []);
 
-  const handleCloseMessageOptionsMenu = () => {
+  const handleCloseMessageOptionsMenu = useCallback(() => {
     setAnchorPosition(null);
-  };
+  }, []);
 
   const checkMessageMedia = (message, index = -1) => {
     // Check for vCard first (can be in body even if mediaType is not set)
@@ -740,7 +743,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
     }
   };
 
-  const renderMessageAck = (message) => {
+  const renderMessageAck = useCallback((message) => {
     if (message.ack === 1) {
       return <AccessTime fontSize="small" className={classes.ackIcons} />;
     }
@@ -753,7 +756,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
     if (message.ack === 4 || message.ack === 5) {
       return <DoneAll fontSize="small" className={classes.ackDoneAllIcon} />;
     }
-  };
+  }, [classes]);
 
   const renderDailyTimestamps = (message, index, list = messagesList) => {
     if (index === 0) {
@@ -909,11 +912,36 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
   };
 
   // Componente auxiliar para renderizar mensagem com tradução
+  // Memoizado para evitar re-renderizações desnecessárias
   const MessageWithTranslation = ({ message, index, fromMe, displayList }) => {
+    const [isVisible, setIsVisible] = useState(false);
+    const messageRef = useRef(null);
+
+    // Verificar visibilidade usando IntersectionObserver
+    useEffect(() => {
+      if (!messageRef.current) return;
+
+      const observer = new IntersectionObserver(
+        ([entry]) => {
+          setIsVisible(entry.isIntersecting);
+        },
+        { rootMargin: "100px" } // Traduzir mensagens próximas também
+      );
+
+      observer.observe(messageRef.current);
+
+      return () => {
+        observer.disconnect();
+      };
+    }, []);
+
+    // Reduzir limite mínimo para 5 caracteres (mais permissivo)
+    const bodyLength = message.body?.trim()?.length || 0;
+    const translationEnabled = realTimeTranslationEnabled && isVisible && !message.isDeleted && message.body && bodyLength >= 5;
     const { translation, loading: translationLoading } = useMessageTranslation(
       message,
       companyLanguage,
-      realTimeTranslationEnabled && !message.isDeleted && message.body && message.body.trim().length >= 10
+      translationEnabled
     );
 
     const displayText = translation?.translatedText || message.body;
@@ -933,6 +961,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
             {renderMessageDivider(message, index, displayList)}
             <div className={clsx(classes.messageWithReactionsWrapper, classes.messageWithReactionsWrapperRight)} onContextMenu={(e) => handleContextMenu(e, message)}>
             <div 
+              ref={messageRef}
               id={`message-${message.id}`}
               className={classes.messageLeft}
               style={{ 
@@ -1003,7 +1032,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
             {renderNumberTicket(message, index, displayList)}
             {renderMessageDivider(message, index, displayList)}
             <div className={clsx(classes.messageWithReactionsWrapper, classes.messageWithReactionsWrapperRight)} onContextMenu={(e) => handleContextMenu(e, message)}>
-            <div id={`message-${message.id}`} className={clsx(classes.messageRight, {
+            <div ref={messageRef} id={`message-${message.id}`} className={clsx(classes.messageRight, {
               [classes.messageInternal]: message.isInternal,
             })}>
               <IconButton
@@ -1066,7 +1095,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
           {renderNumberTicket(message, index, displayList)}
           {renderMessageDivider(message, index, displayList)}
           <div className={classes.messageWithReactionsWrapper} onContextMenu={(e) => handleContextMenu(e, message)}>
-          <div id={`message-${message.id}`} className={classes.messageLeft}>
+          <div ref={messageRef} id={`message-${message.id}`} className={classes.messageLeft}>
             <IconButton
               variant="contained"
               size="small"
@@ -1121,6 +1150,20 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
       );
     }
   };
+
+  // Memoizar o componente após sua definição
+  const MemoizedMessageWithTranslation = React.memo(MessageWithTranslation, (prevProps, nextProps) => {
+    // Comparação customizada para evitar re-renderizações desnecessárias
+    return (
+      prevProps.message.id === nextProps.message.id &&
+      prevProps.message.body === nextProps.message.body &&
+      prevProps.message.isDeleted === nextProps.message.isDeleted &&
+      prevProps.message.isEdited === nextProps.message.isEdited &&
+      prevProps.message.mediaType === nextProps.message.mediaType &&
+      prevProps.index === nextProps.index &&
+      prevProps.fromMe === nextProps.fromMe
+    );
+  });
 
   const reactionsMap = React.useMemo(() => {
     const map = {};
@@ -1221,7 +1264,7 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
 
         if (!message.fromMe) {
           // Mensagens recebidas (clientes)
-          return <MessageWithTranslation key={message.id} message={message} index={index} fromMe={false} displayList={displayableMessages} />;
+          return <MemoizedMessageWithTranslation key={message.id} message={message} index={index} fromMe={false} displayList={displayableMessages} />;
         } else {
           // Mensagens fromMe (enviadas pela empresa) em GRUPOS
           // Cada número/participant diferente recebe uma cor diferente

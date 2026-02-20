@@ -6,67 +6,78 @@ import TrendingDownIcon from "@material-ui/icons/TrendingDown";
 
 const useStyles = makeStyles((theme) => ({
   card: {
-    padding: theme.spacing(2),
+    padding: theme.spacing(2.5),
     height: "100%",
-    borderRadius: 12,
-    border: `1px solid ${theme.palette.divider}`,
-    background: theme.palette.background.paper,
+    borderRadius: theme.spacing(2),
+    border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
+    backgroundColor: theme.palette.type === "dark" ? "#1E293B" : "#FFFFFF",
     transition: "all 0.2s ease",
+    boxShadow: theme.palette.type === "dark" 
+      ? "0 1px 3px 0 rgba(0, 0, 0, 0.3)" 
+      : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
     "&:hover": {
       transform: "translateY(-2px)",
-      boxShadow: theme.shadows[4],
-      borderColor: theme.palette.primary.main,
+      boxShadow: theme.palette.type === "dark"
+        ? "0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3)"
+        : "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+      borderColor: theme.palette.type === "dark" ? "#475569" : "#D1D5DB",
     },
   },
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "flex-start",
-    marginBottom: theme.spacing(1),
+    marginBottom: theme.spacing(1.5),
   },
   iconWrapper: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
+    width: 36,
+    height: 36,
+    borderRadius: theme.spacing(1),
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   title: {
     fontSize: "0.75rem",
     fontWeight: 500,
     color: theme.palette.text.secondary,
     textTransform: "uppercase",
-    letterSpacing: "0.3px",
+    letterSpacing: "0.05em",
+    lineHeight: 1.4,
   },
   valueContainer: {
     display: "flex",
     alignItems: "baseline",
     gap: theme.spacing(0.5),
+    marginBottom: theme.spacing(1),
   },
   value: {
-    fontSize: "1.5rem",
+    fontSize: "1.75rem",
     fontWeight: 700,
     color: theme.palette.text.primary,
+    letterSpacing: "-0.02em",
+    lineHeight: 1.2,
   },
   suffix: {
-    fontSize: "0.85rem",
+    fontSize: "0.875rem",
     fontWeight: 500,
     color: theme.palette.text.secondary,
   },
   footer: {
     display: "flex",
     alignItems: "center",
-    marginTop: theme.spacing(1),
+    marginTop: theme.spacing(1.5),
+    gap: theme.spacing(1),
   },
   trend: {
     display: "flex",
     alignItems: "center",
-    gap: 2,
+    gap: theme.spacing(0.5),
     fontSize: "0.75rem",
     fontWeight: 600,
-    padding: "2px 6px",
-    borderRadius: 4,
+    padding: `${theme.spacing(0.25)} ${theme.spacing(0.75)}`,
+    borderRadius: theme.spacing(0.5),
   },
   trendUp: {
     color: "#22C55E",
@@ -77,9 +88,9 @@ const useStyles = makeStyles((theme) => ({
     backgroundColor: "rgba(239, 68, 68, 0.1)",
   },
   subtext: {
-    fontSize: "0.7rem",
+    fontSize: "0.75rem",
     color: theme.palette.text.secondary,
-    marginLeft: theme.spacing(1),
+    lineHeight: 1.4,
   },
 }));
 

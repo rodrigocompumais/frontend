@@ -27,37 +27,48 @@ import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles(theme => ({
 	tableContainer: {
-		borderRadius: 16,
-		border: `1px solid ${theme.palette.divider}`,
+		borderRadius: theme.spacing(2),
+		border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
 		overflow: "hidden",
-		background: theme.palette.background.paper,
+		backgroundColor: theme.palette.type === "dark" ? "#1E293B" : "#FFFFFF",
+		boxShadow: theme.palette.type === "dark" 
+			? "0 1px 3px 0 rgba(0, 0, 0, 0.3)" 
+			: "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
 	},
 	table: {
 		minWidth: 650,
 	},
 	tableHead: {
 		backgroundColor: theme.palette.type === "dark" 
-			? "rgba(255, 255, 255, 0.03)" 
-			: "rgba(0, 0, 0, 0.02)",
+			? "rgba(255, 255, 255, 0.02)" 
+			: "rgba(0, 0, 0, 0.01)",
 	},
 	tableHeadCell: {
-		fontWeight: 600,
+		fontWeight: 500,
 		color: theme.palette.text.secondary,
 		fontSize: "0.75rem",
 		textTransform: "uppercase",
-		letterSpacing: "0.5px",
-		padding: "12px 16px",
-		borderBottom: `1px solid ${theme.palette.divider}`,
+		letterSpacing: "0.05em",
+		padding: theme.spacing(2),
+		borderBottom: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
+		lineHeight: 1.4,
 	},
 	tableRow: {
-		"&:hover": {
-			backgroundColor: theme.palette.action.hover,
-		},
 		transition: "background-color 0.2s ease",
+		"&:nth-of-type(even)": {
+			backgroundColor: theme.palette.type === "dark" 
+				? "rgba(255, 255, 255, 0.01)" 
+				: "rgba(0, 0, 0, 0.005)",
+		},
+		"&:hover": {
+			backgroundColor: theme.palette.type === "dark" 
+				? "rgba(255, 255, 255, 0.05)" 
+				: "rgba(0, 0, 0, 0.02)",
+		},
 	},
 	tableCell: {
-		borderBottom: `1px solid ${theme.palette.divider}`,
-		padding: "12px 16px",
+		borderBottom: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
+		padding: theme.spacing(2),
 	},
 	userCell: {
 		display: "flex",
@@ -73,18 +84,20 @@ const useStyles = makeStyles(theme => ({
 	},
 	userName: {
 		fontWeight: 500,
-		fontSize: "0.9rem",
+		fontSize: "0.875rem",
 		color: theme.palette.text.primary,
+		lineHeight: 1.4,
 	},
 	userEmail: {
 		fontSize: "0.75rem",
 		color: theme.palette.text.secondary,
+		lineHeight: 1.4,
 	},
 	statusChip: {
-		fontWeight: 600,
-		fontSize: "0.7rem",
+		fontWeight: 500,
+		fontSize: "0.75rem",
 		height: 24,
-		borderRadius: 6,
+		borderRadius: theme.spacing(0.75),
 	},
 	onlineChip: {
 		backgroundColor: "rgba(34, 197, 94, 0.1)",
@@ -112,25 +125,27 @@ const useStyles = makeStyles(theme => ({
 		color: "#F59E0B",
 	},
 	timeValue: {
-		fontSize: "0.85rem",
+		fontSize: "0.875rem",
 		color: theme.palette.text.primary,
 		fontWeight: 500,
+		lineHeight: 1.4,
 	},
 	ticketsContainer: {
 		display: "flex",
 		flexDirection: "column",
 		alignItems: "center",
-		gap: 4,
+		gap: theme.spacing(0.75),
 	},
 	ticketsValue: {
-		fontSize: "0.9rem",
+		fontSize: "0.875rem",
 		fontWeight: 600,
 		color: theme.palette.text.primary,
+		lineHeight: 1.4,
 	},
 	progressBar: {
 		width: 60,
 		height: 4,
-		borderRadius: 2,
+		borderRadius: theme.spacing(0.5),
 	},
 	emptyState: {
 		padding: theme.spacing(6),

@@ -12,44 +12,65 @@ import {
 
 const useStyles = makeStyles((theme) => ({
   container: {
-    padding: theme.spacing(2),
-    borderRadius: 16,
-    background: theme.palette.background.paper,
+    padding: theme.spacing(3),
+    borderRadius: theme.spacing(2),
+    backgroundColor: theme.palette.type === "dark" ? "#1E293B" : "#FFFFFF",
+    border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
     height: "100%",
+    boxShadow: theme.palette.type === "dark" 
+      ? "0 1px 3px 0 rgba(0, 0, 0, 0.3)" 
+      : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      boxShadow: theme.palette.type === "dark"
+        ? "0 4px 6px -1px rgba(0, 0, 0, 0.4)"
+        : "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+    },
   },
   header: {
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(3),
   },
   title: {
     fontWeight: 600,
-    fontSize: "1rem",
+    fontSize: "0.875rem",
     color: theme.palette.text.primary,
+    lineHeight: 1.2,
+    marginBottom: theme.spacing(0.5),
   },
   subtitle: {
-    fontSize: "0.8rem",
+    fontSize: "0.75rem",
     color: theme.palette.text.secondary,
+    lineHeight: 1.5,
+    fontWeight: 400,
   },
   chartContainer: {
-    height: 250,
+    height: 280,
+    [theme.breakpoints.down('sm')]: {
+      height: 240,
+    },
   },
   tooltip: {
-    backgroundColor: theme.palette.background.paper,
-    border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 8,
-    padding: theme.spacing(1),
-    boxShadow: theme.shadows[4],
+    backgroundColor: theme.palette.type === "dark" ? "#1E293B" : "#FFFFFF",
+    border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
+    borderRadius: theme.spacing(1),
+    padding: theme.spacing(1.5),
+    boxShadow: theme.palette.type === "dark"
+      ? "0 4px 6px -1px rgba(0, 0, 0, 0.4)"
+      : "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
   },
   legendItem: {
     display: "flex",
     alignItems: "center",
-    gap: 8,
-    fontSize: "0.8rem",
+    gap: theme.spacing(1),
+    fontSize: "0.75rem",
     color: theme.palette.text.secondary,
+    fontWeight: 400,
   },
   legendColor: {
-    width: 12,
-    height: 12,
-    borderRadius: 3,
+    width: 10,
+    height: 10,
+    borderRadius: theme.spacing(0.5),
+    flexShrink: 0,
   },
 }));
 

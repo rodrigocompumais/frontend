@@ -86,12 +86,13 @@ const Ticket = () => {
   const [iframeUrl, setIframeUrl] = useState("");
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [scrollToMessageId, setScrollToMessageId] = useState(null);
-  const [realTimeTranslationEnabled, setRealTimeTranslationEnabled] = useLocalStorage("realTimeTranslationEnabled", true);
+  const [realTimeTranslationEnabled, setRealTimeTranslationEnabled] = useLocalStorage("realTimeTranslationEnabled", false);
 
   const socketManager = useContext(SocketContext);
 
   useEffect(() => {
     setLoading(true);
+    // Reduzir delay para carregamento mais rápido
     const delayDebounceFn = setTimeout(() => {
       const fetchTicket = async () => {
         try {
@@ -115,7 +116,7 @@ const Ticket = () => {
         }
       };
       fetchTicket();
-    }, 500);
+    }, 200);
     return () => clearTimeout(delayDebounceFn);
   }, [ticketId, user, history]);
 

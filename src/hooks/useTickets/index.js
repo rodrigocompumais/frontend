@@ -21,6 +21,8 @@ const useTickets = ({
 
   useEffect(() => {
     setLoading(true);
+    // Debounce apenas para busca, não para carregamento inicial
+    const debounceDelay = searchParam ? 250 : 0;
     const delayDebounceFn = setTimeout(() => {
       const fetchTickets = async () => {
         try {
@@ -47,7 +49,7 @@ const useTickets = ({
         }
       };
       fetchTickets();
-    }, 500);
+    }, debounceDelay);
     return () => clearTimeout(delayDebounceFn);
   }, [
     searchParam,

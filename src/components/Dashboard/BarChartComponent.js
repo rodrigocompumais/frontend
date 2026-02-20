@@ -14,81 +14,116 @@ import {
 
 const useStyles = makeStyles((theme) => ({
   container: {
-    padding: theme.spacing(2),
-    borderRadius: 16,
-    background: theme.palette.background.paper,
+    padding: theme.spacing(3),
+    borderRadius: theme.spacing(2),
+    backgroundColor: theme.palette.type === "dark" ? "#1E293B" : "#FFFFFF",
+    border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
     height: "100%",
+    boxShadow: theme.palette.type === "dark" 
+      ? "0 1px 3px 0 rgba(0, 0, 0, 0.3)" 
+      : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
+    transition: "all 0.2s ease",
+    "&:hover": {
+      boxShadow: theme.palette.type === "dark"
+        ? "0 4px 6px -1px rgba(0, 0, 0, 0.4)"
+        : "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
+    },
   },
   header: {
-    marginBottom: theme.spacing(2),
+    marginBottom: theme.spacing(3),
   },
   title: {
     fontWeight: 600,
-    fontSize: "1rem",
+    fontSize: "0.875rem",
     color: theme.palette.text.primary,
+    lineHeight: 1.2,
+    marginBottom: theme.spacing(0.5),
   },
   subtitle: {
-    fontSize: "0.8rem",
+    fontSize: "0.75rem",
     color: theme.palette.text.secondary,
+    lineHeight: 1.5,
+    fontWeight: 400,
   },
   chartContainer: {
-    height: 250,
+    height: 280,
+    [theme.breakpoints.down('sm')]: {
+      height: 240,
+    },
   },
   tooltip: {
-    backgroundColor: theme.palette.background.paper,
-    border: `1px solid ${theme.palette.divider}`,
-    borderRadius: 8,
+    backgroundColor: theme.palette.type === "dark" ? "#1E293B" : "#FFFFFF",
+    border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
+    borderRadius: theme.spacing(1),
     padding: theme.spacing(1.5),
-    boxShadow: theme.shadows[4],
+    boxShadow: theme.palette.type === "dark"
+      ? "0 4px 6px -1px rgba(0, 0, 0, 0.4)"
+      : "0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)",
   },
   listContainer: {
     display: "flex",
     flexDirection: "column",
-    gap: theme.spacing(1.5),
+    gap: theme.spacing(2),
   },
   listItem: {
     display: "flex",
     alignItems: "center",
-    gap: theme.spacing(1.5),
+    gap: theme.spacing(2),
+    padding: theme.spacing(1),
+    borderRadius: theme.spacing(1),
+    transition: "background-color 0.2s ease",
+    "&:hover": {
+      backgroundColor: theme.palette.type === "dark" 
+        ? "rgba(255, 255, 255, 0.05)" 
+        : "rgba(0, 0, 0, 0.02)",
+    },
   },
   rank: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     borderRadius: "50%",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontWeight: 600,
     fontSize: "0.75rem",
+    flexShrink: 0,
   },
   avatar: {
-    width: 32,
-    height: 32,
-    fontSize: "0.8rem",
+    width: 36,
+    height: 36,
+    fontSize: "0.875rem",
     backgroundColor: theme.palette.primary.main,
+    flexShrink: 0,
   },
   itemInfo: {
     flex: 1,
+    minWidth: 0,
   },
   itemName: {
     fontWeight: 500,
-    fontSize: "0.9rem",
+    fontSize: "0.875rem",
     color: theme.palette.text.primary,
+    lineHeight: 1.4,
+    marginBottom: theme.spacing(0.25),
   },
   itemValue: {
     fontSize: "0.75rem",
     color: theme.palette.text.secondary,
+    lineHeight: 1.4,
   },
   progressBar: {
     height: 6,
-    borderRadius: 3,
-    backgroundColor: theme.palette.action.hover,
+    borderRadius: theme.spacing(0.75),
+    backgroundColor: theme.palette.type === "dark" 
+      ? "rgba(255, 255, 255, 0.1)" 
+      : "rgba(0, 0, 0, 0.05)",
     overflow: "hidden",
-    marginTop: 4,
+    marginTop: theme.spacing(0.75),
   },
   progressFill: {
     height: "100%",
-    borderRadius: 3,
+    borderRadius: theme.spacing(0.75),
     transition: "width 0.5s ease",
   },
 }));
