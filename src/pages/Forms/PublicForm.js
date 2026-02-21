@@ -207,11 +207,28 @@ const PublicForm = () => {
     }
   };
 
-  // Validação de telefone (deve começar com 55 e ter pelo menos 13 caracteres)
+  // Função para normalizar telefone (remove o 9 duplicado após o DDD se houver)
+  const normalizePhone = (input) => {
+    const digits = String(input || "").replace(/\D/g, "");
+    if (!digits) return "";
+    if (digits.startsWith("55")) {
+      // Se tem 14 dígitos e o 5º e 6º dígitos são ambos "9", remove o 9 duplicado
+      // Exemplo: 5534999999999 -> 553499999999 (remove o 9 após o DDD)
+      if (digits.length === 14 && digits[4] === "9" && digits[5] === "9") {
+        return digits.slice(0, 4) + digits.slice(5);
+      }
+      return digits;
+    }
+    return digits;
+  };
+
+  // Validação de telefone (deve começar com 55 e ter pelo menos 12 caracteres)
+  // Aceita 12 dígitos (55 + DDD + 8) ou 13 dígitos (55 + DDD + 9) ou 14 dígitos (55 + DDD + 9 + 9)
   const validatePhone = (phone) => {
     if (!phone) return false;
     const cleaned = phone.replace(/\D/g, "");
-    return cleaned.startsWith("55") && cleaned.length >= 13;
+    // Aceita 12, 13 ou 14 dígitos (14 será normalizado removendo o 9 duplicado)
+    return cleaned.startsWith("55") && cleaned.length >= 12 && cleaned.length <= 14;
   };
 
   // Validação de email
@@ -310,10 +327,20 @@ const PublicForm = () => {
 
       if (isQuotationForm) {
         // Para formulários de cotação, incluir campos normais + dados dos itens
-        answersArray = Object.keys(answers).map((fieldId) => ({
-          fieldId: Number(fieldId),
-          answer: answers[fieldId],
-        }));
+        answersArray = Object.keys(answers).map((fieldId) => {
+          const field = form.fields.find(f => f.id === Number(fieldId));
+          let answer = answers[fieldId];
+          
+          // Normalizar telefone antes de enviar (remover 9 duplicado após DDD)
+          if (field && field.fieldType === "phone" && answer) {
+            answer = normalizePhone(answer);
+          }
+          
+          return {
+            fieldId: Number(fieldId),
+            answer: answer,
+          };
+        });
 
         // Adicionar dados dos itens de cotação como respostas especiais
         quotationItems.forEach((item, index) => {
@@ -323,10 +350,20 @@ const PublicForm = () => {
           // Vou enviar como parte do answers usando um formato especial
         });
       } else {
-        answersArray = Object.keys(answers).map((fieldId) => ({
-          fieldId: Number(fieldId),
-          answer: answers[fieldId],
-        }));
+        answersArray = Object.keys(answers).map((fieldId) => {
+          const field = form.fields.find(f => f.id === Number(fieldId));
+          let answer = answers[fieldId];
+          
+          // Normalizar telefone antes de enviar (remover 9 duplicado após DDD)
+          if (field && field.fieldType === "phone" && answer) {
+            answer = normalizePhone(answer);
+          }
+          
+          return {
+            fieldId: Number(fieldId),
+            answer: answer,
+          };
+        });
       }
 
       await api.post(`/public/forms/${publicId}/submit`, {
@@ -355,14 +392,12 @@ const PublicForm = () => {
 
     switch (field.fieldType) {
       case "phone":
-        // Máscara dinâmica: aceita 8 ou 9 dígitos após o DDD
-        // 12 dígitos: 55 + DDD + 8 (fixo) | 13 dígitos: 55 + DDD + 9 (celular)
-        // No submit, o backend normaliza e completa o 9 quando necessário.
-        const digits = String(value || "").replace(/\D/g, "");
-        const phoneMask = digits.length > 12 ? "55(99)99999-9999" : "55(99)9999-9999";
+        // Máscara que sempre aceita 9 dígitos após o DDD para permitir digitar o 9 após o DDD
+        // O formato 55(DDD)99999-9999 permite digitar o 9 após o DDD, que será removido no envio
+        // A normalização remove o 9 duplicado quando há 14 dígitos (55 + DDD + 9 + número)
         return (
           <InputMask
-            mask={phoneMask}
+            mask="55(99)99999-9999"
             maskChar={null}
             value={value}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
