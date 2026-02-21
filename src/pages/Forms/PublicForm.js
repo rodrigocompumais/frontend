@@ -366,10 +366,22 @@ const PublicForm = () => {
         });
       }
 
-      await api.post(`/public/forms/${publicId}/submit`, {
+      const payload = {
         answers: answersArray,
+      };
+      
+      // Adicionar quotationItems apenas se for formulário de cotação e houver itens
+      if (isQuotationForm && quotationItems && quotationItems.length > 0) {
+        payload.quotationItems = quotationItems;
+      }
+      
+      console.log("PublicForm: Enviando formulário:", {
+        isQuotationForm,
+        quotationItemsCount: quotationItems?.length || 0,
         quotationItems: isQuotationForm ? quotationItems : undefined,
       });
+      
+      await api.post(`/public/forms/${publicId}/submit`, payload);
 
       setSubmitted(true);
 
@@ -700,102 +712,128 @@ const PublicForm = () => {
             })}
 
             {/* Renderizar tabela de itens de cotação se for formulário de cotação */}
-            {form.settings?.formType === "quotation" && quotationItems.length > 0 && (
+            {form.settings?.formType === "quotation" && (
               <Box className={classes.fieldContainer} style={{ marginTop: 24 }}>
                 <Typography className={classes.fieldLabel} style={{ marginBottom: 16 }}>
                   Itens da Cotação
                 </Typography>
-                <Paper style={{ overflowX: "auto" }}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Produto</TableCell>
-                        <TableCell align="center" style={{ width: 120 }}>Quantidade</TableCell>
-                        <TableCell align="center" style={{ width: 150 }}>Valor Unitário</TableCell>
-                        <TableCell align="center" style={{ width: 150 }}>Valor Total</TableCell>
-                        <TableCell>Observações</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {quotationItems.map((item, index) => (
-                        <TableRow key={index}>
-                          <TableCell>
-                            <Typography variant="body2" style={{ fontWeight: 500 }}>
-                              {item.productName || "Produto sem nome"}
-                            </Typography>
-                          </TableCell>
-                          <TableCell align="center">
-                            <TextField
-                              type="number"
-                              variant="outlined"
-                              size="small"
-                              value={item.quantity || 1}
-                              onChange={(e) =>
-                                handleQuotationItemChange(
-                                  index,
-                                  "quantity",
-                                  parseInt(e.target.value) || 1
-                                )
-                              }
-                              inputProps={{ min: 1 }}
-                              style={{ width: 100 }}
-                            />
-                          </TableCell>
-                          <TableCell align="center">
-                            <TextField
-                              type="number"
-                              variant="outlined"
-                              size="small"
-                              value={item.unitValue || 0}
-                              onChange={(e) =>
-                                handleQuotationItemChange(
-                                  index,
-                                  "unitValue",
-                                  parseFloat(e.target.value) || 0
-                                )
-                              }
-                              InputProps={{
-                                startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                              }}
-                              style={{ width: 120 }}
-                            />
-                          </TableCell>
-                          <TableCell align="center">
-                            <TextField
-                              type="number"
-                              variant="outlined"
-                              size="small"
-                              value={item.totalValue || 0}
-                              InputProps={{
-                                readOnly: true,
-                                startAdornment: <InputAdornment position="start">R$</InputAdornment>,
-                              }}
-                              style={{ width: 120 }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <TextField
-                              fullWidth
-                              multiline
-                              rows={1}
-                              variant="outlined"
-                              size="small"
-                              value={item.observations || ""}
-                              onChange={(e) =>
-                                handleQuotationItemChange(
-                                  index,
-                                  "observations",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Observações"
-                            />
-                          </TableCell>
+                {errors["quotationItems"] && (
+                  <Alert severity="error" style={{ marginBottom: 16 }}>
+                    {errors["quotationItems"]}
+                  </Alert>
+                )}
+                {quotationItems.length > 0 ? (
+                  <Paper style={{ overflowX: "auto" }}>
+                    <Table>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Produto</TableCell>
+                          <TableCell align="center" style={{ width: 120 }}>Quantidade</TableCell>
+                          <TableCell align="center" style={{ width: 150 }}>Valor Unitário</TableCell>
+                          <TableCell align="center" style={{ width: 150 }}>Valor Total</TableCell>
+                          <TableCell>Observações</TableCell>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </Paper>
+                      </TableHead>
+                      <TableBody>
+                        {quotationItems.map((item, index) => (
+                          <TableRow key={index}>
+                            <TableCell>
+                              <TextField
+                                fullWidth
+                                variant="outlined"
+                                size="small"
+                                value={item.productName || ""}
+                                onChange={(e) =>
+                                  handleQuotationItemChange(
+                                    index,
+                                    "productName",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Nome do produto"
+                                error={!!errors[`quotationItem-${index}-productName`]}
+                                helperText={errors[`quotationItem-${index}-productName`]}
+                              />
+                            </TableCell>
+                            <TableCell align="center">
+                              <TextField
+                                type="number"
+                                variant="outlined"
+                                size="small"
+                                value={item.quantity || 1}
+                                onChange={(e) =>
+                                  handleQuotationItemChange(
+                                    index,
+                                    "quantity",
+                                    parseInt(e.target.value) || 1
+                                  )
+                                }
+                                inputProps={{ min: 1 }}
+                                style={{ width: 100 }}
+                                error={!!errors[`quotationItem-${index}-quantity`]}
+                                helperText={errors[`quotationItem-${index}-quantity`]}
+                              />
+                            </TableCell>
+                            <TableCell align="center">
+                              <TextField
+                                type="number"
+                                variant="outlined"
+                                size="small"
+                                value={item.unitValue || 0}
+                                onChange={(e) =>
+                                  handleQuotationItemChange(
+                                    index,
+                                    "unitValue",
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                InputProps={{
+                                  startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                                }}
+                                style={{ width: 120 }}
+                              />
+                            </TableCell>
+                            <TableCell align="center">
+                              <TextField
+                                type="number"
+                                variant="outlined"
+                                size="small"
+                                value={item.totalValue || 0}
+                                InputProps={{
+                                  readOnly: true,
+                                  startAdornment: <InputAdornment position="start">R$</InputAdornment>,
+                                }}
+                                style={{ width: 120 }}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <TextField
+                                fullWidth
+                                multiline
+                                rows={1}
+                                variant="outlined"
+                                size="small"
+                                value={item.observations || ""}
+                                onChange={(e) =>
+                                  handleQuotationItemChange(
+                                    index,
+                                    "observations",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="Observações"
+                              />
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Paper>
+                ) : (
+                  <Alert severity="info" style={{ marginBottom: 16 }}>
+                    Nenhum item de cotação configurado. Configure os itens no editor de formulários.
+                  </Alert>
+                )}
               </Box>
             )}
 
