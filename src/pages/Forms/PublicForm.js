@@ -207,17 +207,32 @@ const PublicForm = () => {
     }
   };
 
-  // Função para normalizar telefone (remove o 9 duplicado após o DDD se houver)
+  // Função para normalizar telefone (remove o 5º dígito quando há 14 ou 13 dígitos com 9 duplicado)
   const normalizePhone = (input) => {
     const digits = String(input || "").replace(/\D/g, "");
     if (!digits) return "";
-    if (digits.startsWith("55")) {
-      // Se tem 14 dígitos e o 5º e 6º dígitos são ambos "9", remove o 9 duplicado
-      // Exemplo: 5534999999999 -> 553499999999 (remove o 9 após o DDD)
-      if (digits.length === 14 && digits[4] === "9" && digits[5] === "9") {
-        return digits.slice(0, 4) + digits.slice(5);
+    // Se tem 14 dígitos e começa com 55, remover o 5º dígito (índice 4)
+    // Formato: 55 + DDD(2) + 9(duplicado) + número(9) = 14 dígitos
+    // Exemplo: 5534999999999 -> 553499999999 (remove o 5º dígito)
+    if (digits.startsWith("55") && digits.length === 14) {
+      return digits.slice(0, 4) + digits.slice(5);
+    }
+    // Se tem 13 dígitos, verificar se há um dígito extra após o DDD
+    // Números brasileiros válidos: 55 + DDD(2) + número(8 ou 9) = 12 ou 13 dígitos
+    // Se tiver 13 dígitos e o 5º dígito (após o DDD) for 9, pode ser um 9 duplicado.
+    // Remover o 5º dígito se o número resultante tiver 8 ou 9 dígitos válidos após o DDD.
+    if (digits.startsWith("55") && digits.length === 13) {
+      const numberAfterDdd = digits.slice(4); // Número após DDD (9 dígitos)
+      // Se o número após DDD tem 9 dígitos e o 5º dígito (índice 4) é 9,
+      // pode ser um 9 duplicado. Remover o 5º dígito.
+      if (numberAfterDdd.length === 9 && digits[4] === "9") {
+        const withoutFifth = digits.slice(0, 4) + digits.slice(5);
+        const numberAfterDddWithoutFifth = withoutFifth.slice(4);
+        // Se após remover ficar com 8 ou 9 dígitos válidos, usar esse formato
+        if (numberAfterDddWithoutFifth.length >= 8 && numberAfterDddWithoutFifth.length <= 9) {
+          return withoutFifth;
+        }
       }
-      return digits;
     }
     return digits;
   };

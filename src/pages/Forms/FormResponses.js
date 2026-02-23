@@ -122,6 +122,7 @@ const FormResponses = () => {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState(null);
   const isCardapioForm = form?.settings?.formType === "cardapio" && hasLanchonetes;
+  const isQuotationForm = form?.settings?.formType === "quotation";
   const [responses, setResponses] = useState([]);
   const [selectedResponse, setSelectedResponse] = useState(null);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -635,6 +636,57 @@ const FormResponses = () => {
                       <Typography className={classes.fieldLabel}>Total</Typography>
                       <Typography variant="body1" fontWeight={700}>
                         R$ {getOrderTotal(selectedResponse).toFixed(2).replace(".", ",")}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Divider style={{ marginBottom: 24, marginTop: 24 }} />
+                </>
+              )}
+              {isQuotationForm && selectedResponse?.metadata?.quotationItems?.length > 0 && (
+                <>
+                  <Divider style={{ marginBottom: 24, marginTop: 24 }} />
+                  <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                    Itens da Cotação
+                  </Typography>
+                  <Box className={classes.fieldAnswer} style={{ marginBottom: 24 }}>
+                    <Table size="small">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Produto</TableCell>
+                          <TableCell align="right">Quantidade</TableCell>
+                          <TableCell align="right">Valor Unitário</TableCell>
+                          <TableCell align="right">Valor Total</TableCell>
+                          {selectedResponse.metadata.quotationItems.some(item => item.observations) && (
+                            <TableCell>Observações</TableCell>
+                          )}
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {selectedResponse.metadata.quotationItems.map((item, idx) => (
+                          <TableRow key={idx}>
+                            <TableCell>{item.productName || `Item ${idx + 1}`}</TableCell>
+                            <TableCell align="right">{item.quantity || 0}</TableCell>
+                            <TableCell align="right">
+                              R$ {((item.unitValue || 0)).toFixed(2).replace(".", ",")}
+                            </TableCell>
+                            <TableCell align="right">
+                              R$ {((item.totalValue || 0)).toFixed(2).replace(".", ",")}
+                            </TableCell>
+                            {selectedResponse.metadata.quotationItems.some(item => item.observations) && (
+                              <TableCell>{item.observations || ""}</TableCell>
+                            )}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    <Divider style={{ margin: "16px 0" }} />
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                      <Typography className={classes.fieldLabel}>Total</Typography>
+                      <Typography variant="body1" fontWeight={700}>
+                        R$ {selectedResponse.metadata.quotationItems
+                          .reduce((sum, item) => sum + (Number(item.totalValue) || 0), 0)
+                          .toFixed(2)
+                          .replace(".", ",")}
                       </Typography>
                     </Box>
                   </Box>

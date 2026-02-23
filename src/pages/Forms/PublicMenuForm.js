@@ -412,27 +412,47 @@ const PublicMenuForm = ({
     return "";
   };
   const normalizePhone = (input) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:414',message:'normalizePhone called',data:{input,digitsLength: String(input || "").replace(/\D/g, "").length},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     const digits = String(input || "").replace(/\D/g, "");
     if (!digits) return "";
-    if (digits.startsWith("55")) {
-      if (digits.length === 12) {
-        const local8 = digits.slice(4);
-        const first = local8[0];
-        if (first === "9") return digits;
-        if (first === "6" || first === "7" || first === "8") return digits.slice(0, 4) + "9" + digits.slice(4);
-        return digits;
+    // Se tem 14 dígitos e começa com 55, remover o 5º dígito (índice 4)
+    // Formato: 55 + DDD(2) + 9(duplicado) + número(9) = 14 dígitos
+    // Exemplo: 5534999999999 -> 553499999999 (remove o 5º dígito)
+    if (digits.startsWith("55") && digits.length === 14) {
+      const result = digits.slice(0, 4) + digits.slice(5);
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:420',message:'normalizePhone 14 digits removed 5th',data:{input,digits,result,removedDigit:digits[4]},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      return result;
+    }
+    // Se tem 13 dígitos, verificar se há um dígito extra após o DDD
+    // Números brasileiros válidos: 55 + DDD(2) + número(8 ou 9) = 12 ou 13 dígitos
+    // Se tiver 13 dígitos e o 5º dígito (após o DDD) for 9, pode ser um 9 duplicado.
+    // Remover o 5º dígito se o número resultante tiver 8 ou 9 dígitos válidos após o DDD.
+    if (digits.startsWith("55") && digits.length === 13) {
+      const numberAfterDdd = digits.slice(4); // Número após DDD (9 dígitos)
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:427',message:'normalizePhone checking 13 digits',data:{input,digits,digitsLength:digits.length,numberAfterDdd,numberAfterDddLength:numberAfterDdd.length,fifthDigit:digits[4],fifthDigitIs9:digits[4]==='9'},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+      // #endregion
+      // Se o número após DDD tem 9 dígitos e o 5º dígito (índice 4) é 9,
+      // pode ser um 9 duplicado. Remover o 5º dígito.
+      if (numberAfterDdd.length === 9 && digits[4] === "9") {
+        const withoutFifth = digits.slice(0, 4) + digits.slice(5);
+        const numberAfterDddWithoutFifth = withoutFifth.slice(4);
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:431',message:'normalizePhone 13 digits removing 5th',data:{input,digits,withoutFifth,numberAfterDddWithoutFifth,numberAfterDddWithoutFifthLength:numberAfterDddWithoutFifth.length,willReturn:numberAfterDddWithoutFifth.length >= 8 && numberAfterDddWithoutFifth.length <= 9},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+        // #endregion
+        // Se após remover ficar com 8 ou 9 dígitos válidos, usar esse formato
+        if (numberAfterDddWithoutFifth.length >= 8 && numberAfterDddWithoutFifth.length <= 9) {
+          return withoutFifth;
+        }
       }
-      if (digits.length === 14 && digits[4] === "9" && digits[5] === "9") return digits.slice(0, 4) + digits.slice(5);
-      return digits;
     }
-    if (digits.length === 10) {
-      const local8 = digits.slice(2);
-      const first = local8[0];
-      if (first === "9") return `55${digits}`;
-      if (first === "6" || first === "7" || first === "8") return `55${digits.slice(0, 2)}9${digits.slice(2)}`;
-      return `55${digits}`;
-    }
-    if (digits.length === 11) return `55${digits}`;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:440',message:'normalizePhone returning original',data:{input,digits,result:digits},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     return digits;
   };
   const normalizeLabelKey = (label) => String(label || "").trim().toLowerCase();
@@ -988,8 +1008,18 @@ const PublicMenuForm = ({
       
       // Adicionar TODAS as respostas (automáticas e customizadas)
       allFormFields.forEach((field) => {
-        const answer = answers[field.id];
+        let answer = answers[field.id];
         if (answer !== undefined && answer !== null && answer !== "") {
+          // Normalizar telefone antes de enviar (remover 9 duplicado após DDD)
+          if (field.fieldType === "phone" && answer) {
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:998',message:'Before normalizePhone in handleSubmit',data:{fieldId:field.id,fieldLabel:field.label,answerBefore:answer},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
+            answer = normalizePhone(answer);
+            // #region agent log
+            fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:1000',message:'After normalizePhone in handleSubmit',data:{fieldId:field.id,fieldLabel:field.label,answerBefore:answers[field.id],answerAfter:answer},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+            // #endregion
+          }
           answersArray.push({
             fieldId: field.id,
             answer: answer,
@@ -1038,6 +1068,13 @@ const PublicMenuForm = ({
       };
 
       // Enviar formulário (orderToken garante que o pedido vá para a mesa do link assinado)
+      const phoneAnswers = answersArray.filter(a => {
+        const field = allFormFields.find(f => f.id === a.fieldId);
+        return field && field.fieldType === "phone";
+      });
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:1049',message:'Payload before sending to backend',data:{phoneAnswers,allAnswers:answersArray.map(a=>({fieldId:a.fieldId,answer:a.answer}))},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       const response = await api.post(`/public/forms/${slug}/submit`, {
         answers: answersArray,
         menuItems,
@@ -1139,11 +1176,12 @@ const PublicMenuForm = ({
         const phoneValue = field.metadata?.autoFieldType === "phone"
           ? (value || "55")
           : value;
-        const digits = String(phoneValue || "").replace(/\D/g, "");
-        const phoneMask = digits.length > 12 ? "55(99)99999-9999" : "55(99)9999-9999";
+        // Máscara que sempre aceita 9 dígitos após o DDD para permitir digitar o 9 após o DDD
+        // O formato 55(DDD)99999-9999 permite digitar o 9 após o DDD, que será removido no envio
+        // A normalização remove o 9 duplicado quando há 14 dígitos (55 + DDD + 9 + número)
         return (
           <InputMask
-            mask={phoneMask}
+            mask="55(99)99999-9999"
             maskChar={null}
             value={phoneValue}
             onChange={(e) => handleFieldChange(field.id, e.target.value)}
@@ -1625,9 +1663,9 @@ const PublicMenuForm = ({
   };
 
   const getPieceAgainPhoneMask = () => {
-    const digits = String(pieceAgainPhoneInput || "").replace(/\D/g, "");
-    // 12 dígitos: 55 + DDD + 8 (fixo) | 13 dígitos: 55 + DDD + 9 (celular)
-    return digits.length > 12 ? "55(99)99999-9999" : "55(99)9999-9999";
+    // Sempre usar máscara com 9 dígitos após o DDD para permitir digitar o 9 após o DDD
+    // O formato 55(DDD)99999-9999 permite digitar o 9 após o DDD, que será removido na normalização
+    return "55(99)99999-9999";
   };
 
   useEffect(() => {
