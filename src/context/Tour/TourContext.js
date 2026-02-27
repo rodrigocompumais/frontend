@@ -14,8 +14,13 @@ export const TourProvider = ({ children }) => {
   // Verificar se é primeiro acesso
   useEffect(() => {
     if (user && user.id) {
+      // Verificar se o tour foi completado para este usuário
+      // Usar uma chave mais persistente que não seja limpa no logout
       const tourCompleted = localStorage.getItem(`tourCompleted_${user.id}`);
-      if (!tourCompleted && (location.pathname === '/dashboard' || location.pathname === '/')) {
+      const tourCompletedGlobal = localStorage.getItem(`tourCompleted_global_${user.id}`);
+      
+      // Se não foi completado nem localmente nem globalmente, iniciar o tour
+      if (!tourCompleted && !tourCompletedGlobal && (location.pathname === '/dashboard' || location.pathname === '/')) {
         // Pequeno delay para garantir que a página carregou
         setTimeout(() => {
           setRun(true);
@@ -39,7 +44,9 @@ export const TourProvider = ({ children }) => {
   const stopTour = () => {
     setRun(false);
     if (user && user.id) {
+      // Salvar em duas chaves para garantir persistência
       localStorage.setItem(`tourCompleted_${user.id}`, 'true');
+      localStorage.setItem(`tourCompleted_global_${user.id}`, 'true');
     }
   };
 

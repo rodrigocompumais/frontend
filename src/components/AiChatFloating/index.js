@@ -19,6 +19,8 @@ import CloseIcon from "@material-ui/icons/Close";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import MinimizeIcon from "@material-ui/icons/Remove";
 import AssessmentIcon from "@material-ui/icons/Assessment";
+import MicIcon from "@material-ui/icons/Mic";
+import StopIcon from "@material-ui/icons/Stop";
 import api from "../../services/api";
 import GeminiIcon from "../GeminiIcon";
 import { toast } from "react-toastify";
@@ -272,6 +274,22 @@ const useStyles = makeStyles((theme) => ({
       color: theme.palette.action.disabled,
     },
   },
+  recordingButton: {
+    width: 40,
+    height: 40,
+    marginRight: theme.spacing(1),
+    "&.recording": {
+      animation: "$pulse 1.5s ease-in-out infinite",
+    },
+  },
+  "@keyframes pulse": {
+    "0%, 100%": {
+      transform: "scale(1)",
+    },
+    "50%": {
+      transform: "scale(1.1)",
+    },
+  },
   // Loading
   loadingBubble: {
     display: "flex",
@@ -285,6 +303,24 @@ const useStyles = makeStyles((theme) => ({
       color: "#FFFFFF",
     },
   },
+  // Botão de gravação
+  recordButton: {
+    width: 40,
+    height: 40,
+    marginRight: theme.spacing(1),
+    transition: "all 0.3s ease",
+    "&.recording": {
+      animation: "$pulse 1.5s ease-in-out infinite",
+    },
+  },
+  "@keyframes pulse": {
+    "0%, 100%": {
+      transform: "scale(1)",
+    },
+    "50%": {
+      transform: "scale(1.1)",
+    },
+  },
 }));
 
 const AiChatFloating = () => {
@@ -293,10 +329,14 @@ const AiChatFloating = () => {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [audioLoading, setAudioLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const containerRef = useRef(null);
   const [openUpward, setOpenUpward] = useState(false);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   // Carregar mensagens do localStorage ao iniciar
   useEffect(() => {
@@ -399,6 +439,111 @@ const AiChatFloating = () => {
     setMessages([]);
     localStorage.removeItem(STORAGE_KEY);
     toast.info("Histórico de conversa limpo");
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: 'audio/webm;codecs=opus'
+      });
+      
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        await sendAudioMessage(audioBlob);
+        
+        // Parar todas as tracks do stream
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorder.start();
+      setRecording(true);
+    } catch (err) {
+      console.error("Erro ao iniciar gravação:", err);
+      toast.error("Não foi possível acessar o microfone. Verifique as permissões.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && recording) {
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+    }
+  };
+
+  const sendAudioMessage = async (audioBlob) => {
+    if (audioLoading || loading) return;
+
+    setAudioLoading(true);
+
+    // Adicionar mensagem indicando que está processando áudio
+    const processingMessage = {
+      role: "user",
+      content: "🎤 Processando áudio...",
+      timestamp: new Date().toISOString(),
+      isProcessing: true
+    };
+    setMessages((prev) => [...prev, processingMessage]);
+
+    try {
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "audio.webm");
+      
+      const conversationHistory = messages
+        .filter(msg => !msg.isProcessing)
+        .slice(-10)
+        .map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        }));
+
+      formData.append("conversationHistory", JSON.stringify(conversationHistory));
+
+      const { data } = await api.post("/ai/chat/audio", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      // Remover mensagem de processamento
+      setMessages((prev) => prev.filter(msg => !msg.isProcessing));
+
+      // Adicionar mensagem do usuário com transcrição
+      const userMessage = {
+        role: "user",
+        content: data.transcription || "🎤 Áudio enviado",
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, userMessage]);
+
+      // Adicionar resposta da IA
+      const aiMessage = {
+        role: "assistant",
+        content: data.response,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (err) {
+      // Remover mensagem de processamento
+      setMessages((prev) => prev.filter(msg => !msg.isProcessing));
+
+      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
+        toast.error("Configure a API Key do Gemini em Configurações → Integrações");
+      } else {
+        toastError(err);
+      }
+    } finally {
+      setAudioLoading(false);
+    }
   };
 
   const history = useHistory();
@@ -567,14 +712,31 @@ const AiChatFloating = () => {
 
           {/* Área de Input */}
           <Box className={classes.inputArea}>
+            <IconButton
+              onClick={recording ? stopRecording : startRecording}
+              disabled={loading || audioLoading}
+              className={`${classes.recordButton} ${recording ? "recording" : ""}`}
+              style={{
+                background: recording 
+                  ? "linear-gradient(135deg, #DC2626 0%, #EF4444 100%)"
+                  : "linear-gradient(135deg, #22C55E 0%, #16A34A 100%)",
+                color: "#FFFFFF",
+              }}
+            >
+              {recording ? (
+                <StopIcon fontSize="small" />
+              ) : (
+                <MicIcon fontSize="small" />
+              )}
+            </IconButton>
             <TextField
               inputRef={inputRef}
               className={classes.input}
-              placeholder="Digite sua pergunta..."
+              placeholder={recording ? "Gravando áudio..." : "Digite sua pergunta..."}
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={handleKeyPress}
-              disabled={loading}
+              disabled={loading || audioLoading || recording}
               variant="outlined"
               size="small"
               multiline
@@ -584,9 +746,9 @@ const AiChatFloating = () => {
             <IconButton
               className={classes.sendButton}
               onClick={handleSendMessage}
-              disabled={!inputMessage.trim() || loading}
+              disabled={!inputMessage.trim() || loading || audioLoading || recording}
             >
-              {loading ? (
+              {loading || audioLoading ? (
                 <CircularProgress size={20} color="inherit" />
               ) : (
                 <SendIcon fontSize="small" />

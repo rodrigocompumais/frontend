@@ -237,6 +237,20 @@ const useAuth = () => {
     try {
       await api.delete("/auth/logout");
       setIsAuth(false);
+      
+      // Preservar flags de tour antes de limpar
+      const userId = localStorage.getItem("userId");
+      const tourKeys = [];
+      if (userId) {
+        // Coletar todas as chaves de tour relacionadas a este usuário
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith(`tourCompleted_${userId}`) || key.startsWith(`tourCompleted_global_${userId}`))) {
+            tourKeys.push({ key, value: localStorage.getItem(key) });
+          }
+        }
+      }
+      
       setUser({});
       localStorage.removeItem("token");
       localStorage.removeItem("companyId");
@@ -244,6 +258,14 @@ const useAuth = () => {
       localStorage.removeItem("cshow");
       // Limpar histórico de conversas com IA
       localStorage.removeItem("ai_chat_messages");
+      
+      // Restaurar flags de tour após limpar
+      if (userId && tourKeys.length > 0) {
+        tourKeys.forEach(({ key, value }) => {
+          localStorage.setItem(key, value);
+        });
+      }
+      
       api.defaults.headers.Authorization = undefined;
       setLoading(false);
       history.push("/login");

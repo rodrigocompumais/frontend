@@ -137,7 +137,22 @@ const LoggedInLayout = ({ children, themeToggle }) => {
       if (data.user.id === +userId) {
         toastError("Sua conta foi acessada em outro computador.");
         setTimeout(() => {
+          // Preservar flags de tour antes de limpar
+          const tourKeys = [];
+          for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key && (key.startsWith('tourCompleted_') || key.startsWith('tourCompleted_global_'))) {
+              tourKeys.push({ key, value: localStorage.getItem(key) });
+            }
+          }
+          
           localStorage.clear();
+          
+          // Restaurar flags de tour após limpar
+          tourKeys.forEach(({ key, value }) => {
+            localStorage.setItem(key, value);
+          });
+          
           window.location.reload();
         }, 1000);
       }
