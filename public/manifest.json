@@ -1,20 +1,58 @@
 {
 	"short_name": "Compuchat",
-	"name": "Compuchat",
+	"name": "Compuchat - CRM WhatsApp com IA",
+	"description": "CRM de atendimento via WhatsApp com inteligência artificial",
 	"icons": [
 		{
 			"src": "favicon.ico",
 			"sizes": "64x64 32x32 24x24 16x16",
-			"type": "image/x-icon"
+			"type": "image/x-icon",
+			"purpose": "any"
 		},
 		{
-			"src": "/android-chrome-192x192.png",
+			"src": "favicon-16x16.jpg",
+			"sizes": "16x16",
+			"type": "image/jpeg",
+			"purpose": "any"
+		},
+		{
+			"src": "favicon-32x32.jpg",
+			"sizes": "32x32",
+			"type": "image/jpeg",
+			"purpose": "any"
+		},
+		{
+			"src": "android-chrome-192x192.jpg",
 			"sizes": "192x192",
-			"type": "image/png"
+			"type": "image/jpeg",
+			"purpose": "any maskable"
+		},
+		{
+			"src": "android-chrome-192x192.jpg",
+			"sizes": "192x192",
+			"type": "image/jpeg",
+			"purpose": "maskable"
+		},
+		{
+			"src": "android-chrome-192x192.jpg",
+			"sizes": "512x512",
+			"type": "image/jpeg",
+			"purpose": "any maskable"
+		},
+		{
+			"src": "apple-touch-icon.jpg",
+			"sizes": "180x180",
+			"type": "image/jpeg",
+			"purpose": "any"
 		}
 	],
-	"start_url": ".",
+	"start_url": "/",
+	"scope": "/",
 	"display": "standalone",
-	"theme_color": "#000000",
-	"background_color": "#ffffff"
+	"orientation": "portrait-primary",
+	"theme_color": "#0A0A0F",
+	"background_color": "#0A0A0F",
+	"categories": ["business", "productivity"],
+	"lang": "pt-BR",
+	"dir": "ltr"
 }
