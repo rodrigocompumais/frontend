@@ -1,4 +1,4 @@
-﻿import React, { useContext, useState, useEffect, useCallback } from "react";
+import React, { useContext, useState, useEffect, useCallback } from "react";
 import { useHistory } from "react-router-dom";
 
 import Container from "@material-ui/core/Container";
@@ -446,7 +446,7 @@ const FormattedSummary = ({ text, classes }) => {
   lines.forEach((line, index) => {
     const trimmed = line.trim();
     
-    // Detectar tÃ­tulos markdown (# ## ###)
+    // Detectar títulos markdown (# ## ###)
     if (trimmed.match(/^#{1,3}\s+/)) {
       if (currentList.length > 0) {
         sections.push({ type: "list", content: currentList });
@@ -470,15 +470,15 @@ const FormattedSummary = ({ text, classes }) => {
       }
       sections.push({ type: "divider" });
     }
-    // Detectar listas (- â€¢ ou nÃºmeros)
-    else if (trimmed.match(/^[-â€¢*]\s/) || trimmed.match(/^\d+[\.\)]\s/)) {
+    // Detectar listas (- • ou números)
+    else if (trimmed.match(/^[-•*]\s/) || trimmed.match(/^\d+[\.\)]\s/)) {
       if (currentParagraph.length > 0) {
         sections.push({ type: "paragraph", content: currentParagraph.join(' ') });
         currentParagraph = [];
       }
-      currentList.push(trimmed.replace(/^[-â€¢*]\s*/, '').replace(/^\d+[\.\)]\s*/, ''));
+      currentList.push(trimmed.replace(/^[-•*]\s*/, '').replace(/^\d+[\.\)]\s*/, ''));
     }
-    // Detectar subtÃ­tulos (negrito ou linha que termina com :)
+    // Detectar subtítulos (negrito ou linha que termina com :)
     else if (trimmed.match(/^\*\*.*\*\*$/) || (trimmed.endsWith(':') && trimmed.length < 100)) {
       if (currentList.length > 0) {
         sections.push({ type: "list", content: currentList });
@@ -490,7 +490,7 @@ const FormattedSummary = ({ text, classes }) => {
       }
       sections.push({ type: "subtitle", content: trimmed });
     }
-    // Linha vazia - finalizar parÃ¡grafo ou lista
+    // Linha vazia - finalizar parágrafo ou lista
     else if (trimmed === '') {
       if (currentList.length > 0) {
         sections.push({ type: "list", content: currentList });
@@ -511,7 +511,7 @@ const FormattedSummary = ({ text, classes }) => {
     }
   });
   
-  // Finalizar Ãºltimos elementos
+  // Finalizar últimos elementos
   if (currentList.length > 0) {
     sections.push({ type: "list", content: currentList });
   }
@@ -553,9 +553,9 @@ const FormattedSummary = ({ text, classes }) => {
         } else if (section.type === "divider") {
           return <Divider key={index} style={{ margin: "16px 0" }} />;
         } else {
-          // ParÃ¡grafo normal
+          // Parágrafo normal
           const content = section.content;
-          const isHighlight = content.match(/(importante|destaque|atenÃ§Ã£o|recomenda|sugestÃ£o|conclusÃ£o)/i);
+          const isHighlight = content.match(/(importante|destaque|atenção|recomenda|sugestão|conclusão)/i);
           
           if (isHighlight) {
             return (
@@ -674,12 +674,12 @@ const Dashboard = () => {
         });
         setPendingTasks(tasksData.tasks || []);
       } catch (err) {
-        // Se a API de tarefas nÃ£o existir, apenas ignora
-        console.log("Tarefas nÃ£o disponÃ­veis");
+        // Se a API de tarefas não existir, apenas ignora
+        console.log("Tarefas não disponíveis");
         setPendingTasks([]);
       }
 
-      // Fetch orders stats quando mÃ³dulo lanchonetes ativo
+      // Fetch orders stats quando módulo lanchonetes ativo
       if (hasLanchonetes) {
         try {
           const { data: ordersData } = await api.get("/dashboard/orders-stats");
@@ -701,7 +701,7 @@ const Dashboard = () => {
     fetchData();
   }, []);
 
-  // MÃ³dulos da empresa com nome e descriÃ§Ã£o (funcionalidades)
+  // Módulos da empresa com nome e descrição (funcionalidades)
   useEffect(() => {
     const loadModulesWithDetails = async () => {
       if (!companyModuleSlugs?.length) {
@@ -774,7 +774,7 @@ const Dashboard = () => {
         });
         setAppointments(appointmentsData.appointments || []);
       } catch (err) {
-        console.log("Agendamentos nÃ£o disponÃ­veis");
+        console.log("Agendamentos não disponíveis");
         setAppointments([]);
       }
     } catch (err) {
@@ -822,7 +822,7 @@ const Dashboard = () => {
       }
 
       const { data } = await api.post("/ai/summary/agent", params);
-      setSummaryText(data.summary || "Nenhum resumo disponÃ­vel.");
+      setSummaryText(data.summary || "Nenhum resumo disponível.");
     } catch (err) {
       if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
         toast.error("Configure a API Key do Gemini em Configuracoes -> Integracoes");
@@ -858,10 +858,10 @@ const Dashboard = () => {
       }
 
       const { data } = await api.post("/ai/summary/agent", params);
-      setGeneralSummary(data.summary || "Nenhum resumo disponÃ­vel.");
+      setGeneralSummary(data.summary || "Nenhum resumo disponível.");
     } catch (err) {
       if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        toast.error("Configure a API Key do Gemini em ConfiguraÃ§Ãµes â†’ IntegraÃ§Ãµes");
+        toast.error("Configure a API Key do Gemini em Configurações → Integrações");
       } else {
         toastError(err);
       }
@@ -911,7 +911,7 @@ const Dashboard = () => {
 
     const content = `Resumo IA das Conversas - ${summaryAgentName}\n` +
       `Gerado em: ${moment().format("DD/MM/YYYY HH:mm:ss")}\n` +
-      `PerÃ­odo: ${dateFrom || "Ãšltimos " + period + " dias"} atÃ© ${dateTo || moment().format("DD/MM/YYYY")}\n\n` +
+      `Período: ${dateFrom || "Últimos " + period + " dias"} até ${dateTo || moment().format("DD/MM/YYYY")}\n\n` +
       `========================================\n\n${summaryText}`;
 
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
@@ -925,7 +925,7 @@ const Dashboard = () => {
     URL.revokeObjectURL(url);
   };
 
-  // FunÃ§Ã£o para lidar com clique nos cards de status
+  // Função para lidar com clique nos cards de status
   const handleCardClick = async (status, title) => {
     setTicketModalTitle(title);
     setTicketModalStatus(status);
@@ -953,13 +953,13 @@ const Dashboard = () => {
     }
   };
 
-  // FunÃ§Ã£o para abrir um ticket
+  // Função para abrir um ticket
   const handleOpenTicket = (ticketId) => {
     setTicketModalOpen(false);
     history.push(`/tickets/${ticketId}`);
   };
 
-  // FunÃ§Ã£o para formatar tempo relativo
+  // Função para formatar tempo relativo
   const formatRelativeTime = (date) => {
     if (!date) return "-";
     return moment(date).fromNow();
@@ -975,9 +975,9 @@ const Dashboard = () => {
               Dashboard
             </Typography>
             <Typography className={classes.subtitle}>
-              VisÃ£o geral das mÃ©tricas e estatÃ­sticas do sistema
+              Visão geral das métricas e estatísticas do sistema
               <span className={classes.lastUpdate}>
-                â€¢ Atualizado: {moment(lastUpdate).format("HH:mm:ss")}
+                • Atualizado: {moment(lastUpdate).format("HH:mm:ss")}
               </span>
             </Typography>
           </Box>
@@ -1007,7 +1007,7 @@ const Dashboard = () => {
               </IconButton>
             </Tooltip>
 
-            <Tooltip title="ConfiguraÃ§Ãµes">
+            <Tooltip title="Configurações">
               <IconButton
                 onClick={() => history.push("/quick-access-buttons-settings")}
                 size="small"
@@ -1040,15 +1040,15 @@ const Dashboard = () => {
             variant="scrollable"
             scrollButtons="auto"
           >
-            <Tab icon={<DashboardIcon />} label="VisÃ£o Geral" />
-            <Tab icon={<BarChartIcon />} label="AnÃ¡lises" />
+            <Tab icon={<DashboardIcon />} label="Visão Geral" />
+            <Tab icon={<BarChartIcon />} label="Análises" />
             <Tab icon={<PeopleIcon />} label="Atendentes" />
             <Tab icon={<GeminiIcon />} label="IA" />
             <Tab icon={<AssignmentIcon />} label="Tarefas" />
           </Tabs>
         </Paper>
 
-        {/* Tab Panel - VisÃ£o Geral */}
+        {/* Tab Panel - Visão Geral */}
         {activeTab === 0 && (
           <Box className={classes.tabPanel}>
             {/* Primary Stats */}
@@ -1132,12 +1132,12 @@ const Dashboard = () => {
 
           <Grid item xs={6} sm={4} md={3}>
             <MiniStatCard
-              title="Taxa ResoluÃ§Ã£o"
+              title="Taxa Resolução"
               value={extendedData.resolutionRate || 0}
               suffix="%"
               icon={TrendingUpIcon}
               color="#22C55E"
-              subtext="no perÃ­odo"
+              subtext="no período"
             />
           </Grid>
 
@@ -1157,7 +1157,7 @@ const Dashboard = () => {
               value={extendedData.messagesSent || 0}
               icon={ChatIcon}
               color="#8B5CF6"
-              subtext="enviadas no perÃ­odo"
+              subtext="enviadas no período"
             />
           </Grid>
 
@@ -1170,7 +1170,7 @@ const Dashboard = () => {
                   value={ordersStats.pedidosHoje || 0}
                   icon={RestaurantIcon}
                   color="#F59E0B"
-                  subtext="cardÃ¡pio"
+                  subtext="cardápio"
                 />
               </Grid>
               <Grid item xs={6} sm={4} md={3}>
@@ -1218,7 +1218,7 @@ const Dashboard = () => {
                         onClick={() => history.push(`/forms/${ordersStats.firstCardapioFormId}/historico-pedidos`)}
                         style={{ textTransform: "none", borderRadius: 8 }}
                       >
-                        HistÃ³rico de Pedidos
+                        Histórico de Pedidos
                       </Button>
                     </>
                   )}
@@ -1228,7 +1228,7 @@ const Dashboard = () => {
                     onClick={() => history.push("/forms")}
                     style={{ textTransform: "none", borderRadius: 8 }}
                   >
-                    FormulÃ¡rios
+                    Formulários
                   </Button>
                 </Box>
               </Grid>
@@ -1237,7 +1237,7 @@ const Dashboard = () => {
 
           <Grid item xs={6} sm={4} md={3}>
             <MiniStatCard
-              title="ConexÃµes"
+              title="Conexões"
               value={`${extendedData.onlineConnections || 0}/${extendedData.totalConnections || 0}`}
               icon={WifiIcon}
               color={extendedData.onlineConnections > 0 ? "#22C55E" : "#EF4444"}
@@ -1247,7 +1247,7 @@ const Dashboard = () => {
 
           <Grid item xs={6} sm={4} md={3}>
             <MiniStatCard
-              title="UsuÃ¡rios Online"
+              title="Usuários Online"
               value={`${extendedData.onlineUsers || 0}/${extendedData.totalUsers || 0}`}
               icon={PeopleIcon}
               color="#3B82F6"
@@ -1268,18 +1268,18 @@ const Dashboard = () => {
           </Box>
         )}
 
-        {/* Tab Panel - AnÃ¡lises */}
+        {/* Tab Panel - Análises */}
         {activeTab === 1 && (
           <Box className={classes.tabPanel}>
             <Typography className={classes.sectionTitle}>
-              ðŸ“Š AnÃ¡lises e GrÃ¡ficos
+              📊 Análises e Gráficos
             </Typography>
             <Grid container spacing={3} className={classes.chartsSection}>
           <Grid item xs={12} md={8}>
             <LineChartComponent
               data={extendedData.ticketsByDay || []}
-              title="Tickets nos Ãšltimos 7 Dias"
-              subtitle="EvoluÃ§Ã£o diÃ¡ria de tickets criados"
+              title="Tickets nos Últimos 7 Dias"
+              subtitle="Evolução diária de tickets criados"
               xAxisKey="day"
               dataKey="count"
               color="#3B82F6"
@@ -1289,7 +1289,7 @@ const Dashboard = () => {
           <Grid item xs={12} md={4}>
             <PieChartComponent
               data={extendedData.ticketsByStatus || []}
-              title="DistribuiÃ§Ã£o por Status"
+              title="Distribuição por Status"
               subtitle="Tickets ativos no momento"
               isStatusChart={true}
             />
@@ -1299,7 +1299,7 @@ const Dashboard = () => {
             <BarChartComponent
               data={extendedData.topAttendants || []}
               title="Top Atendentes"
-              subtitle="Tickets resolvidos no perÃ­odo"
+              subtitle="Tickets resolvidos no período"
               showAsList={true}
             />
           </Grid>
@@ -1308,7 +1308,7 @@ const Dashboard = () => {
             <PieChartComponent
               data={extendedData.ticketsByQueue || []}
               title="Tickets por Fila"
-              subtitle="DistribuiÃ§Ã£o por setor"
+              subtitle="Distribuição por setor"
             />
           </Grid>
         </Grid>
@@ -1321,7 +1321,7 @@ const Dashboard = () => {
             {attendants.length > 0 && (
               <>
                 <Typography className={classes.sectionTitle}>
-                  ðŸ‘¥ Status dos Atendentes
+                  👥 Status dos Atendentes
                 </Typography>
                 <Grid container spacing={3}>
                   <Grid item xs={12}>
@@ -1346,9 +1346,9 @@ const Dashboard = () => {
         {/* Tab Panel - IA */}
         {activeTab === 3 && (
           <Box className={classes.tabPanel}>
-            {/* GeraÃ§Ã£o de Resumos com IA */}
+            {/* Geração de Resumos com IA */}
             <Typography className={classes.sectionTitle}>
-              ðŸ¤– Resumos AutomÃ¡ticos com IA
+              🤖 Resumos Automáticos com IA
             </Typography>
             <Grid container spacing={3}>
               {/* Resumo por Atendente */}
@@ -1376,7 +1376,7 @@ const Dashboard = () => {
                         Resumo por Atendente
                       </Typography>
                       <Typography variant="body2" color="textSecondary" style={{ fontSize: "0.875rem", lineHeight: 1.5 }}>
-                        Gere resumos especÃ­ficos para cada atendente
+                        Gere resumos específicos para cada atendente
                       </Typography>
                     </Box>
                   </Box>
@@ -1409,7 +1409,7 @@ const Dashboard = () => {
                     <Box marginTop={3}>
                       <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2}>
                         <Typography variant="h6" style={{ fontWeight: 600, fontSize: "0.875rem" }}>
-                          ðŸ“„ Resumo: {summaryAgentName}
+                          📄 Resumo: {summaryAgentName}
                         </Typography>
                         <Box display="flex" gap={1}>
                           <Button
@@ -1474,10 +1474,10 @@ const Dashboard = () => {
                     </Box>
                     <Box flex={1}>
                       <Typography variant="h6" style={{ fontWeight: 600, marginBottom: 4, fontSize: "1rem" }}>
-                        Resumo Geral da OperaÃ§Ã£o
+                        Resumo Geral da Operação
                       </Typography>
                       <Typography variant="body2" color="textSecondary" style={{ fontSize: "0.875rem", lineHeight: 1.5 }}>
-                        Gere um resumo completo das conversas e atividades do perÃ­odo selecionado
+                        Gere um resumo completo das conversas e atividades do período selecionado
                       </Typography>
                     </Box>
                   </Box>
@@ -1496,7 +1496,7 @@ const Dashboard = () => {
                     <Box marginTop={3}>
                       <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2}>
                         <Typography variant="h6" style={{ fontWeight: 600, fontSize: "0.875rem" }}>
-                          ðŸ“„ Resumo Geral
+                          📄 Resumo Geral
                         </Typography>
                         <Box display="flex" gap={1}>
                           <Button
@@ -1621,7 +1621,7 @@ const Dashboard = () => {
         {activeTab === 4 && (
           <Box className={classes.tabPanel}>
             <Typography className={classes.sectionTitle}>
-              ðŸ“‹ Tarefas e Agendamentos
+              📋 Tarefas e Agendamentos
             </Typography>
             
             {tasksTabLoading ? (
@@ -1630,7 +1630,7 @@ const Dashboard = () => {
               </Box>
             ) : (
               <Grid container spacing={3}>
-                {/* SeÃ§Ã£o de Tarefas */}
+                {/* Seção de Tarefas */}
                 <Grid item xs={12} md={6}>
                   <Paper elevation={0} className={classes.modernCard}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2}>
@@ -1676,7 +1676,7 @@ const Dashboard = () => {
                               >
                                 <TableCell style={{ padding: "12px 16px" }}>
                                   <Typography variant="body2" style={{ fontWeight: 500 }}>
-                                    {task.title || "Sem tÃ­tulo"}
+                                    {task.title || "Sem título"}
                                   </Typography>
                                   {task.description && (
                                     <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 4 }}>
@@ -1688,7 +1688,7 @@ const Dashboard = () => {
                                 </TableCell>
                                 <TableCell style={{ padding: "12px 16px" }}>
                                   <Chip
-                                    label={task.status === "pending" ? "Pendente" : task.status === "inProgress" ? "Em Progresso" : task.status === "completed" ? "ConcluÃ­da" : "Cancelada"}
+                                    label={task.status === "pending" ? "Pendente" : task.status === "inProgress" ? "Em Progresso" : task.status === "completed" ? "Concluída" : "Cancelada"}
                                     size="small"
                                     style={{
                                       backgroundColor: task.status === "completed" 
@@ -1711,7 +1711,7 @@ const Dashboard = () => {
                                 </TableCell>
                                 <TableCell style={{ padding: "12px 16px" }}>
                                   <Chip
-                                    label={task.priority === "high" ? "Alta" : task.priority === "medium" ? "MÃ©dia" : "Baixa"}
+                                    label={task.priority === "high" ? "Alta" : task.priority === "medium" ? "Média" : "Baixa"}
                                     size="small"
                                     style={{
                                       backgroundColor: task.priority === "high" 
@@ -1757,7 +1757,7 @@ const Dashboard = () => {
                   </Paper>
                 </Grid>
 
-                {/* SeÃ§Ã£o de Agendamentos */}
+                {/* Seção de Agendamentos */}
                 <Grid item xs={12} md={6}>
                   <Paper elevation={0} className={classes.modernCard}>
                     <Box display="flex" justifyContent="space-between" alignItems="center" marginBottom={2}>
@@ -1803,7 +1803,7 @@ const Dashboard = () => {
                               >
                                 <TableCell style={{ padding: "12px 16px" }}>
                                   <Typography variant="body2" style={{ fontWeight: 500 }}>
-                                    {appointment.title || appointment.contact?.name || "Sem tÃ­tulo"}
+                                    {appointment.title || appointment.contact?.name || "Sem título"}
                                   </Typography>
                                   {appointment.description && (
                                     <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 4 }}>
@@ -1821,7 +1821,7 @@ const Dashboard = () => {
                                   </Typography>
                                   {appointment.endDate && (
                                     <Typography variant="caption" color="textSecondary" style={{ display: "block" }}>
-                                      atÃ© {moment(appointment.endDate).format("HH:mm")}
+                                      até {moment(appointment.endDate).format("HH:mm")}
                                     </Typography>
                                   )}
                                 </TableCell>
@@ -1873,7 +1873,7 @@ const Dashboard = () => {
         >
           <DialogTitle>
             <Box style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span>ðŸ¤– Compuchat - {summaryAgentName}</span>
+              <span>🤖 Compuchat - {summaryAgentName}</span>
               <IconButton size="small" onClick={() => setSummaryModalOpen(false)}>
                 <CloseIcon />
               </IconButton>
@@ -1896,7 +1896,7 @@ const Dashboard = () => {
                   <FormattedSummary text={summaryText} classes={classes} />
                 ) : (
                   <Typography variant="body2" color="textSecondary" style={{ textAlign: "center", padding: 24 }}>
-                    Nenhum resumo disponÃ­vel.
+                    Nenhum resumo disponível.
                   </Typography>
                 )}
               </Box>
@@ -1913,7 +1913,7 @@ const Dashboard = () => {
               startIcon={<GetAppIcon />}
               disabled={!summaryText}
             >
-              Baixar RelatÃ³rio
+              Baixar Relatório
             </Button>
           </DialogActions>
         </Dialog>
@@ -1928,7 +1928,7 @@ const Dashboard = () => {
           <DialogTitle>
             <Box style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <Box style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span>ðŸ“‹ {ticketModalTitle}</span>
+                <span>📋 {ticketModalTitle}</span>
                 <Chip 
                   label={`${ticketModalData.length} tickets`} 
                   size="small" 
@@ -1961,7 +1961,7 @@ const Dashboard = () => {
                       <TableCell style={{ fontWeight: 600 }}>Atendente</TableCell>
                       <TableCell style={{ fontWeight: 600 }}>Fila</TableCell>
                       <TableCell style={{ fontWeight: 600 }}>Atualizado</TableCell>
-                      <TableCell style={{ fontWeight: 600 }} align="center">AÃ§Ã£o</TableCell>
+                      <TableCell style={{ fontWeight: 600 }} align="center">Ação</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
