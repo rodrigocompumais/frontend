@@ -11,8 +11,7 @@ const useCompanyModules = () => {
   const { user, isAuth } = useContext(AuthContext);
 
   const fetchModules = useCallback(async () => {
-    const companyId = localStorage.getItem("companyId");
-    if (!companyId || !isAuth) {
+    if (!isAuth) {
       setModules([]);
       setLoading(false);
       return;
