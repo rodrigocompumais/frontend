@@ -512,19 +512,17 @@ const FormResponses = () => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose}
       >
-        {menuResponse && (
-          <>
-            <MenuItem
-              onClick={() => {
-                handleDelete(menuResponse.id);
-                handleMenuClose();
-              }}
-            >
-              <DeleteIcon fontSize="small" style={{ marginRight: 8 }} />
-              Excluir
-            </MenuItem>
-          </>
-        )}
+        {menuResponse ? (
+          <MenuItem
+            onClick={() => {
+              handleDelete(menuResponse.id);
+              handleMenuClose();
+            }}
+          >
+            <DeleteIcon fontSize="small" style={{ marginRight: 8 }} />
+            Excluir
+          </MenuItem>
+        ) : null}
       </Menu>
 
       {/* Modal de detalhes */}

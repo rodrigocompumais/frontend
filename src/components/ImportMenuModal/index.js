@@ -61,6 +61,16 @@ const useStyles = makeStyles((theme) => ({
     fontSize: "0.875rem",
     color: theme.palette.primary.main,
   },
+  adicionaisSection: {
+    marginTop: theme.spacing(2),
+    marginBottom: theme.spacing(2),
+  },
+  adicionaisCard: {
+    padding: theme.spacing(1.5),
+    marginBottom: theme.spacing(1),
+    backgroundColor: theme.palette.action.hover,
+    borderRadius: theme.shape.borderRadius,
+  },
 }));
 
 const ImportMenuModal = ({ open, onClose, onSuccess }) => {
@@ -117,10 +127,20 @@ const ImportMenuModal = ({ open, onClose, onSuccess }) => {
       if (isPdf) {
         const baseURL = api.defaults.baseURL || "";
         const url = `${baseURL.replace(/\/$/, "")}/products/import-from-menu`;
+        let token;
+        try {
+          const raw = localStorage.getItem("token");
+          token = raw ? JSON.parse(raw) : null;
+        } catch {
+          token = null;
+        }
+        const headers = {};
+        if (token) headers.Authorization = `Bearer ${token}`;
         const res = await fetch(url, {
           method: "POST",
           body: formData,
           credentials: "include",
+          headers,
         });
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
@@ -210,10 +230,13 @@ const ImportMenuModal = ({ open, onClose, onSuccess }) => {
 
     setConfirming(true);
     try {
+      const adicionaisToSend = Array.isArray(preview?.adicionais) ? preview.adicionais : [];
       const { data } = await api.post("/products/import-from-menu/confirm", {
         produtos: toSend,
+        adicionais: adicionaisToSend,
       });
-      toast.success(`${data.count || 0} produto(s) importado(s) com sucesso.`);
+      const addOnMsg = adicionaisToSend.length > 0 ? ` e ${adicionaisToSend.length} grupo(s) de adicionais` : "";
+      toast.success(`${data.count || 0} produto(s) importado(s)${addOnMsg} com sucesso.`);
       if (typeof onSuccess === "function") onSuccess();
       handleClose();
     } catch (err) {
@@ -301,6 +324,26 @@ const ImportMenuModal = ({ open, onClose, onSuccess }) => {
                   ))}
                 </Typography>
               </Box>
+            )}
+            {Array.isArray(preview?.adicionais) && preview.adicionais.length > 0 && (
+              <div className={classes.adicionaisSection}>
+                <Typography variant="subtitle2" color="primary" gutterBottom>
+                  Grupos de adicionais (serão criados e vinculados às categorias)
+                </Typography>
+                {preview.adicionais.map((ad, idx) => (
+                  <div key={idx} className={classes.adicionaisCard}>
+                    <Typography variant="body2" fontWeight="bold">
+                      {ad.nomeGrupo}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      {ad.itens?.map((it) => `${it.label} (R$ ${Number(it.valor).toFixed(2)})`).join(", ")}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary">
+                      Aplicado a: {ad.gruposProduto?.join(", ") || "—"}
+                    </Typography>
+                  </div>
+                ))}
+              </div>
             )}
             <div className={classes.tableWrapper}>
               <Table size="small" stickyHeader>
