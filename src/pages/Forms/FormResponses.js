@@ -258,14 +258,14 @@ const FormResponses = () => {
 
   const getOrderTotal = (response) => {
     const metadata = response?.metadata || {};
-    // Se já tem total salvo, usar ele (já inclui taxa de entrega)
+    // Se já tem total salvo, usar ele (já inclui taxa de entrega e adicionais)
     if (metadata.total != null) return Number(metadata.total);
     
-    // Caso contrário, calcular: soma dos itens + taxa de entrega
+    // Caso contrário, calcular: soma dos itens (com adicionais) + taxa de entrega
     const items = metadata.menuItems || [];
     const itemsTotal = items.reduce((sum, item) => {
       const qty = Number(item.quantity) || 0;
-      const val = Number(item.productValue) || 0;
+      const val = (Number(item.productValue) || 0) + (Number(item.addonsTotal) || 0);
       return sum + qty * val;
     }, 0);
     
@@ -621,16 +621,29 @@ const FormResponses = () => {
                     Itens do Pedido
                   </Typography>
                   <Box className={classes.fieldAnswer} style={{ marginBottom: 24 }}>
-                    {selectedResponse.metadata.menuItems.map((item, idx) => (
-                      <Box key={idx} display="flex" justifyContent="space-between" alignItems="center" style={{ marginBottom: 8 }}>
-                        <Typography variant="body2">
-                          {item.quantity}x {item.productName || `Produto #${item.productId}`}
-                        </Typography>
-                        <Typography variant="body2" fontWeight={600}>
-                          R$ {((item.quantity || 0) * (item.productValue || 0)).toFixed(2).replace(".", ",")}
-                        </Typography>
-                      </Box>
-                    ))}
+                    {selectedResponse.metadata.menuItems.map((item, idx) => {
+                      const addons = item.addons || [];
+                      const addonsTotal = Number(item.addonsTotal) || 0;
+                      const unitValue = (Number(item.productValue) || 0) + addonsTotal;
+                      const lineTotal = (Number(item.quantity) || 0) * unitValue;
+                      return (
+                        <Box key={idx} style={{ marginBottom: 8 }}>
+                          <Box display="flex" justifyContent="space-between" alignItems="center">
+                            <Typography variant="body2">
+                              {item.quantity}x {item.productName || `Produto #${item.productId}`}
+                            </Typography>
+                            <Typography variant="body2" fontWeight={600}>
+                              R$ {lineTotal.toFixed(2).replace(".", ",")}
+                            </Typography>
+                          </Box>
+                          {addons.length > 0 && (
+                            <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 2, marginLeft: 0 }}>
+                              Adicionais: {addons.map((a) => `${a.label || "Item"}${a.value != null && a.value !== 0 ? ` (+ R$ ${Number(a.value).toFixed(2).replace(".", ",")})` : ""}`).join(", ")}
+                            </Typography>
+                          )}
+                        </Box>
+                      );
+                    })}
                     <Divider style={{ margin: "8px 0" }} />
                     <Box display="flex" justifyContent="space-between" alignItems="center">
                       <Typography className={classes.fieldLabel}>Total</Typography>

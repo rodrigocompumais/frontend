@@ -81,6 +81,7 @@ const ProductSchema = Yup.object().shape({
     halfAndHalfPriceRule: Yup.string().oneOf(["max", "fixed", "average"]).nullable(),
     halfAndHalfGrupo: Yup.string().nullable(),
     grupo: Yup.string().nullable(),
+    addOnGroupId: Yup.number().nullable(),
     variations: Yup.array()
         .of(
             Yup.object().shape({
@@ -122,12 +123,14 @@ const ProductModal = ({ open, onClose, productId }) => {
         halfAndHalfPriceRule: "",
         halfAndHalfGrupo: "",
         grupo: "",
+        addOnGroupId: null,
         imageUrl: "",
         variations: [],
     };
 
     const [product, setProduct] = useState(initialState);
     const [availableGroups, setAvailableGroups] = useState([]);
+    const [addOnGroups, setAddOnGroups] = useState([]);
     const [loadingGroups, setLoadingGroups] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
     const imageInputRef = React.useRef(null);
@@ -228,6 +231,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                     halfAndHalfPriceRule: data.halfAndHalfPriceRule || "",
                     halfAndHalfGrupo: productHalfAndHalfGrupo,
                     grupo: productGrupo,
+                    addOnGroupId: data.addOnGroupId ?? null,
                     imageUrl: data.imageUrl || "",
                     variations,
                 });
@@ -239,6 +243,7 @@ const ProductModal = ({ open, onClose, productId }) => {
         if (open) {
             fetchProduct();
             fetchGroups();
+            api.get("/addon-groups").then(({ data }) => setAddOnGroups(Array.isArray(data) ? data : [])).catch(() => setAddOnGroups([]));
         }
     }, [productId, open]);
 
@@ -340,6 +345,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                 payload.halfAndHalfPriceRule = null;
             }
             if (payload.halfAndHalfGrupo === "") payload.halfAndHalfGrupo = null;
+            if (payload.addOnGroupId === "" || payload.addOnGroupId == null) payload.addOnGroupId = null;
             payload.variations = (payload.variations || []).filter((v) => v.name && v.options && v.options.length > 0).map((v) => ({
                 name: v.name.trim(),
                 options: v.options.map((o) => ({ label: String(o.label).trim(), value: Number(o.value) })),
@@ -505,6 +511,27 @@ const ProductModal = ({ open, onClose, productId }) => {
                                             {errors.grupo}
                                         </span>
                                     )}
+                                </FormControl>
+                                <br />
+                                <br />
+                                <FormControl variant="outlined" margin="dense" fullWidth>
+                                    <InputLabel id="addon-group-label">Grupo de adicionais</InputLabel>
+                                    <Field
+                                        as={Select}
+                                        labelId="addon-group-label"
+                                        name="addOnGroupId"
+                                        label="Grupo de adicionais"
+                                        value={values.addOnGroupId ?? ""}
+                                    >
+                                        <MenuItem value="">
+                                            <em>Nenhum</em>
+                                        </MenuItem>
+                                        {addOnGroups.map((g) => (
+                                            <MenuItem key={g.id} value={g.id}>
+                                                {g.name}
+                                            </MenuItem>
+                                        ))}
+                                    </Field>
                                 </FormControl>
                                 <br />
                                 <br />

@@ -349,6 +349,8 @@ const PublicMenuForm = ({
   const [submitting, setSubmitting] = useState(false);
   const [products, setProducts] = useState(initialProducts || []);
   const [selectedItems, setSelectedItems] = useState({});
+  /** Por itemKey: array de { addOnItemId, label, value } selecionados */
+  const [selectedAddons, setSelectedAddons] = useState({});
   const [activeGroup, setActiveGroup] = useState(0);
   const [view, setView] = useState("menu"); // "menu" | "checkout"
   const [answers, setAnswers] = useState({});
@@ -367,6 +369,12 @@ const PublicMenuForm = ({
   const [halfAndHalfModalHalf1, setHalfAndHalfModalHalf1] = useState("");
   const [halfAndHalfModalHalf2, setHalfAndHalfModalHalf2] = useState("");
   const [halfAndHalfModalQty, setHalfAndHalfModalQty] = useState(1);
+  /** Modal de adicionais: ao adicionar item com grupo de adicionais, abre para seleção */
+  const [addOnModalOpen, setAddOnModalOpen] = useState(false);
+  const [addOnModalProduct, setAddOnModalProduct] = useState(null);
+  const [addOnModalItemKey, setAddOnModalItemKey] = useState("");
+  const [addOnModalPendingQuantity, setAddOnModalPendingQuantity] = useState(1);
+  const [addOnModalSelectedAddons, setAddOnModalSelectedAddons] = useState([]);
   /** Para produtos com variações: productId -> variationOptionId selecionado */
   const [selectedVariationOption, setSelectedVariationOption] = useState({});
   /** Variação selecionada do produto base quando abre o modal meio a meio */
@@ -388,6 +396,8 @@ const PublicMenuForm = ({
 
   // Âncora para rolar até o começo dos itens ao trocar grupo
   const itemsStartRef = useRef(null);
+  /** Contador para chaves únicas de linha (mesmo produto com adicionais diferentes) */
+  const nextLineIdRef = useRef(0);
 
   const appStyles = form ? getFormAppearanceStyles(form) : null;
   const fieldVariant = appStyles?.fieldVariant || "outlined";
@@ -412,47 +422,18 @@ const PublicMenuForm = ({
     return "";
   };
   const normalizePhone = (input) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:414',message:'normalizePhone called',data:{input,digitsLength: String(input || "").replace(/\D/g, "").length},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     const digits = String(input || "").replace(/\D/g, "");
     if (!digits) return "";
     // Se tem 14 dígitos e começa com 55, remover o 5º dígito (índice 4)
     // Formato: 55 + DDD(2) + 9(duplicado) + número(9) = 14 dígitos
-    // Exemplo: 5534999999999 -> 553499999999 (remove o 5º dígito)
     if (digits.startsWith("55") && digits.length === 14) {
-      const result = digits.slice(0, 4) + digits.slice(5);
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:420',message:'normalizePhone 14 digits removed 5th',data:{input,digits,result,removedDigit:digits[4]},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      return result;
+      return digits.slice(0, 4) + digits.slice(5);
     }
-    // Se tem 13 dígitos, verificar se há um dígito extra após o DDD
-    // Números brasileiros válidos: 55 + DDD(2) + número(8 ou 9) = 12 ou 13 dígitos
-    // Se tiver 13 dígitos e o 5º dígito (após o DDD) for 9, pode ser um 9 duplicado.
-    // Remover o 5º dígito se o número resultante tiver 8 ou 9 dígitos válidos após o DDD.
-    if (digits.startsWith("55") && digits.length === 13) {
-      const numberAfterDdd = digits.slice(4); // Número após DDD (9 dígitos)
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:427',message:'normalizePhone checking 13 digits',data:{input,digits,digitsLength:digits.length,numberAfterDdd,numberAfterDddLength:numberAfterDdd.length,fifthDigit:digits[4],fifthDigitIs9:digits[4]==='9'},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-      // #endregion
-      // Se o número após DDD tem 9 dígitos e o 5º dígito (índice 4) é 9,
-      // pode ser um 9 duplicado. Remover o 5º dígito.
-      if (numberAfterDdd.length === 9 && digits[4] === "9") {
-        const withoutFifth = digits.slice(0, 4) + digits.slice(5);
-        const numberAfterDddWithoutFifth = withoutFifth.slice(4);
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:431',message:'normalizePhone 13 digits removing 5th',data:{input,digits,withoutFifth,numberAfterDddWithoutFifth,numberAfterDddWithoutFifthLength:numberAfterDddWithoutFifth.length,willReturn:numberAfterDddWithoutFifth.length >= 8 && numberAfterDddWithoutFifth.length <= 9},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-        // #endregion
-        // Se após remover ficar com 8 ou 9 dígitos válidos, usar esse formato
-        if (numberAfterDddWithoutFifth.length >= 8 && numberAfterDddWithoutFifth.length <= 9) {
-          return withoutFifth;
-        }
-      }
+    // 55 + DDD(2) + 9(extra) + 8 = 13 dígitos: remover 5º dígito para formato de disparo
+    // Ex.: 5534999999999 -> 553499999999
+    if (digits.startsWith("55") && digits.length === 13 && digits[4] === "9") {
+      return digits.slice(0, 4) + digits.slice(5);
     }
-    // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:440',message:'normalizePhone returning original',data:{input,digits,result:digits},timestamp:Date.now(),runId:'run1',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     return digits;
   };
   const normalizeLabelKey = (label) => String(label || "").trim().toLowerCase();
@@ -772,7 +753,7 @@ const PublicMenuForm = ({
     }
   };
 
-  /** Chave no carrinho: productId (sem variação) ou "productId_optionId" (com variação) */
+  /** Chave base no carrinho: productId (sem variação) ou "productId_optionId" (com variação) */
   const getItemKey = (product) => {
     if (!product) return "";
     if (!product.variations || product.variations.length === 0) return String(product.id);
@@ -780,37 +761,100 @@ const PublicMenuForm = ({
     return optionId != null ? `${product.id}_${optionId}` : String(product.id);
   };
 
-  /** Resolve key para { product, productValue, productName, optionLabel } */
+  /** Remove sufixo _L{n} da key para obter a base (productId ou productId_optionId) */
+  const getBaseKey = (key) => (key || "").replace(/_L\d+$/, "");
+
+  /** Todas as keys no carrinho que pertencem a este produto (baseKey ou baseKey_L0, baseKey_L1, ...) */
+  const getKeysForProduct = (product) => {
+    const baseKey = getItemKey(product);
+    return Object.keys(selectedItems).filter((k) => k === baseKey || k.startsWith(baseKey + "_L"));
+  };
+
+  /** Keys ordenadas para decrementar: _L maior primeiro, depois baseKey (para remover da linha mais recente) */
+  const getKeysForProductSorted = (product) => {
+    const keys = getKeysForProduct(product);
+    return keys.slice().sort((a, b) => {
+      const aM = a.match(/_L(\d+)$/);
+      const bM = b.match(/_L(\d+)$/);
+      if (!aM && !bM) return 0;
+      if (!aM) return 1;
+      if (!bM) return -1;
+      return Number(bM[1]) - Number(aM[1]);
+    });
+  };
+
+  /** Quantidade total do produto no carrinho (soma de todas as linhas) */
+  const getTotalQuantityForProduct = (product) =>
+    getKeysForProduct(product).reduce((sum, k) => sum + (selectedItems[k] || 0), 0);
+
+  /** Resolve key para { product, productValue, productName, optionLabel, addonsTotal } (key pode ser baseKey ou baseKey_Ln) */
   const getItemDetailsByKey = (key) => {
-    const product = products.find((p) => p.id === parseInt(key, 10));
-    if (!product) return { product: null, productValue: 0, productName: "", optionLabel: "" };
-    if (key.includes("_")) {
-      const [, optionIdStr] = key.split("_");
+    const baseKey = getBaseKey(key);
+    const product = products.find((p) => p.id === parseInt(baseKey, 10));
+    if (!product) return { product: null, productValue: 0, productName: "", optionLabel: "", addonsTotal: 0 };
+    let productValue = 0;
+    let productName = "";
+    let optionLabel = "";
+    if (baseKey.includes("_") && !baseKey.match(/_L\d+$/)) {
+      const [, optionIdStr] = baseKey.split("_");
       const optionId = parseInt(optionIdStr, 10);
       const variation = product.variations?.[0];
       const option = variation?.options?.find((o) => o.id === optionId);
-      const productValue = option ? parseFloat(option.value) : parseFloat(product.value) || 0;
-      const productName = option ? `${product.name} - ${option.label}` : product.name;
-      return { product, productValue, productName, optionLabel: option?.label || "" };
+      productValue = option ? parseFloat(option.value) : parseFloat(product.value) || 0;
+      productName = option ? `${product.name} - ${option.label}` : product.name;
+      optionLabel = option?.label || "";
+    } else {
+      productValue = parseFloat(product.value) || 0;
+      productName = product.name || "";
     }
-    return {
-      product,
-      productValue: parseFloat(product.value) || 0,
-      productName: product.name || "",
-      optionLabel: "",
-    };
+    const addonsList = selectedAddons[key] || [];
+    const addonsTotal = addonsList.reduce((sum, a) => sum + (Number(a.value) || 0), 0);
+    return { product, productValue, productName, optionLabel, addonsTotal };
   };
 
   const handleQuantityChange = (key, delta) => {
-    setSelectedItems((prev) => {
-      const current = prev[key] || 0;
+    const baseKey = getBaseKey(key);
+    const product = getItemDetailsByKey(baseKey).product;
+
+    if (delta > 0 && product && hasAddonsToShow(product)) {
+      const newLineKey = `${baseKey}_L${nextLineIdRef.current++}`;
+      setAddOnModalProduct(product);
+      setAddOnModalItemKey(newLineKey);
+      setAddOnModalPendingQuantity(1);
+      setAddOnModalSelectedAddons([]);
+      setAddOnModalOpen(true);
+      return;
+    }
+
+    if (delta < 0 && product) {
+      const keysSorted = getKeysForProductSorted(product);
+      const keyToDecrease = keysSorted[0];
+      if (!keyToDecrease) return;
+      const current = selectedItems[keyToDecrease] || 0;
       const newQuantity = Math.max(0, current + delta);
       if (newQuantity === 0) {
-        const { [key]: removed, ...rest } = prev;
-        return rest;
+        setSelectedItems((prev) => {
+          const { [keyToDecrease]: removed, ...rest } = prev;
+          return rest;
+        });
+        setSelectedAddons((a) => { const { [keyToDecrease]: rem, ...r } = a; return r; });
+        return;
       }
-      return { ...prev, [key]: newQuantity };
-    });
+      setSelectedItems((prev) => ({ ...prev, [keyToDecrease]: newQuantity }));
+      return;
+    }
+
+    const current = selectedItems[baseKey] || 0;
+    const newQuantity = Math.max(0, current + delta);
+    if (newQuantity === 0) {
+      setSelectedItems((prev) => {
+        const { [baseKey]: removed, ...rest } = prev;
+        return rest;
+      });
+      setSelectedAddons((a) => { const { [baseKey]: rem, ...r } = a; return r; });
+      return;
+    }
+    setSelectedItems((prev) => ({ ...prev, [baseKey]: newQuantity }));
   };
 
   const handleQuantityInput = (key, value) => {
@@ -820,9 +864,130 @@ const PublicMenuForm = ({
         const { [key]: removed, ...rest } = prev;
         return rest;
       });
+      setSelectedAddons((a) => { const { [key]: rem, ...r } = a; return r; });
     } else {
       setSelectedItems((prev) => ({ ...prev, [key]: quantity }));
     }
+  };
+
+  const toggleAddon = (key, item) => {
+    const { addOnItemId, label, value } = item;
+    setSelectedAddons((prev) => {
+      const list = prev[key] || [];
+      const idx = list.findIndex((a) => a.addOnItemId === addOnItemId);
+      if (idx >= 0) {
+        const next = list.filter((_, i) => i !== idx);
+        return next.length ? { ...prev, [key]: next } : (() => { const { [key]: _, ...r } = prev; return r; })();
+      }
+      return { ...prev, [key]: [...list, { addOnItemId, label, value: Number(value) || 0 }] };
+    });
+  };
+
+  const isAddonSelected = (key, addOnItemId) => (selectedAddons[key] || []).some((a) => a.addOnItemId === addOnItemId);
+
+  const isAddonSelectedInModal = (addOnItemId) => addOnModalSelectedAddons.some((a) => a.addOnItemId === addOnItemId);
+  const toggleAddonInModal = (item) => {
+    const { addOnItemId, label, value } = item;
+    setAddOnModalSelectedAddons((prev) => {
+      const idx = prev.findIndex((a) => a.addOnItemId === addOnItemId);
+      if (idx >= 0) return prev.filter((_, i) => i !== idx);
+      return [...prev, { addOnItemId, label, value: Number(value) || 0 }];
+    });
+  };
+
+  const confirmAddOnModal = () => {
+    if (!addOnModalItemKey) return;
+    setSelectedItems((prev) => ({ ...prev, [addOnModalItemKey]: addOnModalPendingQuantity }));
+    setSelectedAddons((prev) => ({ ...prev, [addOnModalItemKey]: addOnModalSelectedAddons }));
+    setAddOnModalOpen(false);
+    setAddOnModalProduct(null);
+    setAddOnModalItemKey("");
+    setAddOnModalPendingQuantity(1);
+    setAddOnModalSelectedAddons([]);
+  };
+
+  const closeAddOnModal = () => {
+    setAddOnModalOpen(false);
+    setAddOnModalProduct(null);
+    setAddOnModalItemKey("");
+    setAddOnModalPendingQuantity(1);
+    setAddOnModalSelectedAddons([]);
+  };
+
+  const openAddOnModalForEdit = (product, itemKey) => {
+    if (!product || !hasAddonsToShow(product)) return;
+    setAddOnModalProduct(product);
+    setAddOnModalItemKey(itemKey);
+    setAddOnModalPendingQuantity(selectedItems[itemKey] || 1);
+    setAddOnModalSelectedAddons(selectedAddons[itemKey] || []);
+    setAddOnModalOpen(true);
+  };
+
+  /**
+   * Verifica se o produto tem grupo de adicionais atrelado e com itens.
+   * Só exibimos adicionais quando o produto tem um grupo vinculado (no produto ou na categoria).
+   */
+  const hasAddonsToShow = (product) => {
+    const g = product?.addOnGroup;
+    if (!g) return false;
+    const subsWithItems = (g.subgroups || []).filter((sg) => (sg.items || []).length > 0);
+    const rootItems = g.items || [];
+    return subsWithItems.length > 0 || rootItems.length > 0;
+  };
+
+  /**
+   * Bloco de adicionais do item: só aparece quando o produto tem grupo de adicionais atrelado.
+   * Os adicionais são por linha do pedido (ex.: 1x Pizza + borda recheada).
+   */
+  const renderAddOnsSection = (product, itemKey) => {
+    if (!hasAddonsToShow(product)) return null;
+    const g = product.addOnGroup;
+    return (
+      <Box mt={1} pt={1} borderTop="1px solid #eee">
+        <Typography variant="caption" color="textSecondary" display="block" gutterBottom>
+          Adicionais deste item (opcional)
+        </Typography>
+        {(g.subgroups || []).filter((sg) => (sg.items || []).length > 0).map((sg) => (
+          <Box key={sg.id} mb={0.5}>
+            <Typography variant="caption" style={{ fontWeight: 600 }}>{sg.name}</Typography>
+            <FormGroup row>
+              {(sg.items || []).map((it) => (
+                <FormControlLabel
+                  key={it.id}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={isAddonSelected(itemKey, it.id)}
+                      onChange={() => toggleAddon(itemKey, { addOnItemId: it.id, label: it.label, value: it.value })}
+                    />
+                  }
+                  label={`${it.label} + R$ ${Number(it.value || 0).toFixed(2).replace(".", ",")}`}
+                />
+              ))}
+            </FormGroup>
+          </Box>
+        ))}
+        {(g.items || []).length > 0 && (
+          <Box mb={0.5}>
+            <FormGroup row>
+              {(g.items || []).map((it) => (
+                <FormControlLabel
+                  key={it.id}
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={isAddonSelected(itemKey, it.id)}
+                      onChange={() => toggleAddon(itemKey, { addOnItemId: it.id, label: it.label, value: it.value })}
+                    />
+                  }
+                  label={`${it.label} + R$ ${Number(it.value || 0).toFixed(2).replace(".", ",")}`}
+                />
+              ))}
+            </FormGroup>
+          </Box>
+        )}
+      </Box>
+    );
   };
 
   const handleFieldChange = (fieldId, value) => {
@@ -936,12 +1101,14 @@ const PublicMenuForm = ({
       const normalMenuItems = Object.keys(selectedItems).map((key) => {
         const productId = key.includes("_") ? parseInt(key.split("_")[0], 10) : parseInt(key, 10);
         const { product, productValue, productName } = getItemDetailsByKey(key);
+        const addons = selectedAddons[key] || [];
         return {
           productId,
           quantity: selectedItems[key],
           productName: productName || product?.name,
           productValue,
           grupo: product?.grupo || "Outros",
+          ...(addons.length > 0 && { addons: addons.map((a) => ({ addOnItemId: a.addOnItemId, label: a.label, value: a.value })) }),
         };
       });
       const halfMenuItems = halfAndHalfItems.map((item) => {
@@ -1010,15 +1177,10 @@ const PublicMenuForm = ({
       allFormFields.forEach((field) => {
         let answer = answers[field.id];
         if (answer !== undefined && answer !== null && answer !== "") {
-          // Normalizar telefone antes de enviar (remover 9 duplicado após DDD)
-          if (field.fieldType === "phone" && answer) {
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:998',message:'Before normalizePhone in handleSubmit',data:{fieldId:field.id,fieldLabel:field.label,answerBefore:answer},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
+          // Normalizar telefone antes de enviar (remover 5º dígito quando 9 extra após DDD)
+          const isPhoneField = field.fieldType === "phone" || field.metadata?.autoFieldType === "phone";
+          if (isPhoneField && answer) {
             answer = normalizePhone(answer);
-            // #region agent log
-            fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:1000',message:'After normalizePhone in handleSubmit',data:{fieldId:field.id,fieldLabel:field.label,answerBefore:answers[field.id],answerAfter:answer},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-            // #endregion
           }
           answersArray.push({
             fieldId: field.id,
@@ -1068,13 +1230,6 @@ const PublicMenuForm = ({
       };
 
       // Enviar formulário (orderToken garante que o pedido vá para a mesa do link assinado)
-      const phoneAnswers = answersArray.filter(a => {
-        const field = allFormFields.find(f => f.id === a.fieldId);
-        return field && field.fieldType === "phone";
-      });
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/654d036a-7e93-40a5-be06-4549cdbdbbac',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'PublicMenuForm.js:1049',message:'Payload before sending to backend',data:{phoneAnswers,allAnswers:answersArray.map(a=>({fieldId:a.fieldId,answer:a.answer}))},timestamp:Date.now(),runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       const response = await api.post(`/public/forms/${slug}/submit`, {
         answers: answersArray,
         menuItems,
@@ -1105,9 +1260,10 @@ const PublicMenuForm = ({
             total: unitVal * item.quantity,
           };
         }
+        const addonsTotal = (item.addons || []).reduce((s, a) => s + (Number(a.value) || 0), 0);
         return {
           ...item,
-          total: (item.productValue || 0) * item.quantity,
+          total: ((item.productValue || 0) + addonsTotal) * item.quantity,
         };
       });
       const orderMetadataForDisplay = getOrderMetadata();
@@ -1542,8 +1698,8 @@ const PublicMenuForm = ({
   const calculateTotal = () => {
     let total = 0;
     Object.keys(selectedItems).forEach((key) => {
-      const { productValue } = getItemDetailsByKey(key);
-      total += productValue * selectedItems[key];
+      const { productValue, addonsTotal } = getItemDetailsByKey(key);
+      total += (productValue + (addonsTotal || 0)) * selectedItems[key];
     });
     halfAndHalfItems.forEach((item) => {
       const base = products.find((p) => p.id === item.baseProductId);
@@ -1777,6 +1933,11 @@ const PublicMenuForm = ({
                         <Typography variant="body2" color="textSecondary">
                           Quantidade: {item.quantity} {item.quantity === 1 ? "unidade" : "unidades"}
                         </Typography>
+                        {item.addons && item.addons.length > 0 && (
+                          <Typography variant="caption" color="textSecondary" display="block">
+                            Adicionais: {item.addons.map((a) => `${a.label} (+ R$ ${Number(a.value || 0).toFixed(2).replace(".", ",")})`).join(", ")}
+                          </Typography>
+                        )}
                       </Box>
                       <Typography variant="body1" style={{ fontWeight: 600, color: form.primaryColor, marginLeft: 16 }}>
                         R$ {item.total.toFixed(2).replace(".", ",")}
@@ -2146,7 +2307,9 @@ const PublicMenuForm = ({
             <Box className={classes.mostOrderedScroll}>
               {mostOrderedProducts.map((product) => {
                 const itemKey = getItemKey(product);
-                const quantity = selectedItems[itemKey] || 0;
+                const keysForProduct = getKeysForProduct(product);
+                const quantity = getTotalQuantityForProduct(product);
+                const singleLineKey = keysForProduct.length === 1 ? keysForProduct[0] : null;
                 const { productValue: displayPrice } = getItemDetailsByKey(itemKey);
                 return (
                   <Card key={`top-${product.id}`} className={classes.mostOrderedCard}>
@@ -2175,8 +2338,8 @@ const PublicMenuForm = ({
                               className={classes.quantityInput}
                               type="number"
                               value={quantity}
-                              onChange={(e) => handleQuantityInput(itemKey, e.target.value)}
-                              inputProps={{ min: 0 }}
+                              onChange={(e) => singleLineKey && handleQuantityInput(singleLineKey, e.target.value)}
+                              inputProps={{ min: 0, readOnly: !singleLineKey }}
                               variant="outlined"
                               size="small"
                               style={{ width: 52 }}
@@ -2198,6 +2361,17 @@ const PublicMenuForm = ({
                           </Button>
                         )}
                       </Box>
+                      {quantity > 0 && hasAddonsToShow(product) && singleLineKey && (
+                        <Button
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          onClick={() => openAddOnModalForEdit(product, singleLineKey)}
+                          style={{ marginTop: 8, fontSize: "0.7rem" }}
+                        >
+                          Adicionais
+                        </Button>
+                      )}
                     </Box>
                   </Card>
                 );
@@ -2215,7 +2389,9 @@ const PublicMenuForm = ({
               </Typography>
               {getProductsByGroup(groups[activeGroup]).map((product) => {
                 const itemKey = getItemKey(product);
-                const quantity = selectedItems[itemKey] || 0;
+                const keysForProduct = getKeysForProduct(product);
+                const quantity = getTotalQuantityForProduct(product);
+                const singleLineKey = keysForProduct.length === 1 ? keysForProduct[0] : null;
                 const isHalfAndHalf = product.allowsHalfAndHalf === true;
                 const hasVariations = product.variations && product.variations.length > 0;
                 const firstVariation = hasVariations ? product.variations[0] : null;
@@ -2286,8 +2462,8 @@ const PublicMenuForm = ({
                               className={classes.quantityInput}
                               type="number"
                               value={quantity}
-                              onChange={(e) => handleQuantityInput(itemKey, e.target.value)}
-                              inputProps={{ min: 0 }}
+                              onChange={(e) => singleLineKey && handleQuantityInput(singleLineKey, e.target.value)}
+                              inputProps={{ min: 0, readOnly: !singleLineKey }}
                               variant={fieldVariant}
                               size="small"
                             />
@@ -2300,6 +2476,17 @@ const PublicMenuForm = ({
                           </Box>
                         </Box>
                       </Box>
+                      {quantity > 0 && hasAddonsToShow(product) && singleLineKey && (
+                        <Button
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                          onClick={() => openAddOnModalForEdit(product, singleLineKey)}
+                          style={{ marginTop: 8 }}
+                        >
+                          Adicionais
+                        </Button>
+                      )}
                         </Box>
                       </Box>
                     </CardContent>
@@ -2423,6 +2610,60 @@ const PublicMenuForm = ({
             </DialogActions>
           </Dialog>
 
+          <Dialog open={addOnModalOpen} onClose={closeAddOnModal} maxWidth="sm" fullWidth>
+            <DialogTitle>Adicionais — {addOnModalProduct?.name}</DialogTitle>
+            <DialogContent>
+              <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                Selecione os adicionais para este item (opcional). Quantidade: {addOnModalPendingQuantity}
+              </Typography>
+              {addOnModalProduct?.addOnGroup && (
+                <>
+                  {(addOnModalProduct.addOnGroup.subgroups || []).filter((sg) => (sg.items || []).length > 0).map((sg) => (
+                    <Box key={sg.id} mb={2}>
+                      <Typography variant="subtitle2" style={{ fontWeight: 600, marginBottom: 8 }}>{sg.name}</Typography>
+                      <FormGroup>
+                        {(sg.items || []).map((it) => (
+                          <FormControlLabel
+                            key={it.id}
+                            control={
+                              <Checkbox
+                                checked={isAddonSelectedInModal(it.id)}
+                                onChange={() => toggleAddonInModal({ addOnItemId: it.id, label: it.label, value: it.value })}
+                              />
+                            }
+                            label={`${it.label} + R$ ${Number(it.value || 0).toFixed(2).replace(".", ",")}`}
+                          />
+                        ))}
+                      </FormGroup>
+                    </Box>
+                  ))}
+                  {(addOnModalProduct.addOnGroup.items || []).length > 0 && (
+                    <Box mb={2}>
+                      <FormGroup>
+                        {(addOnModalProduct.addOnGroup.items || []).map((it) => (
+                          <FormControlLabel
+                            key={it.id}
+                            control={
+                              <Checkbox
+                                checked={isAddonSelectedInModal(it.id)}
+                                onChange={() => toggleAddonInModal({ addOnItemId: it.id, label: it.label, value: it.value })}
+                              />
+                            }
+                            label={`${it.label} + R$ ${Number(it.value || 0).toFixed(2).replace(".", ",")}`}
+                          />
+                        ))}
+                      </FormGroup>
+                    </Box>
+                  )}
+                </>
+              )}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={closeAddOnModal} color="secondary">Cancelar</Button>
+              <Button onClick={confirmAddOnModal} color="primary" variant="contained">Confirmar</Button>
+            </DialogActions>
+          </Dialog>
+
           {view === "checkout" && (
             <form onSubmit={handleSubmit}>
               <Box style={{ marginTop: 24 }}>
@@ -2431,14 +2672,22 @@ const PublicMenuForm = ({
                   <Box marginBottom={2} padding={2} bgcolor="action.hover" borderRadius={8}>
                     <Typography variant="subtitle2" gutterBottom>Itens do pedido</Typography>
                     {Object.keys(selectedItems).map((key) => {
-                      const { product, productValue, productName, optionLabel } = getItemDetailsByKey(key);
+                      const { productValue, productName, addonsTotal } = getItemDetailsByKey(key);
                       const quantity = selectedItems[key];
-                      const subtotal = productValue * quantity;
+                      const lineTotal = (productValue + (addonsTotal || 0)) * quantity;
+                      const addonsList = selectedAddons[key] || [];
                       return (
-                        <Box key={key} display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 4 }}>
-                          <Typography variant="body2">
-                            {quantity}x {productName} — R$ {subtotal.toFixed(2).replace(".", ",")}
-                          </Typography>
+                        <Box key={key} display="flex" alignItems="flex-start" justifyContent="space-between" style={{ marginTop: 4 }}>
+                          <Box flex={1}>
+                            <Typography variant="body2">
+                              {quantity}x {productName} — R$ {lineTotal.toFixed(2).replace(".", ",")}
+                            </Typography>
+                            {addonsList.length > 0 && (
+                              <Typography variant="caption" color="textSecondary" display="block">
+                                {addonsList.map((a) => `${a.label} (+ R$ ${Number(a.value).toFixed(2).replace(".", ",")})`).join(", ")}
+                              </Typography>
+                            )}
+                          </Box>
                           <IconButton 
                             size="small" 
                             onClick={() => handleQuantityInput(key, 0)} 

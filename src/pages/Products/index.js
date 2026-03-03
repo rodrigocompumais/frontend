@@ -42,6 +42,7 @@ import api from "../../services/api";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ProductModal from "../../components/ProductModal";
 import ProductGroupsModal from "../../components/ProductGroupsModal";
+import AddOnGroupsModal from "../../components/AddOnGroupsModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
 import { SocketContext } from "../../context/Socket/SocketContext";
@@ -101,6 +102,7 @@ const Products = () => {
     const [searchParam, setSearchParam] = useState("");
     const [productModalOpen, setProductModalOpen] = useState(false);
     const [groupsModalOpen, setGroupsModalOpen] = useState(false);
+    const [addOnGroupsModalOpen, setAddOnGroupsModalOpen] = useState(false);
     const [filterMenuOnly, setFilterMenuOnly] = useState(false);
     const [filterGrupo, setFilterGrupo] = useState("");
     const [productGroups, setProductGroups] = useState([]);
@@ -296,6 +298,10 @@ const Products = () => {
                 onClose={handleCloseGroupsModal}
                 onGroupChange={fetchProducts}
             />
+            <AddOnGroupsModal
+                open={addOnGroupsModalOpen}
+                onClose={() => setAddOnGroupsModalOpen(false)}
+            />
             <MainHeader>
                 <Title>Produtos ({products.length})</Title>
                 <MainHeaderButtonsWrapper>
@@ -346,6 +352,14 @@ const Products = () => {
                         style={{ marginRight: 8 }}
                     >
                         Grupos
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => setAddOnGroupsModalOpen(true)}
+                        style={{ marginRight: 8 }}
+                    >
+                        Grupos de adicionais
                     </Button>
                     <Button
                         variant="contained"

@@ -2044,18 +2044,31 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                 <List dense disablePadding>
                   {(selectedPendingOrder.metadata?.menuItems || []).map((item, idx) => {
                     const observations = item.observations || item.observation || item.obs || "";
+                    const addons = item.addons || [];
+                    const addonsTotal = Number(item.addonsTotal) || 0;
+                    const unitValue = (Number(item.productValue) || 0) + addonsTotal;
+                    const lineTotal = (Number(item.quantity) || 0) * unitValue;
                     return (
-                      <ListItem key={idx} disableGutters style={{ paddingTop: 0, paddingBottom: observations ? 8 : 4 }}>
+                      <ListItem key={idx} disableGutters style={{ paddingTop: 0, paddingBottom: (observations || addons.length) ? 8 : 4 }}>
                         <ListItemText
                           primary={`${item.quantity}x ${item.productName || "Item"}`}
-                          secondary={observations ? (
-                            <Typography variant="caption" color="textSecondary" style={{ fontStyle: "italic", marginTop: 4 }}>
-                              Obs: {observations}
-                            </Typography>
-                          ) : null}
+                          secondary={
+                            <>
+                              {addons.length > 0 && (
+                                <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 2 }}>
+                                  Adicionais: {addons.map((a) => `${a.label || "Item"}${a.value != null && a.value !== 0 ? ` (+ R$ ${Number(a.value).toFixed(2).replace(".", ",")})` : ""}`).join(", ")}
+                                </Typography>
+                              )}
+                              {observations && (
+                                <Typography variant="caption" color="textSecondary" style={{ fontStyle: "italic", marginTop: 4, display: "block" }}>
+                                  Obs: {observations}
+                                </Typography>
+                              )}
+                            </>
+                          }
                         />
                         <Typography variant="body2">
-                          R$ {((Number(item.quantity) || 0) * (Number(item.productValue) || 0)).toFixed(2).replace(".", ",")}
+                          R$ {lineTotal.toFixed(2).replace(".", ",")}
                         </Typography>
                       </ListItem>
                     );
@@ -2124,7 +2137,11 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                   R$ {(() => {
                     const metadata = selectedPendingOrder.metadata || {};
                     if (metadata.total != null) return Number(metadata.total);
-                    const itemsTotal = (metadata.menuItems || []).reduce((s, i) => s + (Number(i.quantity) || 0) * (Number(i.productValue) || 0), 0);
+                    const itemsTotal = (metadata.menuItems || []).reduce((s, i) => {
+                      const addonsTotal = Number(i.addonsTotal) || 0;
+                      const unit = (Number(i.productValue) || 0) + addonsTotal;
+                      return s + (Number(i.quantity) || 0) * unit;
+                    }, 0);
                     const deliveryFee = Number(metadata.deliveryFee) || 0;
                     return itemsTotal + deliveryFee;
                   })().toFixed(2).replace(".", ",")}

@@ -210,11 +210,11 @@ const PedidoKanbanCard = ({
     // Se já tem total salvo, usar ele (já inclui taxa de entrega)
     if (metadata.total != null) return Number(metadata.total);
     
-    // Caso contrário, calcular: soma dos itens + taxa de entrega
+    // Caso contrário, calcular: soma dos itens (com adicionais) + taxa de entrega
     const items = metadata.menuItems || [];
     const itemsTotal = items.reduce((sum, item) => {
       const qty = Number(item.quantity) || 0;
-      const val = Number(item.productValue) || 0;
+      const val = (Number(item.productValue) || 0) + (Number(item.addonsTotal) || 0);
       return sum + qty * val;
     }, 0);
     
