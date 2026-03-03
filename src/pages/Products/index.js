@@ -26,12 +26,14 @@ import FormControl from "@material-ui/core/FormControl";
 import InputLabel from "@material-ui/core/InputLabel";
 import Select from "@material-ui/core/Select";
 import MenuItem from "@material-ui/core/MenuItem";
+import TablePagination from "@material-ui/core/TablePagination";
 
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
 import AddIcon from "@material-ui/icons/Add";
 import CategoryIcon from "@material-ui/icons/Category";
 import FileCopyIcon from "@material-ui/icons/FileCopy";
+import MenuBookIcon from "@material-ui/icons/MenuBook";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -43,6 +45,7 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ProductModal from "../../components/ProductModal";
 import ProductGroupsModal from "../../components/ProductGroupsModal";
 import AddOnGroupsModal from "../../components/AddOnGroupsModal";
+import ImportMenuModal from "../../components/ImportMenuModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
 import { SocketContext } from "../../context/Socket/SocketContext";
@@ -94,7 +97,7 @@ const Products = () => {
 
     const [loading, setLoading] = useState(false);
     const [pageNumber, setPageNumber] = useState(1);
-    const [hasMore, setHasMore] = useState(false);
+    const [totalCount, setTotalCount] = useState(0);
     const [products, setProducts] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [deletingProduct, setDeletingProduct] = useState(null);
@@ -103,6 +106,7 @@ const Products = () => {
     const [productModalOpen, setProductModalOpen] = useState(false);
     const [groupsModalOpen, setGroupsModalOpen] = useState(false);
     const [addOnGroupsModalOpen, setAddOnGroupsModalOpen] = useState(false);
+    const [importMenuModalOpen, setImportMenuModalOpen] = useState(false);
     const [filterMenuOnly, setFilterMenuOnly] = useState(false);
     const [filterGrupo, setFilterGrupo] = useState("");
     const [productGroups, setProductGroups] = useState([]);
@@ -118,12 +122,8 @@ const Products = () => {
                 grupo: filterGrupo || undefined,
             };
             const { data } = await api.get("/products", { params });
-            if (pageNumber === 1) {
-                setProducts(data.products || []);
-            } else {
-                setProducts((prev) => [...prev, ...(data.products || [])]);
-            }
-            setHasMore(data.hasMore || false);
+            setProducts(data.products || []);
+            setTotalCount(data.count ?? 0);
             if (data.groups && Array.isArray(data.groups)) {
                 setProductGroups(data.groups);
             }
@@ -234,17 +234,11 @@ const Products = () => {
         }
     };
 
-    const loadMore = () => {
-        if (!hasMore || loading) return;
-        setPageNumber((prevState) => prevState + 1);
-    };
-
-    const handleScroll = (e) => {
-        if (!hasMore || loading) return;
-        const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-        if (scrollHeight - (scrollTop + 100) < clientHeight) {
-            loadMore();
-        }
+    const limit = 20;
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
+    const handlePageChange = (_, newPage) => {
+        const page = newPage + 1;
+        if (page >= 1 && page <= totalPages) setPageNumber(page);
     };
 
     const formatCurrency = (value) => {
@@ -302,8 +296,13 @@ const Products = () => {
                 open={addOnGroupsModalOpen}
                 onClose={() => setAddOnGroupsModalOpen(false)}
             />
+            <ImportMenuModal
+                open={importMenuModalOpen}
+                onClose={() => setImportMenuModalOpen(false)}
+                onSuccess={fetchProducts}
+            />
             <MainHeader>
-                <Title>Produtos ({products.length})</Title>
+                <Title>Produtos ({totalCount})</Title>
                 <MainHeaderButtonsWrapper>
                     <TextField
                         placeholder="Buscar produtos..."
@@ -362,6 +361,15 @@ const Products = () => {
                         Grupos de adicionais
                     </Button>
                     <Button
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<MenuBookIcon />}
+                        onClick={() => setImportMenuModalOpen(true)}
+                        style={{ marginRight: 8 }}
+                    >
+                        Importar do cardápio
+                    </Button>
+                    <Button
                         variant="contained"
                         color="primary"
                         startIcon={<AddIcon />}
@@ -374,7 +382,6 @@ const Products = () => {
             <Paper
                 className={classes.mainPaper}
                 variant="outlined"
-                onScroll={handleScroll}
             >
                 <Table size="small">
                     <TableHead>
@@ -485,6 +492,16 @@ const Products = () => {
                         {loading && <TableRowSkeleton columns={9} />}
                     </TableBody>
                 </Table>
+                <TablePagination
+                    component="div"
+                    count={totalCount}
+                    page={pageNumber - 1}
+                    onPageChange={handlePageChange}
+                    rowsPerPage={limit}
+                    rowsPerPageOptions={[limit]}
+                    labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
+                    labelRowsPerPage="Por página:"
+                />
             </Paper>
             </>
             )}
