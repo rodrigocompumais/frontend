@@ -192,6 +192,7 @@ const FormBuilder = () => {
       pieceAgainMaxItems: 6, // Máx. itens exibidos na seção
       showMesaField: false, // Exibir campo Número da mesa no cardápio
       mesaFieldMode: "select", // select = dropdown com mesas, input = campo livre
+      autoAdvanceInterval: 0, // Avançar por todos os estágios a cada X segundos (0 = desativado)
       appearance: {
         fontFamily: "inherit",
         borderRadius: "12",
@@ -1156,6 +1157,34 @@ const FormBuilder = () => {
                       }}
                       helperText="Quantos produtos mostrar no “Peça de novo”"
                       disabled={!formData.settings?.enablePieceAgain}
+                    />
+                  </Grid>
+
+                  {/* Passar por todos os estágios em X tempo */}
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginTop: 8, marginBottom: 8 }}>
+                      Avançar automaticamente por todos os estágios
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      variant="outlined"
+                      type="number"
+                      inputProps={{ min: 0, step: 1 }}
+                      label="Intervalo (segundos)"
+                      placeholder="0 = desativado"
+                      value={formData.settings?.autoAdvanceInterval ?? ""}
+                      onChange={(e) => {
+                        const raw = e.target.value === "" ? "" : parseInt(e.target.value, 10);
+                        const val = raw === "" ? 0 : Math.max(0, Number.isNaN(raw) ? 0 : raw);
+                        setFormData({
+                          ...formData,
+                          settings: {
+                            ...formData.settings,
+                            autoAdvanceInterval: val === 0 ? 0 : val,
+                          },
+                        });
+                      }}
+                      helperText="Quando maior que 0: (1) o formulário avança sozinho pelas categorias e checkout a cada X segundos; (2) no Kanban, pedidos em 'Novo' passam para 'Confirmado' após X minutos. Use 0 para desativar."
                     />
                   </Grid>
 

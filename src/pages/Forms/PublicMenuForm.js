@@ -398,6 +398,11 @@ const PublicMenuForm = ({
   const itemsStartRef = useRef(null);
   /** Contador para chaves únicas de linha (mesmo produto com adicionais diferentes) */
   const nextLineIdRef = useRef(0);
+  /** Refs para avanço automático de estágios (sempre valores atuais no interval) */
+  const viewRef = useRef(view);
+  const activeGroupRef = useRef(activeGroup);
+  viewRef.current = view;
+  activeGroupRef.current = activeGroup;
 
   const appStyles = form ? getFormAppearanceStyles(form) : null;
   const fieldVariant = appStyles?.fieldVariant || "outlined";
@@ -1818,6 +1823,46 @@ const PublicMenuForm = ({
     }
   };
 
+  // Avanço automático por estágios: ativado pela configuração do formulário (settings.autoAdvanceInterval em segundos, 0 = desativado)
+  const rawInterval = Number(form?.settings?.autoAdvanceInterval) || 0;
+  const autoAdvanceIntervalSec = rawInterval > 0 ? Math.max(1, rawInterval) : 0;
+  const autoAdvanceEnabled = autoAdvanceIntervalSec > 0;
+
+  useEffect(() => {
+    if (!autoAdvanceEnabled || submitted || groups.length === 0) return;
+    if (addOnModalOpen || halfAndHalfModalOpen || pieceAgainModalOpen || searchOpen) return;
+
+    const ms = autoAdvanceIntervalSec * 1000;
+    const timer = setInterval(() => {
+      const currentView = viewRef.current;
+      const currentGroup = activeGroupRef.current;
+      const totalGroups = groups.length;
+
+      if (currentView === "menu") {
+        if (currentGroup < totalGroups - 1) {
+          setActiveGroup(currentGroup + 1);
+          setTimeout(() => scrollToItemsStart(), 50);
+        } else {
+          setView("checkout");
+        }
+      } else {
+        setView("menu");
+        setActiveGroup(0);
+        setTimeout(() => scrollToItemsStart(), 50);
+      }
+    }, ms);
+    return () => clearInterval(timer);
+  }, [
+    autoAdvanceEnabled,
+    autoAdvanceIntervalSec,
+    groups.length,
+    submitted,
+    addOnModalOpen,
+    halfAndHalfModalOpen,
+    pieceAgainModalOpen,
+    searchOpen,
+  ]);
+
   const getPieceAgainPhoneMask = () => {
     // Sempre usar máscara com 9 dígitos após o DDD para permitir digitar o 9 após o DDD
     // O formato 55(DDD)99999-9999 permite digitar o 9 após o DDD, que será removido na normalização
@@ -1995,8 +2040,8 @@ const PublicMenuForm = ({
               </Box>
             </Box>
 
-            {/* Confirmação: responsável pela mesa */}
-            {(orderData.mesaNumber || orderData.responsavelMesa) && (
+            {/* Confirmação: responsável pela mesa — apenas para pedidos do tipo mesa */}
+            {orderData.orderType === "mesa" && (orderData.mesaNumber || orderData.responsavelMesa) && (
               <Box style={{ marginBottom: 24, padding: 16, backgroundColor: "#e8f5e9", borderRadius: 8 }}>
                 <Typography variant="h6" gutterBottom style={{ fontWeight: 600, marginBottom: 12 }}>
                   Confirmação
