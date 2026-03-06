@@ -1042,6 +1042,28 @@ const FormBuilder = () => {
                       Selecione qual conexão será usada para enviar a confirmação do pedido e mensagens de status. Se não selecionar, será usada a conexão padrão.
                     </Typography>
                   </Grid>
+                  <Grid item xs={12}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={!!formData.settings?.disableWhatsAppMessages}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                disableWhatsAppMessages: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                      }
+                      label="Desabilitar envio de mensagens para WhatsApp"
+                    />
+                    <Typography variant="caption" display="block" color="textSecondary">
+                      Quando ativo, não envia confirmação do pedido nem notificações de status (em preparo, pronto, saiu para entrega, entregue) por WhatsApp.
+                    </Typography>
+                  </Grid>
                   <Grid item xs={12} md={6}>
                     <FormControlLabel
                       control={
