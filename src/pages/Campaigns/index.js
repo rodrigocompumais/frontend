@@ -24,6 +24,8 @@ import DescriptionIcon from "@material-ui/icons/Description";
 import TimerOffIcon from "@material-ui/icons/TimerOff";
 import PlayCircleOutlineIcon from "@material-ui/icons/PlayCircleOutline";
 import PauseCircleOutlineIcon from "@material-ui/icons/PauseCircleOutline";
+import ReplayIcon from "@material-ui/icons/Replay";
+import RepeatIcon from "@material-ui/icons/Repeat";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -35,7 +37,14 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 import CampaignModal from "../../components/CampaignModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
-import { Grid } from "@material-ui/core";
+import {
+  Grid,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Tooltip,
+} from "@material-ui/core";
 import { isArray } from "lodash";
 import { useDate } from "../../hooks/useDate";
 import { SocketContext } from "../../context/Socket/SocketContext";
@@ -240,8 +249,75 @@ const Campaigns = () => {
     }
   };
 
+  const [rerunDialogOpen, setRerunDialogOpen] = useState(false);
+  const [rerunCampaign, setRerunCampaign] = useState(null);
+  const [rerunScheduledAt, setRerunScheduledAt] = useState("");
+
+  const handleOpenRerun = (campaign) => {
+    const defaultDate = new Date(Date.now() + 5 * 60 * 1000);
+    const pad = (n) => String(n).padStart(2, "0");
+    const formatted = `${defaultDate.getFullYear()}-${pad(defaultDate.getMonth() + 1)}-${pad(defaultDate.getDate())}T${pad(defaultDate.getHours())}:${pad(defaultDate.getMinutes())}`;
+    setRerunScheduledAt(formatted);
+    setRerunCampaign(campaign);
+    setRerunDialogOpen(true);
+  };
+
+  const handleConfirmRerun = async () => {
+    try {
+      await api.post(`/campaigns/${rerunCampaign.id}/rerun`, {
+        scheduledAt: rerunScheduledAt
+          ? new Date(rerunScheduledAt).toISOString()
+          : null,
+      });
+      toast.success(i18n.t("campaigns.toasts.rerun"));
+      setRerunDialogOpen(false);
+      setRerunCampaign(null);
+      setPageNumber(1);
+      fetchCampaigns();
+    } catch (err) {
+      toastError(err);
+    }
+  };
+
   return (
     <MainContainer>
+      {/* Diálogo de reagendamento "Rodar Novamente" */}
+      <Dialog
+        open={rerunDialogOpen}
+        onClose={() => setRerunDialogOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>{i18n.t("campaigns.dialog.rerunDialog.title")}</DialogTitle>
+        <DialogContent>
+          <p style={{ marginTop: 0, marginBottom: 12 }}>
+            {i18n.t("campaigns.dialog.rerunDialog.description")}
+          </p>
+          <TextField
+            label={i18n.t("campaigns.dialog.rerunDialog.scheduleLabel")}
+            type="datetime-local"
+            value={rerunScheduledAt}
+            onChange={(e) => setRerunScheduledAt(e.target.value)}
+            fullWidth
+            variant="outlined"
+            size="small"
+            InputLabelProps={{ shrink: true }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRerunDialogOpen(false)} color="secondary">
+            {i18n.t("campaigns.dialog.rerunDialog.cancel")}
+          </Button>
+          <Button
+            onClick={handleConfirmRerun}
+            color="primary"
+            variant="contained"
+          >
+            {i18n.t("campaigns.dialog.rerunDialog.confirm")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <ConfirmationModal
         title={
           deletingCampaign &&
@@ -341,9 +417,18 @@ const Campaigns = () => {
               {campaigns.map((campaign) => (
                 <TableRow key={campaign.id}>
                   <TableCell align="center">{campaign.name}</TableCell>
-                  <TableCell align="center">
-                    {formatStatus(campaign.status)}
-                  </TableCell>
+                <TableCell align="center">
+                  {formatStatus(campaign.status)}
+                  {campaign.isRecurring && (
+                    <Tooltip title="Recorrente (mensal)">
+                      <RepeatIcon
+                        fontSize="small"
+                        color="primary"
+                        style={{ verticalAlign: "middle", marginLeft: 4 }}
+                      />
+                    </Tooltip>
+                  )}
+                </TableCell>
                   <TableCell align="center">
                     {campaign.contactListId
                       ? campaign.contactList.name
@@ -371,22 +456,35 @@ const Campaigns = () => {
                   </TableCell>
                   <TableCell align="center">
                     {campaign.status === "EM_ANDAMENTO" && (
-                      <IconButton
-                        onClick={() => cancelCampaign(campaign)}
-                        title={i18n.t("campaigns.table.stopCampaign")}
-                        size="small"
-                      >
-                        <PauseCircleOutlineIcon />
-                      </IconButton>
+                      <Tooltip title={i18n.t("campaigns.table.stopCampaign")}>
+                        <IconButton
+                          onClick={() => cancelCampaign(campaign)}
+                          size="small"
+                        >
+                          <PauseCircleOutlineIcon />
+                        </IconButton>
+                      </Tooltip>
                     )}
                     {campaign.status === "CANCELADA" && (
-                      <IconButton
-                        onClick={() => restartCampaign(campaign)}
-                        title={i18n.t("campaigns.table.stopCampaign")}
-                        size="small"
-                      >
-                        <PlayCircleOutlineIcon />
-                      </IconButton>
+                      <Tooltip title={i18n.t("campaigns.table.stopCampaign")}>
+                        <IconButton
+                          onClick={() => restartCampaign(campaign)}
+                          size="small"
+                        >
+                          <PlayCircleOutlineIcon />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {(campaign.status === "FINALIZADA" ||
+                      campaign.status === "CANCELADA") && (
+                      <Tooltip title={i18n.t("campaigns.table.rerunCampaign")}>
+                        <IconButton
+                          onClick={() => handleOpenRerun(campaign)}
+                          size="small"
+                        >
+                          <ReplayIcon />
+                        </IconButton>
+                      </Tooltip>
                     )}
                     <IconButton
                       onClick={() =>

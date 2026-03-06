@@ -36,6 +36,8 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const READER_ID = "entregador-scan-qr-reader";
+// Tempo mínimo entre leituras do mesmo QR ou qualquer QR (ms)
+const SCAN_LOCK_MS = 2500;
 
 const EntregadorScanModal = ({ open, onClose, onScan }) => {
   const classes = useStyles();
@@ -44,6 +46,10 @@ const EntregadorScanModal = ({ open, onClose, onScan }) => {
   const scannerRef = useRef(null);
   const onScanRef = useRef(onScan);
   const scanLockRef = useRef(false);
+  // Conjunto de tokens já lidos nesta sessão do modal, para não re-disparar API
+  const seenTextsRef = useRef(new Set());
+  // Flag para evitar chamadas concorrentes de startScanner
+  const startingRef = useRef(false);
 
   useEffect(() => {
     onScanRef.current = onScan;
@@ -51,56 +57,82 @@ const EntregadorScanModal = ({ open, onClose, onScan }) => {
 
   const stopScanner = async () => {
     const scanner = scannerRef.current;
-    scannerRef.current = null;
     if (!scanner) return;
-
+    // Null antes de await para que re-entrância não use o mesmo ref
+    scannerRef.current = null;
     try {
       if (scanner.isScanning) {
         await scanner.stop();
       }
     } catch (_) {}
-
     try {
       await scanner.clear();
     } catch (_) {}
+    // Limpa o DOM manualmente — html5-qrcode às vezes deixa resíduos de vídeo
+    const el = document.getElementById(READER_ID);
+    if (el) el.innerHTML = "";
   };
 
   useEffect(() => {
     if (!open) {
       stopScanner();
+      seenTextsRef.current = new Set();
       return;
     }
 
     let cancelled = false;
 
     const startScanner = async () => {
+      if (startingRef.current) return;
+      startingRef.current = true;
       setStarting(true);
       setError(null);
-      await new Promise((r) => setTimeout(r, 100));
-      if (cancelled) return;
+      // Pequena pausa para o DOM renderizar o div antes de injetar o scanner
+      await new Promise((r) => setTimeout(r, 150));
+      if (cancelled) { startingRef.current = false; return; }
+
       try {
+        // Garante limpeza de qualquer instância anterior
         await stopScanner();
-        if (!document.getElementById(READER_ID)) {
+        if (cancelled) { startingRef.current = false; return; }
+
+        const el = document.getElementById(READER_ID);
+        if (!el) {
           setError("Elemento do scanner não encontrado.");
+          startingRef.current = false;
           return;
         }
+        // Limpa resíduos de vídeo antes de criar nova instância
+        el.innerHTML = "";
+
         const html5QrCode = new Html5Qrcode(READER_ID);
         scannerRef.current = html5QrCode;
+
         await html5QrCode.start(
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 250, height: 250 } },
           async (decodedText) => {
+            const text = (decodedText || "").trim();
+
+            // Ignora silenciosamente se já leu este texto nesta sessão
+            if (seenTextsRef.current.has(text)) return;
+
+            // Ignora se o lock global ainda está ativo
             if (scanLockRef.current) return;
+
             scanLockRef.current = true;
+            seenTextsRef.current.add(text);
+
             try {
               const scanFn = onScanRef.current;
               if (scanFn && typeof scanFn === "function") {
-                await Promise.resolve(scanFn((decodedText || "").trim()));
+                await Promise.resolve(scanFn(text));
               }
             } finally {
+              // Lock mais longo para evitar re-leitura acidental
               setTimeout(() => {
                 scanLockRef.current = false;
-              }, 450);
+              }, SCAN_LOCK_MS);
             }
           },
           () => {}
@@ -110,6 +142,7 @@ const EntregadorScanModal = ({ open, onClose, onScan }) => {
         setError(err?.message || "Não foi possível acessar a câmera.");
       } finally {
         setStarting(false);
+        startingRef.current = false;
       }
     };
 
@@ -118,11 +151,13 @@ const EntregadorScanModal = ({ open, onClose, onScan }) => {
       cancelled = true;
       stopScanner();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const handleClose = () => {
     stopScanner();
     setError(null);
+    seenTextsRef.current = new Set();
     onClose();
   };
 
@@ -135,7 +170,13 @@ const EntregadorScanModal = ({ open, onClose, onScan }) => {
             <div id={READER_ID} style={{ width: "100%", minHeight: 240 }} />
           </Box>
           {starting && (
-            <Box position="absolute" display="flex" alignItems="center" justifyContent="center" style={{ minHeight: 240 }}>
+            <Box
+              position="absolute"
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              style={{ minHeight: 240 }}
+            >
               <CircularProgress />
             </Box>
           )}

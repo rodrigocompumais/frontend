@@ -696,6 +696,40 @@ const useStyles = makeStyles((theme) => ({
     fontSize: "0.9rem",
   },
 
+  // ===== FLOATING WHATSAPP BUTTON =====
+  whatsappFloat: {
+    position: "fixed",
+    bottom: 28,
+    right: 28,
+    zIndex: 9999,
+    width: 60,
+    height: 60,
+    borderRadius: "50%",
+    background: "linear-gradient(135deg, #25D366, #128C7E)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 4px 20px rgba(37, 211, 102, 0.5)",
+    cursor: "pointer",
+    textDecoration: "none",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
+    animation: "$whatsappPulse 2.5s infinite",
+    "&:hover": {
+      transform: "scale(1.1)",
+      boxShadow: "0 6px 28px rgba(37, 211, 102, 0.7)",
+      animation: "none",
+    },
+    "& svg": {
+      fontSize: "2rem",
+      color: "#fff",
+    },
+  },
+  "@keyframes whatsappPulse": {
+    "0%": { boxShadow: "0 4px 20px rgba(37, 211, 102, 0.5)" },
+    "50%": { boxShadow: "0 4px 32px rgba(37, 211, 102, 0.9)" },
+    "100%": { boxShadow: "0 4px 20px rgba(37, 211, 102, 0.5)" },
+  },
+
   // ===== UTILITIES =====
   loadingContainer: {
     display: "flex",
@@ -1800,6 +1834,17 @@ const Landing = () => {
           Todos os direitos reservados.
         </Typography>
       </Box>
+
+      {/* ===== FLOATING WHATSAPP BUTTON ===== */}
+      <a
+        href="https://wa.me/33511861"
+        target="_blank"
+        rel="noopener noreferrer"
+        className={classes.whatsappFloat}
+        title="Fale conosco no WhatsApp"
+      >
+        <WhatsAppIcon />
+      </a>
     </div>
   );
 };

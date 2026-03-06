@@ -31,10 +31,12 @@ import toastError from "../../errors/toastError";
 import {
   Box,
   FormControl,
+  FormControlLabel,
   Grid,
   InputLabel,
   MenuItem,
   Select,
+  Switch,
   Tab,
   Tabs,
   Tooltip,
@@ -149,6 +151,7 @@ const CampaignModal = ({
     whatsappId: "",
     contactListId: "",
     tagListId: "Nenhuma",
+    isRecurring: false,
     companyId,
   };
 
@@ -556,7 +559,7 @@ const CampaignModal = ({
             }, 400);
           }}
         >
-          {({ values, errors, touched, isSubmitting }) => (
+          {({ values, errors, touched, isSubmitting, setFieldValue }) => (
             <Form>
               <DialogContent dividers>
                 <Grid spacing={2} container>
@@ -714,6 +717,21 @@ const CampaignModal = ({
                         ))}
                       </Field>
                     </FormControl>
+                  </Grid>
+                  <Grid xs={12} item>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={!!values.isRecurring}
+                          onChange={(e) =>
+                            setFieldValue("isRecurring", e.target.checked)
+                          }
+                          color="primary"
+                          disabled={!campaignEditable}
+                        />
+                      }
+                      label={i18n.t("campaigns.dialog.form.isRecurring")}
+                    />
                   </Grid>
                   <Grid xs={12} item>
                     <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>

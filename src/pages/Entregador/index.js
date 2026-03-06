@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useHistory } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import {
@@ -24,6 +24,9 @@ import toastError from "../../errors/toastError";
 import useCompanyModules from "../../hooks/useCompanyModules";
 import useAuth from "../../hooks/useAuth.js";
 import EntregadorScanModal from "../../components/EntregadorScanModal";
+
+const STORAGE_ORDERS_KEY = "entregador_scannedOrders";
+const STORAGE_ROUTE_KEY = "entregador_routeStarted";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -72,17 +75,54 @@ function extractDeliveryToken(decodedText) {
   }
 }
 
+/** Lê o estado persistido do localStorage com fallback seguro. */
+function loadPersistedOrders() {
+  try {
+    const saved = localStorage.getItem(STORAGE_ORDERS_KEY);
+    return saved ? JSON.parse(saved) : [];
+  } catch {
+    return [];
+  }
+}
+
+function loadPersistedRouteStarted() {
+  return localStorage.getItem(STORAGE_ROUTE_KEY) === "true";
+}
+
 const Entregador = () => {
   const classes = useStyles();
   const history = useHistory();
   const { user } = useAuth();
   const { hasLanchonetes, loading: modulesLoading } = useCompanyModules();
-  const [scannedOrders, setScannedOrders] = useState([]);
-  const [routeStarted, setRouteStarted] = useState(false);
+
+  // Inicializa a partir do localStorage para sobreviver a recarregamentos
+  const [scannedOrders, setScannedOrders] = useState(loadPersistedOrders);
+  const [routeStarted, setRouteStarted] = useState(loadPersistedRouteStarted);
   const [scanOpen, setScanOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [iniciarLoading, setIniciarLoading] = useState(false);
   const [finalizarLoading, setFinalizarLoading] = useState(false);
+
+  // Conjunto de tokens já consultados na API nesta sessão — evita chamadas duplicadas
+  // entre reaperturas do modal (complementa o seenTexts interno do modal)
+  const scannedTokensRef = useRef(new Set(
+    // Pre-popula com os tokens já persistidos para não re-escanear pedidos da sessão anterior
+    loadPersistedOrders().map((o) => o._token).filter(Boolean)
+  ));
+
+  // Persiste pedidos no localStorage sempre que mudam
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_ORDERS_KEY, JSON.stringify(scannedOrders));
+    } catch {}
+  }, [scannedOrders]);
+
+  // Persiste routeStarted no localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_ROUTE_KEY, String(routeStarted));
+    } catch {}
+  }, [routeStarted]);
 
   const handleScan = useCallback(async (decodedText) => {
     const token = extractDeliveryToken(decodedText);
@@ -90,6 +130,13 @@ const Entregador = () => {
       toast.error("QR Code inválido.");
       return;
     }
+
+    // Ignora silenciosamente se este token já foi adicionado nesta sessão
+    if (scannedTokensRef.current.has(token)) {
+      return;
+    }
+    scannedTokensRef.current.add(token);
+
     setLoading(true);
     try {
       const { data } = await api.get("/delivery/order-by-token", {
@@ -102,9 +149,12 @@ const Entregador = () => {
           return prev;
         }
         toast.success(`Pedido ${data.protocol || data.id} adicionado.`);
-        return [...prev, data];
+        // Guarda o token junto ao pedido para restauração entre sessões
+        return [...prev, { ...data, _token: token }];
       });
     } catch (err) {
+      // Remove o token do conjunto em caso de erro para permitir nova tentativa
+      scannedTokensRef.current.delete(token);
       toastError(err);
     } finally {
       setLoading(false);
@@ -112,7 +162,11 @@ const Entregador = () => {
   }, []);
 
   const removeOrder = (id) => {
-    setScannedOrders((prev) => prev.filter((o) => o.id !== id));
+    setScannedOrders((prev) => {
+      const removed = prev.find((o) => o.id === id);
+      if (removed?._token) scannedTokensRef.current.delete(removed._token);
+      return prev.filter((o) => o.id !== id);
+    });
   };
 
   const handleIniciarRota = async () => {
@@ -139,6 +193,10 @@ const Entregador = () => {
         formResponseIds: scannedOrders.map((o) => o.id),
       });
       toast.success("Rota finalizada! Pedidos marcados como entregues.");
+      // Limpa estado e localStorage ao finalizar com sucesso
+      localStorage.removeItem(STORAGE_ORDERS_KEY);
+      localStorage.removeItem(STORAGE_ROUTE_KEY);
+      scannedTokensRef.current = new Set();
       setScannedOrders([]);
       setRouteStarted(false);
     } catch (err) {
