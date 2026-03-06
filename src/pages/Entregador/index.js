@@ -84,11 +84,6 @@ const Entregador = () => {
   const [iniciarLoading, setIniciarLoading] = useState(false);
   const [finalizarLoading, setFinalizarLoading] = useState(false);
 
-  if (!hasLanchonetes && !modulesLoading) {
-    history.push("/dashboard");
-    return null;
-  }
-
   const handleScan = useCallback(async (decodedText) => {
     const token = extractDeliveryToken(decodedText);
     if (!token) {
@@ -152,6 +147,11 @@ const Entregador = () => {
       setFinalizarLoading(false);
     }
   };
+
+  if (!hasLanchonetes && !modulesLoading) {
+    history.push("/dashboard");
+    return null;
+  }
 
   return (
     <MainContainer>
