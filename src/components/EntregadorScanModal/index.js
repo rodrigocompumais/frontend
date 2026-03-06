@@ -42,11 +42,35 @@ const EntregadorScanModal = ({ open, onClose, onScan }) => {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState(null);
   const scannerRef = useRef(null);
+  const onScanRef = useRef(onScan);
+  const scanLockRef = useRef(false);
 
   useEffect(() => {
-    if (!open) return;
+    onScanRef.current = onScan;
+  }, [onScan]);
 
-    let html5QrCode = null;
+  const stopScanner = async () => {
+    const scanner = scannerRef.current;
+    scannerRef.current = null;
+    if (!scanner) return;
+
+    try {
+      if (scanner.isScanning) {
+        await scanner.stop();
+      }
+    } catch (_) {}
+
+    try {
+      await scanner.clear();
+    } catch (_) {}
+  };
+
+  useEffect(() => {
+    if (!open) {
+      stopScanner();
+      return;
+    }
+
     let cancelled = false;
 
     const startScanner = async () => {
@@ -55,22 +79,32 @@ const EntregadorScanModal = ({ open, onClose, onScan }) => {
       await new Promise((r) => setTimeout(r, 100));
       if (cancelled) return;
       try {
+        await stopScanner();
         if (!document.getElementById(READER_ID)) {
           setError("Elemento do scanner não encontrado.");
           return;
         }
-        html5QrCode = new Html5Qrcode(READER_ID);
+        const html5QrCode = new Html5Qrcode(READER_ID);
+        scannerRef.current = html5QrCode;
         await html5QrCode.start(
           { facingMode: "environment" },
           { fps: 10, qrbox: { width: 250, height: 250 } },
-          (decodedText) => {
-            if (onScan && typeof onScan === "function") {
-              onScan((decodedText || "").trim());
+          async (decodedText) => {
+            if (scanLockRef.current) return;
+            scanLockRef.current = true;
+            try {
+              const scanFn = onScanRef.current;
+              if (scanFn && typeof scanFn === "function") {
+                await Promise.resolve(scanFn((decodedText || "").trim()));
+              }
+            } finally {
+              setTimeout(() => {
+                scanLockRef.current = false;
+              }, 450);
             }
           },
           () => {}
         );
-        scannerRef.current = html5QrCode;
       } catch (err) {
         console.error("EntregadorScanModal error:", err);
         setError(err?.message || "Não foi possível acessar a câmera.");
@@ -82,18 +116,12 @@ const EntregadorScanModal = ({ open, onClose, onScan }) => {
     startScanner();
     return () => {
       cancelled = true;
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop().catch(() => {});
-      }
-      scannerRef.current = null;
+      stopScanner();
     };
-  }, [open, onScan]);
+  }, [open]);
 
   const handleClose = () => {
-    if (scannerRef.current && scannerRef.current.isScanning) {
-      scannerRef.current.stop().catch(() => {});
-    }
-    scannerRef.current = null;
+    stopScanner();
     setError(null);
     onClose();
   };

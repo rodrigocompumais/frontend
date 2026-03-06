@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useState } from "react";
 import { useHistory } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import {
@@ -89,7 +89,7 @@ const Entregador = () => {
     return null;
   }
 
-  const handleScan = async (decodedText) => {
+  const handleScan = useCallback(async (decodedText) => {
     const token = extractDeliveryToken(decodedText);
     if (!token) {
       toast.error("QR Code inválido.");
@@ -114,7 +114,7 @@ const Entregador = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const removeOrder = (id) => {
     setScannedOrders((prev) => prev.filter((o) => o.id !== id));
