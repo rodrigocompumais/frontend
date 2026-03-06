@@ -4,21 +4,26 @@ import {
   Badge,
   Button,
   FormControlLabel,
+  IconButton,
   makeStyles,
   Paper,
   Tab,
   Tabs,
-  Switch
+  Switch,
+  Tooltip,
 } from "@material-ui/core";
 
 import {
   AllInboxRounded,
   HourglassEmptyRounded,
   MoveToInbox,
-  Search
+  Search,
+  ClearAll,
 } from "@material-ui/icons";
 
 import NewTicketModal from "../NewTicketModal";
+import ConfirmationModal from "../ConfirmationModal";
+import { toast } from "react-toastify";
 import TicketsList from "../TicketsList";
 import TabPanel from "../TabPanel";
 import { TagsFilter } from "../TagsFilter";
@@ -153,6 +158,8 @@ const TicketsManager = () => {
   const [subTab, setSubTab] = useState("conversas");
   const [conversationsCount, setConversationsCount] = useState(0);
   const [groupsCount, setGroupsCount] = useState(0);
+  const [bulkCloseConfirmOpen, setBulkCloseConfirmOpen] = useState(false);
+  const [bulkCloseLoading, setBulkCloseLoading] = useState(false);
 
   // Hook para notificação sonora de tickets pendentes
   usePendingTicketNotification();
@@ -190,6 +197,19 @@ const TicketsManager = () => {
     setOpenCount(conversationsCount + groupsCount);
   }, [conversationsCount, groupsCount]);
 
+  const handleBulkClose = async () => {
+    setBulkCloseLoading(true);
+    try {
+      const { data } = await api.post("/tickets/bulk-close");
+      toast.success(`${data.closed} ticket(s) fechado(s) com sucesso.`);
+      setBulkCloseConfirmOpen(false);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setBulkCloseLoading(false);
+    }
+  };
+
   const handleSearch = (e) => {
     const searchedTerm = e.target.value.toLowerCase();
 
@@ -224,6 +244,14 @@ const TicketsManager = () => {
 
   return (
     <Paper elevation={0} variant="outlined" className={classes.mainContainer}>
+      <ConfirmationModal
+        title="Fechar todos os aguardando"
+        open={bulkCloseConfirmOpen}
+        onClose={() => setBulkCloseConfirmOpen(false)}
+        onConfirm={handleBulkClose}
+      >
+        Todos os tickets em &quot;Aguardando atendimento&quot; serão fechados. Se algum cliente responder, o ticket será reaberto automaticamente. Confirmar?
+      </ConfirmationModal>
       <NewTicketModal
         modalOpen={newTicketModalOpen}
         onClose={(e) => setNewTicketModalOpen(false)}
@@ -392,7 +420,25 @@ const TicketsManager = () => {
       </TabPanel>
 
       <TabPanel value={tab} name="pending" className={classes.ticketsWrapper} keepMounted={true}>
-      <TagsFilter onFiltered={handleSelectedTags} />
+        <TagsFilter onFiltered={handleSelectedTags} />
+        {pendingCount > 0 && (
+          <div style={{ display: "flex", justifyContent: "flex-end", padding: "4px 8px" }}>
+            <Tooltip title="Fechar todos os aguardando">
+              <span>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="secondary"
+                  startIcon={<ClearAll />}
+                  onClick={() => setBulkCloseConfirmOpen(true)}
+                  disabled={bulkCloseLoading}
+                >
+                  Fechar todos ({pendingCount})
+                </Button>
+              </span>
+            </Tooltip>
+          </div>
+        )}
         <TicketsList
           status="pending"
           showAll={true}
