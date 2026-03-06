@@ -114,6 +114,14 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(0, 2, 1.5),
     borderBottom: "1px solid #eee",
   },
+  groupPagination: {
+    marginTop: theme.spacing(1),
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: theme.spacing(1),
+    flexWrap: "wrap",
+  },
   storeSubInfo: {
     backgroundColor: "#fff",
     padding: theme.spacing(0, 2, 1.5),
@@ -390,9 +398,9 @@ const PublicMenuForm = ({
   const [pieceAgainPhoneInput, setPieceAgainPhoneInput] = useState("");
 
   // Busca (cardápio)
-  const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef(null);
+  const [groupPage, setGroupPage] = useState(1);
 
   // Âncora para rolar até o começo dos itens ao trocar grupo
   const itemsStartRef = useRef(null);
@@ -1527,6 +1535,15 @@ const PublicMenuForm = ({
     });
   };
 
+  const GROUP_ITEMS_PER_PAGE = 12;
+  const activeGroupName = groups[activeGroup] || null;
+  const activeGroupProducts = activeGroupName ? getProductsByGroup(activeGroupName) : [];
+  const totalGroupPages = Math.max(1, Math.ceil(activeGroupProducts.length / GROUP_ITEMS_PER_PAGE));
+  const paginatedGroupProducts = activeGroupProducts.slice(
+    (groupPage - 1) * GROUP_ITEMS_PER_PAGE,
+    groupPage * GROUP_ITEMS_PER_PAGE
+  );
+
   const getFlavorProductsForHalfAndHalf = (baseProduct, baseVariationLabel = null) => {
     if (!baseProduct) return [];
     const grupoFilter = baseProduct.halfAndHalfGrupo || baseProduct.grupo || null;
@@ -1830,7 +1847,7 @@ const PublicMenuForm = ({
 
   useEffect(() => {
     if (!autoAdvanceEnabled || submitted || groups.length === 0) return;
-    if (addOnModalOpen || halfAndHalfModalOpen || pieceAgainModalOpen || searchOpen) return;
+    if (addOnModalOpen || halfAndHalfModalOpen || pieceAgainModalOpen) return;
 
     const ms = autoAdvanceIntervalSec * 1000;
     const timer = setInterval(() => {
@@ -1860,7 +1877,6 @@ const PublicMenuForm = ({
     addOnModalOpen,
     halfAndHalfModalOpen,
     pieceAgainModalOpen,
-    searchOpen,
   ]);
 
   const getPieceAgainPhoneMask = () => {
@@ -1876,18 +1892,8 @@ const PublicMenuForm = ({
   }, [pieceAgainEnabled, pieceAgainModalOpen]);
 
   useEffect(() => {
-    if (!searchOpen) return;
-    const t = setTimeout(() => {
-      try {
-        if (searchInputRef.current && typeof searchInputRef.current.focus === "function") {
-          searchInputRef.current.focus();
-        }
-      } catch {
-        // ignore
-      }
-    }, 50);
-    return () => clearTimeout(t);
-  }, [searchOpen]);
+    setGroupPage(1);
+  }, [activeGroup, searchQuery, products.length]);
 
   if (loading) {
     return (
@@ -2212,9 +2218,13 @@ const PublicMenuForm = ({
             aria-label="Buscar"
             onClick={() => {
               setView("menu");
-              setSearchOpen(true);
               // ajuda a levar o usuário para a lista quando ele busca
               setTimeout(() => scrollToItemsStart(), 50);
+              setTimeout(() => {
+                if (searchInputRef.current && typeof searchInputRef.current.focus === "function") {
+                  searchInputRef.current.focus();
+                }
+              }, 80);
             }}
           >
             <SearchIcon />
@@ -2236,7 +2246,7 @@ const PublicMenuForm = ({
         </Box>
       </Box>
 
-      {searchOpen && (
+      {view === "menu" && (
         <Box className={classes.searchBar}>
           <TextField
             inputRef={searchInputRef}
@@ -2259,7 +2269,9 @@ const PublicMenuForm = ({
                     aria-label="Limpar busca"
                     onClick={() => {
                       setSearchQuery("");
-                      setSearchOpen(false);
+                      if (searchInputRef.current && typeof searchInputRef.current.focus === "function") {
+                        searchInputRef.current.focus();
+                      }
                     }}
                   >
                     <CloseIcon fontSize="small" />
@@ -2432,7 +2444,12 @@ const PublicMenuForm = ({
               <Typography className={classes.sectionTitle} style={{ marginBottom: 12 }}>
                 {groups[activeGroup]}
               </Typography>
-              {getProductsByGroup(groups[activeGroup]).map((product) => {
+              {activeGroupProducts.length === 0 && (
+                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 12 }}>
+                  Nenhum item encontrado para esta busca neste grupo.
+                </Typography>
+              )}
+              {paginatedGroupProducts.map((product) => {
                 const itemKey = getItemKey(product);
                 const keysForProduct = getKeysForProduct(product);
                 const quantity = getTotalQuantityForProduct(product);
@@ -2538,6 +2555,37 @@ const PublicMenuForm = ({
                   </Card>
                 );
               })}
+              {activeGroupProducts.length > GROUP_ITEMS_PER_PAGE && (
+                <Box className={classes.groupPagination}>
+                  <Typography variant="body2" color="textSecondary">
+                    Página {groupPage} de {totalGroupPages} ({activeGroupProducts.length} itens)
+                  </Typography>
+                  <Box display="flex" alignItems="center" gridGap={8}>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      disabled={groupPage <= 1}
+                      onClick={() => {
+                        setGroupPage((prev) => Math.max(1, prev - 1));
+                        setTimeout(() => scrollToItemsStart(), 50);
+                      }}
+                    >
+                      Anterior
+                    </Button>
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      disabled={groupPage >= totalGroupPages}
+                      onClick={() => {
+                        setGroupPage((prev) => Math.min(totalGroupPages, prev + 1));
+                        setTimeout(() => scrollToItemsStart(), 50);
+                      }}
+                    >
+                      Próxima
+                    </Button>
+                  </Box>
+                </Box>
+              )}
             </Box>
           )}
 

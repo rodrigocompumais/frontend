@@ -185,6 +185,7 @@ const FormBuilder = () => {
       printDeviceId: null, // ID do dispositivo de impressão para impressão de pedidos
       mesaPrintConfig: [], // [{ printDeviceId, groupNames }] para pedidos mesa/garçom
       deliveryPrintDeviceIds: [], // IDs das impressoras para pedidos delivery
+      orderTriggerMessages: [], // [{ fieldId, optionValue, message }]
       autoConfirmMinutes: 0, // Avançar novo->confirmado após X minutos (0=desativado)
       averageDeliveryTime: "", // Tempo médio de entrega (ex: "30-45 minutos")
       enablePieceAgain: false, // Habilita "Peça de novo" por telefone + auto-preenchimento
@@ -291,6 +292,7 @@ const FormBuilder = () => {
           whatsAppMessage: "",
           whatsappId: null,
           printDeviceId: null,
+          orderTriggerMessages: [],
           averageDeliveryTime: "",
           appearance: {
             fontFamily: "inherit",
@@ -337,6 +339,7 @@ const FormBuilder = () => {
         printDeviceId: data.settings?.printDeviceId || null,
         mesaPrintConfig: data.settings?.mesaPrintConfig ?? (data.settings?.printDeviceId ? [{ printDeviceId: data.settings.printDeviceId, groupNames: ["*"] }] : []),
         deliveryPrintDeviceIds: Array.isArray(data.settings?.deliveryPrintDeviceIds) ? data.settings.deliveryPrintDeviceIds : (data.settings?.printDeviceId ? [data.settings.printDeviceId] : []),
+        orderTriggerMessages: Array.isArray(data.settings?.orderTriggerMessages) ? data.settings.orderTriggerMessages : [],
       };
       // Garantir defaults do cardápio para mesa (evitar que mesaFieldMode ausente mostre input em vez de select)
       if (isMenuForm) {
@@ -406,6 +409,15 @@ const FormBuilder = () => {
             return hasValidDevice && hasValidGroups;
           })
         : [];
+      const orderTriggerMessages = Array.isArray(formData.settings?.orderTriggerMessages)
+        ? formData.settings.orderTriggerMessages
+            .map((row) => ({
+              fieldId: row?.fieldId ? Number(row.fieldId) : "",
+              optionValue: String(row?.optionValue ?? ""),
+              message: String(row?.message ?? "").trim(),
+            }))
+            .filter((row) => row.fieldId && row.optionValue && row.message)
+        : [];
 
       const payload = {
         ...formData,
@@ -421,6 +433,7 @@ const FormBuilder = () => {
           deliveryPrintDeviceIds: Array.isArray(formData.settings?.deliveryPrintDeviceIds)
             ? formData.settings.deliveryPrintDeviceIds.filter(id => id && id > 0)
             : [],
+          orderTriggerMessages,
         },
       };
 
@@ -597,6 +610,9 @@ const FormBuilder = () => {
   const deliveryConditionFields = isMenuForm
     ? (formData.settings?.finalizeFields || []).filter((f) => f && f.id)
     : [];
+  const triggerMessageFields = deliveryConditionFields.filter((f) =>
+    ["select", "radio", "checkbox"].includes(f.fieldType)
+  );
 
   const tabKeys = isMenuForm
     ? ["gerais", "campos", "impressao", "quadro", "aparencia", "integracoes"]
@@ -1391,6 +1407,135 @@ const FormBuilder = () => {
                         </Grid>
                       </Grid>
                     </Grid>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Divider style={{ margin: "8px 0 12px" }} />
+                    <Typography variant="subtitle1" style={{ fontWeight: 600 }}>
+                      Mensagens automáticas por opção
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 12 }}>
+                      Dispara uma mensagem junto ao pedido quando um campo tiver a opção selecionada.
+                    </Typography>
+                    {triggerMessageFields.length === 0 && (
+                      <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 8 }}>
+                        Crie e salve primeiro ao menos um campo do tipo select, radio ou checkbox na aba Finalizar.
+                      </Typography>
+                    )}
+
+                    {(formData.settings?.orderTriggerMessages || []).map((row, idx) => {
+                      const selectedField = triggerMessageFields.find(
+                        (f) => Number(f.id) === Number(row.fieldId)
+                      );
+                      const options = selectedField?.options || [];
+                      return (
+                        <Box key={`trigger-msg-${idx}`} display="flex" alignItems="flex-start" flexWrap="wrap" gap={2} style={{ marginBottom: 10 }}>
+                          <FormControl variant="outlined" size="small" style={{ minWidth: 220 }}>
+                            <InputLabel>Campo</InputLabel>
+                            <Select
+                              value={row.fieldId || ""}
+                              onChange={(e) => {
+                                const next = [...(formData.settings?.orderTriggerMessages || [])];
+                                next[idx] = {
+                                  ...next[idx],
+                                  fieldId: e.target.value ? Number(e.target.value) : "",
+                                  optionValue: "",
+                                };
+                                setFormData({
+                                  ...formData,
+                                  settings: { ...formData.settings, orderTriggerMessages: next },
+                                });
+                              }}
+                              label="Campo"
+                            >
+                              <MenuItem value="">
+                                <em>Selecione</em>
+                              </MenuItem>
+                              {triggerMessageFields.map((f) => (
+                                <MenuItem key={f.id} value={f.id}>
+                                  {f.label}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+
+                          <FormControl variant="outlined" size="small" style={{ minWidth: 220 }}>
+                            <InputLabel>Opção</InputLabel>
+                            <Select
+                              value={row.optionValue ?? ""}
+                              onChange={(e) => {
+                                const next = [...(formData.settings?.orderTriggerMessages || [])];
+                                next[idx] = { ...next[idx], optionValue: e.target.value };
+                                setFormData({
+                                  ...formData,
+                                  settings: { ...formData.settings, orderTriggerMessages: next },
+                                });
+                              }}
+                              label="Opção"
+                              disabled={!selectedField}
+                            >
+                              <MenuItem value="">
+                                <em>Selecione</em>
+                              </MenuItem>
+                              {options.map((opt, optIdx) => (
+                                <MenuItem key={`${idx}-${optIdx}-${opt}`} value={opt}>
+                                  {opt}
+                                </MenuItem>
+                              ))}
+                            </Select>
+                          </FormControl>
+
+                          <TextField
+                            variant="outlined"
+                            size="small"
+                            label="Mensagem"
+                            value={row.message || ""}
+                            onChange={(e) => {
+                              const next = [...(formData.settings?.orderTriggerMessages || [])];
+                              next[idx] = { ...next[idx], message: e.target.value };
+                              setFormData({
+                                ...formData,
+                                settings: { ...formData.settings, orderTriggerMessages: next },
+                              });
+                            }}
+                            style={{ minWidth: 320, flex: 1 }}
+                            placeholder="Ex.: Levar sem cebola e com molho separado"
+                          />
+
+                          <IconButton
+                            size="small"
+                            onClick={() => {
+                              const next = (formData.settings?.orderTriggerMessages || []).filter((_, i) => i !== idx);
+                              setFormData({
+                                ...formData,
+                                settings: { ...formData.settings, orderTriggerMessages: next },
+                              });
+                            }}
+                            aria-label="Remover regra"
+                          >
+                            <DeleteIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      );
+                    })}
+
+                    <Button
+                      size="small"
+                      startIcon={<AddIcon />}
+                      disabled={triggerMessageFields.length === 0}
+                      onClick={() => {
+                        const next = [
+                          ...(formData.settings?.orderTriggerMessages || []),
+                          { fieldId: "", optionValue: "", message: "" },
+                        ];
+                        setFormData({
+                          ...formData,
+                          settings: { ...formData.settings, orderTriggerMessages: next },
+                        });
+                      }}
+                    >
+                      Adicionar regra
+                    </Button>
                   </Grid>
 
                   <Grid item xs={12} md={6}>
