@@ -326,6 +326,9 @@ const Campaigns = () => {
                 {i18n.t("campaigns.table.scheduledAt")}
               </TableCell>
               <TableCell align="center">
+                {i18n.t("campaigns.table.estimatedCompletedAt")}
+              </TableCell>
+              <TableCell align="center">
                 {i18n.t("campaigns.table.completedAt")}
               </TableCell>
               <TableCell align="center">
@@ -355,6 +358,11 @@ const Campaigns = () => {
                     {campaign.scheduledAt
                       ? datetimeToClient(campaign.scheduledAt)
                       : i18n.t("campaigns.table.notScheduled")}
+                  </TableCell>
+                  <TableCell align="center">
+                    {campaign.estimatedCompletedAt
+                      ? datetimeToClient(campaign.estimatedCompletedAt)
+                      : i18n.t("campaigns.table.notDefined")}
                   </TableCell>
                   <TableCell align="center">
                     {campaign.completedAt

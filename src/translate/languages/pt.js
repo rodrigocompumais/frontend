@@ -1215,6 +1215,7 @@ const messages = {
           connection: "Conexão",
           contactList: "Lista de Contatos",
           schedule: "Agendamento",
+          estimatedConclusion: "Previsão de Conclusão",
           conclusion: "Conclusão",
         },
         config: {
@@ -1250,6 +1251,7 @@ const messages = {
           contactList: "Lista de Contatos",
           status: "Status",
           scheduledAt: "Agendamento",
+          estimatedCompletedAt: "Previsão",
           completedAt: "Concluída",
           confirmation: "Confirmação",
           actions: "Ações",

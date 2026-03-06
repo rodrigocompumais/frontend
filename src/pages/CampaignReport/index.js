@@ -14,6 +14,7 @@ import { has, get, isNull } from "lodash";
 import CardCounter from "../../components/Dashboard/CardCounter";
 import GroupIcon from "@material-ui/icons/Group";
 import ScheduleIcon from "@material-ui/icons/Schedule";
+import AccessTimeIcon from "@material-ui/icons/AccessTime";
 import EventAvailableIcon from "@material-ui/icons/EventAvailable";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import WhatsAppIcon from "@material-ui/icons/WhatsApp";
@@ -196,6 +197,16 @@ const CampaignReport = () => {
               icon={<ScheduleIcon fontSize="inherit" />}
               title={i18n.t("campaigns.report.schedule")}
               value={datetimeToClient(campaign.scheduledAt)}
+              loading={loading}
+            />
+          </Grid>
+          <Grid xs={12} md={4} item>
+            <CardCounter
+              icon={<AccessTimeIcon fontSize="inherit" />}
+              title={i18n.t("campaigns.report.estimatedConclusion")}
+              value={campaign.estimatedCompletedAt
+                ? datetimeToClient(campaign.estimatedCompletedAt)
+                : i18n.t("campaigns.table.notDefined")}
               loading={loading}
             />
           </Grid>
