@@ -91,12 +91,24 @@ const Ticket = () => {
   const socketManager = useContext(SocketContext);
 
   useEffect(() => {
+    // Limpar estado imediatamente ao mudar ticketId para nunca exibir cabeçalho/dados de outro ticket ou empresa
+    setTicket({});
+    setContact({});
     setLoading(true);
-    // Reduzir delay para carregamento mais rápido
+
     const delayDebounceFn = setTimeout(() => {
       const fetchTicket = async () => {
         try {
           const { data } = await api.get("/tickets/u/" + ticketId);
+
+          // Segurança: não exibir dados de outra empresa (mitiga vazamento mesmo em race/cache)
+          const userCompanyId = user?.companyId ?? parseInt(localStorage.getItem("companyId") || "0", 10);
+          if (data.companyId != null && Number(data.companyId) !== Number(userCompanyId)) {
+            toast.error(i18n.t("tickets.toasts.unauthorized"));
+            history.push("/tickets");
+            return;
+          }
+
           const { queueId } = data;
           const { queues, profile } = user;
 
@@ -123,15 +135,17 @@ const Ticket = () => {
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
+    const userCompanyId = user?.companyId ?? parseInt(companyId || "0", 10);
 
     const handleReady = () => socket.emit("joinChatBox", `${ticket.id}`);
     const handleTicket = (data) => {
       if (data.action === "update" && data.ticket.id === ticket.id) {
-        setTicket(data.ticket);
+        if (Number(data.ticket.companyId) === Number(userCompanyId)) {
+          setTicket(data.ticket);
+        }
       }
 
       if (data.action === "delete" && data.ticketId === ticket.id) {
-        // toast.success("Ticket deleted sucessfully.");
         history.push("/tickets");
       }
     };
@@ -155,7 +169,7 @@ const Ticket = () => {
       socket.off(`company-${companyId}-ticket`, handleTicket);
       socket.off(`company-${companyId}-contact`, handleContact);
     };
-  }, [ticketId, ticket, history, socketManager]);
+  }, [ticketId, ticket, history, socketManager, user]);
 
   const handleDrawerOpen = () => {
     setDrawerOpen(true);
@@ -165,8 +179,13 @@ const Ticket = () => {
     setDrawerOpen(false);
   };
 
+  const isTicketFromCurrentCompany = () => {
+    const userCompanyId = user?.companyId ?? parseInt(localStorage.getItem("companyId") || "0", 10);
+    return ticket?.companyId != null && Number(ticket.companyId) === Number(userCompanyId);
+  };
+
   const renderTicketInfo = () => {
-    if (ticket.user !== undefined) {
+    if (ticket.user !== undefined && isTicketFromCurrentCompany()) {
       return (
         <TicketInfo
           contact={contact}
@@ -238,6 +257,9 @@ const Ticket = () => {
   const showGenerateTicket = companyId === 1;
 
   const renderMessagesList = () => {
+    if (!ticket.id || !isTicketFromCurrentCompany()) {
+      return null;
+    }
     return (
       <>
         <MessagesList
