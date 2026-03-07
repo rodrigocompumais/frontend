@@ -219,6 +219,13 @@ const Mesas = ({ cardapioSlugFromHub }) => {
   const [halfAndHalfBaseVariation, setHalfAndHalfBaseVariation] = useState(null);
   const [halfAndHalfItems, setHalfAndHalfItems] = useState([]);
   const [orderProductSearch, setOrderProductSearch] = useState("");
+  const [addOnModalOpen, setAddOnModalOpen] = useState(false);
+  const [addOnModalProduct, setAddOnModalProduct] = useState(null);
+  const [addOnModalLineIndex, setAddOnModalLineIndex] = useState(null);
+  const [addOnModalSelectedAddons, setAddOnModalSelectedAddons] = useState([]);
+  const [addOnModalPendingQuantity, setAddOnModalPendingQuantity] = useState(1);
+  const [addOnModalVariationOptionId, setAddOnModalVariationOptionId] = useState(null);
+  const [addOnModalProductValue, setAddOnModalProductValue] = useState(null);
   const [pendingOrders, setPendingOrders] = useState([]); // Pedidos pendentes (orderStatus: "novo")
   const [notificationOrder, setNotificationOrder] = useState(null); // Pedido para mostrar no popup
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -576,9 +583,40 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       .filter((l) => l.productId === productId)
       .reduce((a, l) => a + l.quantity, 0);
 
+  const hasAddonsToShow = (product) => {
+    const g = product?.addOnGroup;
+    if (!g) return false;
+    const subsWithItems = (g.subgroups || []).filter((sg) => (sg.items || []).length > 0);
+    const rootItems = g.items || [];
+    return subsWithItems.length > 0 || rootItems.length > 0;
+  };
+
   const handleOrderQuantityChange = (productId, delta, product) => {
     const p = product || orderProducts.find((x) => x.id === productId);
     if (delta === 1) {
+      if (p && hasAddonsToShow(p)) {
+        let productValue = Number(p?.value) || 0;
+        let variationOptionId = null;
+        if (p?.variations && p.variations.length > 0) {
+          const selectedOptionId = selectedVariationOption[p.id];
+          if (selectedOptionId) {
+            const firstVariation = p.variations[0];
+            const opt = firstVariation?.options?.find((o) => o.id === selectedOptionId);
+            if (opt) {
+              productValue = parseFloat(opt.value) || 0;
+              variationOptionId = selectedOptionId;
+            }
+          }
+        }
+        setAddOnModalProduct(p);
+        setAddOnModalLineIndex(null);
+        setAddOnModalPendingQuantity(1);
+        setAddOnModalSelectedAddons([]);
+        setAddOnModalVariationOptionId(variationOptionId);
+        setAddOnModalProductValue(productValue);
+        setAddOnModalOpen(true);
+        return;
+      }
       // Verificar se tem variações
       if (p?.variations && p.variations.length > 0) {
         const selectedOptionId = selectedVariationOption[p.id];
@@ -886,6 +924,82 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     setOrderLines((prev) => prev.filter((_, i) => i !== lineIndex));
   };
 
+  const openAddOnModalForLine = (lineIndex) => {
+    const line = orderLines[lineIndex];
+    const p = orderProducts.find((x) => x.id === line.productId);
+    if (!p || !hasAddonsToShow(p)) return;
+    setAddOnModalProduct(p);
+    setAddOnModalLineIndex(lineIndex);
+    setAddOnModalPendingQuantity(line.quantity);
+    setAddOnModalSelectedAddons(Array.isArray(line.addons) ? line.addons.map((a) => ({ ...a, quantity: a.quantity ?? 1 })) : []);
+    setAddOnModalVariationOptionId(line.variationOptionId ?? null);
+    setAddOnModalProductValue(line.productValue != null ? line.productValue : (Number(p?.value) || 0));
+    setAddOnModalOpen(true);
+  };
+
+  const getAddonQuantityInModal = (addOnItemId) => addOnModalSelectedAddons.find((a) => a.addOnItemId === addOnItemId)?.quantity ?? 0;
+  const setAddonQuantityInModal = (item, quantity) => {
+    const { addOnItemId, label, value } = item;
+    if (quantity <= 0) {
+      setAddOnModalSelectedAddons((prev) => prev.filter((a) => a.addOnItemId !== addOnItemId));
+      return;
+    }
+    setAddOnModalSelectedAddons((prev) => {
+      const idx = prev.findIndex((a) => a.addOnItemId === addOnItemId);
+      const entry = { addOnItemId, label, value: Number(value) || 0, quantity };
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = entry;
+        return next;
+      }
+      return [...prev, entry];
+    });
+  };
+  const toggleAddonInModal = (item) => {
+    const current = getAddonQuantityInModal(item.addOnItemId);
+    setAddonQuantityInModal(item, current + 1);
+  };
+
+  const confirmAddOnModal = () => {
+    const addonsWithQty = (addOnModalSelectedAddons || []).filter((a) => (a.quantity ?? 1) > 0);
+    if (addOnModalLineIndex === null) {
+      if (!addOnModalProduct) return;
+      setOrderLines((prev) => [
+        ...prev,
+        {
+          productId: addOnModalProduct.id,
+          quantity: addOnModalPendingQuantity,
+          productValue: addOnModalProductValue ?? (Number(addOnModalProduct?.value) || 0),
+          variationOptionId: addOnModalVariationOptionId ?? null,
+          addons: addonsWithQty,
+        },
+      ]);
+    } else {
+      setOrderLines((prev) => {
+        const next = [...prev];
+        if (next[addOnModalLineIndex]) next[addOnModalLineIndex] = { ...next[addOnModalLineIndex], addons: addonsWithQty };
+        return next;
+      });
+    }
+    setAddOnModalOpen(false);
+    setAddOnModalProduct(null);
+    setAddOnModalLineIndex(null);
+    setAddOnModalSelectedAddons([]);
+    setAddOnModalPendingQuantity(1);
+    setAddOnModalVariationOptionId(null);
+    setAddOnModalProductValue(null);
+  };
+
+  const closeAddOnModal = () => {
+    setAddOnModalOpen(false);
+    setAddOnModalProduct(null);
+    setAddOnModalLineIndex(null);
+    setAddOnModalSelectedAddons([]);
+    setAddOnModalPendingQuantity(1);
+    setAddOnModalVariationOptionId(null);
+    setAddOnModalProductValue(null);
+  };
+
   const getOrderTotalItems = () =>
     orderLines.reduce((a, l) => a + l.quantity, 0) + halfAndHalfItems.reduce((a, i) => a + i.quantity, 0);
 
@@ -893,7 +1007,8 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     const linesTotal = orderLines.reduce((acc, line) => {
       const p = orderProducts.find((x) => x.id === line.productId);
       const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
-      return acc + line.quantity * unit;
+      const addonsTotal = (line.addons || []).reduce((s, a) => s + (Number(a.value) || 0) * (a.quantity ?? 1), 0);
+      return acc + (unit + addonsTotal) * line.quantity;
     }, 0);
     
     const halfAndHalfTotal = halfAndHalfItems.reduce((acc, item) => {
@@ -928,7 +1043,6 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         const p = orderProducts.find((x) => x.id === line.productId);
         const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
         let productName = p?.name || "Produto";
-        // Se tiver variação, adicionar o nome da variação ao nome do produto
         if (line.variationOptionId && p?.variations && p.variations.length > 0) {
           const firstVariation = p.variations[0];
           const selectedOption = firstVariation?.options?.find((o) => o.id === line.variationOptionId);
@@ -936,6 +1050,9 @@ const Mesas = ({ cardapioSlugFromHub }) => {
             productName = `${productName} - ${selectedOption.label}`;
           }
         }
+        const addons = Array.isArray(line.addons) && line.addons.length > 0
+          ? line.addons.flatMap((a) => Array((a.quantity ?? 1) * line.quantity).fill(null).map(() => ({ addOnItemId: a.addOnItemId, label: a.label, value: a.value })))
+          : undefined;
         return {
           productId: line.productId,
           quantity: line.quantity,
@@ -943,6 +1060,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
           productValue: unit,
           grupo: p?.grupo || "Outros",
           variationOptionId: line.variationOptionId || null,
+          ...(addons && addons.length > 0 && { addons }),
         };
       });
 
@@ -1517,9 +1635,9 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                   {orderLines.map((line, idx) => {
                     const p = orderProducts.find((x) => x.id === line.productId);
                     const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
-                    const subtotal = line.quantity * unit;
+                    const addonsTotal = (line.addons || []).reduce((s, a) => s + (Number(a.value) || 0) * (a.quantity ?? 1), 0);
+                    const subtotal = (unit + addonsTotal) * line.quantity;
                     let productDisplayName = p?.name || "Produto";
-                    // Se tiver variação, adicionar o nome da variação
                     if (line.variationOptionId && p?.variations && p.variations.length > 0) {
                       const firstVariation = p.variations[0];
                       const selectedOption = firstVariation?.options?.find((o) => o.id === line.variationOptionId);
@@ -1529,10 +1647,20 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                     }
                     return (
                       <Box key={idx} className={classes.orderLineRow}>
-                        <Box>
+                        <Box flex={1}>
                           <Typography variant="body2">
-                            {productDisplayName} • {line.quantity}x R$ {unit.toFixed(2).replace(".", ",")} = R$ {subtotal.toFixed(2).replace(".", ",")}
+                            {productDisplayName} • {line.quantity}x R$ {(unit + addonsTotal).toFixed(2).replace(".", ",")} = R$ {subtotal.toFixed(2).replace(".", ",")}
                           </Typography>
+                          {(line.addons || []).length > 0 && (
+                            <Typography variant="caption" color="textSecondary" display="block">
+                              Adicionais: {(line.addons || []).map((a) => ((a.quantity ?? 1) > 1 ? `${a.quantity}x ` : "") + `${a.label} (+ R$ ${Number(a.value || 0).toFixed(2).replace(".", ",")})`).join(", ")}
+                            </Typography>
+                          )}
+                          {p && hasAddonsToShow(p) && (
+                            <Button size="small" color="primary" onClick={() => openAddOnModalForLine(idx)} style={{ marginTop: 4 }}>
+                              {(line.addons || []).length > 0 ? "Alterar adicionais" : "Adicionais"}
+                            </Button>
+                          )}
                         </Box>
                         <IconButton size="small" onClick={() => handleRemoveOrderLine(idx)} aria-label="Remover item">
                           <RemoveIcon fontSize="small" />
@@ -1636,6 +1764,74 @@ const Mesas = ({ cardapioSlugFromHub }) => {
           <Button onClick={handleAddVariablePriceLine} color="primary" variant="contained">
             Adicionar
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={addOnModalOpen} onClose={closeAddOnModal} maxWidth="sm" fullWidth>
+        <DialogTitle>Adicionais — {addOnModalProduct?.name}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+            {addOnModalLineIndex === null ? "Selecione a quantidade do item e os adicionais (ex.: 2 ovos)." : "Altere os adicionais deste item."}
+            {addOnModalLineIndex === null && " Quantidade: "}
+            {addOnModalLineIndex === null && (
+              <Box component="span" display="inline-flex" alignItems="center" style={{ marginTop: 8 }}>
+                <IconButton size="small" onClick={() => setAddOnModalPendingQuantity((q) => Math.max(1, q - 1))} aria-label="Menos">
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+                <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>{addOnModalPendingQuantity}</Typography>
+                <IconButton size="small" onClick={() => setAddOnModalPendingQuantity((q) => q + 1)} aria-label="Mais">
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            )}
+          </Typography>
+          {addOnModalProduct?.addOnGroup && (
+            <>
+              {(addOnModalProduct.addOnGroup.subgroups || []).filter((sg) => (sg.items || []).length > 0).map((sg) => (
+                <Box key={sg.id} mb={2}>
+                  <Typography variant="subtitle2" style={{ fontWeight: 600, marginBottom: 8 }}>{sg.name}</Typography>
+                  {(sg.items || []).map((it) => {
+                    const qty = getAddonQuantityInModal(it.id);
+                    return (
+                      <Box key={it.id} display="flex" alignItems="center" justifyContent="space-between" style={{ marginBottom: 8 }}>
+                        <Typography variant="body2">{it.label} + R$ {Number(it.value || 0).toFixed(2).replace(".", ",")}</Typography>
+                        <Box display="flex" alignItems="center">
+                          <IconButton size="small" onClick={() => setAddonQuantityInModal({ addOnItemId: it.id, label: it.label, value: it.value }, qty - 1)} disabled={qty <= 0} aria-label="Menos">
+                            <RemoveIcon fontSize="small" />
+                          </IconButton>
+                          <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>{qty}</Typography>
+                          <IconButton size="small" onClick={() => toggleAddonInModal({ addOnItemId: it.id, label: it.label, value: it.value })} aria-label="Mais">
+                            <AddIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              ))}
+              {(addOnModalProduct.addOnGroup.items || []).length > 0 && (addOnModalProduct.addOnGroup.items || []).map((it) => {
+                const qty = getAddonQuantityInModal(it.id);
+                return (
+                  <Box key={it.id} display="flex" alignItems="center" justifyContent="space-between" style={{ marginBottom: 8 }}>
+                    <Typography variant="body2">{it.label} + R$ {Number(it.value || 0).toFixed(2).replace(".", ",")}</Typography>
+                    <Box display="flex" alignItems="center">
+                      <IconButton size="small" onClick={() => setAddonQuantityInModal({ addOnItemId: it.id, label: it.label, value: it.value }, qty - 1)} disabled={qty <= 0} aria-label="Menos">
+                        <RemoveIcon fontSize="small" />
+                      </IconButton>
+                      <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>{qty}</Typography>
+                      <IconButton size="small" onClick={() => toggleAddonInModal({ addOnItemId: it.id, label: it.label, value: it.value })} aria-label="Mais">
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                );
+              })}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeAddOnModal} color="secondary">Cancelar</Button>
+          <Button onClick={confirmAddOnModal} color="primary" variant="contained">Confirmar</Button>
         </DialogActions>
       </Dialog>
 

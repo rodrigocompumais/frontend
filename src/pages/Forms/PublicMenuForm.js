@@ -821,7 +821,7 @@ const PublicMenuForm = ({
       productName = product.name || "";
     }
     const addonsList = selectedAddons[key] || [];
-    const addonsTotal = addonsList.reduce((sum, a) => sum + (Number(a.value) || 0), 0);
+    const addonsTotal = addonsList.reduce((sum, a) => sum + (Number(a.value) || 0) * (a.quantity ?? 1), 0);
     return { product, productValue, productName, optionLabel, addonsTotal };
   };
 
@@ -889,29 +889,61 @@ const PublicMenuForm = ({
       const list = prev[key] || [];
       const idx = list.findIndex((a) => a.addOnItemId === addOnItemId);
       if (idx >= 0) {
+        const next = [...list];
+        next[idx] = { ...next[idx], quantity: (next[idx].quantity ?? 1) + 1 };
+        return { ...prev, [key]: next };
+      }
+      return { ...prev, [key]: [...list, { addOnItemId, label, value: Number(value) || 0, quantity: 1 }] };
+    });
+  };
+
+  const changeAddonQuantity = (key, addOnItemId, delta) => {
+    setSelectedAddons((prev) => {
+      const list = prev[key] || [];
+      const idx = list.findIndex((a) => a.addOnItemId === addOnItemId);
+      if (idx < 0) return prev;
+      const qty = (list[idx].quantity ?? 1) + delta;
+      if (qty <= 0) {
         const next = list.filter((_, i) => i !== idx);
         return next.length ? { ...prev, [key]: next } : (() => { const { [key]: _, ...r } = prev; return r; })();
       }
-      return { ...prev, [key]: [...list, { addOnItemId, label, value: Number(value) || 0 }] };
+      const next = [...list];
+      next[idx] = { ...next[idx], quantity: qty };
+      return { ...prev, [key]: next };
     });
   };
 
   const isAddonSelected = (key, addOnItemId) => (selectedAddons[key] || []).some((a) => a.addOnItemId === addOnItemId);
-
-  const isAddonSelectedInModal = (addOnItemId) => addOnModalSelectedAddons.some((a) => a.addOnItemId === addOnItemId);
-  const toggleAddonInModal = (item) => {
+  const getAddonQuantity = (key, addOnItemId) => (selectedAddons[key] || []).find((a) => a.addOnItemId === addOnItemId)?.quantity ?? 0;
+  const isAddonSelectedInModal = (addOnItemId) => addOnModalSelectedAddons.some((a) => a.addOnItemId === addOnItemId && (a.quantity ?? 1) > 0);
+  const getAddonQuantityInModal = (addOnItemId) => addOnModalSelectedAddons.find((a) => a.addOnItemId === addOnItemId)?.quantity ?? 0;
+  const setAddonQuantityInModal = (item, quantity) => {
     const { addOnItemId, label, value } = item;
+    if (quantity <= 0) {
+      setAddOnModalSelectedAddons((prev) => prev.filter((a) => a.addOnItemId !== addOnItemId));
+      return;
+    }
     setAddOnModalSelectedAddons((prev) => {
       const idx = prev.findIndex((a) => a.addOnItemId === addOnItemId);
-      if (idx >= 0) return prev.filter((_, i) => i !== idx);
-      return [...prev, { addOnItemId, label, value: Number(value) || 0 }];
+      const entry = { addOnItemId, label, value: Number(value) || 0, quantity };
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = entry;
+        return next;
+      }
+      return [...prev, entry];
     });
+  };
+  const toggleAddonInModal = (item) => {
+    const current = getAddonQuantityInModal(item.addOnItemId);
+    setAddonQuantityInModal(item, current + 1);
   };
 
   const confirmAddOnModal = () => {
     if (!addOnModalItemKey) return;
     setSelectedItems((prev) => ({ ...prev, [addOnModalItemKey]: addOnModalPendingQuantity }));
-    setSelectedAddons((prev) => ({ ...prev, [addOnModalItemKey]: addOnModalSelectedAddons }));
+    const addonsWithQty = (addOnModalSelectedAddons || []).filter((a) => (a.quantity ?? 1) > 0);
+    setSelectedAddons((prev) => ({ ...prev, [addOnModalItemKey]: addonsWithQty }));
     setAddOnModalOpen(false);
     setAddOnModalProduct(null);
     setAddOnModalItemKey("");
@@ -955,50 +987,35 @@ const PublicMenuForm = ({
   const renderAddOnsSection = (product, itemKey) => {
     if (!hasAddonsToShow(product)) return null;
     const g = product.addOnGroup;
+    const renderAddonRow = (it) => {
+      const qty = getAddonQuantity(itemKey, it.id);
+      return (
+        <Box key={it.id} display="flex" alignItems="center" justifyContent="space-between" style={{ marginBottom: 4 }}>
+          <Typography variant="body2">{it.label} + R$ {Number(it.value || 0).toFixed(2).replace(".", ",")}</Typography>
+          <Box display="flex" alignItems="center">
+            <IconButton size="small" onClick={() => changeAddonQuantity(itemKey, it.id, -1)} disabled={qty <= 0} aria-label="Menos">
+              <RemoveIcon fontSize="small" />
+            </IconButton>
+            <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>{qty}</Typography>
+            <IconButton size="small" onClick={() => toggleAddon(itemKey, { addOnItemId: it.id, label: it.label, value: it.value })} aria-label="Mais">
+              <AddIcon fontSize="small" />
+            </IconButton>
+          </Box>
+        </Box>
+      );
+    };
     return (
       <Box mt={1} pt={1} borderTop="1px solid #eee">
         <Typography variant="caption" color="textSecondary" display="block" gutterBottom>
-          Adicionais deste item (opcional)
+          Adicionais deste item (opcional). Use + para adicionar mais de um (ex.: 2 ovos).
         </Typography>
         {(g.subgroups || []).filter((sg) => (sg.items || []).length > 0).map((sg) => (
           <Box key={sg.id} mb={0.5}>
             <Typography variant="caption" style={{ fontWeight: 600 }}>{sg.name}</Typography>
-            <FormGroup row>
-              {(sg.items || []).map((it) => (
-                <FormControlLabel
-                  key={it.id}
-                  control={
-                    <Checkbox
-                      size="small"
-                      checked={isAddonSelected(itemKey, it.id)}
-                      onChange={() => toggleAddon(itemKey, { addOnItemId: it.id, label: it.label, value: it.value })}
-                    />
-                  }
-                  label={`${it.label} + R$ ${Number(it.value || 0).toFixed(2).replace(".", ",")}`}
-                />
-              ))}
-            </FormGroup>
+            {(sg.items || []).map((it) => renderAddonRow(it))}
           </Box>
         ))}
-        {(g.items || []).length > 0 && (
-          <Box mb={0.5}>
-            <FormGroup row>
-              {(g.items || []).map((it) => (
-                <FormControlLabel
-                  key={it.id}
-                  control={
-                    <Checkbox
-                      size="small"
-                      checked={isAddonSelected(itemKey, it.id)}
-                      onChange={() => toggleAddon(itemKey, { addOnItemId: it.id, label: it.label, value: it.value })}
-                    />
-                  }
-                  label={`${it.label} + R$ ${Number(it.value || 0).toFixed(2).replace(".", ",")}`}
-                />
-              ))}
-            </FormGroup>
-          </Box>
-        )}
+        {(g.items || []).length > 0 && (g.items || []).map((it) => renderAddonRow(it))}
       </Box>
     );
   };
@@ -1115,13 +1132,20 @@ const PublicMenuForm = ({
         const productId = key.includes("_") ? parseInt(key.split("_")[0], 10) : parseInt(key, 10);
         const { product, productValue, productName } = getItemDetailsByKey(key);
         const addons = selectedAddons[key] || [];
+        const addonsExpanded = addons.length > 0
+          ? addons.flatMap((a) =>
+              Array((a.quantity ?? 1) * (selectedItems[key] || 1))
+                .fill(null)
+                .map(() => ({ addOnItemId: a.addOnItemId, label: a.label, value: a.value }))
+            )
+          : undefined;
         return {
           productId,
           quantity: selectedItems[key],
           productName: productName || product?.name,
           productValue,
           grupo: product?.grupo || "Outros",
-          ...(addons.length > 0 && { addons: addons.map((a) => ({ addOnItemId: a.addOnItemId, label: a.label, value: a.value })) }),
+          ...(addonsExpanded && addonsExpanded.length > 0 && { addons: addonsExpanded }),
         };
       });
       const halfMenuItems = halfAndHalfItems.map((item) => {
@@ -2707,47 +2731,49 @@ const PublicMenuForm = ({
             <DialogTitle>Adicionais — {addOnModalProduct?.name}</DialogTitle>
             <DialogContent>
               <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
-                Selecione os adicionais para este item (opcional). Quantidade: {addOnModalPendingQuantity}
+                Selecione os adicionais e a quantidade (ex.: 2 ovos). Quantidade do item: {addOnModalPendingQuantity}
               </Typography>
               {addOnModalProduct?.addOnGroup && (
                 <>
                   {(addOnModalProduct.addOnGroup.subgroups || []).filter((sg) => (sg.items || []).length > 0).map((sg) => (
                     <Box key={sg.id} mb={2}>
                       <Typography variant="subtitle2" style={{ fontWeight: 600, marginBottom: 8 }}>{sg.name}</Typography>
-                      <FormGroup>
-                        {(sg.items || []).map((it) => (
-                          <FormControlLabel
-                            key={it.id}
-                            control={
-                              <Checkbox
-                                checked={isAddonSelectedInModal(it.id)}
-                                onChange={() => toggleAddonInModal({ addOnItemId: it.id, label: it.label, value: it.value })}
-                              />
-                            }
-                            label={`${it.label} + R$ ${Number(it.value || 0).toFixed(2).replace(".", ",")}`}
-                          />
-                        ))}
-                      </FormGroup>
+                      {(sg.items || []).map((it) => {
+                        const qty = getAddonQuantityInModal(it.id);
+                        return (
+                          <Box key={it.id} display="flex" alignItems="center" justifyContent="space-between" style={{ marginBottom: 8 }}>
+                            <Typography variant="body2">{it.label} + R$ {Number(it.value || 0).toFixed(2).replace(".", ",")}</Typography>
+                            <Box display="flex" alignItems="center">
+                              <IconButton size="small" onClick={() => setAddonQuantityInModal({ addOnItemId: it.id, label: it.label, value: it.value }, qty - 1)} disabled={qty <= 0} aria-label="Menos">
+                                <RemoveIcon fontSize="small" />
+                              </IconButton>
+                              <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>{qty}</Typography>
+                              <IconButton size="small" onClick={() => toggleAddonInModal({ addOnItemId: it.id, label: it.label, value: it.value })} aria-label="Mais">
+                                <AddIcon fontSize="small" />
+                              </IconButton>
+                            </Box>
+                          </Box>
+                        );
+                      })}
                     </Box>
                   ))}
-                  {(addOnModalProduct.addOnGroup.items || []).length > 0 && (
-                    <Box mb={2}>
-                      <FormGroup>
-                        {(addOnModalProduct.addOnGroup.items || []).map((it) => (
-                          <FormControlLabel
-                            key={it.id}
-                            control={
-                              <Checkbox
-                                checked={isAddonSelectedInModal(it.id)}
-                                onChange={() => toggleAddonInModal({ addOnItemId: it.id, label: it.label, value: it.value })}
-                              />
-                            }
-                            label={`${it.label} + R$ ${Number(it.value || 0).toFixed(2).replace(".", ",")}`}
-                          />
-                        ))}
-                      </FormGroup>
-                    </Box>
-                  )}
+                  {(addOnModalProduct.addOnGroup.items || []).length > 0 && (addOnModalProduct.addOnGroup.items || []).map((it) => {
+                    const qty = getAddonQuantityInModal(it.id);
+                    return (
+                      <Box key={it.id} display="flex" alignItems="center" justifyContent="space-between" style={{ marginBottom: 8 }}>
+                        <Typography variant="body2">{it.label} + R$ {Number(it.value || 0).toFixed(2).replace(".", ",")}</Typography>
+                        <Box display="flex" alignItems="center">
+                          <IconButton size="small" onClick={() => setAddonQuantityInModal({ addOnItemId: it.id, label: it.label, value: it.value }, qty - 1)} disabled={qty <= 0} aria-label="Menos">
+                            <RemoveIcon fontSize="small" />
+                          </IconButton>
+                          <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>{qty}</Typography>
+                          <IconButton size="small" onClick={() => toggleAddonInModal({ addOnItemId: it.id, label: it.label, value: it.value })} aria-label="Mais">
+                            <AddIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                    );
+                  })}
                 </>
               )}
             </DialogContent>
@@ -2777,7 +2803,7 @@ const PublicMenuForm = ({
                             </Typography>
                             {addonsList.length > 0 && (
                               <Typography variant="caption" color="textSecondary" display="block">
-                                {addonsList.map((a) => `${a.label} (+ R$ ${Number(a.value).toFixed(2).replace(".", ",")})`).join(", ")}
+                                {addonsList.map((a) => ((a.quantity ?? 1) > 1 ? `${a.quantity}x ` : "") + `${a.label} (+ R$ ${Number(a.value).toFixed(2).replace(".", ",")})`).join(", ")}
                               </Typography>
                             )}
                           </Box>
