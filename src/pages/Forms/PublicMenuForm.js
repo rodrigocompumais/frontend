@@ -1251,18 +1251,12 @@ const PublicMenuForm = ({
       // Metadata com mesa e orderType (QR da mesa ou campo mesa configurado)
       const orderMetadata = getOrderMetadata();
       
-      // Calcular total com taxa de entrega para salvar no metadata
-      const orderMetadataForSave = getOrderMetadata();
       const totalWithDelivery = calculateTotal();
-      const deliveryFee = orderMetadataForSave?.orderType === "delivery" && form?.settings?.deliveryFee 
-        ? (parseFloat(form.settings.deliveryFee) || 0) 
-        : 0;
-      
-      // Adicionar total e deliveryFee ao metadata
+      const deliveryFee = getDeliveryFeeAmount();
       const metadataWithTotal = {
         ...orderMetadata,
         total: totalWithDelivery,
-        deliveryFee: deliveryFee,
+        deliveryFee,
         subtotal: totalWithDelivery - deliveryFee,
       };
 
@@ -1303,8 +1297,7 @@ const PublicMenuForm = ({
           total: ((item.productValue || 0) + addonsTotal) * item.quantity,
         };
       });
-      const orderMetadataForDisplay = getOrderMetadata();
-      const deliveryFeeForDisplay = orderMetadataForDisplay?.orderType === "delivery" && form?.settings?.deliveryFee ? (parseFloat(form.settings.deliveryFee) || 0) : 0;
+      const deliveryFeeForDisplay = getDeliveryFeeAmount();
       const subtotal = calculateTotal() - deliveryFeeForDisplay;
       
       const orderInfo = {
@@ -1325,7 +1318,7 @@ const PublicMenuForm = ({
           })),
         ],
         averageDeliveryTime: form.settings?.averageDeliveryTime || "",
-        orderType: orderMetadataForDisplay?.orderType || "mesa",
+        orderType: getOrderMetadata()?.orderType || "mesa",
       };
       setOrderData(orderInfo);
 
@@ -1754,70 +1747,63 @@ const PublicMenuForm = ({
       total += computeHalfAndHalfUnitValue(base, half1, half2, item.half1OptionId, item.half2OptionId) * item.quantity;
     });
     
-    // Adicionar taxa de entrega se for pedido de delivery
-    const orderMetadata = getOrderMetadata();
-    if (orderMetadata?.orderType === "delivery" && form?.settings?.deliveryFee) {
-      total += parseFloat(form.settings.deliveryFee) || 0;
-    }
-    
+    total += getDeliveryFeeAmount();
     return total;
   };
   
+  const getAnswerValue = (fieldId) => {
+    if (fieldId == null || fieldId === "") return undefined;
+    return answers[fieldId] ?? answers[String(fieldId)] ?? answers[Number(fieldId)];
+  };
+
+  const isDeliveryFeeConditionMet = (cond) => {
+    if (!cond || cond.fieldId == null || cond.fieldId === "") return false;
+    const operator = cond.operator || "equals";
+    const expectedValue = cond.value;
+    const answerValue = getAnswerValue(cond.fieldId);
+    const normStr = (val) => String(val ?? "").trim().toLowerCase();
+    const isEmpty = (val) => {
+      if (val === undefined || val === null) return true;
+      if (Array.isArray(val) && val.length === 0) return true;
+      if (typeof val === "string" && val.trim() === "") return true;
+      return false;
+    };
+    switch (operator) {
+      case "equals":
+        if (expectedValue === undefined || expectedValue === null) return false;
+        if (Array.isArray(answerValue)) return answerValue.map(normStr).includes(normStr(expectedValue));
+        return normStr(answerValue) === normStr(expectedValue);
+      case "notEquals":
+        if (expectedValue === undefined || expectedValue === null) return false;
+        if (Array.isArray(answerValue)) return !answerValue.map(normStr).includes(normStr(expectedValue));
+        return normStr(answerValue) !== normStr(expectedValue);
+      case "contains":
+        if (expectedValue === undefined || expectedValue === null) return false;
+        return String(answerValue || "").toLowerCase().includes(String(expectedValue || "").toLowerCase());
+      case "isEmpty":
+        return isEmpty(answerValue);
+      case "isNotEmpty":
+        return !isEmpty(answerValue);
+      case "isTrue": {
+        if (Array.isArray(answerValue)) return answerValue.length > 0;
+        const strVal = String(answerValue || "").toLowerCase();
+        return strVal === "true" || strVal === "sim" || strVal === "yes" || strVal === "1" || answerValue === true;
+      }
+      case "isFalse": {
+        if (Array.isArray(answerValue)) return answerValue.length === 0;
+        const strVal2 = String(answerValue || "").toLowerCase();
+        return strVal2 === "false" || strVal2 === "não" || strVal2 === "nao" || strVal2 === "no" || strVal2 === "0" || answerValue === false || isEmpty(answerValue);
+      }
+      default:
+        return false;
+    }
+  };
+
   const getOrderMetadata = () => {
     let orderMetadata = {};
     const mesasEnabled = form.settings?.mesas !== false;
     const deliveryEnabled = form.settings?.delivery !== false;
     const feeCond = form.settings?.deliveryFeeCondition;
-
-    const getAnswerValue = (fieldId) => {
-      if (fieldId == null || fieldId === "") return undefined;
-      return answers[fieldId] ?? answers[String(fieldId)] ?? answers[Number(fieldId)];
-    };
-
-    const isConditionMet = (cond) => {
-      if (!cond || cond.fieldId == null || cond.fieldId === "") return false;
-      const operator = cond.operator || "equals";
-      const expectedValue = cond.value;
-      const answerValue = getAnswerValue(cond.fieldId);
-      const normStr = (val) => String(val ?? "").trim().toLowerCase();
-
-      const isEmpty = (val) => {
-        if (val === undefined || val === null) return true;
-        if (Array.isArray(val) && val.length === 0) return true;
-        if (typeof val === "string" && val.trim() === "") return true;
-        return false;
-      };
-
-      switch (operator) {
-        case "equals":
-          if (expectedValue === undefined || expectedValue === null) return false;
-          if (Array.isArray(answerValue)) return answerValue.map(normStr).includes(normStr(expectedValue));
-          return normStr(answerValue) === normStr(expectedValue);
-        case "notEquals":
-          if (expectedValue === undefined || expectedValue === null) return false;
-          if (Array.isArray(answerValue)) return !answerValue.map(normStr).includes(normStr(expectedValue));
-          return normStr(answerValue) !== normStr(expectedValue);
-        case "contains":
-          if (expectedValue === undefined || expectedValue === null) return false;
-          return String(answerValue || "").toLowerCase().includes(String(expectedValue || "").toLowerCase());
-        case "isEmpty":
-          return isEmpty(answerValue);
-        case "isNotEmpty":
-          return !isEmpty(answerValue);
-        case "isTrue": {
-          if (Array.isArray(answerValue)) return answerValue.length > 0;
-          const strVal = String(answerValue || "").toLowerCase();
-          return strVal === "true" || strVal === "sim" || strVal === "yes" || strVal === "1" || answerValue === true;
-        }
-        case "isFalse": {
-          if (Array.isArray(answerValue)) return answerValue.length === 0;
-          const strVal2 = String(answerValue || "").toLowerCase();
-          return strVal2 === "false" || strVal2 === "não" || strVal2 === "nao" || strVal2 === "no" || strVal2 === "0" || answerValue === false || isEmpty(answerValue);
-        }
-        default:
-          return false;
-      }
-    };
 
     if (mesaFromQR && mesaValue) {
       orderMetadata.tableId = mesaFromQR.id;
@@ -1835,7 +1821,7 @@ const PublicMenuForm = ({
     if (!orderMetadata.tableId && deliveryEnabled) {
       // Se existir condição vinculada a campo, só marcar como delivery quando a condição for verdadeira
       if (feeCond?.fieldId) {
-        orderMetadata.orderType = isConditionMet(feeCond) ? "delivery" : (mesasEnabled ? "mesa" : "delivery");
+        orderMetadata.orderType = isDeliveryFeeConditionMet(feeCond) ? "delivery" : (mesasEnabled ? "mesa" : "delivery");
       } else {
         orderMetadata.orderType = "delivery";
       }
@@ -1843,6 +1829,19 @@ const PublicMenuForm = ({
       orderMetadata.orderType = mesasEnabled ? "mesa" : "delivery";
     }
     return orderMetadata;
+  };
+
+  /** Taxa de entrega só quando: pedido é delivery, formulário tem valor de taxa e (não há condicional ou a condicional é atendida). */
+  const getDeliveryFeeAmount = () => {
+    const orderMetadata = getOrderMetadata();
+    if (orderMetadata?.orderType !== "delivery") return 0;
+    const feeVal = parseFloat(form?.settings?.deliveryFee) || 0;
+    if (feeVal <= 0) return 0;
+    const feeCond = form?.settings?.deliveryFeeCondition;
+    if (feeCond?.fieldId != null && feeCond.fieldId !== "") {
+      if (!isDeliveryFeeConditionMet(feeCond)) return 0;
+    }
+    return feeVal;
   };
 
   const getTotalItems = () => {
@@ -2922,10 +2921,7 @@ const PublicMenuForm = ({
                       Resumo do Pedido
                     </Typography>
                     {(() => {
-                      const orderMetadataForDisplay = getOrderMetadata();
-                      const fee = orderMetadataForDisplay?.orderType === "delivery" && form?.settings?.deliveryFee
-                        ? (parseFloat(form.settings.deliveryFee) || 0)
-                        : 0;
+                      const fee = getDeliveryFeeAmount();
                       const total = calculateTotal();
                       const subtotal = Math.max(0, total - fee);
                       return (
