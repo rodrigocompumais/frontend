@@ -1943,8 +1943,8 @@ const PublicMenuForm = ({
               </Typography>
             </Box>
 
-            {/* Tempo Médio de Entrega - Destaque */}
-            {orderData.averageDeliveryTime && (
+            {/* Tempo Médio de Entrega - só em pedidos delivery */}
+            {orderData.orderType === "delivery" && orderData.averageDeliveryTime && (
               <Box 
                 style={{ 
                   backgroundColor: form.primaryColor + "20", 
