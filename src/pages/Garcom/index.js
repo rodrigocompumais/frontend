@@ -270,6 +270,46 @@ const Garcom = () => {
     load();
   }, [hasLanchonetes]);
 
+  // Ao abrir o dialog de pedido, carregar o formulário vinculado à mesa (não o primeiro da lista)
+  useEffect(() => {
+    if (!orderDialogOpen || !mesaParaPedido) return;
+    let cancelled = false;
+    const loadFormForMesa = async () => {
+      try {
+        let formToUse = null;
+        const mesaFormId = mesaParaPedido.formId ?? mesaParaPedido.form?.id;
+        const mesaFormPublicId = mesaParaPedido.form?.publicId;
+        if (mesaFormPublicId) {
+          const { data: formsData } = await api.get("/forms?formType=cardapio");
+          const forms = formsData?.forms || [];
+          formToUse = forms.find((f) => f.publicId === mesaFormPublicId) || forms.find((f) => f.id === mesaFormId) || null;
+        }
+        if (!formToUse && mesaFormId) {
+          const { data: formsData } = await api.get("/forms?formType=cardapio");
+          const forms = formsData?.forms || [];
+          formToUse = forms.find((f) => f.id === mesaFormId) || null;
+        }
+        if (!formToUse) {
+          const { data: defaultData } = await api.get("/mesas/default-cardapio-form");
+          if (cancelled || !defaultData?.publicId) return;
+          const { data: formsData } = await api.get("/forms?formType=cardapio");
+          const forms = formsData?.forms || [];
+          formToUse = forms.find((f) => f.publicId === defaultData.publicId) || forms.find((f) => f.id === defaultData.formId) || forms[0] || null;
+        }
+        if (cancelled || !formToUse) return;
+        setForm(formToUse);
+        if (formToUse.publicId) {
+          const { data } = await api.get(`/public/forms/${formToUse.publicId}/products`);
+          if (!cancelled) setProducts(data.products || []);
+        }
+      } catch (err) {
+        if (!cancelled) toastError(err);
+      }
+    };
+    loadFormForMesa();
+    return () => { cancelled = true; };
+  }, [orderDialogOpen, mesaParaPedido?.id, mesaParaPedido?.formId, mesaParaPedido?.form?.publicId]);
+
   useEffect(() => {
     const companyId = user?.companyId;
     const socket = companyId ? socketManager?.getSocket?.(companyId) : null;

@@ -442,6 +442,14 @@ const Mesas = ({ cardapioSlugFromHub }) => {
 
     const resolveSlugAndLoad = async () => {
       let slugToUse = mesaParaPedido?.form?.publicId || cardapioSlug;
+      if (!slugToUse && (mesaParaPedido?.formId || mesaParaPedido?.form?.id)) {
+        try {
+          const { data: formsData } = await api.get("/forms?formType=cardapio");
+          const forms = formsData?.forms || [];
+          const formByMesa = forms.find((f) => f.id === (mesaParaPedido.formId ?? mesaParaPedido.form?.id));
+          if (formByMesa?.publicId) slugToUse = formByMesa.publicId;
+        } catch (_) {}
+      }
       if (!slugToUse) {
         try {
           const { data } = await api.get("/mesas/default-cardapio-form");
@@ -476,7 +484,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
 
     resolveSlugAndLoad();
     return () => { cancelled = true; };
-  }, [orderDialogOpen, mesaParaPedido?.id, mesaParaPedido?.form?.publicId, cardapioSlug]);
+  }, [orderDialogOpen, mesaParaPedido?.id, mesaParaPedido?.formId, mesaParaPedido?.form?.publicId, cardapioSlug]);
 
   const handleOpenOrderDialog = (mesa) => {
     if (mesa.status !== "ocupada" || !mesa.contact) {
