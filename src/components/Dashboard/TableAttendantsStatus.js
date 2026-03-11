@@ -182,19 +182,34 @@ const BorderLinearProgress = withStyles((theme) => ({
 	},
 }))(LinearProgress);
 
+/**
+ * Notas vêm do backend em escala 1–5 (UserRatings); o dashboard usa estrelas max 3.
+ * Normaliza 1–5 → 1–3 linearmente e garante que nunca exiba > 3.
+ */
+function normalizeRatingForDisplay(rating) {
+	if (rating == null || !Number.isFinite(Number(rating))) return 0;
+	const r = Number(rating);
+	// Se já está na escala 0–3, só limita ao teto
+	if (r <= 3) return Math.min(3, Math.max(0, r));
+	// Escala 1–5 → 1–3: 1→1, 3→2, 5→3
+	const normalized = 1 + ((r - 1) / 4) * 2;
+	return Math.min(3, Math.max(0, normalized));
+}
+
 export function RatingBox ({ rating }) {
 	const classes = useStyles();
-	const ratingTrunc = rating === null ? 0 : Math.trunc(rating);
+	const displayRating = normalizeRatingForDisplay(rating);
+	const ratingTrunc = Math.round(displayRating);
 	return (
 		<Box className={classes.ratingContainer}>
 			<StyledRating
-				value={ratingTrunc}
+				value={Math.min(3, Math.max(0, ratingTrunc))}
 				max={3}
 				readOnly
 				size="small"
 			/>
 			<Typography className={classes.ratingValue}>
-				{rating ? rating.toFixed(1) : "0.0"}
+				{displayRating > 0 ? displayRating.toFixed(1) : "0.0"}
 			</Typography>
 		</Box>
 	);
