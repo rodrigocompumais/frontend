@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext, useRef } from "react";
 import { useParams, useHistory } from "react-router-dom";
 
 import { toast } from "react-toastify";
@@ -87,6 +87,7 @@ const Ticket = () => {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [scrollToMessageId, setScrollToMessageId] = useState(null);
   const [realTimeTranslationEnabled, setRealTimeTranslationEnabled] = useLocalStorage("realTimeTranslationEnabled", false);
+  const messagesListRef = useRef(null);
 
   const socketManager = useContext(SocketContext);
 
@@ -98,6 +99,11 @@ const Ticket = () => {
 
     const delayDebounceFn = setTimeout(() => {
       const fetchTicket = async () => {
+        if (!ticketId || String(ticketId).trim() === "" || String(ticketId) === "undefined") {
+          setLoading(false);
+          history.push("/tickets");
+          return;
+        }
         try {
           const { data } = await api.get("/tickets/u/" + ticketId);
 
@@ -263,6 +269,7 @@ const Ticket = () => {
     return (
       <>
         <MessagesList
+          ref={messagesListRef}
           ticket={ticket}
           ticketId={ticket.id}
           isGroup={ticket.isGroup}
@@ -271,7 +278,7 @@ const Ticket = () => {
           scrollToMessageId={scrollToMessageId}
           onScrollToMessageDone={() => setScrollToMessageId(null)}
           onScrollToMessageRequest={(id) => setScrollToMessageId(id)}
-        ></MessagesList>
+        />
         <MessageInput
           ticketId={ticket.id}
           ticketStatus={ticket.status}
@@ -279,6 +286,9 @@ const Ticket = () => {
           onAnalyzeChat={aiHandlers?.handleAnalyzeChat}
           onSummarizeAudios={aiHandlers?.handleSummarizeAudios}
           onSuggestResponse={aiHandlers?.handleSuggestResponse}
+          onOptimisticMessage={(msg) => messagesListRef.current?.addOptimisticMessage?.(msg)}
+          onOptimisticMessageFailed={(tempId) => messagesListRef.current?.removeOptimisticMessage?.(tempId)}
+          onScrollToBottom={() => messagesListRef.current?.scrollToBottom?.()}
         />
       </>
     );

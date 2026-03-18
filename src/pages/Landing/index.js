@@ -876,21 +876,17 @@ const Landing = () => {
     };
   }, []);
 
-  // Função para redirecionar para WhatsApp com mensagem sobre o plano selecionado
+  // Redirecionamento direto para o checkout (signup com plano pré-selecionado)
   const handleAcquirePlan = (plan) => {
-    // Formata a mensagem com informações do plano
-    const message = encodeURIComponent(
-      `Olá! Tenho interesse no plano *${plan.name}*\n\n` +
-      `*Detalhes do plano:*\n` +
-      `• Usuários: ${plan.users || 0} + Gestor\n` +
-      `• Valor: R$ ${plan.value ? plan.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : 'Consulte'}/mês\n` +
-      `• Conexões: ${plan.connections || 1}\n\n` +
-      `Gostaria de mais informações sobre este plano.`
-    );
-    
-    // Redireciona para WhatsApp
-    const whatsappNumber = '553433511861';
-    window.open(`https://wa.me/${whatsappNumber}?text=${message}`, '_blank');
+    if (!plan || !plan.id) return;
+    const isFree = plan.value === 0 || plan.value === null;
+    // Fluxo gratuito: mesma URL usada no restante da LP
+    if (isFree) {
+      history.push(`/signup?free=true&planId=${plan.id}`);
+    } else {
+      // Plano pago: signup já abre com planId e, após o formulário, segue para PIX (Asaas)
+      history.push(`/signup?planId=${plan.id}`);
+    }
   };
 
   // Função para scroll suave para seções
@@ -1528,8 +1524,18 @@ const Landing = () => {
                 
                 return (
                   <Grid item xs={12} sm={6} md={4} key={plan.id}>
-                    <Card 
+                    <Card
                       className={`${classes.planCard} ${isFeatured ? classes.planCardFeatured : ""} sr-plan-card`}
+                      onClick={() => handleAcquirePlan(plan)}
+                      style={{ cursor: "pointer" }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleAcquirePlan(plan);
+                        }
+                      }}
                     >
                       {isFeatured && (
                         <Chip
@@ -1586,13 +1592,19 @@ const Landing = () => {
                         </Box>
 
                         <Button
+                          type="button"
                           variant="contained"
                           className={classes.planCta}
-                          onClick={() => handleAcquirePlan(plan)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAcquirePlan(plan);
+                          }}
                           endIcon={<ArrowForwardIcon />}
                           fullWidth
                         >
-                          ADQUIRIR AGORA
+                          {plan.value === 0 || plan.value === null
+                            ? "COMEÇAR AGORA"
+                            : "ASSINAR / PAGAR COM PIX"}
                         </Button>
                       </Box>
                     </Card>

@@ -108,6 +108,10 @@ export function ContactNotes ({ ticket }) {
     const loadNotes = async () => {
         setLoading(true)
         try {
+            if (ticketId == null || contactId == null) {
+                setLoading(false)
+                return
+            }
             const notes = await listNotes({ ticketId, contactId })
             setNotes(notes)
         } catch (e) {

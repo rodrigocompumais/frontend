@@ -110,7 +110,7 @@ export default function ReciboPdvModal({ open, onClose, data, mesa }) {
       <html>
         <head>
           <meta charset="utf-8">
-          <title>Recibo - ${(mesa?.number || mesa?.name || "Conta").toString().replace(/</g, "")}</title>
+          <title>Recibo - ${(mesa?.number ?? mesa?.name ?? (data?.mesa ? "Conta" : "PDV")).toString().replace(/</g, "")}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -142,8 +142,9 @@ export default function ReciboPdvModal({ open, onClose, data, mesa }) {
 
   if (!data) return null;
 
-  const tipoConta = data.mesa?.type === "comanda" ? "COMANDA" : "MESA";
-  const numeroConta = data.mesa?.number || data.mesa?.name || "";
+  const isVendaDireta = !data.mesa;
+  const tipoConta = isVendaDireta ? "VENDA PDV" : (data.mesa?.type === "comanda" ? "COMANDA" : "MESA");
+  const numeroConta = isVendaDireta ? "" : (data.mesa?.number || data.mesa?.name || "");
   const dataHora = new Date().toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
@@ -159,9 +160,9 @@ export default function ReciboPdvModal({ open, onClose, data, mesa }) {
   lines.push(centerText("DOCUMENTO SEM VALOR FISCAL"));
   lines.push("");
   lines.push(centerText("--------------------------------"));
-  lines.push(`${tipoConta}: ${numeroConta}`);
+  lines.push(numeroConta ? `${tipoConta}: ${numeroConta}` : tipoConta);
   lines.push(`Data/Hora: ${dataHora}`);
-  if (clienteNome) lines.push(`Cliente: ${clienteNome.slice(0, CHARS_PER_LINE - 10)}`);
+  if (!isVendaDireta && clienteNome) lines.push(`Cliente: ${clienteNome.slice(0, CHARS_PER_LINE - 10)}`);
   lines.push("--------------------------------");
   lines.push("");
 
@@ -187,13 +188,22 @@ export default function ReciboPdvModal({ open, onClose, data, mesa }) {
   lines.push("--------------------------------");
   const totalStr = `R$ ${Number(data.total || 0).toFixed(2).replace(".", ",")}`;
   lines.push(padLeft(`TOTAL: ${totalStr}`, CHARS_PER_LINE));
+  if (Array.isArray(data.meiosPagamento) && data.meiosPagamento.length > 0) {
+    lines.push("");
+    lines.push("Pagamento:");
+    data.meiosPagamento.forEach((p) => {
+      const metodo = String(p?.metodo || "").toUpperCase() || "OUTRO";
+      const val = Number(p?.valor || 0);
+      lines.push(padLeft(`${metodo}: R$ ${val.toFixed(2).replace(".", ",")}`, CHARS_PER_LINE));
+    });
+  }
   lines.push("--------------------------------");
   lines.push("");
   lines.push(centerText("Obrigado! Volte sempre."));
 
   return (
     <Dialog open={open} onClose={onClose} className={classes.dialogPaper}>
-      <DialogTitle>Recibo — {tipoConta} {numeroConta}</DialogTitle>
+      <DialogTitle>Recibo — {numeroConta ? `${tipoConta} ${numeroConta}` : tipoConta}</DialogTitle>
       <DialogContent>
         <Box className={classes.reciboWrap} id="recibo-termico-pdv">
           {lines.map((line, i) => {

@@ -115,7 +115,12 @@ const useAuth = () => {
           api.defaults.headers.Authorization = `Bearer ${data.token}`;
           setIsAuth(true);
           setUser(data.user);
-          
+          // Manter dueDate alinhado para Route.js (fallback se company vier sem dueDate)
+          if (data.user?.company?.dueDate) {
+            const v = moment(data.user.company.dueDate).format("DD/MM/YYYY");
+            localStorage.setItem("companyDueDate", v);
+          }
+
           // Carregar idioma da empresa
           if (data.user?.company?.language) {
             setCompanyLanguage(data.user.company.language);

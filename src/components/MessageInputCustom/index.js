@@ -481,11 +481,15 @@ const CustomInput = (props) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inputMessage]);
 
-  const onKeyPress = (e) => {
-    if (loading || e.shiftKey) return;
-    else if (e.key === "Enter") {
-      handleSendMessage();
-    }
+  const onKeyDown = (e) => {
+    // Enter sem Shift envia; precisa prevenir o newline "fantasma" no InputBase/Autocomplete.
+    if (e.key !== "Enter") return;
+    if (e.shiftKey) return;
+    if (loading) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    handleSendMessage();
   };
 
   const onPaste = (e) => {
@@ -518,7 +522,8 @@ const CustomInput = (props) => {
         freeSolo
         open={popupOpen}
         id="grouped-demo"
-        value={inputMessage}
+        value={null}
+        inputValue={inputMessage}
         options={options}
         closeIcon={null}
         getOptionLabel={(option) => {
@@ -544,19 +549,39 @@ const CustomInput = (props) => {
           }
         }}
         onInputChange={(event, opt, reason) => {
-          if (reason === "input") {
-            setInputMessage(event.target.value);
+          // 'opt' aqui é o newInputValue do MUI Autocomplete
+          if (typeof opt === "string") {
+            // Em alguns browsers/MUI, ao enviar com Enter, entra um "\n" "fantasma" enquanto loading=true.
+            // Ignorar para não ficar "texto invisível" na caixa.
+            if (loading && opt.trim() === "") {
+              setInputMessage("");
+              return;
+            }
+            setInputMessage(opt);
           }
         }}
         onPaste={onPaste}
-        onKeyPress={onKeyPress}
+        onKeyDown={onKeyDown}
         style={{ width: "100%" }}
         renderInput={(params) => {
           const { InputLabelProps, InputProps, ...rest } = params;
+          const chainedOnKeyDown = (e) => {
+            let maybeOnKeyDown = null;
+            if (params && params.InputProps && typeof params.InputProps.onKeyDown === "function") {
+              maybeOnKeyDown = params.InputProps.onKeyDown;
+            }
+            if (maybeOnKeyDown) {
+              try {
+                maybeOnKeyDown(e);
+              } catch (_) {}
+            }
+            onKeyDown(e);
+          };
           return (
             <InputBase
               {...params.InputProps}
               {...rest}
+              onKeyDown={chainedOnKeyDown}
               disabled={disableOption()}
               inputRef={setInputRef}
               placeholder={renderPlaceholder()}
@@ -572,7 +597,7 @@ const CustomInput = (props) => {
 };
 
 const MessageInputCustom = (props) => {
-  const { ticketStatus, ticketId, isGroup = false, onAnalyzeChat, onSummarizeAudios, onSuggestResponse } = props;
+  const { ticketStatus, ticketId, isGroup = false, onAnalyzeChat, onSummarizeAudios, onSuggestResponse, onOptimisticMessage, onOptimisticMessageFailed, onScrollToBottom } = props;
   const classes = useStyles();
 
   const [medias, setMedias] = useState([]);
@@ -594,20 +619,34 @@ const MessageInputCustom = (props) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const inputRef = useRef();
   const previewUrlsRef = useRef([]);
+  const inputMessageRef = useRef("");
+  const draftTimeoutRef = useRef(null);
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
   const { user } = useContext(AuthContext);
 
   const [signMessage, setSignMessage] = useLocalStorage("signOption", true);
 
+  useEffect(() => {
+    inputMessageRef.current = inputMessage;
+  }, [inputMessage]);
+
+  useEffect(() => {
+  }, [inputMessage, ticketId]);
+
   // Salvar rascunho no localStorage quando o usuário digita (com debounce)
   useEffect(() => {
     if (!ticketId) return;
     
     const draftKey = `messageDraft_${ticketId}`;
-    const timeoutId = setTimeout(() => {
-      if (inputMessage.trim()) {
-        localStorage.setItem(draftKey, inputMessage);
+    if (draftTimeoutRef.current) {
+      clearTimeout(draftTimeoutRef.current);
+      draftTimeoutRef.current = null;
+    }
+    draftTimeoutRef.current = setTimeout(() => {
+      const currentValue = inputMessageRef.current || "";
+      if (currentValue.trim()) {
+        localStorage.setItem(draftKey, currentValue);
       } else {
         // Se a mensagem estiver vazia, remover o rascunho
         localStorage.removeItem(draftKey);
@@ -615,7 +654,10 @@ const MessageInputCustom = (props) => {
     }, 500); // Debounce de 500ms
 
     return () => {
-      clearTimeout(timeoutId);
+      if (draftTimeoutRef.current) {
+        clearTimeout(draftTimeoutRef.current);
+        draftTimeoutRef.current = null;
+      }
     };
   }, [inputMessage, ticketId]);
 
@@ -948,6 +990,7 @@ const MessageInputCustom = (props) => {
   const handleSendMessage = async () => {
     if (inputMessage.trim() === "") return;
     setLoading(true);
+    const originalInputMessage = inputMessage;
 
     const bodyText = isInternalMessage
       ? inputMessage.trim()
@@ -964,21 +1007,56 @@ const MessageInputCustom = (props) => {
       isInternal: isInternalMessage,
       ...(isGroup && pendingMentions.length > 0 && { mentions: pendingMentions }),
     };
+
+    // Atualização otimista: mesma lógica para mensagens normais e internas (mensagem aparece na hora).
+    const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const optimisticMessage = {
+      id: tempId,
+      body: bodyText,
+      fromMe: true,
+      ticketId,
+      read: 1,
+      mediaUrl: "",
+      mediaType: "conversation",
+      quotedMsg: replyingMessage || undefined,
+      isInternal: isInternalMessage,
+      createdAt: new Date().toISOString(),
+    };
+    if (onOptimisticMessage) {
+      onOptimisticMessage(optimisticMessage);
+      if (onScrollToBottom) onScrollToBottom();
+    }
+    // Limpar a caixa imediatamente (UX em conexão lenta): a mensagem já apareceu via otimista.
+    setInputMessage("");
+    // Cancelar persistência do rascunho imediatamente ao enviar (evita race do debounce)
+    try {
+      if (draftTimeoutRef.current) {
+        clearTimeout(draftTimeoutRef.current);
+        draftTimeoutRef.current = null;
+      }
+      if (ticketId) {
+        localStorage.removeItem(`messageDraft_${ticketId}`);
+      }
+    } catch (_) {}
+
     try {
       await api.post(`/messages/${ticketId}`, message);
       setIsInternalMessage(false);
       setPendingMentions([]);
-      
-      // Limpar rascunho após enviar mensagem com sucesso
+
       if (ticketId) {
         const draftKey = `messageDraft_${ticketId}`;
         localStorage.removeItem(draftKey);
       }
     } catch (err) {
+      if (onOptimisticMessageFailed && tempId) {
+        onOptimisticMessageFailed(tempId);
+      }
       toastError(err);
+      // Se falhou, restaurar o texto para o usuário não perder o que digitou.
+      setInputMessage(originalInputMessage);
     }
 
-    setInputMessage("");
     setShowEmoji(false);
     setLoading(false);
     setReplyingMessage(null);
@@ -1051,8 +1129,10 @@ const MessageInputCustom = (props) => {
     }
   };
 
+  // Não incluir loading: apenas o botão de enviar fica desabilitado durante envio,
+  // para o usuário poder continuar digitando (otimização de UX).
   const disableOption = () => {
-    return loading || recording || ticketStatus !== "open";
+    return recording || ticketStatus !== "open";
   };
 
   const handleImproveMessage = async () => {

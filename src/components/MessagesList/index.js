@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useReducer, useRef, useContext, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useReducer, useRef, useContext, useMemo, useCallback, forwardRef, useImperativeHandle } from "react";
 
 import { isSameDay, parseISO, format } from "date-fns";
 import clsx from "clsx";
@@ -370,54 +370,117 @@ const useStyles = makeStyles((theme) => ({
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_MESSAGES") {
-    const messages = action.payload;
-    const newMessages = [];
-
-    messages.forEach((message) => {
-      const messageIndex = state.findIndex((m) => m.id === message.id);
-      if (messageIndex !== -1) {
-        state[messageIndex] = message;
-      } else {
-        newMessages.push(message);
-      }
-    });
-
-    return [...newMessages, ...state];
+    const messages = Array.isArray(action.payload) ? action.payload : [];
+    if (messages.length === 0) return state;
+    const pageNumber = action.pageNumber || 1;
+    return pageNumber === 1 ? [...messages] : [...messages, ...state];
   }
 
   if (action.type === "ADD_MESSAGE") {
     const newMessage = action.payload;
-    const messageIndex = state.findIndex((m) => m.id === newMessage.id);
+    const newIdStr = newMessage.id != null ? String(newMessage.id) : "";
+    const isRealFromMe = newMessage.fromMe && newIdStr && !newIdStr.startsWith("temp-");
 
-    if (messageIndex !== -1) {
-      state[messageIndex] = newMessage;
-    } else {
-      state.push(newMessage);
+    // Substituir a mensagem otimista mais ANTIGA que corresponda (evita trocar a errada em alta concorrência).
+    // Janela de tempo: só considera otimistas criadas nos últimos 2 min para evitar match incorreto.
+    const OPTIMISTIC_MATCH_WINDOW_MS = 2 * 60 * 1000;
+    const now = Date.now();
+    if (isRealFromMe && newMessage.ticketId != null) {
+      const normTicketId = Number(newMessage.ticketId);
+      const normBody = String(newMessage.body || "").trim();
+      let replaceIndex = -1;
+      for (let i = 0; i < state.length; i++) {
+        const m = state[i];
+        const sameTicket = Number(m.ticketId) === normTicketId;
+        const sameBody = String(m.body || "").trim() === normBody;
+        if (String(m.id || "").startsWith("temp-") && m.fromMe && sameBody && sameTicket) {
+          const createdAt = m.createdAt ? new Date(m.createdAt).getTime() : 0;
+          if (now - createdAt <= OPTIMISTIC_MATCH_WINDOW_MS) {
+            replaceIndex = i;
+            break;
+          }
+        }
+      }
+      // Fallback: se não achou por body (ex.: backend antigo com body formatado), substituir a otimista mais antiga do ticket na janela
+      if (replaceIndex === -1) {
+        for (let i = 0; i < state.length; i++) {
+          const m = state[i];
+          const sameTicket = Number(m.ticketId) === normTicketId;
+          if (String(m.id || "").startsWith("temp-") && m.fromMe && sameTicket) {
+            const createdAt = m.createdAt ? new Date(m.createdAt).getTime() : 0;
+            if (now - createdAt <= OPTIMISTIC_MATCH_WINDOW_MS) {
+              replaceIndex = i;
+              break;
+            }
+          }
+        }
+      }
+      if (replaceIndex !== -1) {
+        const next = [...state];
+        next[replaceIndex] = newMessage;
+        return next;
+      }
     }
 
-    return [...state];
+    const messageIndex = state.findIndex((m) => m.id === newMessage.id);
+    if (messageIndex !== -1) {
+      const next = [...state];
+      next[messageIndex] = newMessage;
+      return next;
+    }
+    return [...state, newMessage];
+  }
+
+  if (action.type === "REMOVE_OPTIMISTIC") {
+    const tempId = action.payload;
+    return state.filter((m) => m.id !== tempId);
+  }
+
+  // Backend em background: quando o job falha e não consegue salvar, emite sendFailed; marcamos a otimista como erro.
+  if (action.type === "MARK_OPTIMISTIC_FAILED") {
+    const { ticketId, body } = action.payload;
+    const normTicketId = Number(ticketId);
+    const normBody = String(body || "").trim();
+    let replaceIndex = -1;
+    for (let i = 0; i < state.length; i++) {
+      const m = state[i];
+      const sameTicket = Number(m.ticketId) === normTicketId;
+      const sameBody = String(m.body || "").trim() === normBody;
+      if (String(m.id || "").startsWith("temp-") && m.fromMe && sameBody && sameTicket) {
+        replaceIndex = i;
+        break;
+      }
+    }
+    if (replaceIndex !== -1) {
+      const next = [...state];
+      next[replaceIndex] = { ...next[replaceIndex], ack: -1, isSending: false };
+      return next;
+    }
+    return state;
   }
 
   if (action.type === "UPDATE_MESSAGE") {
     const messageToUpdate = action.payload;
     const messageIndex = state.findIndex((m) => m.id === messageToUpdate.id);
-
     if (messageIndex !== -1) {
-      state[messageIndex] = messageToUpdate;
+      const next = [...state];
+      next[messageIndex] = messageToUpdate;
+      return next;
     }
-
-    return [...state];
+    return state;
   }
 
   if (action.type === "RESET") {
     return [];
   }
+  return state;
 };
 
-const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTranslationEnabled = false, scrollToMessageId, onScrollToMessageDone, onScrollToMessageRequest }) => {
+const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTranslationEnabled = false, scrollToMessageId, onScrollToMessageDone, onScrollToMessageRequest }, ref) => {
   const classes = useStyles();
 
   const [messagesList, dispatch] = useReducer(reducer, []);
+
   const [pageNumber, setPageNumber] = useState(1);
   const [hasMore, setHasMore] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -553,8 +616,9 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
           });
 
           if (currentTicketId.current === ticketId) {
-            dispatch({ type: "LOAD_MESSAGES", payload: data.messages });
-            setHasMore(data.hasMore);
+            const list = Array.isArray(data?.messages) ? data.messages : [];
+            if (list.length > 0) dispatch({ type: "LOAD_MESSAGES", payload: list, pageNumber });
+            setHasMore(Boolean(data?.hasMore));
             setLoading(false);
           }
 
@@ -579,13 +643,18 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
 
     const handleReady = () => socket.emit("joinChatBox", `${ticket.id}`);
     const handleAppMessage = (data) => {
-      if (data.action === "create" && data.message.ticketId === currentTicketId.current) {
+      const currentId = Number(currentTicketId.current);
+      const msgTicketId = data.message?.ticketId != null ? Number(data.message.ticketId) : null;
+      const failTicketId = data.ticketId != null ? Number(data.ticketId) : null;
+      if (data.action === "create" && msgTicketId === currentId) {
         dispatch({ type: "ADD_MESSAGE", payload: data.message });
         scrollToBottom();
       }
-
-      if (data.action === "update" && data.message.ticketId === currentTicketId.current) {
+      if (data.action === "update" && msgTicketId === currentId) {
         dispatch({ type: "UPDATE_MESSAGE", payload: data.message });
+      }
+      if (data.action === "sendFailed" && failTicketId === currentId) {
+        dispatch({ type: "MARK_OPTIMISTIC_FAILED", payload: { ticketId: data.ticketId, body: data.body } });
       }
     };
 
@@ -599,14 +668,22 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
   }, [ticketId, ticket, socketManager]);
 
   const loadMore = () => {
-    setPageNumber((prevPageNumber) => prevPageNumber + 1);
+    if (loading || !hasMore) return;
+    setLoading(true);
+    setPageNumber((prev) => prev + 1);
   };
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (lastMessageRef.current) {
       lastMessageRef.current.scrollIntoView({});
     }
-  };
+  }, []);
+
+  useImperativeHandle(ref, () => ({
+    addOptimisticMessage: (msg) => dispatch({ type: "ADD_MESSAGE", payload: { ...msg, isSending: true, ack: 1 } }),
+    removeOptimisticMessage: (tempId) => dispatch({ type: "REMOVE_OPTIMISTIC", payload: tempId }),
+    scrollToBottom,
+  }), [scrollToBottom]);
 
   useEffect(() => {
     if (!scrollToMessageId || !onScrollToMessageDone) return;
@@ -744,7 +821,10 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
   };
 
   const renderMessageAck = useCallback((message) => {
-    if (message.ack === 1) {
+    if (message.ack === -1) {
+      return <Block fontSize="small" className={classes.ackIcons} style={{ color: "var(--danger, #f44336)" }} />;
+    }
+    if (message.isSending || message.ack === 1) {
       return <AccessTime fontSize="small" className={classes.ackIcons} />;
     }
     if (message.ack === 2) {
@@ -1609,6 +1689,8 @@ const MessagesList = ({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTr
       </Popover>
     </div>
   );
-};
+});
+
+MessagesList.displayName = "MessagesList";
 
 export default MessagesList;

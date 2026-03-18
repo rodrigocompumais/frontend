@@ -164,7 +164,37 @@ const reducer = (state, action) => {
 
     const ticketIndex = state.findIndex((t) => t.id === ticket.id);
     if (ticketIndex !== -1) {
-      state[ticketIndex] = ticket;
+      const prev = state[ticketIndex];
+      // Se o payload vier parcial (sem unreadMessages), calcular incrementalmente para o badge funcionar sem reload.
+      // Regra: só incrementa em mensagem recebida (fromMe=false) e quando o ticket NÃO está aberto.
+      const shouldIncrementUnread =
+        (ticket.unreadMessages == null) &&
+        !isOpenTicket &&
+        ticket.fromMe === false;
+      const computedUnreadMessages = shouldIncrementUnread
+        ? (Number(prev.unreadMessages || 0) + 1)
+        : ticket.unreadMessages;
+
+      const merged = {
+        ...prev,
+        ...ticket,
+        unreadMessages: computedUnreadMessages != null ? computedUnreadMessages : prev.unreadMessages,
+        // não sobrescrever IDs com undefined
+        contactId: ticket.contactId != null ? ticket.contactId : prev.contactId,
+        userId: ticket.userId != null ? ticket.userId : prev.userId,
+        queueId: ticket.queueId !== undefined ? ticket.queueId : prev.queueId,
+        whatsappId: ticket.whatsappId != null ? ticket.whatsappId : prev.whatsappId,
+        contact: {
+          ...(prev.contact || {}),
+          ...(ticket.contact || {}),
+          // preservar foto se o payload vier parcial
+          profilePicUrl:
+            ticket.contact?.profilePicUrl != null
+              ? ticket.contact.profilePicUrl
+              : prev.contact?.profilePicUrl
+        }
+      };
+      state[ticketIndex] = merged;
       // Sempre reposicionar quando recebe nova mensagem, mesmo que o ticket esteja aberto
       // Isso garante que tickets abertos com novas mensagens sejam reposicionados
       state.unshift(state.splice(ticketIndex, 1)[0]);

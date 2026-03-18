@@ -97,19 +97,21 @@ const MobileNavigationMenu = () => {
   const [connectionWarning, setConnectionWarning] = useState(false);
 
   useEffect(() => {
-    async function fetchData() {
+    if (!user?.companyId) return;
+    let cancelled = false;
+    (async () => {
       const companyId = user.companyId;
       const planConfigs = await getPlanCompany(undefined, companyId);
-
+      if (cancelled) return;
       setShowCampaigns(planConfigs.plan.useCampaigns);
       setShowKanban(planConfigs.plan.useKanban);
       setShowOpenAi(planConfigs.plan.useOpenAi);
       setShowIntegrations(planConfigs.plan.useIntegrations);
       setShowInternalChat(planConfigs.plan.useInternalChat);
       setShowExternalApi(planConfigs.plan.useExternalApi);
-    }
-    fetchData();
-  }, [user.companyId, getPlanCompany]);
+    })();
+    return () => { cancelled = true; };
+  }, [user?.companyId, getPlanCompany]);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {

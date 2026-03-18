@@ -130,15 +130,17 @@ const useStyles = makeStyles((theme) => ({
 
 const COLORS = ["#3B82F6", "#22C55E", "#F59E0B", "#8B5CF6", "#EC4899"];
 
-const CustomTooltip = ({ active, payload, classes }) => {
+const CustomTooltip = ({ active, payload, classes, valueLabel, valueFormatter }) => {
   if (active && payload && payload.length) {
+    const rawValue = payload[0].value;
+    const formattedValue = valueFormatter ? valueFormatter(rawValue) : rawValue;
     return (
       <div className={classes.tooltip}>
         <Typography style={{ fontWeight: 600, marginBottom: 4 }}>
           {payload[0].payload.name}
         </Typography>
         <Typography style={{ color: payload[0].fill }}>
-          {payload[0].value} tickets resolvidos
+          {formattedValue} {valueLabel}
         </Typography>
       </div>
     );
@@ -161,6 +163,8 @@ const BarChartComponent = ({
   subtitle,
   showAsList = false,
   horizontal = false,
+  valueLabel = "tickets",
+  valueFormatter,
 }) => {
   const classes = useStyles();
   const theme = useTheme();
@@ -196,7 +200,7 @@ const BarChartComponent = ({
                   {item.name}
                 </Typography>
                 <Typography className={classes.itemValue}>
-                  {item.count} tickets
+                  {(valueFormatter ? valueFormatter(item.count) : item.count)} {valueLabel}
                 </Typography>
                 <Box className={classes.progressBar}>
                   <Box 
@@ -268,7 +272,7 @@ const BarChartComponent = ({
                 />
               </>
             )}
-            <Tooltip content={<CustomTooltip classes={classes} />} />
+              <Tooltip content={<CustomTooltip classes={classes} valueLabel={valueLabel} valueFormatter={valueFormatter} />} />
             <Bar 
               dataKey="count" 
               radius={[4, 4, 0, 0]}

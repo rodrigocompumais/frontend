@@ -42,6 +42,7 @@ import toastError from "../../errors/toastError";
 import { i18n } from "../../translate/i18n";
 import moment from "moment";
 import ArrowForwardIcon from "@material-ui/icons/ArrowForward";
+import CreditCardIcon from "@material-ui/icons/CreditCard";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -310,6 +311,71 @@ const useStyles = makeStyles((theme) => ({
       color: "#22C55E",
     },
   },
+  // Cards de módulos (mesma linguagem visual dos planos)
+  modulesGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+    gap: theme.spacing(1.5),
+    marginTop: theme.spacing(1),
+  },
+  moduleCard: {
+    padding: theme.spacing(2),
+    borderRadius: 12,
+    background: "rgba(30, 41, 59, 0.45)",
+    border: "2px solid rgba(148, 163, 184, 0.2)",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    textAlign: "left",
+    position: "relative",
+    minHeight: 120,
+    display: "flex",
+    flexDirection: "column",
+    "&:hover": {
+      background: "rgba(30, 41, 59, 0.65)",
+      borderColor: "rgba(0, 217, 255, 0.35)",
+    },
+  },
+  moduleCardSelected: {
+    background: "rgba(0, 217, 255, 0.08)",
+    borderColor: "#00D9FF",
+    boxShadow: "0 0 16px rgba(0, 217, 255, 0.15)",
+  },
+  moduleCardName: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontWeight: 600,
+    fontSize: "0.95rem",
+    color: "#F9FAFB",
+    marginBottom: theme.spacing(0.5),
+    paddingRight: 28,
+  },
+  moduleCardDesc: {
+    fontFamily: "'Inter', sans-serif",
+    fontSize: "0.75rem",
+    color: "rgba(148, 163, 184, 0.95)",
+    lineHeight: 1.45,
+    flex: 1,
+    display: "-webkit-box",
+    WebkitLineClamp: 3,
+    WebkitBoxOrient: "vertical",
+    overflow: "hidden",
+    marginBottom: theme.spacing(1),
+  },
+  moduleCardPrice: {
+    fontFamily: "'Space Grotesk', sans-serif",
+    fontWeight: 700,
+    fontSize: "1rem",
+    background: "linear-gradient(135deg, #00D9FF, #22C55E)",
+    WebkitBackgroundClip: "text",
+    WebkitTextFillColor: "transparent",
+    marginTop: "auto",
+  },
+  moduleCardBadge: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    color: "#22C55E",
+    "& svg": { fontSize: 22 },
+  },
   // Botões
   submitButton: {
     padding: "14px 24px",
@@ -446,6 +512,12 @@ const UserSchema = Yup.object().shape({
     .max(50, "Senha deve ter no máximo 50 caracteres")
     .required("Senha é obrigatória"),
   phone: Yup.string().required("Telefone é obrigatório"),
+  cpfCnpj: Yup.string()
+    .test("cpfcnpj-len", "CPF (11 dígitos) ou CNPJ (14 dígitos) inválido", (v) => {
+      const digits = (v ?? "").replace(/\D/g, "");
+      return digits.length === 11 || digits.length === 14;
+    })
+    .required("CPF/CNPJ é obrigatório"),
 });
 
 const SignUp = () => {
@@ -462,8 +534,24 @@ const SignUp = () => {
     email: "",
     phone: "",
     password: "",
+    cpfCnpj: "",
     planId: "",
   };
+
+  // Pagamento: PIX (padrão) ou cartão — assinatura recorrente no Asaas
+  const [paymentMethod, setPaymentMethod] = useState("PIX");
+  const [cardHolderName, setCardHolderName] = useState("");
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpiryMonth, setCardExpiryMonth] = useState("");
+  const [cardExpiryYear, setCardExpiryYear] = useState("");
+  const [cardCcv, setCardCcv] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [addressNumber, setAddressNumber] = useState("");
+
+  // Módulos opcionais (slugs) — mesma API da LP
+  const [availableModules, setAvailableModules] = useState([]);
+  /** Apenas um módulo por vez; null = nenhum selecionado */
+  const [selectedModuleSlug, setSelectedModuleSlug] = useState(null);
 
   const [user] = useState(initialState);
   const [showPassword, setShowPassword] = useState(false);
@@ -536,6 +624,24 @@ const SignUp = () => {
     };
   }, [listPlans, planIdFromUrl, isFreeFlow]); // listPlans agora é estável com useCallback
 
+  // Carregar módulos públicos para aquisição junto ao plano
+  useEffect(() => {
+    let mounted = true;
+    openApi
+      .get("/modules/public")
+      .then(({ data }) => {
+        if (mounted && data?.modules) setAvailableModules(data.modules);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const selectModule = (slug) => {
+    setSelectedModuleSlug((prev) => (prev === slug ? null : slug));
+  };
+
 
   const handleSignUp = async (values) => {
     if (!selectedPlanId) {
@@ -549,7 +655,6 @@ const SignUp = () => {
       return;
     }
 
-    // Verificar se o plano é gratuito (valor 0 ou null) ou se veio do fluxo gratuito
     const isFreePlan = selectedPlan.value === 0 || selectedPlan.value === null;
     const shouldCreateFreeAccount = isFreeFlow || isFreePlan;
 
@@ -562,66 +667,104 @@ const SignUp = () => {
           phone: values.phone,
           password: values.password,
           planId: selectedPlanId,
+          ...(selectedModuleSlug && { modules: [selectedModuleSlug] }),
         });
 
         if (response.data && response.data.success) {
           toast.success(response.data.message || "Conta criada com sucesso!");
-          // Redirecionar para login após 2 segundos
-          setTimeout(() => {
-            history.push("/login");
-          }, 2000);
+          setTimeout(() => history.push("/login"), 2000);
         } else {
           toast.error("Erro ao criar conta. Por favor, tente novamente.");
         }
       } else {
-        // Validar campos antes de criar preferência
-        if (!values.name || values.name.trim().length < 2) {
-          toast.error("Nome da empresa deve ter no mínimo 2 caracteres.");
-          return;
-        }
-
-        if (!values.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email)) {
-          toast.error("Email inválido. Por favor, informe um email válido.");
-          return;
-        }
-
-        if (!values.phone || values.phone.replace(/\D/g, "").length < 10) {
-          toast.error("Telefone inválido. Por favor, informe um telefone válido.");
-          return;
-        }
-
-        if (!values.password || values.password.length < 5) {
-          toast.error("Senha deve ter no mínimo 5 caracteres.");
-          return;
-        }
-
-        // Criar preferência de pagamento para planos pagos
-        const response = await openApi.post("/companies/create-payment-preference", {
+        const payload = {
           name: values.name,
           email: values.email,
           phone: values.phone,
           password: values.password,
+          cpfCnpj: values.cpfCnpj,
           planId: selectedPlanId,
           recurrence: "MENSAL",
-        });
+          billingType: paymentMethod === "CREDIT_CARD" ? "CREDIT_CARD" : "PIX",
+          ...(selectedModuleSlug && { modules: [selectedModuleSlug] }),
+        };
 
-        if (response.data && response.data.initPoint) {
-          // Salvar preference_id no sessionStorage para uso nas páginas de callback
-          if (response.data.preferenceId) {
-            sessionStorage.setItem("mp_preference_id", response.data.preferenceId);
+        if (paymentMethod === "CREDIT_CARD") {
+          const num = (cardNumber || "").replace(/\D/g, "");
+          if (num.length < 13) {
+            toast.error("Número do cartão inválido.");
+            return;
           }
-          // Redirecionar para o checkout do Mercado Pago
-          window.location.href = response.data.initPoint;
+          if (!cardHolderName.trim()) {
+            toast.error("Nome no cartão é obrigatório.");
+            return;
+          }
+          if (!cardExpiryMonth || !cardExpiryYear || !cardCcv) {
+            toast.error("Preencha validade e CVV do cartão.");
+            return;
+          }
+          if (!(postalCode || "").replace(/\D/g, "") || !addressNumber.trim()) {
+            toast.error("CEP e número do endereço são obrigatórios para pagamento com cartão.");
+            return;
+          }
+          payload.postalCode = postalCode;
+          payload.addressNumber = addressNumber;
+          payload.creditCard = {
+            holderName: cardHolderName.trim(),
+            number: num,
+            expiryMonth: String(cardExpiryMonth).padStart(2, "0"),
+            expiryYear: String(cardExpiryYear).length === 2 ? `20${cardExpiryYear}` : String(cardExpiryYear),
+            ccv: String(cardCcv).replace(/\D/g, ""),
+          };
+        }
+
+        const response = await openApi.post("/companies/create-asaas-subscription", payload);
+        const data = response.data;
+
+        if (data && data.companyId) {
+          if (data.paymentConfirmed) {
+            toast.success("Pagamento aprovado! Sua conta está ativa.");
+            history.push("/signup/success");
+            return;
+          }
+          if (data.billingType === "CREDIT_CARD" && !data.paymentConfirmed) {
+            toast.info("Assinatura criada. Aguardando confirmação do cartão...");
+            history.push("/signup/pending", {
+              companyId: data.companyId,
+              value: data.value,
+              planName: data.planName,
+              cardPending: true,
+            });
+            return;
+          }
+          if (data.pixUnavailable) {
+            toast.warning("PIX indisponível no momento. Aguardando confirmação...");
+            history.push("/signup/pending", {
+              companyId: data.companyId,
+              value: data.value,
+              planName: data.planName,
+            });
+            return;
+          }
+          toast.success("Assinatura criada! Pague com PIX para ativar.");
+          history.push("/signup/pending", {
+            companyId: data.companyId,
+            pixQrCode: data.pixQrCode,
+            pixPayload: data.pixPayload,
+            expirationDate: data.expirationDate,
+            value: data.value,
+            planName: data.planName,
+          });
         } else {
-          toast.error("Erro ao criar preferência de pagamento. Por favor, tente novamente.");
+          toast.error("Erro ao criar assinatura. Por favor, tente novamente.");
         }
       }
     } catch (err) {
       console.error("Erro ao processar cadastro:", err);
-      let errorMessage = shouldCreateFreeAccount 
+      let errorMessage = shouldCreateFreeAccount
         ? "Erro ao criar conta. Por favor, tente novamente."
-        : "Erro ao processar pagamento. Por favor, tente novamente.";
-      
+        : "Erro ao criar assinatura. Por favor, tente novamente.";
+
       if (err.response?.data?.error) {
         errorMessage = err.response.data.error;
       } else if (err.response?.data?.message) {
@@ -629,7 +772,7 @@ const SignUp = () => {
       } else if (err.message) {
         errorMessage = err.message;
       }
-      
+
       toast.error(errorMessage);
     }
   };
@@ -803,6 +946,171 @@ const SignUp = () => {
                       }}
                     />
 
+                    {/* CPF/CNPJ — oculto para planos gratuitos */}
+                    {(() => {
+                      const selPlan = plans.find((p) => p.id === selectedPlanId);
+                      const isPaid = selPlan && selPlan.value > 0 && !isFreeFlow;
+                      if (!isPaid) return null;
+                      return (
+                        <Field name="cpfCnpj">
+                          {({ field, meta }) => (
+                            <InputMask
+                              {...field}
+                              mask={
+                                field.value.replace(/\D/g, "").length <= 11
+                                  ? "999.999.999-999"
+                                  : "99.999.999/9999-99"
+                              }
+                              maskChar={null}
+                            >
+                              {(inputProps) => (
+                                <TextField
+                                  {...inputProps}
+                                  label="CPF / CNPJ"
+                                  variant="outlined"
+                                  fullWidth
+                                  className={classes.textField}
+                                  error={meta.touched && Boolean(meta.error)}
+                                  helperText={meta.touched && meta.error}
+                                  InputProps={{
+                                    startAdornment: (
+                                      <InputAdornment position="start">
+                                        <VerifiedUserIcon />
+                                      </InputAdornment>
+                                    ),
+                                  }}
+                                />
+                              )}
+                            </InputMask>
+                          )}
+                        </Field>
+                      );
+                    })()}
+
+                    {/* PIX vs Cartão — só planos pagos */}
+                    {(() => {
+                      const selPlan = plans.find((p) => p.id === selectedPlanId);
+                      const isPaid = selPlan && selPlan.value > 0 && !isFreeFlow;
+                      if (!isPaid) return null;
+                      return (
+                        <Box style={{ marginBottom: 16 }}>
+                          <Typography className={classes.plansSectionTitle}>
+                            Forma de pagamento
+                          </Typography>
+                          <Box style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+                            <Button
+                              type="button"
+                              variant={paymentMethod === "PIX" ? "contained" : "outlined"}
+                              onClick={() => setPaymentMethod("PIX")}
+                              style={{
+                                flex: 1,
+                                minWidth: 120,
+                                borderColor: "rgba(0, 217, 255, 0.5)",
+                                color: paymentMethod === "PIX" ? "#0A0A0F" : "#E5E7EB",
+                                background: paymentMethod === "PIX" ? "linear-gradient(135deg, #00D9FF, #22C55E)" : "transparent",
+                              }}
+                            >
+                              PIX
+                            </Button>
+                            <Button
+                              type="button"
+                              variant={paymentMethod === "CREDIT_CARD" ? "contained" : "outlined"}
+                              onClick={() => setPaymentMethod("CREDIT_CARD")}
+                              startIcon={<CreditCardIcon />}
+                              style={{
+                                flex: 1,
+                                minWidth: 120,
+                                borderColor: "rgba(0, 217, 255, 0.5)",
+                                color: paymentMethod === "CREDIT_CARD" ? "#0A0A0F" : "#E5E7EB",
+                                background: paymentMethod === "CREDIT_CARD" ? "linear-gradient(135deg, #00D9FF, #22C55E)" : "transparent",
+                              }}
+                            >
+                              Cartão (assinatura)
+                            </Button>
+                          </Box>
+                          {paymentMethod === "CREDIT_CARD" && (
+                            <Box style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+                              <TextField
+                                label="Nome no cartão"
+                                variant="outlined"
+                                fullWidth
+                                className={classes.textField}
+                                value={cardHolderName}
+                                onChange={(e) => setCardHolderName(e.target.value)}
+                                InputProps={{
+                                  startAdornment: (
+                                    <InputAdornment position="start">
+                                      <CreditCardIcon />
+                                    </InputAdornment>
+                                  ),
+                                }}
+                              />
+                              <TextField
+                                label="Número do cartão"
+                                variant="outlined"
+                                fullWidth
+                                className={classes.textField}
+                                value={cardNumber}
+                                onChange={(e) => setCardNumber(e.target.value)}
+                                placeholder="0000 0000 0000 0000"
+                              />
+                              <Box style={{ display: "flex", gap: 12 }}>
+                                <TextField
+                                  label="Mês"
+                                  variant="outlined"
+                                  className={classes.textField}
+                                  style={{ flex: 1 }}
+                                  value={cardExpiryMonth}
+                                  onChange={(e) => setCardExpiryMonth(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                                  placeholder="MM"
+                                />
+                                <TextField
+                                  label="Ano"
+                                  variant="outlined"
+                                  className={classes.textField}
+                                  style={{ flex: 1 }}
+                                  value={cardExpiryYear}
+                                  onChange={(e) => setCardExpiryYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                                  placeholder="AAAA"
+                                />
+                                <TextField
+                                  label="CVV"
+                                  variant="outlined"
+                                  className={classes.textField}
+                                  style={{ flex: 1 }}
+                                  type="password"
+                                  value={cardCcv}
+                                  onChange={(e) => setCardCcv(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                                />
+                              </Box>
+                              <Box style={{ display: "flex", gap: 12 }}>
+                                <TextField
+                                  label="CEP"
+                                  variant="outlined"
+                                  className={classes.textField}
+                                  style={{ flex: 1 }}
+                                  value={postalCode}
+                                  onChange={(e) => setPostalCode(e.target.value)}
+                                  placeholder="00000-000"
+                                />
+                                <TextField
+                                  label="Nº endereço"
+                                  variant="outlined"
+                                  className={classes.textField}
+                                  style={{ flex: 1 }}
+                                  value={addressNumber}
+                                  onChange={(e) => setAddressNumber(e.target.value)}
+                                />
+                              </Box>
+                              <Typography style={{ fontSize: "0.75rem", color: "rgba(148, 163, 184, 0.8)" }}>
+                                A cobrança será recorrente no cartão conforme o plano. Dados enviados com segurança ao Asaas.
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      );
+                    })()}
+
                       <>
                         {/* Seleção de Plano */}
                         <Box className={classes.plansSection}>
@@ -863,11 +1171,82 @@ const SignUp = () => {
                           )}
                         </Box>
 
+                        {/* Módulos adicionais — cards com valor e descrição */}
+                        {availableModules.length > 0 && (
+                          <Box className={classes.plansSection}>
+                            <Typography className={classes.plansSectionTitle}>
+                              Módulos adicionais (opcional)
+                            </Typography>
+                            <Typography
+                              style={{
+                                fontSize: "0.8rem",
+                                color: "rgba(148, 163, 184, 0.85)",
+                                marginBottom: 8,
+                              }}
+                            >
+                              Selecione um módulo (apenas um por vez). Toque novamente no mesmo card para remover. O valor é somado ao plano quando houver preço cadastrado.
+                            </Typography>
+                            <Box className={classes.modulesGrid}>
+                              {availableModules.map((mod) => {
+                                const selected = selectedModuleSlug === mod.id;
+                                const priceNum = Number(mod.price);
+                                const hasPrice = priceNum > 0;
+                                const desc =
+                                  mod.description && String(mod.description).trim()
+                                    ? String(mod.description).trim()
+                                    : "Módulo opcional para expandir as funcionalidades da sua conta.";
+                                return (
+                                  <Box
+                                    key={mod.id}
+                                    className={`${classes.moduleCard} ${
+                                      selected ? classes.moduleCardSelected : ""
+                                    }`}
+                                    onClick={() => selectModule(mod.id)}
+                                    role="button"
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        selectModule(mod.id);
+                                      }
+                                    }}
+                                  >
+                                    {selected && (
+                                      <Box className={classes.moduleCardBadge}>
+                                        <CheckCircleIcon />
+                                      </Box>
+                                    )}
+                                    <Typography className={classes.moduleCardName}>
+                                      {mod.name}
+                                    </Typography>
+                                    <Typography className={classes.moduleCardDesc}>
+                                      {desc}
+                                    </Typography>
+                                    <Typography className={classes.moduleCardPrice}>
+                                      {hasPrice
+                                        ? `+ R$ ${priceNum.toLocaleString("pt-BR", {
+                                            minimumFractionDigits: 2,
+                                          })}/mês`
+                                        : "Incluso / sob consulta"}
+                                    </Typography>
+                                  </Box>
+                                );
+                              })}
+                            </Box>
+                          </Box>
+                        )}
+
                         {(() => {
                           const selectedPlan = plans.find((p) => p.id === selectedPlanId);
                           const isFreePlan = selectedPlan && (selectedPlan.value === 0 || selectedPlan.value === null);
                           // Se for fluxo gratuito, sempre mostrar "Registrar", senão verificar se é plano gratuito
-                          const buttonText = isFreeFlow ? "Registrar" : (isFreePlan ? "Registrar" : "Continuar para pagamento");
+                          const buttonText = isFreeFlow
+                            ? "Registrar"
+                            : isFreePlan
+                            ? "Registrar"
+                            : paymentMethod === "CREDIT_CARD"
+                            ? "Assinar com cartão"
+                            : "Pagar via PIX";
                           
                           return (
                         <Button

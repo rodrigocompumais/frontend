@@ -32,6 +32,9 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
   const [reciboData, setReciboData] = useState(null);
   const [numeroPessoas, setNumeroPessoas] = useState(1);
   const [meioPagamento, setMeioPagamento] = useState("pix");
+  const [pagamentoHibrido, setPagamentoHibrido] = useState(false);
+  const [pagamentos, setPagamentos] = useState([]);
+  const [valorAtual, setValorAtual] = useState("");
   const [settingsPix, setSettingsPix] = useState({ pixKey: "", pixReceiverName: "", pixReceiverCity: "" });
 
   const { getAll: getAllSettings } = useSettings();
@@ -41,6 +44,9 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
     setResumoConta(null);
     setNumeroPessoas(1);
     setMeioPagamento("pix");
+    setPagamentoHibrido(false);
+    setPagamentos([]);
+    setValorAtual("");
     setLoadingResumo(true);
     api
       .get(`/mesas/${mesa.id}/resumo-conta`)
@@ -64,13 +70,53 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  const totalConta = Number(resumoConta?.total || 0);
+  const totalPago = (pagamentos || []).reduce((s, p) => s + Number(p.valor || 0), 0);
+  const restante = totalConta - totalPago;
+
+  const handlePagar = () => {
+    const v = Number(String(valorAtual || "").replace(",", ".")) || 0;
+    if (v <= 0) {
+      toast.error("Informe o valor a pagar.");
+      return;
+    }
+    if (v > restante + 0.01) {
+      toast.error("Valor maior que o restante da conta.");
+      return;
+    }
+    setPagamentos((prev) => [...prev, { metodo: meioPagamento, valor: v }]);
+    setValorAtual("");
+  };
+
+  const handleRemoverPagamento = (index) => {
+    setPagamentos((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleConfirmarLiberar = async () => {
     if (!mesa?.id) return;
+    const total = Number(resumoConta?.total || 0);
+    let meiosPagamento = null;
+    if (pagamentoHibrido) {
+      if (pagamentos.length === 0) {
+        toast.error("Adicione ao menos um pagamento.");
+        return;
+      }
+      if (restante > 0.01) {
+        toast.error("O total pago deve ser igual ou maior que o total da conta. Restante: R$ " + restante.toFixed(2));
+        return;
+      }
+      meiosPagamento = pagamentos.map((p) => ({ metodo: p.metodo, valor: Number(p.valor) }));
+    } else {
+      meiosPagamento = [{ metodo: meioPagamento, valor: total }];
+    }
+
     setLiberando(true);
     try {
-      await api.put(`/mesas/${mesa.id}/liberar`);
+      await api.put(`/mesas/${mesa.id}/liberar`, { meiosPagamento });
       toast.success(i18n.t("mesas.tableLiberated"));
-      setReciboData(resumoConta ? { ...resumoConta, mesa: resumoConta.mesa || mesa } : { pedidos: [], total: 0, mesa, cliente: null });
+      const reciboPayload = resumoConta ? { ...resumoConta, mesa: resumoConta.mesa || mesa } : { pedidos: [], total: 0, mesa, cliente: null };
+      if (meiosPagamento) reciboPayload.meiosPagamento = meiosPagamento;
+      setReciboData(reciboPayload);
       setShowRecibo(true);
       onClose && onClose();
     } catch (err) {
@@ -162,17 +208,75 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
                       )}
                     </Box>
                     <Box mt={2}>
-                      <FormControl variant="outlined" size="small" fullWidth>
-                        <InputLabel>{i18n.t("mesas.paymentMethod")}</InputLabel>
-                        <Select value={meioPagamento} onChange={(e) => setMeioPagamento(e.target.value)} label={i18n.t("mesas.paymentMethod")}>
-                          <MenuItem value="pix">{i18n.t("mesas.paymentMethods.pix")}</MenuItem>
-                          <MenuItem value="dinheiro">{i18n.t("mesas.paymentMethods.dinheiro")}</MenuItem>
-                          <MenuItem value="cartao">{i18n.t("mesas.paymentMethods.cartao")}</MenuItem>
-                          <MenuItem value="outro">{i18n.t("mesas.paymentMethods.outro")}</MenuItem>
-                        </Select>
-                      </FormControl>
+                      <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap">
+                        <FormControl variant="outlined" size="small" style={{ minWidth: 140 }} disabled={pagamentoHibrido && restante <= 0}>
+                          <InputLabel>{i18n.t("mesas.paymentMethod")}</InputLabel>
+                          <Select value={meioPagamento} onChange={(e) => setMeioPagamento(e.target.value)} label={i18n.t("mesas.paymentMethod")}>
+                            <MenuItem value="pix">{i18n.t("mesas.paymentMethods.pix")}</MenuItem>
+                            <MenuItem value="dinheiro">{i18n.t("mesas.paymentMethods.dinheiro")}</MenuItem>
+                            <MenuItem value="cartao">{i18n.t("mesas.paymentMethods.cartao")}</MenuItem>
+                            <MenuItem value="outro">{i18n.t("mesas.paymentMethods.outro")}</MenuItem>
+                          </Select>
+                        </FormControl>
+                        <Button
+                          size="small"
+                          color="primary"
+                          variant={pagamentoHibrido ? "contained" : "outlined"}
+                          onClick={() => setPagamentoHibrido((v) => !v)}
+                        >
+                          {pagamentoHibrido ? "Híbrido (ativo)" : "Pagamento híbrido"}
+                        </Button>
+                      </Box>
                     </Box>
-                    {meioPagamento === "pix" && settingsPix.pixKey && (
+
+                    {pagamentoHibrido && resumoConta?.pedidos?.length > 0 && (
+                      <Box mt={2}>
+                        <Typography variant="subtitle2" color="textSecondary">
+                          Restante: R$ {restante.toFixed(2).replace(".", ",")}
+                        </Typography>
+                        {pagamentos.length > 0 && (
+                          <Box mt={1}>
+                            <Typography variant="caption" color="textSecondary" display="block">Pagamentos:</Typography>
+                            {pagamentos.map((p, idx) => (
+                              <Box key={idx} display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 4 }}>
+                                <Typography variant="body2">
+                                  {i18n.t("mesas.paymentMethods." + p.metodo) || p.metodo}: R$ {Number(p.valor).toFixed(2).replace(".", ",")}
+                                </Typography>
+                                <Button size="small" color="secondary" onClick={() => handleRemoverPagamento(idx)}>
+                                  Remover
+                                </Button>
+                              </Box>
+                            ))}
+                          </Box>
+                        )}
+                        {restante > 0.01 && (
+                          <Box mt={1} display="flex" flexWrap="wrap" alignItems="center" style={{ gap: 8 }}>
+                            <TextField
+                              label="Valor (R$)"
+                              variant="outlined"
+                              size="small"
+                              type="number"
+                              inputProps={{ min: 0, step: 0.01 }}
+                              value={valorAtual}
+                              onChange={(e) => setValorAtual(e.target.value)}
+                              style={{ width: 120 }}
+                            />
+                            <Button size="small" variant="contained" color="primary" onClick={handlePagar}>
+                              Pagar
+                            </Button>
+                            <Button size="small" variant="outlined" onClick={() => setValorAtual(restante.toFixed(2))}>
+                              Preencher restante
+                            </Button>
+                            {numeroPessoas > 1 && (
+                              <Button size="small" variant="outlined" onClick={() => setValorAtual((restante / numeroPessoas).toFixed(2))}>
+                                Dividir ({numeroPessoas}x)
+                              </Button>
+                            )}
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+                    {!pagamentoHibrido && meioPagamento === "pix" && settingsPix.pixKey && (
                       <Box mt={2} display="flex" flexDirection="column" alignItems="center">
                         {(() => {
                           const valorPix = numeroPessoas > 1 ? Number(resumoConta.total) / numeroPessoas : Number(resumoConta.total);
@@ -221,7 +325,7 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
                         })()}
                       </Box>
                     )}
-                    {meioPagamento === "pix" && !settingsPix.pixKey && (
+                    {!pagamentoHibrido && meioPagamento === "pix" && !settingsPix.pixKey && (
                       <Typography variant="body2" color="textSecondary" style={{ marginTop: 12 }}>
                         {i18n.t("mesas.configurePixKey")}
                       </Typography>
@@ -237,7 +341,12 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
         <Button onClick={handleClose} disabled={liberando}>
           {i18n.t("mesas.cancel")}
         </Button>
-        <Button variant="contained" color="primary" onClick={handleConfirmarLiberar} disabled={liberando}>
+        <Button
+          variant="contained"
+          color="primary"
+          onClick={handleConfirmarLiberar}
+          disabled={liberando || (pagamentoHibrido && resumoConta?.pedidos?.length > 0 && restante > 0.01)}
+        >
           {liberando ? <CircularProgress size={24} /> : i18n.t("mesas.closeAndLiberate")}
         </Button>
       </DialogActions>

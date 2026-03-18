@@ -9,9 +9,12 @@ import { useDate } from "../../../hooks/useDate";
 import { toast } from "react-toastify";
 
 function CheckoutSuccess(props) {
-
   const { pix } = props;
-  const [pixString,] = useState(pix.qrcode.qrcode);
+  // Asaas: pix.pixPayload + pix.pixQrCode (data URL) | Gerencianet: pix.qrcode.qrcode
+  const isAsaas = Boolean(pix.asaas && pix.pixPayload);
+  const [pixString] = useState(
+    isAsaas ? pix.pixPayload : pix.qrcode?.qrcode
+  );
   const [copied, setCopied] = useState(false);
   const history = useHistory();
 
@@ -41,14 +44,33 @@ function CheckoutSuccess(props) {
     setCopied(true);
   };
 
+  const totalValue =
+    pix.valor?.original != null
+      ? pix.valor.original
+      : pix.value != null
+      ? pix.value
+      : 0;
+
   return (
     <React.Fragment>
       <Total>
         <span>TOTAL</span>
-        <strong>R${pix.valor.original.toLocaleString('pt-br', { minimumFractionDigits: 2 })}</strong>
+        <strong>
+          R${Number(totalValue).toLocaleString("pt-br", {
+            minimumFractionDigits: 2,
+          })}
+        </strong>
       </Total>
       <SuccessContent>
-        <QRCode value={pixString} />
+        {isAsaas && pix.pixQrCode ? (
+          <img
+            src={pix.pixQrCode}
+            alt="PIX QR Code"
+            style={{ maxWidth: 220, height: "auto" }}
+          />
+        ) : (
+          <QRCode value={pixString || ""} />
+        )}
         <CopyToClipboard text={pixString} onCopy={handleCopyQR}>
           <button className="copy-button" type="button">
             {copied ? (

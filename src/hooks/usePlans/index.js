@@ -1,8 +1,10 @@
 import { useCallback } from "react";
 import api, { openApi } from "../../services/api";
 
-const usePlans = () => {
+const LIST_PLAN_CACHE_TTL_MS = 120000; // 2 min - evita dezenas de requisições ao carregar
+const listPlanCache = new Map();
 
+const usePlans = () => {
     const getPlanList = useCallback(async (params) => {
         const { data } = await openApi.request({
             url: '/plans/list',
@@ -55,14 +57,24 @@ const usePlans = () => {
         return data;
     }
 
-    const getPlanCompany = async (params, id) => {
+    const getPlanCompany = useCallback(async (params, id) => {
+        const companyId = String(id ?? "");
+        const now = Date.now();
+        const cached = listPlanCache.get(companyId);
+        if (cached && cached.expiresAt > now) return cached.data;
         const { data } = await api.request({
             url: `/companies/listPlan/${id}`,
             method: 'GET',
             params
         });
+        listPlanCache.set(companyId, { data, expiresAt: now + LIST_PLAN_CACHE_TTL_MS });
+        if (listPlanCache.size > 50) {
+            for (const [k, v] of listPlanCache.entries()) {
+                if (v.expiresAt <= now) listPlanCache.delete(k);
+            }
+        }
         return data;
-    }
+    }, []);
 
     return {
         getPlanList,

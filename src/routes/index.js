@@ -6,11 +6,9 @@ import LoggedInLayout from "../layout";
 import HomePage from "../pages/HomePage";
 import TicketResponsiveContainer from "../pages/TicketResponsiveContainer";
 import Signup from "../pages/Signup/";
-// import SignupCheckout from "../pages/Signup/Checkout"; // Checkout transparente desabilitado
 import SignupSuccess from "../pages/Signup/Success";
 import SignupFailure from "../pages/Signup/Failure";
 import SignupPending from "../pages/Signup/Pending";
-import SetupAutoRenew from "../pages/Signup/SetupAutoRenew";
 import Login from "../pages/Login/";
 import Connections from "../pages/Connections/";
 import SettingsCustom from "../pages/SettingsCustom/";
@@ -99,11 +97,9 @@ const Routes = () => {
             <Route exact path="/mesa/:mesaId" component={MesaRedirect} isPublic={true} />
             <Route exact path="/login" component={Login} />
             <Route exact path="/signup" component={Signup} />
-            {/* <Route exact path="/signup/checkout" component={SignupCheckout} /> Checkout transparente desabilitado */}
             <Route exact path="/signup/success" component={SignupSuccess} />
             <Route exact path="/signup/failure" component={SignupFailure} />
             <Route exact path="/signup/pending" component={SignupPending} />
-            <Route exact path="/signup/setup-auto-renew" component={SetupAutoRenew} />
             <Route exact path="/forgetpsw" component={ForgetPassword} />
             {/* <Route exact path="/create-company" component={Companies} /> */}
             <Route exact path="/subscription-expired" component={SubscriptionExpired} isPrivate allowExpired />
@@ -178,11 +174,13 @@ const Routes = () => {
                 <Route exact path="/kanban" component={Kanban} isPrivate />
                 <Route exact path="/pedidos" component={Pedidos} isPrivate />
                 <Route exact path="/mesas" component={Mesas} isPrivate />
+                {/* allowExpired: quem está vencido precisa acessar para pagar via Asaas */}
                 <Route
                   exact
                   path="/financeiro"
                   component={Financeiro}
                   isPrivate
+                  allowExpired
                 />
                 <Route exact path="/queues" component={Queues} isPrivate />
                 <Route

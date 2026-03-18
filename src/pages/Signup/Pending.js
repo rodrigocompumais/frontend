@@ -1,7 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useHistory, useLocation } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
-import { Box, Typography, Button, Container, CircularProgress } from "@material-ui/core";
+import {
+  Box,
+  Typography,
+  Button,
+  Container,
+  CircularProgress,
+  Tooltip,
+  IconButton,
+} from "@material-ui/core";
+import FileCopyIcon from "@material-ui/icons/FileCopy";
+import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
 import { openApi } from "../../services/api";
 import { toast } from "react-toastify";
@@ -11,8 +21,6 @@ const useStyles = makeStyles((theme) => ({
     minHeight: "100vh",
     display: "flex",
     background: "linear-gradient(180deg, #0A0A0F 0%, #111827 50%, #0A0A0F 100%)",
-    position: "relative",
-    overflow: "hidden",
   },
   container: {
     minHeight: "100vh",
@@ -22,53 +30,80 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(3),
   },
   content: {
-    background: "linear-gradient(145deg, rgba(17, 24, 39, 0.95), rgba(10, 10, 15, 0.98))",
+    background:
+      "linear-gradient(145deg, rgba(17, 24, 39, 0.95), rgba(10, 10, 15, 0.98))",
     borderRadius: 24,
     padding: theme.spacing(5),
     textAlign: "center",
-    maxWidth: 600,
+    maxWidth: 560,
+    width: "100%",
     border: "1px solid rgba(0, 217, 255, 0.15)",
     backdropFilter: "blur(20px)",
     boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)",
-    position: "relative",
-    zIndex: 1,
-  },
-  icon: {
-    fontSize: 100,
-    color: "#F59E0B",
-    marginBottom: theme.spacing(3),
-    filter: "drop-shadow(0 0 20px rgba(245, 158, 11, 0.5))",
-    animation: "$pulse 2s infinite",
-  },
-  "@keyframes pulse": {
-    "0%, 100%": {
-      opacity: 1,
-      transform: "scale(1)",
-    },
-    "50%": {
-      opacity: 0.8,
-      transform: "scale(1.05)",
-    },
   },
   title: {
     fontFamily: "'Space Grotesk', sans-serif",
     fontWeight: 700,
-    fontSize: "2.5rem",
+    fontSize: "1.8rem",
     color: "#F9FAFB",
-    marginBottom: theme.spacing(2),
-    background: "linear-gradient(135deg, #FFFFFF 0%, #F59E0B 100%)",
-    WebkitBackgroundClip: "text",
-    WebkitTextFillColor: "transparent",
-    [theme.breakpoints.down("sm")]: {
-      fontSize: "2rem",
-    },
+    marginBottom: theme.spacing(1),
+    [theme.breakpoints.down("sm")]: { fontSize: "1.4rem" },
   },
-  message: {
+  subtitle: {
     fontFamily: "'Inter', sans-serif",
-    fontSize: "1.1rem",
-    color: "rgba(226, 232, 240, 0.85)",
-    marginBottom: theme.spacing(4),
-    lineHeight: 1.7,
+    fontSize: "1rem",
+    color: "rgba(226, 232, 240, 0.75)",
+    marginBottom: theme.spacing(3),
+    lineHeight: 1.6,
+  },
+  qrContainer: {
+    display: "flex",
+    justifyContent: "center",
+    marginBottom: theme.spacing(3),
+  },
+  qrImage: {
+    width: 200,
+    height: 200,
+    borderRadius: 16,
+    border: "2px solid rgba(0, 217, 255, 0.4)",
+    padding: 8,
+    background: "#FFF",
+  },
+  copyBox: {
+    display: "flex",
+    alignItems: "center",
+    background: "rgba(30, 41, 59, 0.6)",
+    border: "1px solid rgba(0, 217, 255, 0.25)",
+    borderRadius: 12,
+    padding: theme.spacing(1.5, 2),
+    marginBottom: theme.spacing(3),
+    gap: theme.spacing(1),
+    wordBreak: "break-all",
+  },
+  pixPayloadText: {
+    fontFamily: "'Inter', sans-serif",
+    fontSize: "0.75rem",
+    color: "rgba(148, 163, 184, 0.9)",
+    flex: 1,
+    textAlign: "left",
+  },
+  copyButton: {
+    color: "#00D9FF",
+    flexShrink: 0,
+    padding: 4,
+  },
+  statusRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: theme.spacing(1),
+    marginBottom: theme.spacing(3),
+  },
+  statusText: {
+    fontFamily: "'Inter', sans-serif",
+    fontSize: "0.9rem",
+    color: "rgba(148, 163, 184, 0.7)",
+    fontStyle: "italic",
   },
   button: {
     background: "linear-gradient(135deg, #00D9FF, #22C55E)",
@@ -81,131 +116,203 @@ const useStyles = makeStyles((theme) => ({
     boxShadow: "0 4px 15px rgba(0, 217, 255, 0.3)",
     "&:hover": {
       background: "linear-gradient(135deg, #00E5FF, #2DD881)",
-      boxShadow: "0 6px 20px rgba(0, 217, 255, 0.4)",
       transform: "translateY(-2px)",
     },
     transition: "all 0.3s ease",
   },
-  loading: {
-    marginBottom: theme.spacing(3),
-    color: "#00D9FF",
-  },
-  statusText: {
+  expiry: {
     fontFamily: "'Inter', sans-serif",
-    fontSize: "0.9rem",
-    color: "rgba(148, 163, 184, 0.7)",
-    marginTop: theme.spacing(2),
-    fontStyle: "italic",
+    fontSize: "0.8rem",
+    color: "#F59E0B",
+    marginBottom: theme.spacing(2),
   },
 }));
+
+const POLL_INTERVAL_MS = 5000;
+const MAX_POLLS = 120; // 10 minutos
 
 const SignupPending = () => {
   const classes = useStyles();
   const history = useHistory();
   const location = useLocation();
-  const [isChecking, setIsChecking] = useState(true);
-  const [checkCount, setCheckCount] = useState(0);
-  const maxChecks = 60; // Verificar por até 5 minutos (60 * 5 segundos)
+  const intervalRef = useRef(null);
+  const pollCountRef = useRef(0);
 
-  // Extrair preference_id da URL ou sessionStorage
-  const searchParams = new URLSearchParams(location.search);
-  const preferenceIdFromUrl = searchParams.get("preference_id");
-  const preferenceIdFromStorage = sessionStorage.getItem("mp_preference_id");
-  const preferenceId = preferenceIdFromUrl || preferenceIdFromStorage;
+  // Estado passado via history.push (fluxo Asaas)
+  const state = location.state || {};
+  const {
+    companyId,
+    pixQrCode,
+    pixPayload,
+    expirationDate,
+    value,
+    planName,
+    cardPending,
+  } = state;
+
+  const [copied, setCopied] = useState(false);
+  const [checking, setChecking] = useState(Boolean(companyId));
+
+  const handleCopy = () => {
+    if (!pixPayload) return;
+    navigator.clipboard.writeText(pixPayload).then(() => {
+      setCopied(true);
+      toast.success("Código PIX copiado!");
+      setTimeout(() => setCopied(false), 3000);
+    });
+  };
 
   useEffect(() => {
-    if (!preferenceId) {
-      setIsChecking(false);
-      return;
-    }
+    if (!companyId) return;
 
-    const checkPaymentStatus = async () => {
+    const poll = async () => {
       try {
         const response = await openApi.get(
-          `/mercadopago/preference-status/${preferenceId}`
+          `/companies/asaas-payment-status/${companyId}`
         );
+        const { status } = response.data;
 
-        const { status, payment } = response.data;
-
-        if (status === "approved") {
-          // Pagamento aprovado, redirecionar para success
-          toast.success("Pagamento confirmado! Redirecionando...");
-          setTimeout(() => {
-            history.push(`/signup/success?preference_id=${preferenceId}`);
-          }, 1500);
-          return;
-        } else if (status === "rejected" || status === "cancelled") {
-          // Pagamento rejeitado, redirecionar para failure
-          toast.error("Pagamento não foi aprovado.");
-          setTimeout(() => {
-            history.push(`/signup/failure?preference_id=${preferenceId}`);
-          }, 1500);
+        if (status === "active") {
+          clearInterval(intervalRef.current);
+          setChecking(false);
+          toast.success("Pagamento confirmado! Sua conta está ativa.");
+          setTimeout(() => history.push("/signup/success"), 1500);
           return;
         }
+      } catch (err) {
+        console.error("Erro ao verificar status:", err);
+      }
 
-        // Se ainda está pendente, continuar verificando
-        setCheckCount((prev) => {
-          if (prev >= maxChecks) {
-            setIsChecking(false);
-            toast.info("Aguardando confirmação do pagamento. Você receberá um email quando for confirmado.");
-            return prev;
-          }
-          return prev + 1;
-        });
-      } catch (error) {
-        console.error("Erro ao verificar status do pagamento:", error);
-        // Continuar tentando mesmo em caso de erro
-        setCheckCount((prev) => {
-          if (prev >= maxChecks) {
-            setIsChecking(false);
-            return prev;
-          }
-          return prev + 1;
-        });
+      pollCountRef.current += 1;
+      if (pollCountRef.current >= MAX_POLLS) {
+        clearInterval(intervalRef.current);
+        setChecking(false);
+        toast.info(
+          cardPending
+            ? "Aguardando confirmação do cartão. Sua conta será ativada em instantes."
+            : "Aguardando confirmação do PIX. Você receberá acesso assim que o pagamento for identificado."
+        );
       }
     };
 
-    // Verificar imediatamente
-    checkPaymentStatus();
+    poll();
+    intervalRef.current = setInterval(poll, POLL_INTERVAL_MS);
 
-    // Verificar a cada 5 segundos
-    const interval = setInterval(() => {
-      if (checkCount < maxChecks && isChecking) {
-        checkPaymentStatus();
-      } else {
-        clearInterval(interval);
-        setIsChecking(false);
-      }
-    }, 5000);
+    return () => clearInterval(intervalRef.current);
+  }, [companyId, history]);
 
-    return () => clearInterval(interval);
-  }, [preferenceId, checkCount, isChecking, maxChecks, history]);
+  // Se não tiver state (acesso direto à URL), mostrar mensagem genérica
+  if (!companyId) {
+    return (
+      <Box className={classes.root}>
+        <Container className={classes.container}>
+          <Box className={classes.content}>
+            <HourglassEmptyIcon
+              style={{ fontSize: 80, color: "#F59E0B", marginBottom: 16 }}
+            />
+            <Typography className={classes.title}>
+              Aguardando Pagamento
+            </Typography>
+            <Typography className={classes.subtitle}>
+              Se você já realizou um cadastro, aguarde a confirmação do
+              pagamento. Você receberá acesso assim que o PIX for confirmado.
+            </Typography>
+            <Button
+              className={classes.button}
+              variant="contained"
+              onClick={() => history.push("/login")}
+            >
+              Ir para Login
+            </Button>
+          </Box>
+        </Container>
+      </Box>
+    );
+  }
 
   return (
     <Box className={classes.root}>
       <Container className={classes.container}>
         <Box className={classes.content}>
-          <CircularProgress className={classes.loading} size={60} />
-          <HourglassEmptyIcon className={classes.icon} />
           <Typography className={classes.title}>
-            Pagamento em Processamento
+            {cardPending
+              ? "Confirmando pagamento no cartão"
+              : "Pague via PIX para ativar sua conta"}
           </Typography>
-          <Typography className={classes.message}>
-            Seu pagamento está sendo processado pelo Mercado Pago. Isso pode
-            levar alguns minutos. Sua empresa será criada automaticamente assim
-            que o pagamento for confirmado. Você receberá um email quando tudo
-            estiver pronto.
-          </Typography>
-          {isChecking && checkCount > 0 && (
-            <Typography className={classes.statusText}>
-              Verificando status... ({checkCount}/{maxChecks})
+
+          {planName && value && (
+            <Typography className={classes.subtitle}>
+              {planName} — R${" "}
+              {Number(value).toLocaleString("pt-BR", {
+                minimumFractionDigits: 2,
+              })}
+              /mês
             </Typography>
           )}
+
+          {cardPending && (
+            <Typography className={classes.subtitle} style={{ marginBottom: 24 }}>
+              Sua assinatura foi registrada. Estamos aguardando a confirmação da operadora do cartão. Esta página atualiza automaticamente.
+            </Typography>
+          )}
+
+          {/* QR Code — só PIX */}
+          {!cardPending && pixQrCode && (
+            <Box className={classes.qrContainer}>
+              <img
+                src={pixQrCode}
+                alt="QR Code PIX"
+                className={classes.qrImage}
+              />
+            </Box>
+          )}
+
+          {/* Copia e cola — só PIX */}
+          {!cardPending && pixPayload && (
+            <Box className={classes.copyBox}>
+              <Typography className={classes.pixPayloadText}>
+                {pixPayload}
+              </Typography>
+              <Tooltip title={copied ? "Copiado!" : "Copiar código PIX"}>
+                <IconButton className={classes.copyButton} onClick={handleCopy}>
+                  {copied ? (
+                    <CheckCircleOutlineIcon style={{ color: "#22C55E" }} />
+                  ) : (
+                    <FileCopyIcon />
+                  )}
+                </IconButton>
+              </Tooltip>
+            </Box>
+          )}
+
+          {expirationDate && (
+            <Typography className={classes.expiry}>
+              Válido até:{" "}
+              {new Date(expirationDate).toLocaleString("pt-BR")}
+            </Typography>
+          )}
+
+          {/* Status do polling */}
+          <Box className={classes.statusRow}>
+            {checking && (
+              <>
+                <CircularProgress size={18} style={{ color: "#00D9FF" }} />
+                <Typography className={classes.statusText}>
+                  Aguardando confirmação do pagamento...
+                </Typography>
+              </>
+            )}
+            {!checking && (
+              <Typography className={classes.statusText}>
+                Verificação encerrada. Seu acesso será liberado após a confirmação do banco.
+              </Typography>
+            )}
+          </Box>
+
           <Button
             className={classes.button}
             variant="contained"
             onClick={() => history.push("/login")}
-            style={{ marginTop: 16 }}
           >
             Ir para Login
           </Button>
@@ -216,4 +323,3 @@ const SignupPending = () => {
 };
 
 export default SignupPending;
-

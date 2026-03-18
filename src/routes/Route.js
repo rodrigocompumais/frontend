@@ -8,12 +8,22 @@ import BackdropLoading from "../components/BackdropLoading";
 const Route = ({ component: Component, isPrivate = false, isPublic = false, allowExpired = false, ...rest }) => {
 	const { isAuth, loading, user } = useContext(AuthContext);
 
-	// Verificar se a assinatura está vencida
+	// Verificar se a assinatura está vencida (dueDate deve vir no refresh — ver ShowUserService)
 	const isSubscriptionExpired = () => {
-		if (!user?.company?.dueDate) return false;
-		const dueDate = moment(user.company.dueDate);
-		const today = moment();
-		return today.isAfter(dueDate);
+		let due = user?.company?.dueDate;
+		// Fallback: login grava companyDueDate em DD/MM/yyyy se refresh ainda não trouxer dueDate
+		if (!due && typeof window !== "undefined") {
+			const stored = localStorage.getItem("companyDueDate");
+			if (stored) {
+				const parsed = moment(stored, "DD/MM/YYYY", true);
+				if (parsed.isValid()) due = parsed.toISOString();
+			}
+		}
+		if (!due) return false;
+		const dueDate = moment(due);
+		if (!dueDate.isValid()) return false;
+		const today = moment().startOf("day");
+		return today.isAfter(dueDate.startOf("day"));
 	};
 
 	// Se não está autenticado e a rota é privada

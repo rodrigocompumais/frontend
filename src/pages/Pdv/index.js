@@ -8,6 +8,10 @@ import {
   Button,
   CircularProgress,
   TextField,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   List,
   ListItem,
   ListItemText,
@@ -23,10 +27,15 @@ import LocalShippingIcon from "@material-ui/icons/LocalShipping";
 import KitchenIcon from "@material-ui/icons/Kitchen";
 import AssignmentIcon from "@material-ui/icons/Assignment";
 import ExitToAppIcon from "@material-ui/icons/ExitToApp";
+import AddShoppingCartIcon from "@material-ui/icons/AddShoppingCart";
+import AddIcon from "@material-ui/icons/Add";
+import RemoveIcon from "@material-ui/icons/Remove";
+import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import { toast } from "react-toastify";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import LiberarMesaModal from "../../components/LiberarMesaModal";
+import ReciboPdvModal from "../../components/ReciboPdvModal";
 import useCompanyModules from "../../hooks/useCompanyModules";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -279,6 +288,11 @@ const useStyles = makeStyles((theme) => {
     color: theme.palette.primary?.contrastText || "#fff",
     "&:hover": { backgroundColor: primaryMain, opacity: 0.9 },
   },
+  quickBtnSecondary: {
+    background: secondaryMain,
+    color: theme.palette.primary?.contrastText || "#fff",
+    "&:hover": { backgroundColor: secondaryMain, opacity: 0.9 },
+  },
   emptySidebar: {
     display: "flex",
     flexDirection: "column",
@@ -317,6 +331,67 @@ const useStyles = makeStyles((theme) => {
     fontSize: "2rem",
     lineHeight: 1.2,
   },
+  // Venda direta
+  vendaDiretaLayout: {
+    flex: 1,
+    minHeight: 0,
+    display: "flex",
+    flexDirection: "row",
+    overflow: "hidden",
+  },
+  vendaDiretaProducts: {
+    flex: 1,
+    minWidth: 0,
+    overflow: "auto",
+    padding: theme.spacing(2),
+  },
+  vendaDiretaProductGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
+    gap: theme.spacing(1.5),
+  },
+  vendaDiretaProductCard: {
+    cursor: "pointer",
+    padding: theme.spacing(1.5),
+    borderRadius: 12,
+    border: `2px solid ${theme.palette.divider}`,
+    transition: "all 0.2s ease",
+    "&:hover": {
+      borderColor: primaryMain,
+      boxShadow: theme.shadows[2],
+    },
+  },
+  vendaDiretaCart: {
+    width: SIDEBAR_WIDTH,
+    minWidth: SIDEBAR_WIDTH,
+    display: "flex",
+    flexDirection: "column",
+    borderLeft: `1px solid ${theme.palette.divider}`,
+    background: theme.palette.background.paper,
+    overflow: "hidden",
+  },
+  vendaDiretaCartTitle: {
+    padding: theme.spacing(2),
+    borderBottom: `2px solid ${theme.palette.divider}`,
+    fontWeight: 700,
+  },
+  vendaDiretaCartList: {
+    flex: 1,
+    minHeight: 0,
+    overflow: "auto",
+    padding: theme.spacing(1),
+  },
+  vendaDiretaCartFooter: {
+    padding: theme.spacing(2),
+    borderTop: `2px solid ${theme.palette.divider}`,
+  },
+  vendaDiretaCartRow: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: theme.spacing(1, 0),
+    borderBottom: `1px solid ${theme.palette.divider}`,
+  },
 }; });
 
 const Pdv = () => {
@@ -336,6 +411,19 @@ const Pdv = () => {
   const [novosMesaCount, setNovosMesaCount] = useState(0);
   const [novosDeliveryCount, setNovosDeliveryCount] = useState(0);
   const [mainTab, setMainTab] = useState(0);
+  // Venda direta PDV
+  const [modoVendaDireta, setModoVendaDireta] = useState(false);
+  const [products, setProducts] = useState([]);
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const [cart, setCart] = useState([]);
+  const [reciboPdvOpen, setReciboPdvOpen] = useState(false);
+  const [reciboPdvData, setReciboPdvData] = useState(null);
+  const [finalizando, setFinalizando] = useState(false);
+  const [pagamentoHibrido, setPagamentoHibrido] = useState(false);
+  const [pagamentos, setPagamentos] = useState([]);
+  const [valorAtual, setValorAtual] = useState("");
+  const [meioPagamento, setMeioPagamento] = useState("dinheiro");
+  const [divisaoPartes, setDivisaoPartes] = useState(2);
 
   // Fullscreen ao abrir o PDV
   useEffect(() => {
@@ -449,6 +537,146 @@ const Pdv = () => {
     handleVoltar();
   };
 
+  // Venda direta: carregar produtos ao entrar no modo
+  useEffect(() => {
+    if (!modoVendaDireta || !hasLanchonetes) return;
+    setLoadingProducts(true);
+    api
+      .get("/products", { params: { pageNumber: 1, isMenuProduct: true } })
+      .then(({ data }) => setProducts(data.products || []))
+      .catch((err) => {
+        toastError(err);
+        setProducts([]);
+      })
+      .finally(() => setLoadingProducts(false));
+  }, [modoVendaDireta, hasLanchonetes]);
+
+  const addToCart = (product) => {
+    const value = Number(product.value) ?? 0;
+    setCart((prev) => {
+      const found = prev.find((c) => c.productId === product.id);
+      if (found) {
+        return prev.map((c) =>
+          c.productId === product.id ? { ...c, quantity: c.quantity + 1 } : c
+        );
+      }
+      return [
+        ...prev,
+        {
+          productId: product.id,
+          productName: product.name || "",
+          productValue: value,
+          quantity: 1,
+        },
+      ];
+    });
+  };
+
+  const updateCartQty = (productId, delta) => {
+    setCart((prev) =>
+      prev
+        .map((c) =>
+          c.productId === productId ? { ...c, quantity: c.quantity + delta } : c
+        )
+        .filter((c) => c.quantity > 0)
+    );
+  };
+
+  const removeFromCart = (productId) => {
+    setCart((prev) => prev.filter((c) => c.productId !== productId));
+  };
+
+  const cartTotal = cart.reduce(
+    (sum, c) => sum + (Number(c.productValue) || 0) * (c.quantity || 0),
+    0
+  );
+
+  const totalPagoPdv = (pagamentos || []).reduce((s, p) => s + Number(p.valor || 0), 0);
+  const restantePdv = cartTotal - totalPagoPdv;
+
+  const handlePagarPdv = () => {
+    const v = Number(String(valorAtual || "").replace(",", ".")) || 0;
+    if (v <= 0) {
+      toast.error("Informe o valor a pagar.");
+      return;
+    }
+    if (v > restantePdv + 0.01) {
+      toast.error("Valor maior que o restante.");
+      return;
+    }
+    setPagamentos((prev) => [...prev, { metodo: meioPagamento, valor: v }]);
+    setValorAtual("");
+  };
+
+  const handleRemoverPagamentoPdv = (index) => {
+    setPagamentos((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleFinalizarVendaDireta = async () => {
+    if (cart.length === 0) return;
+    if (pagamentoHibrido) {
+      if (pagamentos.length === 0) {
+        toast.error("Adicione ao menos um pagamento.");
+        return;
+      }
+      if (restantePdv > 0.01) {
+        toast.error("Total pago deve ser igual ou maior que o total. Restante: R$ " + restantePdv.toFixed(2));
+        return;
+      }
+    }
+    setFinalizando(true);
+    try {
+      const itens = cart.map((c) => ({
+        productName: c.productName,
+        quantity: c.quantity,
+        productValue: Number(c.productValue) || 0,
+      }));
+      let meiosPagamento = null;
+      if (pagamentoHibrido) {
+        meiosPagamento = pagamentos.map((p) => ({ metodo: p.metodo, valor: Number(p.valor) }));
+      } else {
+        meiosPagamento = [{ metodo: meioPagamento, valor: cartTotal }];
+      }
+      const { data } = await api.post("/pdv/venda", { itens, total: cartTotal, meiosPagamento });
+      setReciboPdvData({
+        mesa: null,
+        cliente: null,
+        pedidos: [
+          {
+            id: data.id,
+            protocol: "PDV",
+            menuItems: data.itens || itens,
+            total: data.total,
+          },
+        ],
+        total: data.total,
+        meiosPagamento: data.meiosPagamento || meiosPagamento,
+      });
+      setReciboPdvOpen(true);
+      setCart([]);
+      setPagamentos([]);
+      setValorAtual("");
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setFinalizando(false);
+    }
+  };
+
+  const handleCloseReciboPdv = () => {
+    setReciboPdvOpen(false);
+    setReciboPdvData(null);
+  };
+
+  const handleSairVendaDireta = () => {
+    setCart([]);
+    setModoVendaDireta(false);
+    setPagamentoHibrido(false);
+    setPagamentos([]);
+    setValorAtual("");
+    setMeioPagamento("dinheiro");
+  };
+
   const tipoLabel = selectedMesa?.type === "comanda" ? "Comanda" : "Mesa";
   const numeroLabel = selectedMesa?.name || selectedMesa?.number || selectedMesa?.id;
 
@@ -460,26 +688,218 @@ const Pdv = () => {
       <header className={classes.topBar}>
         <Typography className={classes.topBarTitle}>
           <ReceiptIcon style={{ fontSize: 28 }} />
-          PDV
+          PDV {modoVendaDireta ? "— Nova venda" : ""}
         </Typography>
-        <Button
-          size="small"
-          startIcon={<ExitToAppIcon />}
-          onClick={() => {
-            if (document.fullscreenElement && document.exitFullscreen) {
-              document.exitFullscreen().then(() => history.push("/dashboard")).catch(() => history.push("/dashboard"));
-            } else {
-              history.push("/dashboard");
-            }
-          }}
-          className={classes.quickBtn}
-          style={{ color: "#fff", borderColor: "rgba(255,255,255,0.7)" }}
-          variant="outlined"
-        >
-          Voltar ao sistema
-        </Button>
+        <Box display="flex" alignItems="center" gap={1}>
+          {modoVendaDireta && (
+            <Button
+              size="small"
+              startIcon={<ArrowBackIcon />}
+              onClick={handleSairVendaDireta}
+              style={{ color: "#fff", borderColor: "rgba(255,255,255,0.7)" }}
+              variant="outlined"
+            >
+              Fechar venda
+            </Button>
+          )}
+          <Button
+            size="small"
+            startIcon={<ExitToAppIcon />}
+            onClick={() => {
+              if (document.fullscreenElement && document.exitFullscreen) {
+                document.exitFullscreen().then(() => history.push("/dashboard")).catch(() => history.push("/dashboard"));
+              } else {
+                history.push("/dashboard");
+              }
+            }}
+            className={classes.quickBtn}
+            style={{ color: "#fff", borderColor: "rgba(255,255,255,0.7)" }}
+            variant="outlined"
+          >
+            Voltar ao sistema
+          </Button>
+        </Box>
       </header>
 
+      {modoVendaDireta ? (
+        <div className={classes.vendaDiretaLayout}>
+          <div className={classes.vendaDiretaProducts}>
+            <Typography variant="subtitle1" gutterBottom style={{ fontWeight: 700, marginBottom: 16 }}>
+              Produtos
+            </Typography>
+            {loadingProducts ? (
+              <Box display="flex" justifyContent="center" py={4}>
+                <CircularProgress />
+              </Box>
+            ) : (
+              <div className={classes.vendaDiretaProductGrid}>
+                {(products || []).map((product) => (
+                  <Paper
+                    key={product.id}
+                    className={classes.vendaDiretaProductCard}
+                    elevation={0}
+                    onClick={() => addToCart(product)}
+                  >
+                    <Typography variant="subtitle2" style={{ fontWeight: 700 }} noWrap>
+                      {product.name || "Produto"}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      R$ {Number(product.value ?? 0).toFixed(2)}
+                    </Typography>
+                  </Paper>
+                ))}
+                {(!products || products.length === 0) && !loadingProducts && (
+                  <Typography color="textSecondary">Nenhum produto no cardápio.</Typography>
+                )}
+              </div>
+            )}
+          </div>
+          <aside className={classes.vendaDiretaCart}>
+            <Typography className={classes.vendaDiretaCartTitle}>Carrinho</Typography>
+            <div className={classes.vendaDiretaCartList}>
+              {cart.length === 0 ? (
+                <Typography variant="body2" color="textSecondary" style={{ padding: 16 }}>
+                  Adicione produtos ao carrinho.
+                </Typography>
+              ) : (
+                cart.map((item) => (
+                  <div key={item.productId} className={classes.vendaDiretaCartRow}>
+                    <Box flex={1} minWidth={0}>
+                      <Typography variant="body2" noWrap>{item.productName}</Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        R$ {Number(item.productValue || 0).toFixed(2)} × {item.quantity}
+                      </Typography>
+                    </Box>
+                    <Box display="flex" alignItems="center">
+                      <Button
+                        size="small"
+                        onClick={() => updateCartQty(item.productId, -1)}
+                        style={{ minWidth: 32, padding: 4 }}
+                      >
+                        <RemoveIcon fontSize="small" />
+                      </Button>
+                      <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>
+                        {item.quantity}
+                      </Typography>
+                      <Button
+                        size="small"
+                        onClick={() => updateCartQty(item.productId, 1)}
+                        style={{ minWidth: 32, padding: 4 }}
+                      >
+                        <AddIcon fontSize="small" />
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => removeFromCart(item.productId)}
+                        style={{ minWidth: 32, padding: 4 }}
+                      >
+                        <DeleteOutlineIcon fontSize="small" />
+                      </Button>
+                    </Box>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className={classes.vendaDiretaCartFooter}>
+              <Typography variant="h6" style={{ marginBottom: 8 }}>
+                Total: R$ {cartTotal.toFixed(2)}
+              </Typography>
+              <Box mb={1}>
+                <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap">
+                  <FormControl variant="outlined" size="small" style={{ minWidth: 120 }} disabled={pagamentoHibrido && restantePdv <= 0}>
+                    <InputLabel>Meio</InputLabel>
+                    <Select value={meioPagamento} onChange={(e) => setMeioPagamento(e.target.value)} label="Meio" disabled={finalizando}>
+                      <MenuItem value="dinheiro">Dinheiro</MenuItem>
+                      <MenuItem value="cartao">Cartão</MenuItem>
+                      <MenuItem value="pix">Pix</MenuItem>
+                      <MenuItem value="outro">Outro</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <Button
+                    size="small"
+                    color="primary"
+                    variant={pagamentoHibrido ? "contained" : "outlined"}
+                    onClick={() => setPagamentoHibrido((v) => !v)}
+                    disabled={finalizando}
+                  >
+                    {pagamentoHibrido ? "Híbrido" : "Híbrido?"}
+                  </Button>
+                </Box>
+
+                {pagamentoHibrido && cart.length > 0 && (
+                  <Box mt={1}>
+                    <Typography variant="body2" color="textSecondary">
+                      Restante: R$ {restantePdv.toFixed(2)}
+                    </Typography>
+                    {pagamentos.length > 0 && (
+                      <Box mt={0.5}>
+                        {pagamentos.map((p, idx) => (
+                          <Box key={idx} display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 2 }}>
+                            <Typography variant="caption">{p.metodo}: R$ {Number(p.valor).toFixed(2)}</Typography>
+                            <Button size="small" style={{ minWidth: 0, padding: "0 6px" }} onClick={() => handleRemoverPagamentoPdv(idx)}>
+                              Remover
+                            </Button>
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                    {restantePdv > 0.01 && (
+                      <Box mt={0.5} display="flex" flexWrap="wrap" alignItems="center" style={{ gap: 6 }}>
+                        <TextField
+                          label="Valor"
+                          variant="outlined"
+                          size="small"
+                          type="number"
+                          inputProps={{ min: 0, step: 0.01 }}
+                          value={valorAtual}
+                          onChange={(e) => setValorAtual(e.target.value)}
+                          style={{ width: 90 }}
+                        />
+                        <Button size="small" variant="contained" color="primary" onClick={handlePagarPdv}>
+                          Pagar
+                        </Button>
+                        <Button size="small" variant="outlined" onClick={() => setValorAtual(restantePdv.toFixed(2))}>
+                          Restante
+                        </Button>
+                        <TextField
+                          size="small"
+                          type="number"
+                          inputProps={{ min: 1, style: { width: 36 } }}
+                          value={divisaoPartes}
+                          onChange={(e) => setDivisaoPartes(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                          style={{ width: 52 }}
+                        />
+                        <Button size="small" variant="outlined" onClick={() => setValorAtual((restantePdv / divisaoPartes).toFixed(2))}>
+                          Dividir
+                        </Button>
+                      </Box>
+                    )}
+                  </Box>
+                )}
+
+                {!pagamentoHibrido && (
+                  <Box mt={0.5} />
+                )}
+              </Box>
+              <Button
+                fullWidth
+                variant="contained"
+                color="primary"
+                disabled={
+                  cart.length === 0 ||
+                  finalizando ||
+                  (pagamentoHibrido && cart.length > 0 && restantePdv > 0.01)
+                }
+                startIcon={<ReceiptIcon />}
+                onClick={handleFinalizarVendaDireta}
+                style={{ fontWeight: 700 }}
+              >
+                {finalizando ? "Finalizando…" : "Finalizar venda"}
+              </Button>
+            </div>
+          </aside>
+        </div>
+      ) : (
       <div className={classes.body}>
         {/* Área central: busca + grid de mesas/comandas */}
         <main className={classes.main}>
@@ -742,10 +1162,21 @@ const Pdv = () => {
           </div>
         </aside>
       </div>
+      )}
 
       {/* Barra inferior: acessos rápidos + totalizador fixo */}
       <footer className={classes.bottomBar}>
         <div className={classes.bottomBarQuick}>
+          {!modoVendaDireta && (
+            <Button
+              className={`${classes.quickBtn} ${classes.quickBtnSecondary}`}
+              variant="contained"
+              startIcon={<AddShoppingCartIcon />}
+              onClick={() => setModoVendaDireta(true)}
+            >
+              Nova venda
+            </Button>
+          )}
           <Badge badgeContent={mesas.length} color="primary" max={99}>
             <Button
               className={`${classes.quickBtn} ${classes.quickBtnPrimary}`}
@@ -819,6 +1250,12 @@ const Pdv = () => {
         mesa={selectedMesa}
         onClose={() => setLiberarModalOpen(false)}
         onSuccess={handleFechamentoSuccess}
+      />
+      <ReciboPdvModal
+        open={reciboPdvOpen}
+        onClose={handleCloseReciboPdv}
+        data={reciboPdvData}
+        mesa={null}
       />
     </div>
   );

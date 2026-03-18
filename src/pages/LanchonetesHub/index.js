@@ -17,6 +17,7 @@ import {
   Badge,
   IconButton,
   Tooltip,
+  TextField,
 } from "@material-ui/core";
 import {
   Restaurant as RestaurantIcon,
@@ -48,6 +49,9 @@ import LineChartComponent from "../../components/Dashboard/LineChartComponent";
 import BarChartComponent from "../../components/Dashboard/BarChartComponent";
 import TrendingUpIcon from "@material-ui/icons/TrendingUp";
 import AttachMoneyIcon from "@material-ui/icons/AttachMoney";
+import AccountBalanceWalletIcon from "@material-ui/icons/AccountBalanceWallet";
+import AssessmentIcon from "@material-ui/icons/Assessment";
+import DespesasModal from "../../components/DespesasModal";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -112,11 +116,18 @@ const LanchonetesHub = () => {
   const [lanchonetesStats, setLanchonetesStats] = useState({
     totalVendasDia: 0,
     totalVendasMes: 0,
+    totalDespesas: 0,
+    saldoGeral: 0,
     evolucaoVendas: [],
+    evolucaoDespesas: [],
     entregasPorEntregador: [],
+    faturamentoPorMeioPagamento: [],
   });
   const [loadingLanchonetesStats, setLoadingLanchonetesStats] = useState(false);
+  const [filtroInicial, setFiltroInicial] = useState("");
+  const [filtroFinal, setFiltroFinal] = useState("");
   const [quickScanOpen, setQuickScanOpen] = useState(false);
+  const [despesasModalOpen, setDespesasModalOpen] = useState(false);
   const pendingOrderIdsRef = useRef(new Set());
   const soundIntervalRef = useRef(null);
   const [playOrderAlert] = useSound(alertSound, { volume: 0.6 });
@@ -180,12 +191,27 @@ const LanchonetesHub = () => {
   useEffect(() => {
     if (!hasLanchonetes) return;
     setLoadingLanchonetesStats(true);
+    const params = {};
+    if (filtroInicial) params.initialDate = filtroInicial;
+    if (filtroFinal) params.finalDate = filtroFinal;
+    if (!filtroInicial || !filtroFinal) {
+      const now = new Date();
+      const localEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+      const start = new Date(now);
+      start.setDate(start.getDate() - 29);
+      const localStart = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+      if (!filtroInicial) params.initialDate = localStart;
+      if (!filtroFinal) params.finalDate = localEnd;
+    }
     api
-      .get("/dashboard/lanchonetes-stats")
-      .then(({ data }) => setLanchonetesStats(data || { totalVendasDia: 0, totalVendasMes: 0, evolucaoVendas: [], entregasPorEntregador: [] }))
-      .catch(() => setLanchonetesStats({ totalVendasDia: 0, totalVendasMes: 0, evolucaoVendas: [], entregasPorEntregador: [] }))
+      .get("/dashboard/lanchonetes-stats", { params })
+      .then(({ data }) => {
+        const fallback = { totalVendasDia: 0, totalVendasMes: 0, totalDespesas: 0, saldoGeral: 0, evolucaoVendas: [], evolucaoDespesas: [], entregasPorEntregador: [], faturamentoPorMeioPagamento: [] };
+        setLanchonetesStats({ ...fallback, ...data });
+      })
+      .catch(() => setLanchonetesStats({ totalVendasDia: 0, totalVendasMes: 0, totalDespesas: 0, saldoGeral: 0, evolucaoVendas: [], evolucaoDespesas: [], entregasPorEntregador: [], faturamentoPorMeioPagamento: [] }))
       .finally(() => setLoadingLanchonetesStats(false));
-  }, [hasLanchonetes]);
+  }, [hasLanchonetes, filtroInicial, filtroFinal]);
 
   useEffect(() => {
     const companyId = user?.companyId;
@@ -507,6 +533,38 @@ const LanchonetesHub = () => {
                 </Box>
               ) : (
                 <Grid container spacing={2} style={{ marginBottom: 24 }}>
+                  <Grid item xs={12}>
+                    <Paper style={{ padding: 12 }}>
+                      <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap" style={{ gap: 12 }}>
+                        <Typography variant="subtitle2" color="textSecondary">
+                          Filtro de período (opcional)
+                        </Typography>
+                        <Box display="flex" alignItems="center" flexWrap="wrap" style={{ gap: 12 }}>
+                          <TextField
+                            type="date"
+                            size="small"
+                            variant="outlined"
+                            label="Início"
+                            InputLabelProps={{ shrink: true }}
+                            value={filtroInicial}
+                            onChange={(e) => setFiltroInicial(e.target.value)}
+                          />
+                          <TextField
+                            type="date"
+                            size="small"
+                            variant="outlined"
+                            label="Fim"
+                            InputLabelProps={{ shrink: true }}
+                            value={filtroFinal}
+                            onChange={(e) => setFiltroFinal(e.target.value)}
+                          />
+                          <Button size="small" variant="outlined" onClick={() => { setFiltroInicial(""); setFiltroFinal(""); }}>
+                            Limpar
+                          </Button>
+                        </Box>
+                      </Box>
+                    </Paper>
+                  </Grid>
                   <Grid item xs={12} sm={6} md={3}>
                     <Card className={`${classes.statCard} ${classes.vendasCard}`}>
                       <CardContent>
@@ -541,16 +599,61 @@ const LanchonetesHub = () => {
                       </CardContent>
                     </Card>
                   </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Card className={`${classes.statCard} ${classes.vendasCard}`}>
+                      <CardContent>
+                        <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap">
+                          <Box>
+                            <Typography color="textSecondary" gutterBottom>
+                              Total de despesas
+                            </Typography>
+                            <Typography variant="h4">
+                              R$ {(lanchonetesStats.totalDespesas ?? 0).toFixed(2).replace(".", ",")}
+                            </Typography>
+                            <Button size="small" color="primary" onClick={() => setDespesasModalOpen(true)} style={{ marginTop: 8 }}>
+                              Ver mais
+                            </Button>
+                          </Box>
+                          <AccountBalanceWalletIcon style={{ fontSize: 40, color: "rgba(239, 68, 68, 0.8)" }} />
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                  <Grid item xs={12} sm={6} md={3}>
+                    <Card className={`${classes.statCard} ${classes.vendasCard}`}>
+                      <CardContent>
+                        <Box display="flex" alignItems="center" justifyContent="space-between">
+                          <Box>
+                            <Typography color="textSecondary" gutterBottom>
+                              Saldo geral
+                            </Typography>
+                            <Typography variant="h4" style={{ color: (lanchonetesStats.saldoGeral ?? 0) >= 0 ? undefined : "rgba(239, 68, 68, 0.9)" }}>
+                              R$ {(lanchonetesStats.saldoGeral ?? 0).toFixed(2).replace(".", ",")}
+                            </Typography>
+                          </Box>
+                          <AssessmentIcon style={{ fontSize: 40, color: "rgba(139, 92, 246, 0.8)" }} />
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
                   <Grid item xs={12} md={6} className={classes.chartCard}>
                     <LineChartComponent
-                      data={(lanchonetesStats.evolucaoVendas || []).map((ev) => ({
-                        data: new Date(ev.data + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
-                        total: ev.total,
-                        quantidade: ev.quantidade,
-                      }))}
+                      data={(() => {
+                        const despMap = new Map(
+                          (lanchonetesStats.evolucaoDespesas || []).map((d) => [d.data, Number(d.total || 0)])
+                        );
+                        return (lanchonetesStats.evolucaoVendas || []).map((ev) => ({
+                          data: new Date(ev.data + "T12:00:00").toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }),
+                          total: ev.total,
+                          despesas: despMap.get(ev.data) || 0,
+                        }));
+                      })()}
                       title="Vendas nos últimos 30 dias"
-                      subtitle="Total em R$ por dia"
+                      subtitle="Receitas (verde/azul) e despesas (vermelho) por dia"
                       dataKey="total"
+                      secondaryDataKey="despesas"
+                      secondaryColor="#EF4444"
+                      secondaryName="Despesas"
                       xAxisKey="data"
                       color="#22C55E"
                       gradient
@@ -565,6 +668,19 @@ const LanchonetesHub = () => {
                       }))}
                       title="Entregas concluídas por entregador"
                       subtitle="Quantidade de pedidos entregues"
+                      horizontal
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6} className={classes.chartCard}>
+                    <BarChartComponent
+                      data={(lanchonetesStats.faturamentoPorMeioPagamento || []).map((m) => ({
+                        name: (m.metodo || "outro").toUpperCase(),
+                        count: Number(m.total || 0),
+                      }))}
+                      title="Faturamento por meio de pagamento"
+                      subtitle="Total em R$ (últimos 30 dias ou filtro)"
+                      valueLabel="R$"
+                      valueFormatter={(v) => `R$ ${Number(v || 0).toFixed(2).replace(".", ",")}`}
                       horizontal
                     />
                   </Grid>
@@ -865,6 +981,25 @@ const LanchonetesHub = () => {
         </Box>
       </Box>
 
+      <DespesasModal
+        open={despesasModalOpen}
+        onClose={() => setDespesasModalOpen(false)}
+        onSaved={() => {
+          const params = {};
+          if (filtroInicial) params.initialDate = filtroInicial;
+          if (filtroFinal) params.finalDate = filtroFinal;
+          if (!filtroInicial || !filtroFinal) {
+            const now = new Date();
+            const localEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+            const start = new Date(now);
+            start.setDate(start.getDate() - 29);
+            const localStart = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+            if (!filtroInicial) params.initialDate = localStart;
+            if (!filtroFinal) params.finalDate = localEnd;
+          }
+          api.get("/dashboard/lanchonetes-stats", { params }).then(({ data }) => setLanchonetesStats((prev) => ({ ...prev, ...data }))).catch(() => {});
+        }}
+      />
       <QuickScanModal open={quickScanOpen} onClose={() => setQuickScanOpen(false)} />
     </MainContainer>
   );

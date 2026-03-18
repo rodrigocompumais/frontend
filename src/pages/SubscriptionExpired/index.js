@@ -9,7 +9,9 @@ import {
 } from "@material-ui/core";
 import WarningAmberIcon from "@material-ui/icons/Warning";
 import WhatsAppIcon from "@material-ui/icons/WhatsApp";
+import PaymentIcon from "@material-ui/icons/Payment";
 import RefreshIcon from "@material-ui/icons/Refresh";
+import { useHistory } from "react-router-dom";
 import ExitToAppIcon from "@material-ui/icons/ExitToApp";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import moment from "moment";
@@ -190,6 +192,7 @@ const useStyles = makeStyles((theme) => ({
 
 const SubscriptionExpired = () => {
   const classes = useStyles();
+  const history = useHistory();
   const { user, handleLogout } = useContext(AuthContext);
 
   const companyName = user?.company?.name || "Sua empresa";
@@ -208,6 +211,11 @@ const SubscriptionExpired = () => {
     window.location.href = "/#planos";
   };
 
+  /** Renovação via Asaas — Financeiro (faturas / PIX) */
+  const handleRenewFinanceiro = () => {
+    history.push("/financeiro");
+  };
+
   return (
     <Box className={classes.root}>
       <Paper className={classes.card} elevation={0}>
@@ -220,7 +228,7 @@ const SubscriptionExpired = () => {
             Período de Teste Encerrado
           </Typography>
           <Typography className={classes.subtitle}>
-            Seu período de teste gratuito expirou. Renove sua assinatura para continuar utilizando todos os recursos.
+            Sua assinatura está vencida. Renove pelo Financeiro (PIX/cartão Asaas) ou entre em contato para continuar utilizando todos os recursos.
           </Typography>
         </Box>
 
@@ -248,11 +256,20 @@ const SubscriptionExpired = () => {
           <Box className={classes.actions}>
             <Button
               className={classes.primaryButton}
+              startIcon={<PaymentIcon />}
+              onClick={handleRenewFinanceiro}
+              fullWidth
+            >
+              Renovar no Financeiro (PIX / Asaas)
+            </Button>
+
+            <Button
+              className={classes.secondaryButton}
               startIcon={<WhatsAppIcon />}
               onClick={handleContactWhatsApp}
               fullWidth
             >
-              Renovar via WhatsApp
+              Falar no WhatsApp
             </Button>
 
             <Button
@@ -261,7 +278,7 @@ const SubscriptionExpired = () => {
               onClick={handleViewPlans}
               fullWidth
             >
-              Ver Planos Disponíveis
+              Ver Planos na Landing
             </Button>
 
             <Box className={classes.divider}>ou</Box>
@@ -280,7 +297,7 @@ const SubscriptionExpired = () => {
         {/* Footer */}
         <Box className={classes.footer}>
           <Typography className={classes.footerText}>
-            Precisa de ajuda? Entre em contato conosco pelo WhatsApp e renove sua assinatura em minutos.
+            No Financeiro você paga faturas em aberto com PIX (Asaas). Após a confirmação, o acesso é liberado automaticamente.
           </Typography>
         </Box>
       </Paper>

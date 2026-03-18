@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { makeStyles } from "@material-ui/core/styles";
 import {
   Box,
@@ -60,13 +60,8 @@ const UserAvailabilitySettings = ({ userId }) => {
     },
   });
 
-  useEffect(() => {
-    if (userId) {
-      fetchSettings();
-    }
-  }, [userId]);
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
+    if (!userId) return;
     try {
       const { data } = await api.get(`/users/${userId}/availability-settings`);
       if (data.availabilitySettings) {
@@ -76,7 +71,13 @@ const UserAvailabilitySettings = ({ userId }) => {
       // Se não houver configurações, usar padrão
       console.log("Nenhuma configuração encontrada, usando padrão");
     }
-  };
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId) {
+      fetchSettings();
+    }
+  }, [userId, fetchSettings]);
 
   const handleSave = async () => {
     if (!userId) return;

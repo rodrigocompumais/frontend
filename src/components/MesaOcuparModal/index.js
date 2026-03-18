@@ -26,6 +26,8 @@ const MesaOcuparModal = ({ open, onClose, mesa, onSuccess }) => {
   const [selectedContact, setSelectedContact] = useState(null);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [createTicket, setCreateTicket] = useState(true);
+  const [semTelefone, setSemTelefone] = useState(false);
+  const [nomeSemTelefone, setNomeSemTelefone] = useState("");
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [newContactInitial, setNewContactInitial] = useState({});
 
@@ -33,6 +35,8 @@ const MesaOcuparModal = ({ open, onClose, mesa, onSuccess }) => {
     if (!open) {
       setSelectedContact(null);
       setSearchParam("");
+      setSemTelefone(false);
+      setNomeSemTelefone("");
     }
   }, [open]);
 
@@ -121,6 +125,30 @@ const MesaOcuparModal = ({ open, onClose, mesa, onSuccess }) => {
     }
   };
 
+  const handleOcuparSemTelefone = async () => {
+    if (!mesa) return;
+    const nome = String(nomeSemTelefone || "").trim();
+    if (!nome) {
+      toast.error("Informe o nome para ocupar sem telefone.");
+      return;
+    }
+    setLoading(true);
+    try {
+      // Sem telefone: backend cria um contato \"placeholder\" automaticamente
+      await api.put(`/mesas/${mesa.id}/ocupar`, {
+        contactName: nome,
+        ticketId: null,
+      });
+      toast.success("Mesa ocupada com sucesso");
+      if (onSuccess) onSuccess();
+      onClose();
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <ContactModal
@@ -135,69 +163,98 @@ const MesaOcuparModal = ({ open, onClose, mesa, onSuccess }) => {
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
         <DialogTitle>Ocupar mesa {mesa?.number || mesa?.name}</DialogTitle>
         <DialogContent>
-          <Autocomplete
-            options={contacts}
-            getOptionLabel={(opt) => {
-              if (opt.isNew) return `Criar contato: ${opt.name}`;
-              return opt.name ? `${opt.name} (${opt.number})` : opt.number || "";
-            }}
-            value={selectedContact}
-            onChange={handleSelectOption}
-            onInputChange={(_, val) => setSearchParam(val)}
-            loading={loadingContacts}
-            filterOptions={createAddContactOption}
-            renderOption={(opt) =>
-              opt.isNew ? (
-                <Typography component="span" color="primary">
-                  + Criar contato: {opt.name}
-                </Typography>
-              ) : (
-                <Typography component="span">
-                  {opt.name ? `${opt.name} (${opt.number})` : opt.number}
-                </Typography>
-              )
-            }
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Buscar ou criar contato"
-                variant="outlined"
-                margin="dense"
-                fullWidth
-                InputProps={{
-                  ...params.InputProps,
-                  endAdornment: (
-                    <>
-                      {loadingContacts ? (
-                        <CircularProgress color="inherit" size={20} />
-                      ) : null}
-                      {params.InputProps.endAdornment}
-                    </>
-                  ),
-                }}
-              />
-            )}
-          />
-          <Box mt={1} mb={1}>
+          <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+            <Typography variant="body2" color="textSecondary">
+              Modo de ocupação
+            </Typography>
             <Button
               size="small"
-              startIcon={<AddIcon />}
-              onClick={handleOpenNewContact}
+              variant={semTelefone ? "contained" : "outlined"}
+              color="primary"
+              onClick={() => setSemTelefone((v) => !v)}
+              disabled={loading}
             >
-              Novo contato
+              {semTelefone ? "Sem telefone (ativo)" : "Ocupar sem telefone"}
             </Button>
           </Box>
-          <Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
-            Ao ocupar, um ticket será criado para o contato para facilitar o atendimento.
-          </Typography>
+
+          {semTelefone ? (
+            <TextField
+              label="Nome do cliente"
+              variant="outlined"
+              margin="dense"
+              fullWidth
+              value={nomeSemTelefone}
+              onChange={(e) => setNomeSemTelefone(e.target.value)}
+              disabled={loading}
+            />
+          ) : (
+            <>
+              <Autocomplete
+                options={contacts}
+                getOptionLabel={(opt) => {
+                  if (opt.isNew) return `Criar contato: ${opt.name}`;
+                  return opt.name ? `${opt.name} (${opt.number})` : opt.number || "";
+                }}
+                value={selectedContact}
+                onChange={handleSelectOption}
+                onInputChange={(_, val) => setSearchParam(val)}
+                loading={loadingContacts}
+                filterOptions={createAddContactOption}
+                renderOption={(opt) =>
+                  opt.isNew ? (
+                    <Typography component="span" color="primary">
+                      + Criar contato: {opt.name}
+                    </Typography>
+                  ) : (
+                    <Typography component="span">
+                      {opt.name ? `${opt.name} (${opt.number})` : opt.number}
+                    </Typography>
+                  )
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Buscar ou criar contato"
+                    variant="outlined"
+                    margin="dense"
+                    fullWidth
+                    InputProps={{
+                      ...params.InputProps,
+                      endAdornment: (
+                        <>
+                          {loadingContacts ? (
+                            <CircularProgress color="inherit" size={20} />
+                          ) : null}
+                          {params.InputProps.endAdornment}
+                        </>
+                      ),
+                    }}
+                  />
+                )}
+              />
+              <Box mt={1} mb={1}>
+                <Button
+                  size="small"
+                  startIcon={<AddIcon />}
+                  onClick={handleOpenNewContact}
+                >
+                  Novo contato
+                </Button>
+              </Box>
+              <Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
+                Ao ocupar, um ticket será criado para o contato para facilitar o atendimento.
+              </Typography>
+            </>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Cancelar</Button>
           <Button
             variant="contained"
             color="primary"
-            onClick={handleOcupar}
-            disabled={!selectedContact || loading}
+            onClick={semTelefone ? handleOcuparSemTelefone : handleOcupar}
+            disabled={(semTelefone ? !String(nomeSemTelefone || "").trim() : !selectedContact) || loading}
           >
             {loading ? <CircularProgress size={24} /> : "Ocupar"}
           </Button>
