@@ -373,7 +373,22 @@ const reducer = (state, action) => {
     const messages = Array.isArray(action.payload) ? action.payload : [];
     if (messages.length === 0) return state;
     const pageNumber = action.pageNumber || 1;
-    return pageNumber === 1 ? [...messages] : [...messages, ...state];
+    if (pageNumber === 1) {
+      // Para preservar mensagens otimistas em reload:
+      // - se temos otimistas no estado (temp-...), mantemos quando não existe mensagem real correspondente no backend.
+      const optimistic = state.filter((m) => String(m.id || "").startsWith("temp-"));
+      const optimisticToKeep = optimistic.filter((o) => {
+        const oBody = String(o.body || "").trim();
+        const oTicketId = String(o.ticketId ?? "");
+        return !messages.some((b) => {
+          const bTicketId = String(b.ticketId ?? "");
+          const bBody = String(b.body || "").trim();
+          return b.fromMe === true && bTicketId === oTicketId && bBody === oBody;
+        });
+      });
+      return [...messages, ...optimisticToKeep];
+    }
+    return [...messages, ...state];
   }
 
   if (action.type === "ADD_MESSAGE") {
@@ -533,6 +548,40 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
     }
   }, [authCompanyLanguage]);
 
+  // Persistir mensagens otimistas por um curto período.
+  // Ajuda no cenário "enviou, não substituiu pela real ainda, recarregou -> some".
+  const OPTIMISTIC_TTL_MS = 2 * 60 * 1000;
+  const optimisticStorageKey = ticketId != null ? `optimistic_messages_${ticketId}` : null;
+
+  const safeReadOptimisticStorage = useCallback(() => {
+    if (!optimisticStorageKey) return [];
+    try {
+      const raw = localStorage.getItem(optimisticStorageKey);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      if (!Array.isArray(parsed)) return [];
+      const now = Date.now();
+      return parsed.filter((m) => {
+        const createdAtMs = m?.createdAt ? new Date(m.createdAt).getTime() : 0;
+        return createdAtMs && now - createdAtMs <= OPTIMISTIC_TTL_MS;
+      });
+    } catch {
+      return [];
+    }
+  }, [optimisticStorageKey]);
+
+  const safeWriteOptimisticStorage = useCallback(
+    (messages) => {
+      if (!optimisticStorageKey) return;
+      try {
+        localStorage.setItem(optimisticStorageKey, JSON.stringify(messages));
+      } catch {
+        // ignore
+      }
+    },
+    [optimisticStorageKey]
+  );
+
   // Função para gerar cor consistente baseada em uma string (contactId ou participant)
   // Memoizada para evitar recálculos desnecessários
   const generateColorFromString = useCallback((str) => {
@@ -602,7 +651,15 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
     setPageNumber(1);
 
     currentTicketId.current = ticketId;
-  }, [ticketId]);
+    
+    // Hidratar mensagens otimistas (temp-...) após reload
+    const optimistic = safeReadOptimisticStorage();
+    if (optimistic.length > 0) {
+      optimistic.forEach((m) => {
+        dispatch({ type: "ADD_MESSAGE", payload: m });
+      });
+    }
+  }, [ticketId, safeReadOptimisticStorage]);
 
   useEffect(() => {
     setLoading(true);
@@ -647,6 +704,26 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
       const msgTicketId = data.message?.ticketId != null ? Number(data.message.ticketId) : null;
       const failTicketId = data.ticketId != null ? Number(data.ticketId) : null;
       if (data.action === "create" && msgTicketId === currentId) {
+        // Se chegou a mensagem real (não a temp), removemos a otimista do localStorage
+        // para não re-hidratar depois do reload.
+        try {
+          const newMessage = data.message;
+          const isRealFromMe = newMessage?.fromMe === true && String(newMessage?.id || "").trim() !== "" && !String(newMessage?.id || "").startsWith("temp-");
+          if (isRealFromMe && newMessage?.ticketId != null) {
+            const realTicketId = String(newMessage.ticketId);
+            const realBody = String(newMessage.body || "").trim();
+            const current = safeReadOptimisticStorage();
+            const next = current.filter((m) => {
+              const mTicketId = String(m.ticketId ?? "");
+              const mBody = String(m.body || "").trim();
+              const isTemp = String(m.id || "").startsWith("temp-");
+              return !(isTemp && String(m.fromMe) === "true" && mTicketId === realTicketId && mBody === realBody);
+            });
+            safeWriteOptimisticStorage(next);
+          }
+        } catch {
+          // ignore
+        }
         dispatch({ type: "ADD_MESSAGE", payload: data.message });
         scrollToBottom();
       }
@@ -654,6 +731,24 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
         dispatch({ type: "UPDATE_MESSAGE", payload: data.message });
       }
       if (data.action === "sendFailed" && failTicketId === currentId) {
+        // Atualiza no storage para exibir o estado de erro após reload.
+        try {
+          const failedTicketId = String(data.ticketId);
+          const failedBody = String(data.body || "").trim();
+          const current = safeReadOptimisticStorage();
+          const next = current.map((m) => {
+            const isTemp = String(m.id || "").startsWith("temp-");
+            const mTicketId = String(m.ticketId ?? "");
+            const mBody = String(m.body || "").trim();
+            if (isTemp && String(m.fromMe) === "true" && mTicketId === failedTicketId && mBody === failedBody) {
+              return { ...m, ack: -1, isSending: false };
+            }
+            return m;
+          });
+          safeWriteOptimisticStorage(next);
+        } catch {
+          // ignore
+        }
         dispatch({ type: "MARK_OPTIMISTIC_FAILED", payload: { ticketId: data.ticketId, body: data.body } });
       }
     };
@@ -680,10 +775,36 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
   }, []);
 
   useImperativeHandle(ref, () => ({
-    addOptimisticMessage: (msg) => dispatch({ type: "ADD_MESSAGE", payload: { ...msg, isSending: true, ack: 1 } }),
-    removeOptimisticMessage: (tempId) => dispatch({ type: "REMOVE_OPTIMISTIC", payload: tempId }),
+    addOptimisticMessage: (msg) => {
+      const payload = { ...msg, isSending: true, ack: 1 };
+      try {
+        const current = safeReadOptimisticStorage();
+        if (!current.some((m) => m.id === payload.id)) {
+          safeWriteOptimisticStorage([...current, payload]);
+        }
+      } catch {
+        // ignore
+      }
+      dispatch({ type: "ADD_MESSAGE", payload });
+      // Garantir scroll após o React renderizar o "ref" do último elemento.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scrollToBottom();
+        });
+      });
+    },
+    removeOptimisticMessage: (tempId) => {
+      try {
+        const current = safeReadOptimisticStorage();
+        const next = current.filter((m) => m.id !== tempId);
+        safeWriteOptimisticStorage(next);
+      } catch {
+        // ignore
+      }
+      dispatch({ type: "REMOVE_OPTIMISTIC", payload: tempId });
+    },
     scrollToBottom,
-  }), [scrollToBottom]);
+  }), [scrollToBottom, safeReadOptimisticStorage, safeWriteOptimisticStorage]);
 
   useEffect(() => {
     if (!scrollToMessageId || !onScrollToMessageDone) return;
