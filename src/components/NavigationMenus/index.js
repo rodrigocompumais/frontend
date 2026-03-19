@@ -49,6 +49,7 @@ import { WhatsAppsContext } from '../../context/WhatsApp/WhatsAppsContext';
 import usePlans from '../../hooks/usePlans';
 import useCompanyModules from '../../hooks/useCompanyModules';
 import useNotificationCounts from '../../hooks/useNotificationCounts';
+import useInternalChatUnreadCount from '../../hooks/useInternalChatUnreadCount';
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -92,6 +93,7 @@ const NavigationMenus = () => {
   const { getPlanCompany } = usePlans();
   const { hasLanchonetes, hasAgendamento } = useCompanyModules();
   const { pendingTicketsCount, unreadMessagesCount, totalNotifications } = useNotificationCounts();
+  const { unreadChatCount } = useInternalChatUnreadCount();
 
   // Estados para os dropdowns
   const [atendimentoAnchor, setAtendimentoAnchor] = useState(null);
@@ -210,7 +212,9 @@ const NavigationMenus = () => {
             onClick={() => handleNavigate('/chats', () => setAtendimentoAnchor(null))}
           >
             <ListItemIcon>
-              <ForumIcon fontSize="small" />
+              <Badge badgeContent={unreadChatCount > 0 ? unreadChatCount : 0} color="error" max={99}>
+                <ForumIcon fontSize="small" />
+              </Badge>
             </ListItemIcon>
             <ListItemText primary={i18n.t("mainDrawer.listItems.chats")} />
           </MenuItem>

@@ -48,6 +48,7 @@ import { AuthContext } from '../../context/Auth/AuthContext';
 import { WhatsAppsContext } from '../../context/WhatsApp/WhatsAppsContext';
 import usePlans from '../../hooks/usePlans';
 import useCompanyModules from '../../hooks/useCompanyModules';
+import useInternalChatUnreadCount from '../../hooks/useInternalChatUnreadCount';
 
 const useStyles = makeStyles((theme) => ({
   list: {
@@ -83,6 +84,7 @@ const MobileNavigationMenu = () => {
   const { whatsApps } = useContext(WhatsAppsContext);
   const { getPlanCompany } = usePlans();
   const { hasLanchonetes, hasAgendamento } = useCompanyModules();
+  const { unreadChatCount } = useInternalChatUnreadCount();
 
   // Submenus
   const [openAutomacao, setOpenAutomacao] = useState(false);
@@ -182,7 +184,9 @@ const MobileNavigationMenu = () => {
             {showInternalChat && (
               <ListItem button onClick={() => handleNavigate('/chats')}>
                 <ListItemIcon>
-                  <ForumIcon />
+                  <Badge badgeContent={unreadChatCount > 0 ? unreadChatCount : 0} color="error" max={99}>
+                    <ForumIcon />
+                  </Badge>
                 </ListItemIcon>
                 <ListItemText primary={i18n.t("mainDrawer.listItems.chats")} />
               </ListItem>

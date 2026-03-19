@@ -106,7 +106,20 @@ const useNotificationCounts = () => {
     const userQueueIds = user.queues?.map(q => q.id) || [];
 
     const shouldCountTicket = (ticket) => {
-      if (!ticket.queueId) return true;
+      // Regra de negócio:
+      // - Se já tem responsável, só o responsável recebe notificação.
+      // - Se não tem responsável e está aguardando (pending), todos da fila (ou sem fila) recebem.
+      // - Para status diferentes de pending sem responsável, manter filtro por fila.
+      if (ticket?.userId) {
+        return Number(ticket.userId) === Number(user.id);
+      }
+
+      if (ticket?.status === "pending") {
+        if (!ticket.queueId) return true; // sem fila -> todos
+        return userQueueIds.indexOf(ticket.queueId) > -1;
+      }
+
+      if (!ticket?.queueId) return true;
       return userQueueIds.indexOf(ticket.queueId) > -1;
     };
 
