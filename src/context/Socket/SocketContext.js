@@ -39,9 +39,17 @@ class ManagedSocket {
   }
   
   off(event, callback) {
-    const i = this.callbacks.findIndex((c) => c.event === event && c.callback === callback);
-    this.callbacks.splice(i, 1);
-    return this.rawSocket.off(event, callback);
+    // `findIndex` pode retornar -1. O splice(-1, 1) removeria a última entrada,
+    // causando comportamento inconsistente até recarregar a página.
+    if (event === "ready" || event === "connect") {
+      return this.rawSocket?.off?.(event, callback);
+    }
+
+    const i = this.callbacks.findIndex(
+      (c) => c.event === event && c.callback === callback
+    );
+    if (i !== -1) this.callbacks.splice(i, 1);
+    return this.rawSocket?.off?.(event, callback);
   }
   
   emit(event, ...params) {

@@ -583,7 +583,7 @@ const TicketsManagerTabs = () => {
           </Box>
         </Menu>
       </Paper>
-      <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={true}>
+      <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={false}>
         {subTab === "conversations" && (
           <TicketsList
             status="open"
@@ -615,7 +615,7 @@ const TicketsManagerTabs = () => {
           />
         )}
       </TabPanel>
-      <TabPanel value={tab} name="pending" className={classes.ticketsWrapper} keepMounted={true}>
+      <TabPanel value={tab} name="pending" className={classes.ticketsWrapper} keepMounted={false}>
         <TicketsList
           status="pending"
           showAll={showAllTickets}

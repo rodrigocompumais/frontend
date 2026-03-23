@@ -1131,6 +1131,113 @@ const FormBuilder = () => {
                     </Typography>
                   </Grid>
 
+                  <Grid item xs={12}>
+                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginTop: 16, marginBottom: 8 }}>
+                      Horário de pedidos (cardápio)
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" style={{ marginBottom: 12 }}>
+                      Fora deste intervalo, o cardápio público não poderá ser utilizado para novos pedidos e uma mensagem informará o horário de funcionamento. A validação também é aplicada no envio do pedido (API).
+                    </Typography>
+                  </Grid>
+                  <Grid item xs={12}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={!!formData.settings?.orderHoursEnabled}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                orderHoursEnabled: e.target.checked,
+                                orderHoursStart: formData.settings?.orderHoursStart ?? "09:00",
+                                orderHoursEnd: formData.settings?.orderHoursEnd ?? "22:00",
+                                orderHoursTimezone: formData.settings?.orderHoursTimezone ?? "America/Sao_Paulo",
+                              },
+                            })
+                          }
+                        />
+                      }
+                      label="Limitar pedidos a um horário fixo"
+                    />
+                  </Grid>
+                  {formData.settings?.orderHoursEnabled && (
+                    <>
+                      <Grid item xs={12} md={4}>
+                        <TextField
+                          fullWidth
+                          variant="outlined"
+                          label="Início"
+                          type="time"
+                          InputLabelProps={{ shrink: true }}
+                          value={formData.settings?.orderHoursStart ?? "09:00"}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: { ...formData.settings, orderHoursStart: e.target.value },
+                            })
+                          }
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <TextField
+                          fullWidth
+                          variant="outlined"
+                          label="Fim"
+                          type="time"
+                          InputLabelProps={{ shrink: true }}
+                          value={formData.settings?.orderHoursEnd ?? "22:00"}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: { ...formData.settings, orderHoursEnd: e.target.value },
+                            })
+                          }
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={4}>
+                        <FormControl fullWidth variant="outlined">
+                          <InputLabel>Fuso horário</InputLabel>
+                          <Select
+                            value={formData.settings?.orderHoursTimezone || "America/Sao_Paulo"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                settings: { ...formData.settings, orderHoursTimezone: e.target.value },
+                              })
+                            }
+                            label="Fuso horário"
+                          >
+                            <MenuItem value="America/Sao_Paulo">Brasília (America/Sao_Paulo)</MenuItem>
+                            <MenuItem value="America/Manaus">Manaus</MenuItem>
+                            <MenuItem value="America/Fortaleza">Fortaleza</MenuItem>
+                            <MenuItem value="America/Recife">Recife</MenuItem>
+                            <MenuItem value="America/Belem">Belém</MenuItem>
+                            <MenuItem value="America/Cuiaba">Cuiabá</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <TextField
+                          fullWidth
+                          variant="outlined"
+                          multiline
+                          minRows={2}
+                          label="Mensagem personalizada (fora do horário)"
+                          placeholder="Deixe em branco para usar o texto padrão formal."
+                          value={formData.settings?.orderHoursMessage || ""}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: { ...formData.settings, orderHoursMessage: e.target.value },
+                            })
+                          }
+                          helperText="Opcional. Se preenchida, substitui a mensagem padrão exibida ao cliente."
+                        />
+                      </Grid>
+                    </>
+                  )}
+
                   {/* Peça de novo (Configurações Gerais) */}
                   <Grid item xs={12}>
                     <Typography variant="subtitle1" style={{ fontWeight: 600, marginTop: 8, marginBottom: 8 }}>

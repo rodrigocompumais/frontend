@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useReducer, useContext } from "react";
+import React, { useState, useEffect, useReducer, useContext, useRef } from "react";
 
 import { makeStyles } from "@material-ui/core/styles";
 import List from "@material-ui/core/List";
@@ -12,6 +12,7 @@ import useTickets from "../../hooks/useTickets";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import { useLocation } from "react-router-dom";
 
 const useStyles = makeStyles((theme) => ({
   ticketsListWrapper: {
@@ -184,9 +185,12 @@ const reducer = (state, action) => {
         userId: ticket.userId != null ? ticket.userId : prev.userId,
         queueId: ticket.queueId !== undefined ? ticket.queueId : prev.queueId,
         whatsappId: ticket.whatsappId != null ? ticket.whatsappId : prev.whatsappId,
+        isGroup: ticket.isGroup != null ? ticket.isGroup : prev.isGroup,
         contact: {
           ...(prev.contact || {}),
           ...(ticket.contact || {}),
+          isGroup: ticket.contact?.isGroup != null ? ticket.contact.isGroup : prev.contact?.isGroup,
+          number: ticket.contact?.number != null ? ticket.contact.number : prev.contact?.number,
           // preservar foto se o payload vier parcial
           profilePicUrl:
             ticket.contact?.profilePicUrl != null
@@ -247,12 +251,26 @@ const TicketsListCustom = (props) => {
   const { user } = useContext(AuthContext);
   const { profile, queues } = user;
 
+  // Mapa local para estabilizar classificação de "grupo" quando o payload realtime vier parcial.
+  // Ex.: quando `ticket.isGroup` não vier no `appMessage`, tentamos recuperar a classificação
+  // do ticket que já está (ou já esteve) na lista carregada via API.
+  const ticketGroupByIdRef = useRef(new Map());
+
   const socketManager = useContext(SocketContext);
+
+  const location = useLocation();
 
   useEffect(() => {
     dispatch({ type: "RESET" });
     setPageNumber(1);
   }, [status, searchParam, dispatch, showAll, tags, users, selectedQueueIds, filterIsGroup]);
+
+  // Ticket aberto na rota atual (usado para não incrementar/unread quando o ticket está sendo visualizado).
+  const currentTicketUuidRef = useRef(null);
+  useEffect(() => {
+    const match = location.pathname.match(/\/tickets\/([^\/]+)/);
+    currentTicketUuidRef.current = match ? match[1] : null;
+  }, [location.pathname]);
 
   const { tickets, hasMore, loading } = useTickets({
     pageNumber,
@@ -278,31 +296,63 @@ const TicketsListCustom = (props) => {
       });
     }
 
+    let ticketsToDispatch = [];
+
     if (profile === "user") {
-      dispatch({ type: "LOAD_TICKETS", payload: filteredTickets });
+      ticketsToDispatch = filteredTickets;
     } else {
       // Para admin, também aplicar filtro de grupo nos tickets gerais
-      let ticketsToShow = tickets;
+      ticketsToDispatch = tickets;
       if (filterIsGroup !== undefined) {
-        ticketsToShow = tickets.filter((t) => {
+        ticketsToDispatch = tickets.filter((t) => {
           const ticketIsGroup = isTicketGroup(t);
           return filterIsGroup ? ticketIsGroup : !ticketIsGroup;
         });
       }
-      dispatch({ type: "LOAD_TICKETS", payload: ticketsToShow });
     }
+
+    // Atualizar mapa para fallback de classificação no realtime.
+    ticketGroupByIdRef.current.clear();
+    ticketsToDispatch.forEach((t) => {
+      const key = Number(t.id);
+      if (!Number.isNaN(key)) ticketGroupByIdRef.current.set(key, isTicketGroup(t));
+    });
+
+    dispatch({ type: "LOAD_TICKETS", payload: ticketsToDispatch });
   }, [tickets, status, searchParam, queues, profile, filterIsGroup]);
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
+    const selectedQueueIdSet = new Set(selectedQueueIds.map((id) => Number(id)));
+
     const shouldUpdateTicket = (ticket) => {
-      const meetsQueueAndUser = (!ticket.userId || ticket.userId === user?.id || showAll) &&
-        (!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1);
+      const meetsUser =
+        showAll ||
+        (ticket.userId != null && Number(ticket.userId) === Number(user?.id)) ||
+        // Para tickets pendentes sem responsável, permitir que a fila veja.
+        (ticket.userId == null && status === "pending");
+
+      const meetsQueue =
+        !ticket.queueId || selectedQueueIdSet.has(Number(ticket.queueId));
+
+      const meetsQueueAndUser = meetsUser && meetsQueue;
       
       // Se há filtro de grupo, verificar também
       if (filterIsGroup !== undefined && meetsQueueAndUser) {
+        const payloadHasGroupSignals =
+          ticket?.isGroup != null ||
+          ticket?.contact?.isGroup != null ||
+          ticket?.contact?.number != null ||
+          ticket?.groupContact != null;
+
+        // Se o payload vier parcial demais, tenta resolver pela classificação que já temos do ticket.
+        if (!payloadHasGroupSignals) {
+          const knownGroup = ticketGroupByIdRef.current.get(Number(ticket?.id));
+          if (knownGroup != null) return filterIsGroup ? knownGroup : !knownGroup;
+        }
+
         const ticketIsGroup = isTicketGroup(ticket);
         return filterIsGroup ? ticketIsGroup : !ticketIsGroup;
       }
@@ -311,7 +361,7 @@ const TicketsListCustom = (props) => {
     };
 
     const notBelongsToUserQueues = (ticket) =>
-      ticket.queueId && selectedQueueIds.indexOf(ticket.queueId) === -1;
+      ticket.queueId != null && !selectedQueueIdSet.has(Number(ticket.queueId));
 
     const handleReady = () => {
       if (status) {
@@ -330,19 +380,9 @@ const TicketsListCustom = (props) => {
       }
 
       if (data.action === "update" && shouldUpdateTicket(data.ticket) && data.ticket.status === status) {
-        // Verificar se o ticket está aberto (comparando com ticketId da URL)
-        // Usar uma função helper para obter o ticketId atual da URL
-        const getCurrentTicketId = () => {
-          const pathname = window.location.pathname;
-          if (pathname.includes('/tickets/')) {
-            const match = pathname.match(/\/tickets\/(\d+)/);
-            return match ? parseInt(match[1]) : null;
-          }
-          return null;
-        };
-        
-        const currentTicketId = getCurrentTicketId();
-        const isOpenTicket = currentTicketId === data.ticket.id;
+        const isOpenTicket =
+          currentTicketUuidRef.current != null &&
+          currentTicketUuidRef.current === data.ticket.uuid;
         
         dispatch({
           type: "UPDATE_TICKET",
@@ -369,28 +409,10 @@ const TicketsListCustom = (props) => {
     };
 
     const handleAppMessage = (data) => {
-      const queueIds = queues.map((q) => q.id);
-      if (
-        profile === "user" &&
-        (queueIds.indexOf(data.ticket?.queue?.id) === -1 ||
-          data.ticket.queue === null)
-      ) {
-        return;
-      }
-
       if (data.action === "create" && shouldUpdateTicket(data.ticket) && ( status === undefined || data.ticket.status === status)) {
-        // Verificar se o ticket está aberto (comparando com ticketId da URL)
-        const getCurrentTicketId = () => {
-          const pathname = window.location.pathname;
-          if (pathname.includes('/tickets/')) {
-            const match = pathname.match(/\/tickets\/(\d+)/);
-            return match ? parseInt(match[1]) : null;
-          }
-          return null;
-        };
-        
-        const currentTicketId = getCurrentTicketId();
-        const isOpenTicket = currentTicketId === data.ticket.id;
+        const isOpenTicket =
+          currentTicketUuidRef.current != null &&
+          currentTicketUuidRef.current === data.ticket.uuid;
         
         dispatch({
           type: "UPDATE_TICKET_UNREAD_MESSAGES",

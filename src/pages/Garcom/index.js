@@ -46,6 +46,7 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import ContactModal from "../../components/ContactModal";
 import LiberarMesaModal from "../../components/LiberarMesaModal";
 import OrderNotificationPopup from "../../components/OrderNotificationPopup";
+import { isWithinMenuOrderHours, getMenuOrderHoursClosedMessage } from "../../utils/menuOrderHours";
 
 const filter = createFilterOptions({ trim: true });
 
@@ -203,6 +204,8 @@ const Garcom = () => {
   const [notificationOpen, setNotificationOpen] = useState(false);
 
   const [orderDialogOpen, setOrderDialogOpen] = useState(false);
+  /** Enquanto carrega o formulário da mesa ao abrir o diálogo de pedido */
+  const [orderDialogFormLoading, setOrderDialogFormLoading] = useState(false);
   const [mesaParaPedido, setMesaParaPedido] = useState(null);
   const [contactParaPedido, setContactParaPedido] = useState(null);
   const [orderLines, setOrderLines] = useState([]);
@@ -278,8 +281,12 @@ const Garcom = () => {
 
   // Ao abrir o dialog de pedido, carregar o formulário vinculado à mesa (não o primeiro da lista)
   useEffect(() => {
-    if (!orderDialogOpen || !mesaParaPedido) return;
+    if (!orderDialogOpen || !mesaParaPedido) {
+      setOrderDialogFormLoading(false);
+      return;
+    }
     let cancelled = false;
+    setOrderDialogFormLoading(true);
     const loadFormForMesa = async () => {
       try {
         let formToUse = null;
@@ -310,10 +317,14 @@ const Garcom = () => {
         }
       } catch (err) {
         if (!cancelled) toastError(err);
+      } finally {
+        if (!cancelled) setOrderDialogFormLoading(false);
       }
     };
     loadFormForMesa();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [orderDialogOpen, mesaParaPedido?.id, mesaParaPedido?.formId, mesaParaPedido?.form?.publicId]);
 
   useEffect(() => {
@@ -831,6 +842,10 @@ const Garcom = () => {
 
   const submitOrder = async () => {
     if (!form?.slug || !mesaParaPedido || !contactParaPedido) return;
+    if (form && !isWithinMenuOrderHours(form.settings)) {
+      toast.error(getMenuOrderHoursClosedMessage(form.settings));
+      return;
+    }
     if (getTotalItems() === 0) {
       toast.error("Adicione itens ao pedido");
       return;
@@ -957,6 +972,12 @@ const Garcom = () => {
   };
 
   const groups = [...new Set(products.map((p) => p.grupo || "Outros"))].sort();
+
+  const orderHoursBlocked =
+    orderDialogOpen &&
+    !orderDialogFormLoading &&
+    form &&
+    !isWithinMenuOrderHours(form.settings);
 
   const filteredMesas = mesas.filter((m) => {
     if (!mesaStatusFilter) return true;
@@ -1110,6 +1131,21 @@ const Garcom = () => {
           )}
         </DialogTitle>
         <DialogContent className={classes.orderDialogContent}>
+          {orderDialogFormLoading ? (
+            <Box display="flex" justifyContent="center" py={3}>
+              <CircularProgress />
+            </Box>
+          ) : orderHoursBlocked ? (
+            <Box py={1}>
+              <Typography variant="h6" gutterBottom>
+                Fora do horário de pedidos
+              </Typography>
+              <Typography variant="body1" color="textSecondary" style={{ whiteSpace: "pre-line", lineHeight: 1.6 }}>
+                {getMenuOrderHoursClosedMessage(form.settings)}
+              </Typography>
+            </Box>
+          ) : (
+            <>
           <TextField
             size="small"
             placeholder="Buscar produto..."
@@ -1301,7 +1337,10 @@ const Garcom = () => {
               )}
             </Box>
           )}
+            </>
+          )}
         </DialogContent>
+        {!orderDialogFormLoading && !orderHoursBlocked && (
         <DialogActions className={classes.summaryRow}>
           <Typography variant="h6">
             Total: R$ {(Number(calculateTotal()) || 0).toFixed(2).replace(".", ",")} • {getTotalItems()} itens
@@ -1315,6 +1354,14 @@ const Garcom = () => {
             {submitting ? <CircularProgress size={24} color="inherit" /> : "Enviar pedido"}
           </Button>
         </DialogActions>
+        )}
+        {!orderDialogFormLoading && orderHoursBlocked && (
+          <DialogActions className={classes.summaryRow}>
+            <Button variant="outlined" color="primary" onClick={() => { setOrderDialogOpen(false); setMesaParaPedido(null); setContactParaPedido(null); }}>
+              Fechar
+            </Button>
+          </DialogActions>
+        )}
       </Dialog>
 
       <Dialog

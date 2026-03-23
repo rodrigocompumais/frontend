@@ -46,13 +46,19 @@ const useTicketNotifications = () => {
       if (message.isInternal || message.fromMe) return;
 
       // Se o ticket tem um responsável, notificar apenas para ele
-      if (ticket.userId) {
-        if (ticket.userId !== user.id) {
+      const isPendingTicket = ticket?.status === "pending";
+
+      if (ticket?.userId != null) {
+        if (Number(ticket.userId) !== Number(user.id)) {
           return; // Não notificar se não é o responsável
         }
       } else {
+        // Ticket sem responsável: só notificar para pendentes (quando a fila deve "ver tudo")
+        if (!isPendingTicket) return;
+
         // Se não tem responsável, verificar se o usuário está na fila
-        const isInQueue = user.queues?.some((queue) => queue.id === ticket.queueId) || false;
+        const isInQueue =
+          user.queues?.some((queue) => queue.id === ticket.queueId) || false;
         if (!isInQueue && ticket.queueId) {
           return; // Não notificar se não está na fila e o ticket tem fila
         }

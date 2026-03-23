@@ -44,6 +44,7 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { isFieldVisible } from "../../utils/formUtils";
 import { getFormAppearanceStyles, FONT_IMPORTS } from "../../utils/formAppearanceStyles";
+import { isWithinMenuOrderHours, getMenuOrderHoursClosedMessage } from "../../utils/menuOrderHours";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -1924,6 +1925,23 @@ const PublicMenuForm = ({
         <Box className={classes.loadingContainer}>
           <CircularProgress />
         </Box>
+      </Box>
+    );
+  }
+
+  if (form && !isWithinMenuOrderHours(form.settings)) {
+    return (
+      <Box className={classes.root} style={appStyles?.rootStyle}>
+        <Paper className={classes.formPaper} style={appStyles?.formPaperStyle}>
+          <Box style={{ textAlign: "center", padding: 24 }}>
+            <Typography variant="h5" gutterBottom style={{ fontWeight: 600 }}>
+              Fora do horário de pedidos
+            </Typography>
+            <Typography variant="body1" color="textSecondary" style={{ whiteSpace: "pre-line", lineHeight: 1.6 }}>
+              {getMenuOrderHoursClosedMessage(form.settings)}
+            </Typography>
+          </Box>
+        </Paper>
       </Box>
     );
   }
