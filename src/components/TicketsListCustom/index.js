@@ -13,6 +13,7 @@ import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { useLocation } from "react-router-dom";
+import { canUserAccessTicket } from "../../utils/ticketEligibility";
 
 const useStyles = makeStyles((theme) => ({
   ticketsListWrapper: {
@@ -326,16 +327,20 @@ const TicketsListCustom = (props) => {
     const socket = socketManager.getSocket(companyId);
 
     const selectedQueueIdSet = new Set(selectedQueueIds.map((id) => Number(id)));
+    const hasQueueFilter = selectedQueueIdSet.size > 0;
 
     const shouldUpdateTicket = (ticket) => {
       const meetsUser =
         showAll ||
-        (ticket.userId != null && Number(ticket.userId) === Number(user?.id)) ||
-        // Para tickets pendentes sem responsável, permitir que a fila veja.
-        (ticket.userId == null && status === "pending");
+        canUserAccessTicket(ticket, user, {
+          allowUnassignedPending: status === "pending",
+          allowUnassignedWithoutQueue: true
+        });
 
       const meetsQueue =
-        !ticket.queueId || selectedQueueIdSet.has(Number(ticket.queueId));
+        !hasQueueFilter ||
+        !ticket.queueId ||
+        selectedQueueIdSet.has(Number(ticket.queueId));
 
       const meetsQueueAndUser = meetsUser && meetsQueue;
       
@@ -361,7 +366,9 @@ const TicketsListCustom = (props) => {
     };
 
     const notBelongsToUserQueues = (ticket) =>
-      ticket.queueId != null && !selectedQueueIdSet.has(Number(ticket.queueId));
+      hasQueueFilter &&
+      ticket.queueId != null &&
+      !selectedQueueIdSet.has(Number(ticket.queueId));
 
     const handleReady = () => {
       if (status) {

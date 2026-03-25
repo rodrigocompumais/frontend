@@ -3,6 +3,7 @@ import { useLocation, useHistory } from "react-router-dom";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { toast } from "react-toastify";
+import { canNotifyBrowserForTicket } from "../../utils/ticketEligibility";
 
 const NO_NOTIFICATION_PATHS = ["/garcom", "/cozinha"];
 
@@ -46,23 +47,7 @@ const useTicketNotifications = () => {
       if (message.isInternal || message.fromMe) return;
 
       // Se o ticket tem um responsável, notificar apenas para ele
-      const isPendingTicket = ticket?.status === "pending";
-
-      if (ticket?.userId != null) {
-        if (Number(ticket.userId) !== Number(user.id)) {
-          return; // Não notificar se não é o responsável
-        }
-      } else {
-        // Ticket sem responsável: só notificar para pendentes (quando a fila deve "ver tudo")
-        if (!isPendingTicket) return;
-
-        // Se não tem responsável, verificar se o usuário está na fila
-        const isInQueue =
-          user.queues?.some((queue) => queue.id === ticket.queueId) || false;
-        if (!isInQueue && ticket.queueId) {
-          return; // Não notificar se não está na fila e o ticket tem fila
-        }
-      }
+      if (!canNotifyBrowserForTicket(ticket, user)) return;
 
       // Verificar se o ticket está sendo visualizado atualmente
       const ticketUuid = ticket.uuid;

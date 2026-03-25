@@ -21,6 +21,7 @@ import alertSound from "../../assets/sound.mp3";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { i18n } from "../../translate/i18n";
 import toastError from "../../errors/toastError";
+import { canNotifyBrowserForTicket, canUserAccessTicket } from "../../utils/ticketEligibility";
 
 const useStyles = makeStyles(theme => ({
 	tabContainer: {
@@ -170,26 +171,31 @@ const NotificationsPopOver = (volume) => {
 		});
 
 		socket.on(`company-${user.companyId}-appMessage`, data => {
+			const ticket = data.ticket || {};
+			const canAccessTicket = canUserAccessTicket(ticket, user, {
+				allowUnassignedPending: true,
+				allowUnassignedWithoutQueue: true
+			});
+
 			if (
 				data.action === "create" && !data.message.fromMe && 
-				(!data.message.read || data.ticket.status === "pending") &&
-				(data.ticket.userId === user?.id || !data.ticket.userId) &&
-				(user?.queues?.some(queue => (queue.id === data.ticket.queueId)) || !data.ticket.queueId)
+				(!data.message.read || ticket.status === "pending") &&
+				canAccessTicket
 			) {
 				setNotifications(prevState => {
-					const ticketIndex = prevState.findIndex(t => t.id === data.ticket.id);
+					const ticketIndex = prevState.findIndex(t => t.id === ticket.id);
 					if (ticketIndex !== -1) {
-						prevState[ticketIndex] = data.ticket;
+						prevState[ticketIndex] = ticket;
 						return [...prevState];
 					}
-					return [data.ticket, ...prevState];
+					return [ticket, ...prevState];
 				});
 
 				const shouldNotNotificate =
 					(data.message.ticketId === ticketIdRef.current &&
 						document.visibilityState === "visible") ||
-					(data.ticket.userId && data.ticket.userId !== user?.id) ||
-					data.ticket.isGroup;
+					!canNotifyBrowserForTicket(ticket, user) ||
+					ticket.isGroup;
 
 				if (shouldNotNotificate) return;
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useContext, useRef } from "react";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import api from "../../services/api";
+import { canUserAccessTicket } from "../../utils/ticketEligibility";
 
 const useNotificationCounts = () => {
   const { user } = useContext(AuthContext);
@@ -103,25 +104,11 @@ const useNotificationCounts = () => {
       return () => {};
     }
 
-    const userQueueIds = user.queues?.map(q => q.id) || [];
-
-    const shouldCountTicket = (ticket) => {
-      // Regra de negócio:
-      // - Se já tem responsável, só o responsável recebe notificação.
-      // - Se não tem responsável e está aguardando (pending), todos da fila (ou sem fila) recebem.
-      // - Para status diferentes de pending sem responsável, manter filtro por fila.
-      if (ticket?.userId) {
-        return Number(ticket.userId) === Number(user.id);
-      }
-
-      if (ticket?.status === "pending") {
-        if (!ticket.queueId) return true; // sem fila -> todos
-        return userQueueIds.indexOf(ticket.queueId) > -1;
-      }
-
-      if (!ticket?.queueId) return true;
-      return userQueueIds.indexOf(ticket.queueId) > -1;
-    };
+    const shouldCountTicket = ticket =>
+      canUserAccessTicket(ticket, user, {
+        allowUnassignedPending: true,
+        allowUnassignedWithoutQueue: true
+      });
 
     const handleTicket = (data) => {
       if (!data.ticket) return;
@@ -215,6 +202,7 @@ const useNotificationCounts = () => {
       const isTicketOpen = currentTicketId === ticketId;
 
       if (data.action === "create" && !data.message.fromMe) {
+        if (!shouldCountTicket(data.ticket)) return;
         // Se o ticket está aberto, não incrementar contador (mensagem será marcada como lida)
         if (isTicketOpen) {
           return;

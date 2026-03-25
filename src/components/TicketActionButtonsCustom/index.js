@@ -155,9 +155,9 @@ const TicketActionButtonsCustom = ({ ticket, realTimeTranslationEnabled = true, 
 			await api.put(`/tickets/${ticket.id}`, {
 				status: status,
 				userId: userId || null,
-				useIntegration: status === "closed" ? false : ticket.useIntegration,
-				promptId: status === "closed" ? false : ticket.promptId,
-				integrationId: status === "closed" ? false : ticket.integrationId
+				useIntegration: (status === "closed" || status === "rating") ? false : ticket.useIntegration,
+				promptId: (status === "closed" || status === "rating") ? false : ticket.promptId,
+				integrationId: (status === "closed" || status === "rating") ? false : ticket.integrationId
 			});
 
 			setLoading(false);
@@ -250,7 +250,7 @@ const TicketActionButtonsCustom = ({ ticket, realTimeTranslationEnabled = true, 
 							</Tooltip>
 							<Tooltip title={i18n.t("messagesList.header.buttons.resolve")}>
 								<Button
-									onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
+									onClick={e => handleUpdateTicketStatus(e, "rating", user?.id)}
 									className={classes.resolveButton}
 									startIcon={<CheckCircleIcon />}
 									disabled={loading}

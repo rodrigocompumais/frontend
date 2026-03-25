@@ -497,6 +497,16 @@ const TicketsManagerTabs = () => {
           </div>
         ) : (
           <div className={classes.actionButtonsContainer}>
+            {check(user.profile, "tickets-manager:showall") && (
+              <Button
+                size="small"
+                variant={showAllTickets ? "contained" : "outlined"}
+                color="primary"
+                onClick={() => setShowAllTickets((prevState) => !prevState)}
+              >
+                {showAllTickets ? "Todos" : "Meus"}
+              </Button>
+            )}
             <IconButton
               color="primary"
               onClick={() => setNewTicketModalOpen(true)}
@@ -519,28 +529,6 @@ const TicketsManagerTabs = () => {
           onClose={handleCloseFilterMenu}
           className={classes.filterMenu}
         >
-          {check(user.profile, "tickets-manager:showall") && (
-            <Box className={classes.filterMenuSection}>
-              <FormControlLabel
-                label={i18n.t("tickets.buttons.showAll")}
-                labelPlacement="start"
-                control={
-                  <Switch
-                    size="small"
-                    checked={showAllTickets}
-                    onChange={() =>
-                      setShowAllTickets((prevState) => !prevState)
-                    }
-                    name="showAllTickets"
-                    color="primary"
-                  />
-                }
-              />
-            </Box>
-          )}
-          {check(user.profile, "tickets-manager:showall") && (
-            <Divider />
-          )}
           <Box className={classes.filterMenuSection}>
             <Typography variant="caption" color="textSecondary" style={{ padding: "8px 16px" }}>
               Filas
@@ -583,7 +571,7 @@ const TicketsManagerTabs = () => {
           </Box>
         </Menu>
       </Paper>
-      <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={false}>
+      <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={true}>
         {subTab === "conversations" && (
           <TicketsList
             status="open"
@@ -615,7 +603,7 @@ const TicketsManagerTabs = () => {
           />
         )}
       </TabPanel>
-      <TabPanel value={tab} name="pending" className={classes.ticketsWrapper} keepMounted={false}>
+      <TabPanel value={tab} name="pending" className={classes.ticketsWrapper} keepMounted={true}>
         <TicketsList
           status="pending"
           showAll={showAllTickets}

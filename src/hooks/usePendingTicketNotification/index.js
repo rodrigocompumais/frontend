@@ -3,6 +3,7 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import newChatSound from "../../assets/new_chat.mp3";
 import api from "../../services/api";
+import { canUserAccessTicket } from "../../utils/ticketEligibility";
 
 const usePendingTicketNotification = () => {
   const { user } = useContext(AuthContext);
@@ -203,24 +204,11 @@ const usePendingTicketNotification = () => {
       return () => {};
     }
 
-    const userQueueIds = user.queues?.map(q => q.id) || [];
-
-    const shouldCountTicket = (ticket) => {
-      // Regra de negócio:
-      // - Se já tem responsável, só o responsável recebe notificação.
-      // - Se não tem responsável e está pending, todos da fila (ou sem fila) recebem.
-      if (ticket?.userId) {
-        return Number(ticket.userId) === Number(user.id);
-      }
-
-      if (ticket?.status === "pending") {
-        if (!ticket.queueId) return true; // sem fila -> todos
-        return userQueueIds.indexOf(ticket.queueId) > -1;
-      }
-
-      if (!ticket?.queueId) return true;
-      return userQueueIds.indexOf(ticket.queueId) > -1;
-    };
+    const shouldCountTicket = ticket =>
+      canUserAccessTicket(ticket, user, {
+        allowUnassignedPending: true,
+        allowUnassignedWithoutQueue: true
+      });
 
     const handleTicket = (data) => {
       if (!data.ticket) return;

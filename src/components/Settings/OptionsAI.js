@@ -12,7 +12,6 @@ import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import { Select, MenuItem, InputLabel, FormHelperText } from "@material-ui/core";
 import OptionsLanguage from "./OptionsLanguage";
-import { sanitizeApiKeyInput } from "../../utils/sanitizeApiKey";
 
 const useStyles = makeStyles((theme) => ({
     container: {
@@ -97,12 +96,11 @@ export default function OptionsAI(props) {
     };
 
     async function handleGeminiApiKey(value) {
-        const clean = sanitizeApiKeyInput(value);
-        setGeminiApiKey(clean);
+        setGeminiApiKey(value);
         setLoadingGeminiApiKey(true);
         await update({
             key: "geminiApiKey",
-            value: clean,
+            value,
         });
         toast.success(i18n.t("settings.options.toasts.success"));
         setLoadingGeminiApiKey(false);
@@ -136,12 +134,11 @@ export default function OptionsAI(props) {
     }
 
     async function handleOpenaiApiKey(value) {
-        const clean = sanitizeApiKeyInput(value);
-        setOpenaiApiKey(clean);
+        setOpenaiApiKey(value);
         setLoadingOpenaiApiKey(true);
         await update({
             key: "openaiApiKey",
-            value: clean,
+            value,
         });
         toast.success(i18n.t("settings.options.toasts.success"));
         setLoadingOpenaiApiKey(false);

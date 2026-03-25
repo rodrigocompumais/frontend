@@ -115,7 +115,7 @@ const TicketActionButtons = ({ ticket }) => {
 								size="small"
 								variant="contained"
 								color="primary"
-								onClick={e => handleUpdateTicketStatus(e, "closed", user?.id)}
+								onClick={e => handleUpdateTicketStatus(e, "rating", user?.id)}
 							>
 								{i18n.t("messagesList.header.buttons.resolve")}
 							</ButtonWithSpinner>

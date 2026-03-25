@@ -57,7 +57,6 @@ import useCompanyModules from "../../hooks/useCompanyModules";
 import { i18n } from "../../translate/i18n";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
-import { isWithinMenuOrderHours, getMenuOrderHoursClosedMessage } from "../../utils/menuOrderHours";
 
 // Pedidos mesa: Novo, Confirmado, Em preparo, Pronto, Entregue, Cancelado
 const MESA_ORDER_STAGES = [
@@ -1026,10 +1025,6 @@ const Mesas = ({ cardapioSlugFromHub }) => {
 
   const submitOrder = async () => {
     if (!orderForm?.publicId || !mesaParaPedido) return;
-    if (orderForm && !isWithinMenuOrderHours(orderForm.settings)) {
-      toast.error(getMenuOrderHoursClosedMessage(orderForm.settings));
-      return;
-    }
     if (getOrderTotalItems() === 0) {
       toast.error("Adicione itens ao pedido");
       return;
@@ -1162,12 +1157,6 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       )
     : orderProducts;
   const orderGroups = [...new Set(orderProductsFiltered.map((p) => p.grupo || "Outros"))].sort();
-
-  const orderHoursBlocked =
-    orderDialogOpen &&
-    !orderLoading &&
-    orderForm &&
-    !isWithinMenuOrderHours(orderForm.settings);
 
   useEffect(() => {
     if (!mesaIdFromUrl || mesas.length === 0 || !highlightedMesaRef.current) return;
@@ -1533,15 +1522,6 @@ const Mesas = ({ cardapioSlugFromHub }) => {
             <Box display="flex" justifyContent="center" py={3}>
               <CircularProgress />
             </Box>
-          ) : orderHoursBlocked ? (
-            <Box py={2}>
-              <Typography variant="h6" gutterBottom>
-                Fora do horário de pedidos
-              </Typography>
-              <Typography variant="body1" color="textSecondary" style={{ whiteSpace: "pre-line", lineHeight: 1.6 }}>
-                {getMenuOrderHoursClosedMessage(orderForm.settings)}
-              </Typography>
-            </Box>
           ) : (
             <>
               <TextField
@@ -1728,7 +1708,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
             </>
           )}
         </DialogContent>
-        {!orderLoading && !orderHoursBlocked && (
+        {!orderLoading && (
           <Box component={DialogActions} className={classes.orderDialogFooter} disableSpacing>
             <Typography variant="h6" style={{ margin: 0 }}>
               Total: R$ {(Number(calculateOrderTotal()) || 0).toFixed(2).replace(".", ",")} • {getOrderTotalItems()} itens
@@ -1740,13 +1720,6 @@ const Mesas = ({ cardapioSlugFromHub }) => {
               disabled={getOrderTotalItems() === 0 || orderSubmitting}
             >
               {orderSubmitting ? <CircularProgress size={24} color="inherit" /> : "Enviar pedido"}
-            </Button>
-          </Box>
-        )}
-        {!orderLoading && orderHoursBlocked && (
-          <Box component={DialogActions} className={classes.orderDialogFooter} disableSpacing>
-            <Button variant="outlined" color="primary" onClick={handleCloseOrderDialog}>
-              Fechar
             </Button>
           </Box>
         )}
