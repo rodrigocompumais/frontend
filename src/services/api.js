@@ -5,13 +5,11 @@ const api = axios.create({
 	withCredentials: true,
 });
 
-// Cardápio e rotas públicas: evitar cache HTTP/CDN de JSON antigo (horários, settings).
+// Cardápio e rotas públicas: bust de cache via query (evita preflight CORS por headers custom em GET).
+// Headers Cache-Control/Pragma no *pedido* tornam o GET "não-simples" e quebram em aba anônima se o CORS não listar esses headers.
 api.interceptors.request.use((config) => {
 	const u = config.url || "";
 	if (u.includes("/public/")) {
-		config.headers = config.headers || {};
-		config.headers["Cache-Control"] = "no-cache";
-		config.headers["Pragma"] = "no-cache";
 		const method = (config.method || "get").toLowerCase();
 		if (method === "get") {
 			config.params = { ...(config.params || {}), _: Date.now() };
