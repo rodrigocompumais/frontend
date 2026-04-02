@@ -77,9 +77,27 @@ const useStyles = makeStyles((theme) => ({
 	},
 }));
 
+/** Lista de fechados: ordenar por updatedAt (alinha à API) sem “pular” itens por unread/socket */
+const sortClosedListOrder = (arr) =>
+	[...arr].sort((a, b) => {
+		const da = new Date(a.updatedAt).getTime();
+		const db = new Date(b.updatedAt).getTime();
+		if (db !== da) return db - da;
+		return (b.id || 0) - (a.id || 0);
+	});
+
 const reducer = (state, action) => {
 	if (action.type === "LOAD_TICKETS") {
 		const newTickets = action.payload;
+		const closed = action.listStatus === "closed";
+
+		if (closed) {
+			const byId = new Map(state.map((t) => [t.id, t]));
+			newTickets.forEach((ticket) => {
+				byId.set(ticket.id, ticket);
+			});
+			return sortClosedListOrder(Array.from(byId.values()));
+		}
 
 		newTickets.forEach((ticket) => {
 			const ticketIndex = state.findIndex((t) => t.id === ticket.id);
@@ -122,11 +140,14 @@ const reducer = (state, action) => {
 
 	if (action.type === "UPDATE_TICKET_UNREAD_MESSAGES") {
 		const ticket = action.payload;
+		const closed = action.listStatus === "closed";
 
 		const ticketIndex = state.findIndex((t) => t.id === ticket.id);
 		if (ticketIndex !== -1) {
 			state[ticketIndex] = ticket;
-			state.unshift(state.splice(ticketIndex, 1)[0]);
+			if (!closed) {
+				state.unshift(state.splice(ticketIndex, 1)[0]);
+			}
 		} else {
 			state.unshift(ticket);
 		}
@@ -283,7 +304,7 @@ const TicketsList = (props) => {
 			});
 		}
 
-		dispatch({ type: "LOAD_TICKETS", payload: ticketsToLoad });
+		dispatch({ type: "LOAD_TICKETS", payload: ticketsToLoad, listStatus: status });
 
 	}, [tickets, status, searchParam, queues, profile, filterIsGroup, user.allTicket]);
 
@@ -294,6 +315,7 @@ const TicketsList = (props) => {
     }
 
 		const shouldUpdateTicket = (ticket) =>
+			(status === undefined || ticket.status === status) &&
 			(!ticket.userId || ticket.userId === user?.id || showAll) &&
 			(!ticket.queueId || selectedQueueIds.indexOf(ticket.queueId) > -1);
 
@@ -351,6 +373,7 @@ const TicketsList = (props) => {
 					dispatch({
 						type: "UPDATE_TICKET_UNREAD_MESSAGES",
 						payload: data.ticket,
+						listStatus: status,
 					});
 				}
 			}

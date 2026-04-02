@@ -220,6 +220,9 @@ const Garcom = () => {
   const [searchContact, setSearchContact] = useState("");
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
+  const [keywordDialogOpen, setKeywordDialogOpen] = useState(false);
+  const [occupationKeyword, setOccupationKeyword] = useState("");
+  const [pendingMesaConfirmation, setPendingMesaConfirmation] = useState(null);
 
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [newContactInitial, setNewContactInitial] = useState({});
@@ -798,30 +801,81 @@ const Garcom = () => {
         status: "open",
         reuseOpenTicket: true,
       });
-      await api.put(`/mesas/${mesaParaOcupar.id}/ocupar`, {
+      const { data: occupyResult } = await api.put(`/mesas/${mesaParaOcupar.id}/ocupar`, {
         contactId: selectedContact.id,
         ticketId: ticket?.id,
         transferir: true,
       });
-      toast.success("Mesa ocupada");
-      setClienteDialogOpen(false);
+      if (occupyResult?.status === "pending_confirmation") {
+        setPendingMesaConfirmation({
+          mesaId: mesaParaOcupar.id,
+          contact: selectedContact,
+        });
+        setOccupationKeyword("");
+        setKeywordDialogOpen(true);
+        setClienteDialogOpen(false);
+        setMesaParaOcupar(null);
+        setSelectedContact(null);
+        toast.info("Palavra-chave enviada para o WhatsApp do cliente. Confirme para liberar a mesa.");
+      } else {
+        toast.success("Mesa ocupada");
+        setClienteDialogOpen(false);
+        const mesasRes = await api.get("/mesas");
+        setMesas(Array.isArray(mesasRes.data) ? mesasRes.data : []);
+        const mesaAtualizada = (mesasRes.data || []).find((m) => m.id === mesaParaOcupar.id) || {
+          ...mesaParaOcupar,
+          status: "ocupada",
+          contactId: selectedContact.id,
+          contact: selectedContact,
+          ticketId: ticket?.id,
+        };
+        setMesaParaPedido(mesaAtualizada);
+        setContactParaPedido(selectedContact);
+        setOrderLines([]);
+        setHalfAndHalfItems([]);
+        setOrderDialogTab(0);
+        setOrderDialogOpen(true);
+        setMesaParaOcupar(null);
+        setSelectedContact(null);
+      }
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleConfirmarPalavraChave = async () => {
+    const keyword = String(occupationKeyword || "").trim();
+    if (!pendingMesaConfirmation?.mesaId || !keyword) {
+      toast.error("Informe a palavra-chave recebida pelo cliente.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const { data } = await api.post(`/mesas/${pendingMesaConfirmation.mesaId}/confirmar-ocupacao`, {
+        keyword,
+      });
+      const mesaConfirmada = data?.mesa;
+      toast.success("Ocupação confirmada");
+      setKeywordDialogOpen(false);
+      setOccupationKeyword("");
+      setPendingMesaConfirmation(null);
+
       const mesasRes = await api.get("/mesas");
       setMesas(Array.isArray(mesasRes.data) ? mesasRes.data : []);
-      const mesaAtualizada = (mesasRes.data || []).find((m) => m.id === mesaParaOcupar.id) || {
-        ...mesaParaOcupar,
-        status: "ocupada",
-        contactId: selectedContact.id,
-        contact: selectedContact,
-        ticketId: ticket?.id,
-      };
-      setMesaParaPedido(mesaAtualizada);
-      setContactParaPedido(selectedContact);
+
+      if (mesaConfirmada) {
+        setMesaParaPedido(mesaConfirmada);
+      } else {
+        const refreshed = (mesasRes.data || []).find((m) => m.id === pendingMesaConfirmation.mesaId);
+        setMesaParaPedido(refreshed || null);
+      }
+      setContactParaPedido(pendingMesaConfirmation.contact || null);
       setOrderLines([]);
       setHalfAndHalfItems([]);
       setOrderDialogTab(0);
       setOrderDialogOpen(true);
-      setMesaParaOcupar(null);
-      setSelectedContact(null);
     } catch (err) {
       toastError(err);
     } finally {
@@ -1578,6 +1632,54 @@ const Garcom = () => {
             disabled={!selectedContact || submitting}
           >
             {submitting ? <CircularProgress size={24} /> : "Ocupar mesa e fazer pedido"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={keywordDialogOpen}
+        onClose={() => {
+          if (!submitting) {
+            setKeywordDialogOpen(false);
+            setOccupationKeyword("");
+            setPendingMesaConfirmation(null);
+          }
+        }}
+        maxWidth="xs"
+        fullWidth
+        fullScreen={isXs}
+      >
+        <DialogTitle>Confirmar ocupação por palavra-chave</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="textSecondary" style={{ marginBottom: 12 }}>
+            Informe a palavra-chave enviada ao WhatsApp do cliente para efetivar a ocupação da mesa.
+          </Typography>
+          <TextField
+            label="Palavra-chave"
+            variant="outlined"
+            fullWidth
+            value={occupationKeyword}
+            onChange={(e) => setOccupationKeyword(e.target.value.toUpperCase())}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setKeywordDialogOpen(false);
+              setOccupationKeyword("");
+              setPendingMesaConfirmation(null);
+            }}
+            disabled={submitting}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleConfirmarPalavraChave}
+            disabled={!String(occupationKeyword || "").trim() || submitting}
+          >
+            {submitting ? <CircularProgress size={24} /> : "Confirmar ocupação"}
           </Button>
         </DialogActions>
       </Dialog>

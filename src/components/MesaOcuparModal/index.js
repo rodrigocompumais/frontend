@@ -30,6 +30,9 @@ const MesaOcuparModal = ({ open, onClose, mesa, onSuccess }) => {
   const [nomeSemTelefone, setNomeSemTelefone] = useState("");
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [newContactInitial, setNewContactInitial] = useState({});
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const [pendingConfirmationMesaId, setPendingConfirmationMesaId] = useState(null);
+  const [confirmationKeyword, setConfirmationKeyword] = useState("");
 
   useEffect(() => {
     if (!open) {
@@ -37,6 +40,9 @@ const MesaOcuparModal = ({ open, onClose, mesa, onSuccess }) => {
       setSearchParam("");
       setSemTelefone(false);
       setNomeSemTelefone("");
+      setConfirmationOpen(false);
+      setPendingConfirmationMesaId(null);
+      setConfirmationKeyword("");
     }
   }, [open]);
 
@@ -111,13 +117,20 @@ const MesaOcuparModal = ({ open, onClose, mesa, onSuccess }) => {
         });
         ticketId = ticket?.id;
       }
-      await api.put(`/mesas/${mesa.id}/ocupar`, {
+      const { data } = await api.put(`/mesas/${mesa.id}/ocupar`, {
         contactId: selectedContact.id,
         ticketId,
       });
-      toast.success("Mesa ocupada com sucesso");
-      if (onSuccess) onSuccess();
-      onClose();
+      if (data?.status === "pending_confirmation") {
+        setPendingConfirmationMesaId(mesa.id);
+        setConfirmationKeyword("");
+        setConfirmationOpen(true);
+        toast.info("Palavra-chave enviada para o WhatsApp do cliente. Confirme para efetivar a ocupação.");
+      } else {
+        toast.success("Mesa ocupada com sucesso");
+        if (onSuccess) onSuccess();
+        onClose();
+      }
     } catch (err) {
       toastError(err);
     } finally {
@@ -135,11 +148,43 @@ const MesaOcuparModal = ({ open, onClose, mesa, onSuccess }) => {
     setLoading(true);
     try {
       // Sem telefone: backend cria um contato \"placeholder\" automaticamente
-      await api.put(`/mesas/${mesa.id}/ocupar`, {
+      const { data } = await api.put(`/mesas/${mesa.id}/ocupar`, {
         contactName: nome,
         ticketId: null,
       });
-      toast.success("Mesa ocupada com sucesso");
+      if (data?.status === "pending_confirmation") {
+        setPendingConfirmationMesaId(mesa.id);
+        setConfirmationKeyword("");
+        setConfirmationOpen(true);
+        toast.info("Palavra-chave enviada para o WhatsApp do cliente. Confirme para efetivar a ocupação.");
+      } else {
+        toast.success("Mesa ocupada com sucesso");
+        if (onSuccess) onSuccess();
+        onClose();
+      }
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmarOcupacao = async () => {
+    if (!pendingConfirmationMesaId) return;
+    const keyword = String(confirmationKeyword || "").trim();
+    if (!keyword) {
+      toast.error("Informe a palavra-chave para confirmar.");
+      return;
+    }
+    setLoading(true);
+    try {
+      await api.post(`/mesas/${pendingConfirmationMesaId}/confirmar-ocupacao`, {
+        keyword,
+      });
+      toast.success("Ocupação confirmada com sucesso");
+      setConfirmationOpen(false);
+      setPendingConfirmationMesaId(null);
+      setConfirmationKeyword("");
       if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
@@ -257,6 +302,48 @@ const MesaOcuparModal = ({ open, onClose, mesa, onSuccess }) => {
             disabled={(semTelefone ? !String(nomeSemTelefone || "").trim() : !selectedContact) || loading}
           >
             {loading ? <CircularProgress size={24} /> : "Ocupar"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={confirmationOpen}
+        onClose={() => !loading && setConfirmationOpen(false)}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>Confirmar ocupação</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="textSecondary" style={{ marginBottom: 12 }}>
+            Informe a palavra-chave que o cliente recebeu no WhatsApp para efetivar a ocupação.
+          </Typography>
+          <TextField
+            label="Palavra-chave"
+            variant="outlined"
+            margin="dense"
+            fullWidth
+            value={confirmationKeyword}
+            onChange={(e) => setConfirmationKeyword(e.target.value.toUpperCase())}
+            disabled={loading}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setConfirmationOpen(false);
+              setPendingConfirmationMesaId(null);
+              setConfirmationKeyword("");
+            }}
+            disabled={loading}
+          >
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            onClick={handleConfirmarOcupacao}
+            disabled={!String(confirmationKeyword || "").trim() || loading}
+          >
+            {loading ? <CircularProgress size={24} /> : "Confirmar ocupação"}
           </Button>
         </DialogActions>
       </Dialog>

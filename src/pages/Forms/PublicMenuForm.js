@@ -44,6 +44,9 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { isFieldVisible } from "../../utils/formUtils";
 import { getFormAppearanceStyles, FONT_IMPORTS } from "../../utils/formAppearanceStyles";
+import evaluateCardapioOrderHours, {
+  getCardapioOrderHoursScheduleSummary,
+} from "../../utils/cardapioOrderHours";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -401,6 +404,8 @@ const PublicMenuForm = ({
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef(null);
   const [groupPage, setGroupPage] = useState(1);
+  /** Atualiza a cada 1 min para reavaliar horário do cardápio */
+  const [orderHoursTick, setOrderHoursTick] = useState(0);
 
   // Âncora para rolar até o começo dos itens ao trocar grupo
   const itemsStartRef = useRef(null);
@@ -1099,6 +1104,12 @@ const PublicMenuForm = ({
       totalItems: getTotalItems(),
       formId: form?.id 
     });
+
+    const ohCheck = evaluateCardapioOrderHours(form?.settings);
+    if (!ohCheck.allowed) {
+      toast.error(ohCheck.message);
+      return;
+    }
 
     const isValid = validateForm();
     if (!isValid) {
@@ -1918,6 +1929,11 @@ const PublicMenuForm = ({
     setGroupPage(1);
   }, [activeGroup, searchQuery, products.length]);
 
+  useEffect(() => {
+    const id = setInterval(() => setOrderHoursTick((n) => n + 1), 60000);
+    return () => clearInterval(id);
+  }, []);
+
   if (loading) {
     return (
       <Box className={classes.root} style={appStyles?.rootStyle}>
@@ -1926,6 +1942,88 @@ const PublicMenuForm = ({
         </Box>
       </Box>
     );
+  }
+
+  void orderHoursTick;
+  if (form) {
+    const orderHoursState = evaluateCardapioOrderHours(form.settings);
+    if (!orderHoursState.allowed) {
+      const primary = form.primaryColor || "#1976d2";
+      const schedule = getCardapioOrderHoursScheduleSummary(form.settings);
+      return (
+        <Box className={classes.root} style={appStyles?.rootStyle}>
+          {form?.settings?.bannerUrl ? (
+            <img
+              src={form.settings.bannerUrl}
+              alt=""
+              className={classes.heroBanner}
+              onError={(e) => {
+                e.target.style.display = "none";
+              }}
+            />
+          ) : null}
+          <Box className={classes.storeBar}>
+            {form.logoUrl ? (
+              <img src={form.logoUrl} alt="Logo" className={classes.storeLogo} />
+            ) : (
+              <Typography variant="h6" style={{ fontWeight: 700 }}>
+                {form.name}
+              </Typography>
+            )}
+          </Box>
+          <Box className={classes.container} style={{ padding: 24, maxWidth: 560, margin: "0 auto" }}>
+            <Paper
+              className={classes.formPaper}
+              style={{
+                padding: 24,
+                textAlign: "center",
+                borderTop: `4px solid ${primary}`,
+              }}
+            >
+              <Typography variant="h5" style={{ fontWeight: 700, marginBottom: 16, color: primary }}>
+                Cardápio indisponível no momento
+              </Typography>
+              <Typography variant="body1" color="textSecondary" style={{ whiteSpace: "pre-wrap", marginBottom: schedule.lines.length ? 20 : 0 }}>
+                {orderHoursState.message}
+              </Typography>
+              {schedule.lines.length > 0 && (
+                <>
+                  <Divider style={{ margin: "16px 0" }} />
+                  <Typography
+                    variant="subtitle2"
+                    style={{ fontWeight: 700, marginBottom: 12, color: primary, textAlign: "left" }}
+                  >
+                    {schedule.title}
+                  </Typography>
+                  <Box component="ul" style={{ margin: 0, paddingLeft: 20, textAlign: "left" }}>
+                    {schedule.lines.map((line, idx) => (
+                      <Typography
+                        key={`oh-${idx}`}
+                        component="li"
+                        variant="body2"
+                        color="textSecondary"
+                        style={{ marginBottom: 6 }}
+                      >
+                        {line}
+                      </Typography>
+                    ))}
+                  </Box>
+                </>
+              )}
+              {schedule.footnotes.length > 0 && (
+                <Box style={{ marginTop: 16, textAlign: "left" }}>
+                  {schedule.footnotes.map((fn) => (
+                    <Typography key={fn} variant="caption" color="textSecondary" display="block" style={{ marginTop: 6 }}>
+                      {fn}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+            </Paper>
+          </Box>
+        </Box>
+      );
+    }
   }
 
   if (submitted && orderData) {

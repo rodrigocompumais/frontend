@@ -33,7 +33,11 @@ import {
   RadioGroup,
   Checkbox,
   FormGroup,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
 } from "@material-ui/core";
+import ExpandMoreIcon from "@material-ui/icons/ExpandMore";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -118,6 +122,31 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "flex-start",
     gap: theme.spacing(2),
   },
+  /** Blocos na aba Configurações gerais (leitura mais simples) */
+  settingsSectionCard: {
+    padding: theme.spacing(2),
+    height: "100%",
+    borderRadius: theme.shape.borderRadius,
+    backgroundColor: theme.palette.background.paper,
+  },
+  settingsSectionHeading: {
+    fontWeight: 600,
+    fontSize: "1.05rem",
+    marginBottom: theme.spacing(0.5),
+    color: theme.palette.primary.main,
+  },
+  settingsAccordion: {
+    width: "100%",
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: theme.shape.borderRadius,
+    boxShadow: "none",
+    marginBottom: theme.spacing(1.5),
+    "&:before": { display: "none" },
+  },
+  accordionTitle: {
+    fontWeight: 600,
+    fontSize: "0.95rem",
+  },
 }));
 
 const fieldTypes = [
@@ -133,6 +162,26 @@ const fieldTypes = [
   { value: "file", label: "Arquivo" },
   { value: "rating", label: "Avaliação (1-5)" },
 ];
+
+const ORDER_HOURS_DAY_ROWS = [
+  { key: "sunday", label: "Domingo" },
+  { key: "monday", label: "Segunda-feira" },
+  { key: "tuesday", label: "Terça-feira" },
+  { key: "wednesday", label: "Quarta-feira" },
+  { key: "thursday", label: "Quinta-feira" },
+  { key: "friday", label: "Sexta-feira" },
+  { key: "saturday", label: "Sábado" },
+];
+
+const defaultOrderHoursWeekdays = () => ({
+  sunday: { enabled: false, startTime: "09:00", endTime: "22:00" },
+  monday: { enabled: true, startTime: "09:00", endTime: "22:00" },
+  tuesday: { enabled: true, startTime: "09:00", endTime: "22:00" },
+  wednesday: { enabled: true, startTime: "09:00", endTime: "22:00" },
+  thursday: { enabled: true, startTime: "09:00", endTime: "22:00" },
+  friday: { enabled: true, startTime: "09:00", endTime: "22:00" },
+  saturday: { enabled: true, startTime: "09:00", endTime: "22:00" },
+});
 
 const FormBuilder = () => {
   const classes = useStyles();
@@ -157,6 +206,7 @@ const FormBuilder = () => {
   const [bannerUploading, setBannerUploading] = useState(false);
   const logoInputRef = useRef(null);
   const bannerInputRef = useRef(null);
+  const [orderClosedDateDraft, setOrderClosedDateDraft] = useState("");
 
   const [formData, setFormData] = useState({
     name: "",
@@ -193,6 +243,7 @@ const FormBuilder = () => {
       pieceAgainMaxItems: 6, // Máx. itens exibidos na seção
       showMesaField: false, // Exibir campo Número da mesa no cardápio
       mesaFieldMode: "select", // select = dropdown com mesas, input = campo livre
+      mesaOccupationKeywordValidation: false, // Exige confirmação por palavra-chave no WhatsApp para efetivar ocupação manual
       autoAdvanceInterval: 0, // Avançar por todos os estágios a cada X segundos (0 = desativado)
       appearance: {
         fontFamily: "inherit",
@@ -294,6 +345,7 @@ const FormBuilder = () => {
           printDeviceId: null,
           orderTriggerMessages: [],
           averageDeliveryTime: "",
+          mesaOccupationKeywordValidation: false,
           appearance: {
             fontFamily: "inherit",
             borderRadius: "12",
@@ -340,6 +392,7 @@ const FormBuilder = () => {
         mesaPrintConfig: data.settings?.mesaPrintConfig ?? (data.settings?.printDeviceId ? [{ printDeviceId: data.settings.printDeviceId, groupNames: ["*"] }] : []),
         deliveryPrintDeviceIds: Array.isArray(data.settings?.deliveryPrintDeviceIds) ? data.settings.deliveryPrintDeviceIds : (data.settings?.printDeviceId ? [data.settings.printDeviceId] : []),
         orderTriggerMessages: Array.isArray(data.settings?.orderTriggerMessages) ? data.settings.orderTriggerMessages : [],
+        mesaOccupationKeywordValidation: data.settings?.mesaOccupationKeywordValidation === true,
       };
       // Garantir defaults do cardápio para mesa (evitar que mesaFieldMode ausente mostre input em vez de select)
       if (isMenuForm) {
@@ -688,9 +741,19 @@ const FormBuilder = () => {
         {currentTabKey === "gerais" && (
           <Box className={classes.section} style={{ marginTop: 24 }}>
             <Typography className={classes.sectionTitle}>
-              Informações Básicas
+              Configurações gerais
+            </Typography>
+            <Typography variant="body2" color="textSecondary" style={{ marginBottom: 24, maxWidth: 720 }}>
+              As opções estão agrupadas por tema para facilitar a manutenção.
             </Typography>
             <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Paper variant="outlined" className={classes.settingsSectionCard}>
+                  <Typography className={classes.settingsSectionHeading}>Informações básicas</Typography>
+                  <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                    Nome, descrição, ativação e o que acontece após o envio.
+                  </Typography>
+                  <Grid container spacing={2}>
               <Grid item xs={12}>
                 <TextField
                   label="Nome do Formulário *"
@@ -827,11 +890,20 @@ const FormBuilder = () => {
                   </Select>
                 </FormControl>
               </Grid>
+                  </Grid>
+                </Paper>
+              </Grid>
 
               {formData.settings?.formType === "agendamento" && (
-                <Grid container spacing={2} style={{ marginTop: 16 }}>
+                <Grid item xs={12}>
+                  <Paper variant="outlined" className={classes.settingsSectionCard}>
+                    <Typography className={classes.settingsSectionHeading}>Agendamento público</Typography>
+                    <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                      Horários, lembretes e política de cancelamento exibidos no fluxo de agendamento.
+                    </Typography>
+                    <Grid container spacing={2}>
                   <Grid item xs={12}>
-                    <Typography variant="subtitle1" style={{ marginBottom: 8 }}>Configurações do agendamento</Typography>
+                    <Typography variant="subtitle2" style={{ marginBottom: 8, fontWeight: 600 }}>Horários e regras</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
                     <TextField
@@ -998,18 +1070,24 @@ const FormBuilder = () => {
                     </FormControl>
                   </Grid>
                 </Grid>
+                </Paper>
+              </Grid>
               )}
 
               {formData.settings?.formType === "cardapio" && (
-                <Grid container spacing={2} style={{ marginTop: 24 }}>
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 8 }}>
-                      Conexão para envio de notificações
+                <Grid item xs={12}>
+                  <Paper variant="outlined" className={classes.settingsSectionCard}>
+                    <Typography className={classes.settingsSectionHeading}>Cardápio (pedidos online)</Typography>
+                    <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 12 }}>
+                      Toque em cada título para abrir ou fechar. Comece por WhatsApp e horários.
                     </Typography>
-                    <Typography variant="body2" color="textSecondary" style={{ marginBottom: 12 }}>
-                      Defina qual conexão WhatsApp será usada para enviar confirmações e notificações de status do pedido ao cliente.
-                    </Typography>
-                  </Grid>
+                    <Box>
+                    <Accordion className={classes.settingsAccordion} defaultExpanded>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography className={classes.accordionTitle}>WhatsApp</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                    <Grid container spacing={2}>
                   <Grid item xs={12} md={6}>
                     <FormControl fullWidth variant="outlined">
                       <InputLabel>Conexão WhatsApp para Envio</InputLabel>
@@ -1039,7 +1117,7 @@ const FormBuilder = () => {
                       </Select>
                     </FormControl>
                     <Typography variant="caption" color="textSecondary" style={{ marginTop: 8, display: "block" }}>
-                      Selecione qual conexão será usada para enviar a confirmação do pedido e mensagens de status. Se não selecionar, será usada a conexão padrão.
+                      Vazio = usa a conexão padrão da empresa.
                     </Typography>
                   </Grid>
                   <Grid item xs={12}>
@@ -1060,10 +1138,17 @@ const FormBuilder = () => {
                       }
                       label="Desabilitar envio de mensagens para WhatsApp"
                     />
-                    <Typography variant="caption" display="block" color="textSecondary">
-                      Quando ativo, não envia confirmação do pedido nem notificações de status (em preparo, pronto, saiu para entrega, entregue) por WhatsApp.
-                    </Typography>
                   </Grid>
+                    </Grid>
+                      </AccordionDetails>
+                    </Accordion>
+
+                    <Accordion className={classes.settingsAccordion}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography className={classes.accordionTitle}>Mesa e delivery</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                    <Grid container spacing={2}>
                   <Grid item xs={12} md={6}>
                     <FormControlLabel
                       control={
@@ -1082,9 +1167,6 @@ const FormBuilder = () => {
                       }
                       label="Aceita pedidos de mesa"
                     />
-                    <Typography variant="caption" display="block" color="textSecondary">
-                      Permite que clientes façam pedidos para consumo na mesa.
-                    </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <FormControlLabel
@@ -1104,9 +1186,25 @@ const FormBuilder = () => {
                       }
                       label="Requer ocupação de mesa ao fazer pedido"
                     />
-                    <Typography variant="caption" display="block" color="textSecondary">
-                      Quando desativado, permite fazer pedidos sem ocupar a mesa automaticamente. A mesa permanece livre e os pedidos são apenas associados a ela.
-                    </Typography>
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={!!formData.settings?.mesaOccupationKeywordValidation}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                mesaOccupationKeywordValidation: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                      }
+                      label="Exigir confirmação de ocupação por palavra-chave (WhatsApp)"
+                    />
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <FormControlLabel
@@ -1126,17 +1224,20 @@ const FormBuilder = () => {
                       }
                       label="Aceita pedidos de delivery"
                     />
-                    <Typography variant="caption" display="block" color="textSecondary">
-                      Permite que clientes façam pedidos para entrega.
-                    </Typography>
                   </Grid>
+                    </Grid>
+                      </AccordionDetails>
+                    </Accordion>
 
+                    <Accordion className={classes.settingsAccordion} defaultExpanded>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography className={classes.accordionTitle}>Horário de pedidos</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                    <Grid container spacing={2}>
                   <Grid item xs={12}>
-                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginTop: 16, marginBottom: 8 }}>
-                      Horário de pedidos (cardápio)
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary" style={{ marginBottom: 12 }}>
-                      Fora deste intervalo, o cardápio público não poderá ser utilizado para novos pedidos e uma mensagem informará o horário de funcionamento. A validação também é aplicada no envio do pedido (API).
+                    <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 8 }}>
+                      Fora do horário, o cardápio fecha para o cliente (o PDV com login continua podendo pedir).
                     </Typography>
                   </Grid>
                   <Grid item xs={12}>
@@ -1153,49 +1254,21 @@ const FormBuilder = () => {
                                 orderHoursStart: formData.settings?.orderHoursStart ?? "09:00",
                                 orderHoursEnd: formData.settings?.orderHoursEnd ?? "22:00",
                                 orderHoursTimezone: formData.settings?.orderHoursTimezone ?? "America/Sao_Paulo",
+                                orderHoursMode: formData.settings?.orderHoursMode ?? "simple",
+                                orderHoursWeekdays:
+                                  formData.settings?.orderHoursWeekdays || defaultOrderHoursWeekdays(),
+                                orderHoursClosedDates: formData.settings?.orderHoursClosedDates || [],
                               },
                             })
                           }
                         />
                       }
-                      label="Limitar pedidos a um horário fixo"
+                      label="Limitar pedidos por horário"
                     />
                   </Grid>
                   {formData.settings?.orderHoursEnabled && (
                     <>
-                      <Grid item xs={12} md={4}>
-                        <TextField
-                          fullWidth
-                          variant="outlined"
-                          label="Início"
-                          type="time"
-                          InputLabelProps={{ shrink: true }}
-                          value={formData.settings?.orderHoursStart ?? "09:00"}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              settings: { ...formData.settings, orderHoursStart: e.target.value },
-                            })
-                          }
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={4}>
-                        <TextField
-                          fullWidth
-                          variant="outlined"
-                          label="Fim"
-                          type="time"
-                          InputLabelProps={{ shrink: true }}
-                          value={formData.settings?.orderHoursEnd ?? "22:00"}
-                          onChange={(e) =>
-                            setFormData({
-                              ...formData,
-                              settings: { ...formData.settings, orderHoursEnd: e.target.value },
-                            })
-                          }
-                        />
-                      </Grid>
-                      <Grid item xs={12} md={4}>
+                      <Grid item xs={12} md={6}>
                         <FormControl fullWidth variant="outlined">
                           <InputLabel>Fuso horário</InputLabel>
                           <Select
@@ -1217,6 +1290,216 @@ const FormBuilder = () => {
                           </Select>
                         </FormControl>
                       </Grid>
+                      <Grid item xs={12} md={6}>
+                        <Typography variant="subtitle2" style={{ marginBottom: 8 }}>
+                          Modo de horário
+                        </Typography>
+                        <RadioGroup
+                          row
+                          value={formData.settings?.orderHoursMode === "weekly" ? "weekly" : "simple"}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                orderHoursMode: v,
+                                orderHoursWeekdays:
+                                  v === "weekly"
+                                    ? formData.settings?.orderHoursWeekdays || defaultOrderHoursWeekdays()
+                                    : formData.settings?.orderHoursWeekdays,
+                              },
+                            });
+                          }}
+                        >
+                          <FormControlLabel value="simple" control={<Radio color="primary" />} label="Mesmo horário todos os dias" />
+                          <FormControlLabel value="weekly" control={<Radio color="primary" />} label="Por dia da semana" />
+                        </RadioGroup>
+                      </Grid>
+                      {formData.settings?.orderHoursMode === "weekly" ? (
+                        <Grid item xs={12}>
+                          <Table size="small">
+                            <TableHead>
+                              <TableRow>
+                                <TableCell>Dia</TableCell>
+                                <TableCell>Aberto</TableCell>
+                                <TableCell>Início</TableCell>
+                                <TableCell>Fim</TableCell>
+                              </TableRow>
+                            </TableHead>
+                            <TableBody>
+                              {ORDER_HOURS_DAY_ROWS.map((row) => {
+                                const wd = (formData.settings?.orderHoursWeekdays || defaultOrderHoursWeekdays())[row.key] || {
+                                  enabled: false,
+                                  startTime: "09:00",
+                                  endTime: "22:00",
+                                };
+                                return (
+                                  <TableRow key={row.key}>
+                                    <TableCell>{row.label}</TableCell>
+                                    <TableCell padding="checkbox">
+                                      <Checkbox
+                                        color="primary"
+                                        checked={!!wd.enabled}
+                                        onChange={(ev) =>
+                                          setFormData({
+                                            ...formData,
+                                            settings: {
+                                              ...formData.settings,
+                                              orderHoursWeekdays: {
+                                                ...(formData.settings?.orderHoursWeekdays || defaultOrderHoursWeekdays()),
+                                                [row.key]: {
+                                                  ...wd,
+                                                  enabled: ev.target.checked,
+                                                },
+                                              },
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      <TextField
+                                        type="time"
+                                        variant="outlined"
+                                        size="small"
+                                        InputLabelProps={{ shrink: true }}
+                                        value={wd.startTime || "09:00"}
+                                        onChange={(e) =>
+                                          setFormData({
+                                            ...formData,
+                                            settings: {
+                                              ...formData.settings,
+                                              orderHoursWeekdays: {
+                                                ...(formData.settings?.orderHoursWeekdays || defaultOrderHoursWeekdays()),
+                                                [row.key]: { ...wd, startTime: e.target.value },
+                                              },
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </TableCell>
+                                    <TableCell>
+                                      <TextField
+                                        type="time"
+                                        variant="outlined"
+                                        size="small"
+                                        InputLabelProps={{ shrink: true }}
+                                        value={wd.endTime || "22:00"}
+                                        onChange={(e) =>
+                                          setFormData({
+                                            ...formData,
+                                            settings: {
+                                              ...formData.settings,
+                                              orderHoursWeekdays: {
+                                                ...(formData.settings?.orderHoursWeekdays || defaultOrderHoursWeekdays()),
+                                                [row.key]: { ...wd, endTime: e.target.value },
+                                              },
+                                            },
+                                          })
+                                        }
+                                      />
+                                    </TableCell>
+                                  </TableRow>
+                                );
+                              })}
+                            </TableBody>
+                          </Table>
+                        </Grid>
+                      ) : (
+                        <>
+                          <Grid item xs={12} md={4}>
+                            <TextField
+                              fullWidth
+                              variant="outlined"
+                              label="Início"
+                              type="time"
+                              InputLabelProps={{ shrink: true }}
+                              value={formData.settings?.orderHoursStart ?? "09:00"}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  settings: { ...formData.settings, orderHoursStart: e.target.value },
+                                })
+                              }
+                            />
+                          </Grid>
+                          <Grid item xs={12} md={4}>
+                            <TextField
+                              fullWidth
+                              variant="outlined"
+                              label="Fim"
+                              type="time"
+                              InputLabelProps={{ shrink: true }}
+                              value={formData.settings?.orderHoursEnd ?? "22:00"}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  settings: { ...formData.settings, orderHoursEnd: e.target.value },
+                                })
+                              }
+                            />
+                          </Grid>
+                        </>
+                      )}
+                      <Grid item xs={12}>
+                        <Typography variant="subtitle2" style={{ marginBottom: 8 }}>
+                          Fechamento rápido (datas específicas)
+                        </Typography>
+                        <Typography variant="caption" display="block" color="textSecondary" style={{ marginBottom: 8 }}>
+                          Nestas datas o cardápio fica indisponível o dia inteiro, mesmo que caia em um dia normalmente aberto.
+                        </Typography>
+                        <Box display="flex" flexWrap="wrap" alignItems="center" style={{ gap: 8 }}>
+                          <TextField
+                            type="date"
+                            variant="outlined"
+                            size="small"
+                            label="Data"
+                            InputLabelProps={{ shrink: true }}
+                            value={orderClosedDateDraft}
+                            onChange={(e) => setOrderClosedDateDraft(e.target.value)}
+                          />
+                          <Button
+                            variant="outlined"
+                            color="primary"
+                            startIcon={<AddIcon />}
+                            onClick={() => {
+                              const d = (orderClosedDateDraft || "").trim();
+                              if (!d) return;
+                              const cur = Array.isArray(formData.settings?.orderHoursClosedDates)
+                                ? [...formData.settings.orderHoursClosedDates]
+                                : [];
+                              if (cur.includes(d)) return;
+                              cur.push(d);
+                              cur.sort();
+                              setFormData({
+                                ...formData,
+                                settings: { ...formData.settings, orderHoursClosedDates: cur },
+                              });
+                              setOrderClosedDateDraft("");
+                            }}
+                          >
+                            Adicionar data
+                          </Button>
+                        </Box>
+                        <Box display="flex" flexWrap="wrap" style={{ gap: 8, marginTop: 8 }}>
+                          {(formData.settings?.orderHoursClosedDates || []).map((d) => (
+                            <Chip
+                              key={d}
+                              label={d}
+                              onDelete={() =>
+                                setFormData({
+                                  ...formData,
+                                  settings: {
+                                    ...formData.settings,
+                                    orderHoursClosedDates: (formData.settings?.orderHoursClosedDates || []).filter((x) => x !== d),
+                                  },
+                                })
+                              }
+                            />
+                          ))}
+                        </Box>
+                      </Grid>
                       <Grid item xs={12}>
                         <TextField
                           fullWidth
@@ -1237,12 +1520,17 @@ const FormBuilder = () => {
                       </Grid>
                     </>
                   )}
+                    </Grid>
+                      </AccordionDetails>
+                    </Accordion>
 
-                  {/* Peça de novo (Configurações Gerais) */}
+                    <Accordion className={classes.settingsAccordion}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography className={classes.accordionTitle}>Peça de novo e avanço automático</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                    <Grid container spacing={2}>
                   <Grid item xs={12}>
-                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginTop: 8, marginBottom: 8 }}>
-                      Peça de novo
-                    </Typography>
                     <FormControlLabel
                       control={
                         <Switch
@@ -1262,9 +1550,6 @@ const FormBuilder = () => {
                       }
                       label="Ativar “Peça de novo” (por telefone) e auto-preenchimento"
                     />
-                    <Typography variant="caption" display="block" color="textSecondary">
-                      Quando ativo, o cardápio pede o telefone ao abrir, sugere itens dos últimos pedidos e salva dados para preencher automaticamente os campos nas próximas compras.
-                    </Typography>
                   </Grid>
                   <Grid item xs={12} md={6}>
                     <TextField
@@ -1305,17 +1590,13 @@ const FormBuilder = () => {
                     />
                   </Grid>
 
-                  {/* Passar por todos os estágios em X tempo */}
                   <Grid item xs={12}>
-                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginTop: 8, marginBottom: 8 }}>
-                      Avançar automaticamente por todos os estágios
-                    </Typography>
                     <TextField
                       fullWidth
                       variant="outlined"
                       type="number"
                       inputProps={{ min: 0, step: 1 }}
-                      label="Intervalo (segundos)"
+                      label="Avanço automático — intervalo (segundos)"
                       placeholder="0 = desativado"
                       value={formData.settings?.autoAdvanceInterval ?? ""}
                       onChange={(e) => {
@@ -1329,15 +1610,18 @@ const FormBuilder = () => {
                           },
                         });
                       }}
-                      helperText="Quando maior que 0: (1) o formulário avança sozinho pelas categorias e checkout a cada X segundos; (2) no Kanban, pedidos em 'Novo' passam para 'Confirmado' após X minutos. Use 0 para desativar."
+                      helperText="0 = desligado. Com valor maior que zero: o cardápio avança sozinho; no quadro, pedidos novos viram confirmados após o mesmo tempo em minutos."
                     />
                   </Grid>
+                    </Grid>
+                      </AccordionDetails>
+                    </Accordion>
 
-                  {/* Taxa de entrega e condição (Configurações Gerais) */}
-                  <Grid item xs={12}>
-                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginTop: 8, marginBottom: 8 }}>
-                      Taxa de entrega
-                    </Typography>
+                    <Accordion className={classes.settingsAccordion}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography className={classes.accordionTitle}>Taxa e tempo de entrega</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
                     <Grid container spacing={2}>
                       <Grid item xs={12} md={6}>
                         <TextField
@@ -1385,11 +1669,10 @@ const FormBuilder = () => {
 
                       <Grid item xs={12}>
                         <Typography variant="subtitle2" style={{ fontWeight: 600, marginTop: 8 }}>
-                          Condição para aplicar a taxa de entrega
+                          Quando aplicar a taxa
                         </Typography>
                         <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 12 }}>
-                          A taxa só será somada quando a condição abaixo for verdadeira (ex.: campo “Entrega?” = “Sim”). Funciona como campos condicionais.
-                          Dica: se você acabou de criar o formulário, salve primeiro para os campos ganharem ID.
+                          Só soma a taxa se a condição for verdadeira. Salve o formulário antes se os campos ainda não tiverem ID.
                         </Typography>
 
                         <Grid container spacing={2}>
@@ -1536,16 +1819,16 @@ const FormBuilder = () => {
                         </Grid>
                       </Grid>
                     </Grid>
-                  </Grid>
+                      </AccordionDetails>
+                    </Accordion>
 
+                    <Accordion className={classes.settingsAccordion}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography className={classes.accordionTitle}>Mensagens extras no pedido</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                    <Grid container spacing={2}>
                   <Grid item xs={12}>
-                    <Divider style={{ margin: "8px 0 12px" }} />
-                    <Typography variant="subtitle1" style={{ fontWeight: 600 }}>
-                      Mensagens automáticas por opção
-                    </Typography>
-                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 12 }}>
-                      Dispara uma mensagem junto ao pedido quando um campo tiver a opção selecionada.
-                    </Typography>
                     {triggerMessageFields.length === 0 && (
                       <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 8 }}>
                         Crie e salve primeiro ao menos um campo do tipo select, radio ou checkbox na aba Finalizar.
@@ -1666,7 +1949,16 @@ const FormBuilder = () => {
                       Adicionar regra
                     </Button>
                   </Grid>
+                    </Grid>
+                      </AccordionDetails>
+                    </Accordion>
 
+                    <Accordion className={classes.settingsAccordion}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography className={classes.accordionTitle}>Campo “Número da mesa”</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                    <Grid container spacing={2}>
                   <Grid item xs={12} md={6}>
                     <FormControlLabel
                       control={
@@ -1685,9 +1977,6 @@ const FormBuilder = () => {
                       }
                       label="Exibir campo Número da mesa"
                     />
-                    <Typography variant="caption" display="block" color="textSecondary">
-                      Permite que o cliente selecione ou digite a mesa ao finalizar o pedido.
-                    </Typography>
                   </Grid>
                   {formData.settings?.showMesaField && (
                     <Grid item xs={12} md={6}>
@@ -1712,6 +2001,11 @@ const FormBuilder = () => {
                       </FormControl>
                     </Grid>
                   )}
+                    </Grid>
+                      </AccordionDetails>
+                    </Accordion>
+                    </Box>
+                  </Paper>
                 </Grid>
               )}
             </Grid>
