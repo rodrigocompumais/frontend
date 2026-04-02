@@ -42,6 +42,7 @@ const DespesasModal = ({ open, onClose, onSaved }) => {
   const fileInputRef = useRef(null);
   const [form, setForm] = useState({
     descricao: "",
+    fornecedor: "",
     observacoes: "",
     valor: "",
     dataVencimento: "",
@@ -73,7 +74,7 @@ const DespesasModal = ({ open, onClose, onSaved }) => {
     if (!open) {
       setFormOpen(false);
       setEditingId(null);
-      setForm({ descricao: "", observacoes: "", valor: "", dataVencimento: "" });
+      setForm({ descricao: "", fornecedor: "", observacoes: "", valor: "", dataVencimento: "" });
     }
   }, [open]);
 
@@ -82,13 +83,14 @@ const DespesasModal = ({ open, onClose, onSaved }) => {
       setEditingId(item.id);
       setForm({
         descricao: item.descricao || "",
+        fornecedor: item.fornecedor || "",
         observacoes: item.observacoes || "",
         valor: String(item.valor ?? ""),
         dataVencimento: item.dataVencimento || "",
       });
     } else {
       setEditingId(null);
-      setForm({ descricao: "", observacoes: "", valor: "", dataVencimento: "" });
+      setForm({ descricao: "", fornecedor: "", observacoes: "", valor: "", dataVencimento: "" });
     }
     setFormOpen(true);
   };
@@ -110,6 +112,7 @@ const DespesasModal = ({ open, onClose, onSaved }) => {
       setEditingId(null);
       setForm({
         descricao: extracted.descricao || "",
+        fornecedor: extracted.fornecedor || "",
         observacoes: extracted.observacoes || "",
         valor: extracted.valor != null ? String(extracted.valor) : "",
         dataVencimento: extracted.dataVencimento || "",
@@ -127,7 +130,7 @@ const DespesasModal = ({ open, onClose, onSaved }) => {
   const handleCloseForm = () => {
     setFormOpen(false);
     setEditingId(null);
-    setForm({ descricao: "", observacoes: "", valor: "", dataVencimento: "" });
+    setForm({ descricao: "", fornecedor: "", observacoes: "", valor: "", dataVencimento: "" });
   };
 
   const handleSubmit = async (e) => {
@@ -148,6 +151,7 @@ const DespesasModal = ({ open, onClose, onSaved }) => {
       if (editingId) {
         await api.put(`/despesas/${editingId}`, {
           descricao,
+          fornecedor: form.fornecedor ? String(form.fornecedor).trim() : null,
           observacoes: form.observacoes ? String(form.observacoes).trim() : null,
           valor,
           dataVencimento,
@@ -156,6 +160,7 @@ const DespesasModal = ({ open, onClose, onSaved }) => {
       } else {
         await api.post("/despesas", {
           descricao,
+          fornecedor: form.fornecedor ? String(form.fornecedor).trim() : null,
           observacoes: form.observacoes ? String(form.observacoes).trim() : null,
           valor,
           dataVencimento,
@@ -191,7 +196,7 @@ const DespesasModal = ({ open, onClose, onSaved }) => {
         <Box display="flex" flexWrap="wrap" alignItems="center" style={{ gap: 12 }} marginBottom={2}>
           <TextField
             size="small"
-            label="Buscar (descrição ou observações)"
+            label="Buscar (descrição, fornecedor ou observações)"
             variant="outlined"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -242,7 +247,7 @@ const DespesasModal = ({ open, onClose, onSaved }) => {
               {editingId ? "Editar despesa" : "Nova despesa"}
             </Typography>
             <form onSubmit={handleSubmit}>
-              <Box display="flex" flexDirection="column" style={{ gap: 12 }} maxWidth={400}>
+              <Box display="flex" flexDirection="column" style={{ gap: 12 }} maxWidth={480}>
                 <TextField
                   size="small"
                   label="Descrição"
@@ -250,6 +255,15 @@ const DespesasModal = ({ open, onClose, onSaved }) => {
                   value={form.descricao}
                   onChange={(e) => setForm((f) => ({ ...f, descricao: e.target.value }))}
                   required
+                />
+                <TextField
+                  size="small"
+                  label="Fornecedor"
+                  variant="outlined"
+                  value={form.fornecedor}
+                  onChange={(e) => setForm((f) => ({ ...f, fornecedor: e.target.value }))}
+                  inputProps={{ maxLength: 255 }}
+                  placeholder="Emitente / credor (preenchido pela IA ao importar foto)"
                 />
                 <TextField
                   size="small"
@@ -307,6 +321,7 @@ const DespesasModal = ({ open, onClose, onSaved }) => {
               <TableHead>
                 <TableRow>
                   <TableCell>Descrição</TableCell>
+                  <TableCell>Fornecedor</TableCell>
                   <TableCell align="right">Valor</TableCell>
                   <TableCell>Vencimento</TableCell>
                   <TableCell>Observações</TableCell>
@@ -317,6 +332,9 @@ const DespesasModal = ({ open, onClose, onSaved }) => {
                 {list.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell>{row.descricao || "-"}</TableCell>
+                    <TableCell style={{ maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {row.fornecedor || "-"}
+                    </TableCell>
                     <TableCell align="right">{formatCurrency(row.valor)}</TableCell>
                     <TableCell>{formatDate(row.dataVencimento)}</TableCell>
                     <TableCell style={{ maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis" }}>

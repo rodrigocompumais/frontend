@@ -250,7 +250,39 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(0.5),
     objectFit: "contain",
   },
+  messageFileLink: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: theme.spacing(0.5),
+    padding: theme.spacing(0.75, 1),
+    borderRadius: theme.spacing(1),
+    backgroundColor: theme.palette.type === "dark" ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)",
+    fontSize: "0.875rem",
+    color: theme.palette.primary.main,
+    textDecoration: "none",
+    maxWidth: "100%",
+    wordBreak: "break-all",
+    "&:hover": {
+      textDecoration: "underline",
+    },
+  },
+  previewFileChip: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    padding: theme.spacing(1, 1.5),
+    minWidth: 140,
+    maxWidth: 260,
+    borderRadius: theme.spacing(1),
+    border: `2px solid ${theme.palette.primary.main}`,
+    flexShrink: 0,
+  },
 }));
+
+const isImageFileName = (name) =>
+  name && /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(String(name));
 
 export default function ChatMessages({
   chat,
@@ -268,7 +300,7 @@ export default function ChatMessages({
   const fileInputRef = useRef();
 
   const [contentMessage, setContentMessage] = useState("");
-  const [selectedImages, setSelectedImages] = useState([]);
+  const [selectedAttachments, setSelectedAttachments] = useState([]);
 
   const scrollToBottom = () => {
     if (baseRef.current) {
@@ -309,50 +341,51 @@ export default function ChatMessages({
   };
 
   const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files);
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
-    
-    imageFiles.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setSelectedImages(prev => [...prev, {
-          file,
-          preview: event.target.result
-        }]);
-      };
-      reader.readAsDataURL(file);
+    const files = Array.from(e.target.files || []);
+    files.forEach((file) => {
+      const isImage = file.type.startsWith("image/");
+      if (isImage) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setSelectedAttachments((prev) => [
+            ...prev,
+            { file, preview: event.target.result, name: file.name, isImage: true },
+          ]);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setSelectedAttachments((prev) => [
+          ...prev,
+          { file, preview: null, name: file.name, isImage: false },
+        ]);
+      }
     });
-    
-    // Limpar o input para permitir selecionar o mesmo arquivo novamente
-    e.target.value = '';
+    e.target.value = "";
   };
 
-  const removeImage = (index) => {
-    setSelectedImages(prev => prev.filter((_, i) => i !== index));
+  const removeAttachment = (index) => {
+    setSelectedAttachments((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleSend = async () => {
-    if (contentMessage.trim() === "" && selectedImages.length === 0) return;
+    if (contentMessage.trim() === "" && selectedAttachments.length === 0) return;
 
     try {
       const messageText = contentMessage.trim();
-      
-      if (selectedImages.length > 0) {
-        // Enviar cada imagem
-        for (const imageData of selectedImages) {
+
+      if (selectedAttachments.length > 0) {
+        for (const att of selectedAttachments) {
           const formData = new FormData();
-          formData.append("media", imageData.file);
-          // Só adiciona mensagem se houver texto digitado
+          formData.append("media", att.file);
           if (messageText) {
             formData.append("message", messageText);
           }
-          
+
           await handleSendMessage(formData, true);
         }
-        setSelectedImages([]);
+        setSelectedAttachments([]);
         setContentMessage("");
       } else {
-        // Enviar apenas texto
         await handleSendMessage(messageText, false);
         setContentMessage("");
       }
@@ -395,16 +428,27 @@ export default function ChatMessages({
                     <Typography className={classes.senderName}>
                       {item.sender.name}
                     </Typography>
-                    {item.mediaPath && (
-                      <img 
-                        src={`${process.env.REACT_APP_BACKEND_URL}/public/${item.mediaPath}`}
-                        alt=""
-                        className={classes.messageImage}
-                        onError={(e) => {
-                          e.target.style.display = "none";
-                        }}
-                      />
-                    )}
+                    {item.mediaPath &&
+                      (isImageFileName(item.mediaName || item.mediaPath) ? (
+                        <img
+                          src={`${process.env.REACT_APP_BACKEND_URL}/public/${item.mediaPath}`}
+                          alt=""
+                          className={classes.messageImage}
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <a
+                          href={`${process.env.REACT_APP_BACKEND_URL}/public/${item.mediaPath}`}
+                          download={item.mediaName || true}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={classes.messageFileLink}
+                        >
+                          📎 {item.mediaName || item.mediaPath}
+                        </a>
+                      ))}
                     {item.message && item.message.trim() && (
                       <Typography className={classes.messageText}>
                         {item.message}
@@ -421,19 +465,21 @@ export default function ChatMessages({
         </div>
       </div>
       <div className={classes.inputArea}>
-        {selectedImages.length > 0 && (
+        {selectedAttachments.length > 0 && (
           <div className={classes.previewContainer}>
-            {selectedImages.map((imageData, index) => (
-              <div key={index} className={classes.previewImage}>
-                <img 
-                  src={imageData.preview} 
-                  alt={`Preview ${index}`}
-                  className={classes.previewImageImg}
-                />
+            {selectedAttachments.map((att, index) => (
+              <div key={index} className={att.isImage ? classes.previewImage : classes.previewFileChip}>
+                {att.isImage ? (
+                  <img src={att.preview} alt="" className={classes.previewImageImg} />
+                ) : (
+                  <Typography variant="caption" noWrap style={{ flex: 1 }} title={att.name}>
+                    📎 {att.name}
+                  </Typography>
+                )}
                 <IconButton
-                  className={classes.previewRemoveButton}
+                  className={att.isImage ? classes.previewRemoveButton : undefined}
                   size="small"
-                  onClick={() => removeImage(index)}
+                  onClick={() => removeAttachment(index)}
                 >
                   <CloseIcon fontSize="small" />
                 </IconButton>
@@ -447,7 +493,7 @@ export default function ChatMessages({
             rowsMax={4}
             value={contentMessage}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey && (contentMessage.trim() !== "" || selectedImages.length > 0)) {
+              if (e.key === "Enter" && !e.shiftKey && (contentMessage.trim() !== "" || selectedAttachments.length > 0)) {
                 e.preventDefault();
                 handleSend();
               }
@@ -467,7 +513,7 @@ export default function ChatMessages({
             type="file"
             ref={fileInputRef}
             className={classes.fileInput}
-            accept="image/*"
+            accept="image/*,video/*,audio/*,.pdf,.txt,.doc,.docx,.xls,.xlsx,.csv,.zip,.rar,.json"
             onChange={handleFileSelect}
             multiple
           />
@@ -481,7 +527,7 @@ export default function ChatMessages({
           <IconButton
             onClick={handleSend}
             className={classes.buttonSend}
-            disabled={contentMessage.trim() === "" && selectedImages.length === 0}
+            disabled={contentMessage.trim() === "" && selectedAttachments.length === 0}
             size="small"
           >
             <SendIcon fontSize="small" />

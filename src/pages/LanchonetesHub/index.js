@@ -18,6 +18,10 @@ import {
   IconButton,
   Tooltip,
   TextField,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemSecondaryAction,
 } from "@material-ui/core";
 import {
   Restaurant as RestaurantIcon,
@@ -91,11 +95,50 @@ const useStyles = makeStyles((theme) => ({
   chartCard: {
     minHeight: 280,
   },
+  upcomingExpensesCard: {
+    padding: theme.spacing(3),
+    borderRadius: theme.spacing(2),
+    backgroundColor: theme.palette.type === "dark" ? "#1E293B" : "#FFFFFF",
+    border: `1px solid ${theme.palette.type === "dark" ? "#334155" : "#E5E7EB"}`,
+    height: "100%",
+    minHeight: 280,
+    boxShadow:
+      theme.palette.type === "dark"
+        ? "0 1px 3px 0 rgba(0, 0, 0, 0.3)"
+        : "0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
+    display: "flex",
+    flexDirection: "column",
+  },
+  upcomingTitle: {
+    fontWeight: 600,
+    fontSize: "0.875rem",
+    color: theme.palette.text.primary,
+    lineHeight: 1.2,
+    marginBottom: theme.spacing(0.5),
+  },
+  upcomingSubtitle: {
+    fontSize: "0.75rem",
+    color: theme.palette.text.secondary,
+    lineHeight: 1.5,
+    fontWeight: 400,
+    marginBottom: theme.spacing(2),
+  },
   quickLink: {
     textDecoration: "none",
     color: "inherit",
   },
 }));
+
+/** Só vencimento hoje ou futuro — não lista contas já vencidas no passado. */
+const apenasDespesasProximas = (lista) => {
+  if (!Array.isArray(lista)) return [];
+  const now = new Date();
+  const hoje = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return lista.filter((d) => {
+    const key = d.dataVencimento != null ? String(d.dataVencimento).slice(0, 10) : "";
+    return /^\d{4}-\d{2}-\d{2}$/.test(key) && key >= hoje;
+  });
+};
 
 const LanchonetesHub = () => {
   const classes = useStyles();
@@ -128,6 +171,8 @@ const LanchonetesHub = () => {
   const [filtroFinal, setFiltroFinal] = useState("");
   const [quickScanOpen, setQuickScanOpen] = useState(false);
   const [despesasModalOpen, setDespesasModalOpen] = useState(false);
+  const [proximasDespesas, setProximasDespesas] = useState([]);
+  const [loadingProximasDespesas, setLoadingProximasDespesas] = useState(false);
   const pendingOrderIdsRef = useRef(new Set());
   const soundIntervalRef = useRef(null);
   const [playOrderAlert] = useSound(alertSound, { volume: 0.6 });
@@ -212,6 +257,26 @@ const LanchonetesHub = () => {
       .catch(() => setLanchonetesStats({ totalVendasDia: 0, totalVendasMes: 0, totalDespesas: 0, saldoGeral: 0, evolucaoVendas: [], evolucaoDespesas: [], entregasPorEntregador: [], faturamentoPorMeioPagamento: [] }))
       .finally(() => setLoadingLanchonetesStats(false));
   }, [hasLanchonetes, filtroInicial, filtroFinal]);
+
+  useEffect(() => {
+    if (!hasLanchonetes) return;
+    let cancelled = false;
+    setLoadingProximasDespesas(true);
+    api
+      .get("/despesas", { params: { proximas: 1, limit: 8 } })
+      .then(({ data }) => {
+        if (!cancelled) setProximasDespesas(apenasDespesasProximas(Array.isArray(data) ? data : []));
+      })
+      .catch(() => {
+        if (!cancelled) setProximasDespesas([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingProximasDespesas(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [hasLanchonetes]);
 
   useEffect(() => {
     const companyId = user?.companyId;
@@ -684,6 +749,60 @@ const LanchonetesHub = () => {
                       horizontal
                     />
                   </Grid>
+                  <Grid item xs={12} md={6} className={classes.chartCard}>
+                    <Paper className={classes.upcomingExpensesCard} elevation={0}>
+                      <Typography className={classes.upcomingTitle}>Próximas despesas a vencer</Typography>
+                      <Typography className={classes.upcomingSubtitle}>
+                        Vencimento a partir de hoje — contas já vencidas não aparecem aqui
+                      </Typography>
+                      {loadingProximasDespesas ? (
+                        <Box display="flex" justifyContent="center" alignItems="center" flex={1} minHeight={180}>
+                          <CircularProgress size={32} />
+                        </Box>
+                      ) : proximasDespesas.length === 0 ? (
+                        <Box flex={1} display="flex" flexDirection="column" justifyContent="center" minHeight={160}>
+                          <Typography variant="body2" color="textSecondary">
+                            Nenhuma despesa futura cadastrada.
+                          </Typography>
+                        </Box>
+                      ) : (
+                        <List dense disablePadding style={{ flex: 1, overflow: "auto", maxHeight: 220 }}>
+                          {proximasDespesas.map((d) => (
+                            <ListItem key={d.id} disableGutters style={{ paddingTop: 4, paddingBottom: 4 }}>
+                              <ListItemText
+                                primary={d.descricao || "Sem descrição"}
+                                secondary={
+                                  [
+                                    d.fornecedor ? `Fornecedor: ${d.fornecedor}` : null,
+                                    d.dataVencimento
+                                      ? `Vence em ${new Date(`${d.dataVencimento}T12:00:00`).toLocaleDateString("pt-BR")}`
+                                      : null,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(" · ") || null
+                                }
+                                primaryTypographyProps={{ variant: "body2", noWrap: true }}
+                                secondaryTypographyProps={{ variant: "caption" }}
+                              />
+                              <ListItemSecondaryAction>
+                                <Typography
+                                  variant="body2"
+                                  style={{ color: "#EF4444", fontWeight: 500, paddingRight: 4 }}
+                                >
+                                  R$ {Number(d.valor || 0).toFixed(2).replace(".", ",")}
+                                </Typography>
+                              </ListItemSecondaryAction>
+                            </ListItem>
+                          ))}
+                        </List>
+                      )}
+                      <Box mt="auto" pt={1}>
+                        <Button size="small" color="primary" onClick={() => setDespesasModalOpen(true)}>
+                          Ver todas as despesas
+                        </Button>
+                      </Box>
+                    </Paper>
+                  </Grid>
                 </Grid>
               )}
 
@@ -998,6 +1117,10 @@ const LanchonetesHub = () => {
             if (!filtroFinal) params.finalDate = localEnd;
           }
           api.get("/dashboard/lanchonetes-stats", { params }).then(({ data }) => setLanchonetesStats((prev) => ({ ...prev, ...data }))).catch(() => {});
+          api
+            .get("/despesas", { params: { proximas: 1, limit: 8 } })
+            .then(({ data }) => setProximasDespesas(apenasDespesasProximas(Array.isArray(data) ? data : [])))
+            .catch(() => {});
         }}
       />
       <QuickScanModal open={quickScanOpen} onClose={() => setQuickScanOpen(false)} />

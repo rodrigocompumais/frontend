@@ -1222,7 +1222,8 @@ const MessageInputCustom = (props) => {
     if (message.mediaType === "audio") return "🎵 Áudio";
     if (message.mediaType === "image") return "🖼️ Imagem";
     if (message.mediaType === "video") return "🎬 Vídeo";
-    if (message.mediaType === "document" || message.mediaType === "application") return "📄 Documento";
+    if (message.mediaType === "document" || message.mediaType === "application" || message.mediaType === "text")
+      return "📄 Documento";
     if (message.mediaType === "contactMessage" || message.mediaType === "vcard") return "👤 Contato";
     if (message.mediaType === "locationMessage") return "📍 Localização";
     return "(Mensagem)";

@@ -67,7 +67,8 @@ const useTicketNotifications = () => {
       let messagePreview = message.body || "";
       
       // Tipos de mensagem que são na verdade texto (não mídia)
-      const textMessageTypes = ["extendedTextMessage", "text", "conversation"];
+      // "text" sozinho pode ser arquivo .txt (mediaUrl) — não tratar como mensagem só texto
+      const textMessageTypes = ["extendedTextMessage", "conversation"];
       const isTextMessageType = textMessageTypes.includes(message.mediaType);
       
       // Se não há texto mas há mídia, mostrar descrição amigável do tipo de mídia
@@ -80,6 +81,7 @@ const useTicketNotifications = () => {
           "ptt": "🎤 Áudio",
           "document": "📄 Documento",
           "application": "📄 Documento",
+          "text": "📄 Documento",
           "pdf": "📄 PDF",
           "sticker": "😀 Figurinha",
           "location": "📍 Localização",
