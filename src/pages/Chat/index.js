@@ -27,6 +27,7 @@ import { has, isObject } from "lodash";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import withWidth, { isWidthUp } from "@material-ui/core/withWidth";
 import { i18n } from "../../translate/i18n";
+import toastError from "../../errors/toastError";
 
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
@@ -299,12 +300,42 @@ function Chat(props) {
     if (isObject(currentChat) && has(currentChat, "id")) {
       socket.on(`company-${companyId}-chat-${currentChat.id}`, (data) => {
         if (data.action === "new-message" && data.newMessage.chatId === currentChat.id) {
-          // Adicionar nova mensagem no final (mensagens mais recentes)
+          // Adicionar nova mensagem no final; remover otimista correspondente (mesmo modelo dos tickets)
           setMessages((prev) => {
-            // Verificar se a mensagem já existe para evitar duplicatas
-            const exists = prev.some(msg => msg.id === data.newMessage.id);
+            const exists = prev.some((msg) => msg.id === data.newMessage.id);
             if (exists) return prev;
-            return [...prev, data.newMessage];
+
+            const OPTIMISTIC_MATCH_WINDOW_MS = 2 * 60 * 1000;
+            const now = Date.now();
+            const nm = data.newMessage;
+
+            const stripMatchingOptimistic = (list) =>
+              list.filter((m) => {
+                if (!String(m.id || "").startsWith("temp-")) return true;
+                if (m.senderId !== nm.senderId) return true;
+                const createdAt = m.createdAt ? new Date(m.createdAt).getTime() : 0;
+                if (!createdAt || now - createdAt > OPTIMISTIC_MATCH_WINDOW_MS) return true;
+
+                const sameText =
+                  String(m.message || "").trim() === String(nm.message || "").trim();
+                const nmHasMedia = !!(nm.mediaPath || nm.mediaName);
+                const mHasPreview = !!(m.mediaPreview || m.mediaName);
+
+                if (!nmHasMedia && !mHasPreview && sameText) return false;
+                if (
+                  nmHasMedia &&
+                  mHasPreview &&
+                  nm.mediaName &&
+                  m.mediaName &&
+                  String(nm.mediaName).trim() === String(m.mediaName).trim() &&
+                  sameText
+                ) {
+                  return false;
+                }
+                return true;
+              });
+
+            return [...stripMatchingOptimistic(prev), nm];
           });
           const changedChats = chats.map((chat) => {
             if (chat.id === data.newMessage.chatId) {
@@ -352,20 +383,58 @@ function Chat(props) {
     } catch (err) {}
   };
 
-  const sendMessage = async (contentMessageOrFormData, isFormData = false) => {
-    setLoading(true);
+  /**
+   * @param {string|FormData} contentMessageOrFormData
+   * @param {boolean} isFormData
+   * @param {object} [optimisticMessage] — mensagem otimista (id temp-...) exibida antes da API, como nos tickets
+   */
+  const sendMessage = async (
+    contentMessageOrFormData,
+    isFormData = false,
+    optimisticMessage = null
+  ) => {
+    const chatId = currentChat?.id;
+    if (!chatId) return;
+
+    if (optimisticMessage) {
+      setMessages((prev) => [...prev, optimisticMessage]);
+    }
+
     try {
+      let response;
       if (isFormData) {
-        await api.post(`/chats/${currentChat.id}/messages`, contentMessageOrFormData);
+        response = await api.post(
+          `/chats/${chatId}/messages`,
+          contentMessageOrFormData
+        );
       } else {
-        await api.post(`/chats/${currentChat.id}/messages`, {
+        response = await api.post(`/chats/${chatId}/messages`, {
           message: contentMessageOrFormData,
+        });
+      }
+
+      const real = response.data;
+      if (optimisticMessage && real?.id != null) {
+        setMessages((prev) => {
+          const idx = prev.findIndex((m) => m.id === optimisticMessage.id);
+          if (idx !== -1) {
+            const next = [...prev];
+            next[idx] = real;
+            return next;
+          }
+          if (prev.some((m) => m.id === real.id)) return prev;
+          return [...prev, real];
         });
       }
     } catch (err) {
       console.error("Erro ao enviar mensagem:", err);
+      if (optimisticMessage) {
+        setMessages((prev) =>
+          prev.filter((m) => m.id !== optimisticMessage.id)
+        );
+      }
+      toastError(err);
     }
-    setLoading(false);
   };
 
   const deleteChat = async (chat) => {
@@ -386,8 +455,29 @@ function Chat(props) {
       // Se é a primeira página, substituir todas as mensagens
       // Se não, adicionar mensagens antigas no início (para scroll infinito)
       if (messagesPage === 1) {
-        // Mensagens já vêm ordenadas do backend (mais antigas primeiro, mais recentes por último)
-        setMessages(data.records);
+        const records = data.records || [];
+        setMessages((prev) => {
+          const optimistic = prev.filter((m) =>
+            String(m.id || "").startsWith("temp-")
+          );
+          const optimisticToKeep = optimistic.filter((o) => {
+            return !records.some((b) => {
+              if (String(b.id || "").startsWith("temp-")) return false;
+              if (b.senderId !== o.senderId) return false;
+              if (
+                String(b.message || "").trim() !==
+                String(o.message || "").trim()
+              ) {
+                return false;
+              }
+              const oMedia = String(o.mediaName || "").trim();
+              const bMedia = String(b.mediaName || "").trim();
+              if (oMedia || bMedia) return oMedia && bMedia && oMedia === bMedia;
+              return true;
+            });
+          });
+          return [...records, ...optimisticToKeep];
+        });
       } else {
         // Adicionar mensagens antigas no início
         setMessages((prev) => [...data.records, ...prev]);
@@ -541,6 +631,7 @@ function Chat(props) {
           <Grid className={classes.gridItemTab} md={12} item>
             {isObject(currentChat) && has(currentChat, "id") && (
               <ChatMessages
+                chat={currentChat}
                 scrollToBottomRef={scrollToBottomRef}
                 pageInfo={messagesPageInfo}
                 messages={messages}

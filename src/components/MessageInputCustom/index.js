@@ -15,8 +15,8 @@ import AttachFileIcon from "@material-ui/icons/AttachFile";
 import IconButton from "@material-ui/core/IconButton";
 import MoodIcon from "@material-ui/icons/Mood";
 import SendIcon from "@material-ui/icons/Send";
-import CancelIcon from "@material-ui/icons/Cancel";
 import ClearIcon from "@material-ui/icons/Clear";
+import CloseIcon from "@material-ui/icons/Close";
 import MicIcon from "@material-ui/icons/Mic";
 import CheckCircleOutlineIcon from "@material-ui/icons/CheckCircleOutline";
 import HighlightOffIcon from "@material-ui/icons/HighlightOff";
@@ -94,16 +94,70 @@ const useStyles = makeStyles((theme) => ({
     display: "none",
   },
 
-  viewMediaInputWrapper: {
+  /** Mesmo modelo visual do preview em /chats (ChatMessages) */
+  previewContainer: {
     display: "flex",
-    padding: "10px 13px",
-    position: "relative",
-    justifyContent: "space-between",
-    alignItems: "center",
-    backgroundColor: "#eee",
-    borderTop: "1px solid rgba(0, 0, 0, 0.12)",
-    gap: "8px",
+    gap: theme.spacing(1),
+    padding: theme.spacing(1.5),
+    margin: theme.spacing(0, 1.5, 0, 1.5),
     flexWrap: "wrap",
+    backgroundColor:
+      theme.palette.type === "dark"
+        ? "rgba(255, 255, 255, 0.05)"
+        : "rgba(0, 0, 0, 0.02)",
+    borderRadius: theme.spacing(1),
+    border: `1px solid ${
+      theme.palette.type === "dark"
+        ? "rgba(255, 255, 255, 0.1)"
+        : "rgba(0, 0, 0, 0.1)"
+    }`,
+    maxHeight: "200px",
+    overflowY: "auto",
+    ...(theme.scrollbarStyles || {}),
+  },
+  previewThumb: {
+    position: "relative",
+    width: "120px",
+    height: "120px",
+    borderRadius: theme.spacing(1),
+    overflow: "hidden",
+    border: `2px solid ${theme.palette.primary.main}`,
+    boxShadow: theme.shadows[2],
+    flexShrink: 0,
+    cursor: "pointer",
+  },
+  previewThumbImg: {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+  },
+  previewRemoveButton: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    color: "#FFFFFF",
+    padding: theme.spacing(0.5),
+    minWidth: "auto",
+    width: "28px",
+    height: "28px",
+    zIndex: 2,
+    "&:hover": {
+      backgroundColor: "rgba(244, 67, 54, 0.9)",
+    },
+  },
+  previewFileChip: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    padding: theme.spacing(1, 1.5),
+    minWidth: 140,
+    maxWidth: 260,
+    borderRadius: theme.spacing(1),
+    border: `2px solid ${theme.palette.primary.main}`,
+    flexShrink: 0,
+    position: "relative",
   },
   previewModal: {
     "& .MuiDialog-paper": {
@@ -326,6 +380,14 @@ const SignSwitch = (props) => {
   return null;
 };
 
+const isImageMedia = (media) => {
+  const file = media?.file || media;
+  if (file && typeof file.type === "string" && file.type.startsWith("image/")) {
+    return true;
+  }
+  return !!(media && media.preview);
+};
+
 const FileInput = (props) => {
   const { handleChangeMedias, disableOption } = props;
   const classes = useStyles();
@@ -355,15 +417,30 @@ const FileInput = (props) => {
 const ActionButtons = (props) => {
   const {
     inputMessage,
+    mediasCount,
     loading,
     recording,
     ticketStatus,
     handleSendMessage,
+    handleUploadMedia,
     handleCancelAudio,
     handleUploadAudio,
     handleStartRecording,
   } = props;
   const classes = useStyles();
+  if (mediasCount > 0) {
+    return (
+      <IconButton
+        color="primary"
+        aria-label="sendMedia"
+        component="span"
+        onClick={handleUploadMedia}
+        disabled={loading}
+      >
+        <SendIcon />
+      </IconButton>
+    );
+  }
   if (inputMessage) {
     return (
       <IconButton
@@ -900,23 +977,36 @@ const MessageInputCustom = (props) => {
     setInputMessage(value.value);
   };
 
+  const removeMediaAt = (index) => {
+    setMedias((prev) => {
+      const removed = prev[index];
+      if (removed?.preview) {
+        URL.revokeObjectURL(removed.preview);
+        previewUrlsRef.current = previewUrlsRef.current.filter(
+          (u) => u !== removed.preview
+        );
+      }
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
   const handleUploadMedia = async (e) => {
+    if (e?.preventDefault) e.preventDefault();
+    if (!medias.length) return;
+
     setLoading(true);
-    e.preventDefault();
 
     const formData = new FormData();
     formData.append("fromMe", true);
+    formData.append("body", inputMessage.trim() || "");
     medias.forEach((media) => {
-      // Se media é um objeto com file, usar file, senão usar media diretamente (compatibilidade)
       const fileToUpload = media.file || media;
       formData.append("medias", fileToUpload);
-      formData.append("body", media.name || fileToUpload.name);
     });
 
     try {
       await api.post(`/messages/${ticketId}`, formData);
-      
-      // Limpar rascunho após enviar mídia com sucesso
+
       if (ticketId) {
         const draftKey = `messageDraft_${ticketId}`;
         localStorage.removeItem(draftKey);
@@ -925,7 +1015,6 @@ const MessageInputCustom = (props) => {
       toastError(err);
     }
 
-    // Limpar preview URLs para liberar memória
     previewUrlsRef.current.forEach((url) => {
       if (url) {
         URL.revokeObjectURL(url);
@@ -935,6 +1024,7 @@ const MessageInputCustom = (props) => {
 
     setLoading(false);
     setMedias([]);
+    setInputMessage("");
   };
 
   const fetchParticipants = () => {
@@ -988,6 +1078,10 @@ const MessageInputCustom = (props) => {
   }, [inputMessage, isGroup, isInternalMessage, ticketId]);
 
   const handleSendMessage = async () => {
+    if (medias.length > 0) {
+      await handleUploadMedia();
+      return;
+    }
     if (inputMessage.trim() === "") return;
     setLoading(true);
     const originalInputMessage = inputMessage;
@@ -1260,173 +1354,86 @@ const MessageInputCustom = (props) => {
   };
 
 
-  if (medias.length > 0)
-    return (
-      <>
-        <Paper elevation={0} square className={classes.mainWrapper}>
-          {replyingMessage && renderReplyingMessage(replyingMessage)}
-          <Paper elevation={0} square className={classes.viewMediaInputWrapper}>
-          <IconButton
-            aria-label="cancel-upload"
-            component="span"
-            onClick={(e) => {
-              // Limpar preview URLs antes de limpar medias
-              previewUrlsRef.current.forEach((url) => {
-                if (url) {
-                  URL.revokeObjectURL(url);
-                }
-              });
-              previewUrlsRef.current = [];
-              setMedias([]);
-            }}
-          >
-            <CancelIcon className={classes.sendMessageIcons} />
-          </IconButton>
-
-          {loading ? (
-            <div>
-              <CircularProgress className={classes.circleLoading} />
-            </div>
-          ) : (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, overflowX: 'auto', padding: '4px' }}>
-              {medias.map((media, index) => (
+  return (
+    <React.Fragment>
+      <Paper
+        square
+        elevation={0}
+        className={classes.mainWrapper}
+        onDragOver={onDragOver}
+        onDrop={onDrop}
+      >
+        {replyingMessage && renderReplyingMessage(replyingMessage)}
+        {medias.length > 0 && (
+          <div className={classes.previewContainer}>
+            {medias.map((media, index) =>
+              isImageMedia(media) ? (
                 <div
-                  key={index}
-                  style={{
-                    position: 'relative',
-                    cursor: 'pointer',
-                    borderRadius: 8,
-                    overflow: 'hidden',
-                    width: 60,
-                    height: 60,
-                    flexShrink: 0,
-                    border: '1px solid #ddd'
-                  }}
+                  key={`img-${index}-${media.name || ""}`}
+                  className={classes.previewThumb}
                   onClick={() => {
-                    setCurrentImageIndex(index);
-                    setPreviewModalOpen(true);
+                    const imgs = medias.filter((m) => m.preview);
+                    const idx = imgs.indexOf(media);
+                    if (idx >= 0) {
+                      setCurrentImageIndex(idx);
+                      setPreviewModalOpen(true);
+                    }
                   }}
                 >
                   {media.preview ? (
                     <img
                       src={media.preview}
-                      alt={media.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      alt={media.name || ""}
+                      className={classes.previewThumbImg}
                     />
                   ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f0f0f0' }}>
-                      <AttachFileIcon style={{ fontSize: 24, color: '#666' }} />
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        height: "100%",
+                        backgroundColor: "#f0f0f0",
+                      }}
+                    >
+                      <AttachFileIcon style={{ fontSize: 40, color: "#666" }} />
                     </div>
                   )}
+                  <IconButton
+                    aria-label="remove-attachment"
+                    className={classes.previewRemoveButton}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeMediaAt(index);
+                    }}
+                    size="small"
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
                 </div>
-              ))}
-              {medias.length > 0 && (
-                <Typography variant="caption" style={{ marginLeft: 8 }}>
-                  {medias.length > 1 ? `+${medias.length - 1}` : ''}
-                </Typography>
-              )}
-            </div>
-          )}
-          <IconButton
-            aria-label="send-upload"
-            component="span"
-            onClick={handleUploadMedia}
-            disabled={loading}
-          >
-            <SendIcon className={classes.sendMessageIcons} />
-          </IconButton>
-        </Paper>
-        </Paper>
-
-        {/* Modal de Preview com Carrossel */}
-        <Dialog
-          open={previewModalOpen}
-          onClose={() => setPreviewModalOpen(false)}
-          className={classes.previewModal}
-          maxWidth={false}
-          fullWidth
-        >
-          <DialogContent className={classes.previewModalContent} style={{ padding: 0 }}>
-            {imageMedias.length > 0 ? (
-              <>
-                {/* Imagem atual */}
-                <img
-                  src={imageMedias[currentImageIndex]?.preview}
-                  alt={imageMedias[currentImageIndex]?.name || 'Preview'}
-                  className={classes.previewImage}
-                />
-
-                {/* Botão anterior */}
-                {imageMedias.length > 1 && (
-                  <IconButton
-                    className={`${classes.previewNavButton} ${classes.previewNavButtonLeft}`}
-                    onClick={handlePrevImage}
-                    aria-label="Imagem anterior"
+              ) : (
+                <div key={`file-${index}-${media.name || ""}`} className={classes.previewFileChip}>
+                  <Typography
+                    variant="caption"
+                    noWrap
+                    style={{ flex: 1 }}
+                    title={media.name}
                   >
-                    <ChevronLeftIcon />
-                  </IconButton>
-                )}
-
-                {/* Botão próximo */}
-                {imageMedias.length > 1 && (
-                  <IconButton
-                    className={`${classes.previewNavButton} ${classes.previewNavButtonRight}`}
-                    onClick={handleNextImage}
-                    aria-label="Próxima imagem"
-                  >
-                    <ChevronRightIcon />
-                  </IconButton>
-                )}
-
-                {/* Informações da imagem */}
-                <Box className={classes.previewImageInfo}>
-                  <Typography variant="body2" style={{ fontWeight: 500 }}>
-                    {imageMedias[currentImageIndex]?.name || 'Imagem'}
+                    📎 {media.name}
                   </Typography>
-                  {imageMedias.length > 1 && (
-                    <Typography variant="caption" style={{ opacity: 0.8 }}>
-                      {currentImageIndex + 1} de {imageMedias.length}
-                    </Typography>
-                  )}
-                </Box>
-
-                {/* Indicadores */}
-                {imageMedias.length > 1 && (
-                  <Box className={classes.previewIndicators}>
-                    {imageMedias.map((_, index) => (
-                      <Box
-                        key={index}
-                        className={`${classes.previewIndicator} ${index === currentImageIndex ? 'active' : ''
-                          }`}
-                        onClick={() => handleIndicatorClick(index)}
-                      />
-                    ))}
-                  </Box>
-                )}
-              </>
-            ) : (
-              <Box p={4} textAlign="center">
-                <Typography variant="body1" color="textSecondary">
-                  Nenhuma imagem para visualizar
-                </Typography>
-              </Box>
+                  <IconButton
+                    aria-label="remove-attachment"
+                    size="small"
+                    onClick={() => removeMediaAt(index)}
+                  >
+                    <CloseIcon fontSize="small" />
+                  </IconButton>
+                </div>
+              )
             )}
-          </DialogContent>
-        </Dialog>
-      </>
-    );
-  else {
-    return (
-      <React.Fragment>
-        <Paper
-          square
-          elevation={0}
-          className={classes.mainWrapper}
-          onDragOver={onDragOver}
-          onDrop={onDrop}
-        >
-          {replyingMessage && renderReplyingMessage(replyingMessage)}
-          <div className={classes.newMessageBox}>
+          </div>
+        )}
+        <div className={classes.newMessageBox}>
             <EmojiOptions
               disabled={disableOption()}
               handleAddEmoji={handleAddEmoji}
@@ -1543,10 +1550,12 @@ const MessageInputCustom = (props) => {
 
             <ActionButtons
               inputMessage={inputMessage}
+              mediasCount={medias.length}
               loading={loading}
               recording={recording}
               ticketStatus={ticketStatus}
               handleSendMessage={handleSendMessage}
+              handleUploadMedia={handleUploadMedia}
               handleCancelAudio={handleCancelAudio}
               handleUploadAudio={handleUploadAudio}
               handleStartRecording={handleStartRecording}
@@ -1564,9 +1573,79 @@ const MessageInputCustom = (props) => {
           improvedText={improvedText}
           onUseImproved={handleUseImprovedText}
         />
+
+        <Dialog
+          open={previewModalOpen}
+          onClose={() => setPreviewModalOpen(false)}
+          className={classes.previewModal}
+          maxWidth={false}
+          fullWidth
+        >
+          <DialogContent className={classes.previewModalContent} style={{ padding: 0 }}>
+            {imageMedias.length > 0 ? (
+              <>
+                <img
+                  src={imageMedias[currentImageIndex]?.preview}
+                  alt={imageMedias[currentImageIndex]?.name || "Preview"}
+                  className={classes.previewImage}
+                />
+
+                {imageMedias.length > 1 && (
+                  <IconButton
+                    className={`${classes.previewNavButton} ${classes.previewNavButtonLeft}`}
+                    onClick={handlePrevImage}
+                    aria-label="Imagem anterior"
+                  >
+                    <ChevronLeftIcon />
+                  </IconButton>
+                )}
+
+                {imageMedias.length > 1 && (
+                  <IconButton
+                    className={`${classes.previewNavButton} ${classes.previewNavButtonRight}`}
+                    onClick={handleNextImage}
+                    aria-label="Próxima imagem"
+                  >
+                    <ChevronRightIcon />
+                  </IconButton>
+                )}
+
+                <Box className={classes.previewImageInfo}>
+                  <Typography variant="body2" style={{ fontWeight: 500 }}>
+                    {imageMedias[currentImageIndex]?.name || "Imagem"}
+                  </Typography>
+                  {imageMedias.length > 1 && (
+                    <Typography variant="caption" style={{ opacity: 0.8 }}>
+                      {currentImageIndex + 1} de {imageMedias.length}
+                    </Typography>
+                  )}
+                </Box>
+
+                {imageMedias.length > 1 && (
+                  <Box className={classes.previewIndicators}>
+                    {imageMedias.map((_, index) => (
+                      <Box
+                        key={index}
+                        className={`${classes.previewIndicator} ${
+                          index === currentImageIndex ? "active" : ""
+                        }`}
+                        onClick={() => handleIndicatorClick(index)}
+                      />
+                    ))}
+                  </Box>
+                )}
+              </>
+            ) : (
+              <Box p={4} textAlign="center">
+                <Typography variant="body1" color="textSecondary">
+                  Nenhuma imagem para visualizar
+                </Typography>
+              </Box>
+            )}
+          </DialogContent>
+        </Dialog>
       </React.Fragment>
     );
-  }
 };
 
 export default withWidth()(MessageInputCustom);

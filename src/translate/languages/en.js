@@ -795,6 +795,8 @@ const messages = {
         },
         chats: "Chats",
         messages: "Mensagens",
+        inputPlaceholder:
+          "Type a message… (Ctrl+V to paste a screenshot)",
         noTicketMessage: "Selecione um ticket para começar a conversar.",
         buttons: {
           close: "Fechar",
@@ -1395,19 +1397,30 @@ const messages = {
         inputLabel: "Filas",
       },
       users: {
-        title: "Usuários",
+        title: "Users",
         table: {
           id: "ID",
-          name: "Nome",
+          name: "Name",
           email: "Email",
-          profile: "Perfil",
-          actions: "Ações",
+          profile: "Role",
+          status: "Status",
+          active: "Active",
+          inactive: "Inactive",
+          actions: "Actions",
+        },
+        tooltips: {
+          edit: "Edit",
+          deactivate: "Deactivate user",
+          activate: "Reactivate user",
+          delete: "Delete permanently",
         },
         buttons: {
-          add: "Adicionar usuário",
+          add: "Add user",
         },
         toasts: {
-          deleted: "Usuário excluído com sucesso.",
+          deleted: "User deleted successfully.",
+          deactivated: "User deactivated.",
+          activated: "User reactivated.",
         },
         confirmationModal: {
           deleteTitle: "Excluir",
@@ -1976,6 +1989,12 @@ const messages = {
           "This contact is already at another table. Free the current table before occupying another.",
         ERR_MESA_LINK_INVALID:
           "Invalid or expired table link. Use the table QR code to access the menu.",
+        ERR_USER_INACTIVE:
+          "This user account is inactive. Ask an administrator to restore access.",
+        ERR_CANNOT_DEACTIVATE_SELF:
+          "You cannot deactivate your own account.",
+        ERR_LAST_ACTIVE_ADMIN:
+          "At least one active administrator is required for the company.",
         ERR_FORM_NOT_AGENDAMENTO:
           "This form is not set up for scheduling. Edit it in Forms and set the type to \"Scheduling\".",
       },

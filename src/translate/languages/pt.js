@@ -795,6 +795,8 @@ const messages = {
         },
         chats: "Chats",
         messages: "Mensagens",
+        inputPlaceholder:
+          "Digite uma mensagem… (Ctrl+V para colar captura de tela)",
         noTicketMessage: "Selecione um ticket para começar a conversar.",
         buttons: {
           close: "Fechar",
@@ -1414,13 +1416,24 @@ const messages = {
           name: "Nome",
           email: "Email",
           profile: "Perfil",
+          status: "Situação",
+          active: "Ativo",
+          inactive: "Inativo",
           actions: "Ações",
+        },
+        tooltips: {
+          edit: "Editar",
+          deactivate: "Inativar usuário",
+          activate: "Reativar usuário",
+          delete: "Excluir permanentemente",
         },
         buttons: {
           add: "Adicionar usuário",
         },
         toasts: {
           deleted: "Usuário excluído com sucesso.",
+          deactivated: "Usuário inativado.",
+          activated: "Usuário reativado.",
         },
         confirmationModal: {
           deleteTitle: "Excluir",
@@ -1996,6 +2009,12 @@ const messages = {
           "Este contato já está em outra mesa. Libere a mesa atual antes de ocupar outra.",
         ERR_MESA_LINK_INVALID:
           "Link da mesa inválido ou expirado. Use o QR code da mesa para acessar o cardápio.",
+        ERR_USER_INACTIVE:
+          "Este usuário está inativo. Peça a um administrador para reativar o acesso.",
+        ERR_CANNOT_DEACTIVATE_SELF:
+          "Você não pode inativar a própria conta.",
+        ERR_LAST_ACTIVE_ADMIN:
+          "É necessário manter pelo menos um administrador ativo na empresa.",
       },
       lanchonetes: {
         hubName: "Home",

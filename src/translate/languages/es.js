@@ -795,6 +795,8 @@ const messages = {
         },
         chats: "Chats",
         messages: "Mensagens",
+        inputPlaceholder:
+          "Escribe un mensaje… (Ctrl+V para pegar captura)",
         noTicketMessage: "Selecione um ticket para começar a conversar.",
         buttons: {
           close: "Fechar",
@@ -1391,19 +1393,30 @@ const messages = {
         inputLabel: "Filas",
       },
       users: {
-        title: "Usuários",
+        title: "Usuarios",
         table: {
           id: "ID",
-          name: "Nome",
+          name: "Nombre",
           email: "Email",
           profile: "Perfil",
-          actions: "Ações",
+          status: "Estado",
+          active: "Activo",
+          inactive: "Inactivo",
+          actions: "Acciones",
+        },
+        tooltips: {
+          edit: "Editar",
+          deactivate: "Desactivar usuario",
+          activate: "Reactivar usuario",
+          delete: "Eliminar permanentemente",
         },
         buttons: {
-          add: "Adicionar usuário",
+          add: "Añadir usuario",
         },
         toasts: {
-          deleted: "Usuário excluído com sucesso.",
+          deleted: "Usuario eliminado correctamente.",
+          deactivated: "Usuario desactivado.",
+          activated: "Usuario reactivado.",
         },
         confirmationModal: {
           deleteTitle: "Excluir",
@@ -1946,6 +1959,12 @@ const messages = {
           "Este contacto ya está en otra mesa. Libere la mesa actual antes de ocupar otra.",
         ERR_MESA_LINK_INVALID:
           "Enlace de mesa inválido o expirado. Use el código QR de la mesa para acceder al menú.",
+        ERR_USER_INACTIVE:
+          "Esta cuenta de usuario está inactiva. Pida a un administrador que restaure el acceso.",
+        ERR_CANNOT_DEACTIVATE_SELF:
+          "No puede desactivar su propia cuenta.",
+        ERR_LAST_ACTIVE_ADMIN:
+          "Debe haber al menos un administrador activo en la empresa.",
         ERR_FORM_NOT_AGENDAMENTO:
           "Este formulario no está configurado para agendamiento. Edítelo en Formularios y defina el tipo como \"Agendamiento\".",
       },

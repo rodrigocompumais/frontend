@@ -15,6 +15,7 @@ import CloseIcon from "@material-ui/icons/Close";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { useDate } from "../../hooks/useDate";
 import api from "../../services/api";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
@@ -340,27 +341,58 @@ export default function ChatMessages({
     }
   };
 
-  const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files || []);
-    files.forEach((file) => {
-      const isImage = file.type.startsWith("image/");
-      if (isImage) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          setSelectedAttachments((prev) => [
-            ...prev,
-            { file, preview: event.target.result, name: file.name, isImage: true },
-          ]);
-        };
-        reader.readAsDataURL(file);
-      } else {
+  const addFileAsAttachment = (file) => {
+    const isImage = file.type.startsWith("image/");
+    if (isImage) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
         setSelectedAttachments((prev) => [
           ...prev,
-          { file, preview: null, name: file.name, isImage: false },
+          {
+            file,
+            preview: event.target.result,
+            name: file.name,
+            isImage: true,
+          },
         ]);
-      }
-    });
+      };
+      reader.readAsDataURL(file);
+    } else {
+      setSelectedAttachments((prev) => [
+        ...prev,
+        { file, preview: null, name: file.name, isImage: false },
+      ]);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    files.forEach((file) => addFileAsAttachment(file));
     e.target.value = "";
+  };
+
+  /** Colar captura de tela (Ctrl+V) como anexo de imagem, sem roubar texto comum. */
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items?.length) return;
+
+    for (let i = 0; i < items.length; i += 1) {
+      const item = items[i];
+      if (item.kind === "file" && item.type.startsWith("image/")) {
+        e.preventDefault();
+        const raw = item.getAsFile();
+        if (!raw) continue;
+        const fallbackName = `captura-${Date.now()}.png`;
+        const name =
+          raw.name && !/^blob$/i.test(raw.name) ? raw.name : fallbackName;
+        const file =
+          raw instanceof File && raw.name && !/^blob$/i.test(raw.name)
+            ? raw
+            : new File([raw], name, { type: raw.type || "image/png" });
+        addFileAsAttachment(file);
+        break;
+      }
+    }
   };
 
   const removeAttachment = (index) => {
@@ -370,32 +402,55 @@ export default function ChatMessages({
   const handleSend = async () => {
     if (contentMessage.trim() === "" && selectedAttachments.length === 0) return;
 
-    try {
-      const messageText = contentMessage.trim();
+    const messageText = contentMessage.trim();
 
-      if (selectedAttachments.length > 0) {
-        for (const att of selectedAttachments) {
-          const formData = new FormData();
-          formData.append("media", att.file);
-          if (messageText) {
-            formData.append("message", messageText);
-          }
-
-          await handleSendMessage(formData, true);
+    if (selectedAttachments.length > 0) {
+      for (let i = 0; i < selectedAttachments.length; i += 1) {
+        const att = selectedAttachments[i];
+        const formData = new FormData();
+        formData.append("media", att.file);
+        if (messageText) {
+          formData.append("message", messageText);
         }
-        setSelectedAttachments([]);
-        setContentMessage("");
-      } else {
-        await handleSendMessage(messageText, false);
-        setContentMessage("");
+
+        const tempId = `temp-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2)}-${i}`;
+        const optimisticMsg = {
+          id: tempId,
+          senderId: user.id,
+          sender: { name: user.name, avatar: user.avatar },
+          message: messageText || "",
+          mediaName: att.name,
+          mediaPreview: att.isImage ? att.preview : null,
+          createdAt: new Date().toISOString(),
+          optimistic: true,
+          chatId: chat?.id,
+        };
+
+        await handleSendMessage(formData, true, optimisticMsg);
       }
-      
-      setTimeout(() => {
-        scrollToBottom();
-      }, 100);
-    } catch (err) {
-      console.error("Erro ao enviar mensagem:", err);
+      setSelectedAttachments([]);
+      setContentMessage("");
+    } else {
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const optimisticMsg = {
+        id: tempId,
+        senderId: user.id,
+        sender: { name: user.name, avatar: user.avatar },
+        message: messageText,
+        createdAt: new Date().toISOString(),
+        optimistic: true,
+        chatId: chat?.id,
+      };
+
+      await handleSendMessage(messageText, false, optimisticMsg);
+      setContentMessage("");
     }
+
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
   };
 
   return (
@@ -410,11 +465,12 @@ export default function ChatMessages({
                 : null;
               return (
                 <Box 
-                  key={key} 
+                  key={item.id != null ? String(item.id) : `msg-${key}`} 
                   className={`${classes.messageBubble} ${isOwnMessage ? classes.boxRight : classes.boxLeft}`}
                   style={{
                     alignSelf: isOwnMessage ? "flex-end" : "flex-start",
-                    flexDirection: isOwnMessage ? "row-reverse" : "row"
+                    flexDirection: isOwnMessage ? "row-reverse" : "row",
+                    ...(item.optimistic ? { opacity: 0.92 } : {}),
                   }}
                 >
                   <Avatar 
@@ -428,6 +484,22 @@ export default function ChatMessages({
                     <Typography className={classes.senderName}>
                       {item.sender.name}
                     </Typography>
+                    {item.mediaPreview && !item.mediaPath &&
+                      (isImageFileName(item.mediaName || "image.png") ? (
+                        <img
+                          src={item.mediaPreview}
+                          alt=""
+                          className={classes.messageImage}
+                        />
+                      ) : (
+                        <Typography
+                          variant="caption"
+                          className={classes.messageText}
+                          component="div"
+                        >
+                          📎 {item.mediaName || "arquivo"}
+                        </Typography>
+                      ))}
                     {item.mediaPath &&
                       (isImageFileName(item.mediaName || item.mediaPath) ? (
                         <img
@@ -492,6 +564,7 @@ export default function ChatMessages({
             multiline
             rowsMax={4}
             value={contentMessage}
+            onPaste={handlePaste}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey && (contentMessage.trim() !== "" || selectedAttachments.length > 0)) {
                 e.preventDefault();
@@ -500,7 +573,7 @@ export default function ChatMessages({
             }}
             onChange={(e) => setContentMessage(e.target.value)}
             className={classes.input}
-            placeholder="Digite sua mensagem..."
+            placeholder={i18n.t("chat.inputPlaceholder")}
             disableUnderline
             inputProps={{
               style: {

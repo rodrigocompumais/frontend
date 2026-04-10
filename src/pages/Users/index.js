@@ -16,6 +16,10 @@ import InputAdornment from "@material-ui/core/InputAdornment";
 
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 import EditIcon from "@material-ui/icons/Edit";
+import BlockIcon from "@material-ui/icons/Block";
+import HowToRegIcon from "@material-ui/icons/HowToReg";
+import Tooltip from "@material-ui/core/Tooltip";
+import Chip from "@material-ui/core/Chip";
 
 import MainContainer from "../../components/MainContainer";
 import MainHeader from "../../components/MainHeader";
@@ -29,6 +33,7 @@ import UserModal from "../../components/UserModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import { AuthContext } from "../../context/Auth/AuthContext";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_USERS") {
@@ -52,7 +57,7 @@ const reducer = (state, action) => {
     const userIndex = state.findIndex((u) => u.id === user.id);
 
     if (userIndex !== -1) {
-      state[userIndex] = user;
+      state[userIndex] = { ...state[userIndex], ...user };
       return [...state];
     } else {
       return [user, ...state];
@@ -97,6 +102,7 @@ const Users = () => {
   const [users, dispatch] = useReducer(reducer, []);
 
   const socketManager = useContext(SocketContext);
+  const { user: loggedInUser } = useContext(AuthContext);
 
   useEffect(() => {
     dispatch({ type: "RESET" });
@@ -159,6 +165,22 @@ const Users = () => {
   const handleEditUser = (user) => {
     setSelectedUser(user);
     setUserModalOpen(true);
+  };
+
+  const handleSetUserActive = async (userRow) => {
+    const currentlyActive = userRow.active !== false;
+    try {
+      await api.put(`/users/${userRow.id}/active`, {
+        active: !currentlyActive,
+      });
+      toast.success(
+        currentlyActive
+          ? i18n.t("users.toasts.deactivated")
+          : i18n.t("users.toasts.activated")
+      );
+    } catch (err) {
+      toastError(err);
+    }
   };
 
   const handleDeleteUser = async (userId) => {
@@ -250,6 +272,9 @@ const Users = () => {
                 {i18n.t("users.table.profile")}
               </TableCell>
               <TableCell align="center">
+                {i18n.t("users.table.status")}
+              </TableCell>
+              <TableCell align="center">
                 {i18n.t("users.table.actions")}
               </TableCell>
             </TableRow>
@@ -263,26 +288,64 @@ const Users = () => {
                   <TableCell align="center">{user.email}</TableCell>
                   <TableCell align="center">{user.profile}</TableCell>
                   <TableCell align="center">
-                    <IconButton
+                    <Chip
                       size="small"
-                      onClick={() => handleEditUser(user)}
-                    >
-                      <EditIcon />
-                    </IconButton>
+                      label={
+                        user.active === false
+                          ? i18n.t("users.table.inactive")
+                          : i18n.t("users.table.active")
+                      }
+                      color={user.active === false ? "default" : "primary"}
+                    />
+                  </TableCell>
+                  <TableCell align="center">
+                    <Tooltip title={i18n.t("users.tooltips.edit")}>
+                      <IconButton
+                        size="small"
+                        onClick={() => handleEditUser(user)}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
 
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        setConfirmModalOpen(true);
-                        setDeletingUser(user);
-                      }}
-                    >
-                      <DeleteOutlineIcon />
-                    </IconButton>
+                    {user.active !== false ? (
+                      <Tooltip title={i18n.t("users.tooltips.deactivate")}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            disabled={loggedInUser?.id === user.id}
+                            onClick={() => handleSetUserActive(user)}
+                          >
+                            <BlockIcon />
+                          </IconButton>
+                        </span>
+                      </Tooltip>
+                    ) : (
+                      <Tooltip title={i18n.t("users.tooltips.activate")}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleSetUserActive(user)}
+                        >
+                          <HowToRegIcon />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+
+                    <Tooltip title={i18n.t("users.tooltips.delete")}>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setConfirmModalOpen(true);
+                          setDeletingUser(user);
+                        }}
+                      >
+                        <DeleteOutlineIcon />
+                      </IconButton>
+                    </Tooltip>
                   </TableCell>
                 </TableRow>
               ))}
-              {loading && <TableRowSkeleton columns={4} />}
+              {loading && <TableRowSkeleton columns={6} />}
             </>
           </TableBody>
         </Table>
