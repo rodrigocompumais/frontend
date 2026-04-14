@@ -1968,6 +1968,8 @@ const messages = {
         ERR_DUPLICATED_CONTACT: "Já existe um contato com este número.",
         ERR_NO_SETTING_FOUND: "Nenhuma configuração encontrada com este ID.",
         ERR_NO_CONTACT_FOUND: "Nenhum contato encontrado com este ID.",
+        ERR_TICKET_CLOSED_CANNOT_SEND:
+          "Esta conversación está cerrada. Vuelva a abrir el ticket para enviar mensajes al cliente.",
         ERR_NO_TICKET_FOUND: "Nenhum tíquete encontrado com este ID.",
         ERR_NO_USER_FOUND: "Nenhum usuário encontrado com este ID.",
         ERR_NO_WAPP_FOUND: "Nenhum WhatsApp encontrado com este ID.",

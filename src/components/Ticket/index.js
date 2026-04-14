@@ -203,6 +203,12 @@ const Ticket = () => {
   };
 
   const handleQuickMessageSend = (message) => {
+    if (ticket.status === "closed") {
+      toast.info(i18n.t("backendErrors.ERR_TICKET_CLOSED_CANNOT_SEND"), {
+        toastId: "ticket-closed-no-send",
+      });
+      return;
+    }
     // Send message via API (same format as MessageInput)
     const sendMessage = async () => {
       try {
@@ -351,7 +357,15 @@ const Ticket = () => {
       {ticket.id && (
         <QuickActionsMenu
           onTaskClick={() => setTaskModalOpen(true)}
-          onQuickMessageClick={() => setQuickMessageModalOpen(true)}
+          onQuickMessageClick={() => {
+            if (ticket.status === "closed") {
+              toast.info(i18n.t("backendErrors.ERR_TICKET_CLOSED_CANNOT_SEND"), {
+                toastId: "ticket-closed-no-send",
+              });
+              return;
+            }
+            setQuickMessageModalOpen(true);
+          }}
           onScheduleClick={() => setScheduleModalOpen(true)}
           onInternalChatClick={handleInternalChatClick}
           onSearchClick={() => setSearchModalOpen(true)}
