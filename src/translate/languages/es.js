@@ -1559,7 +1559,6 @@ const messages = {
         title: "Configurações",
         tabs: {
           options: "Opciones",
-          ai: "Inteligencia Artificial",
           api: "API / Integración",
           billing: "Cobro PIX",
           schedules: "Horarios",
@@ -1614,15 +1613,21 @@ const messages = {
             sendGreetingMessageOneQueues: {
               title: "Enviar saudação quando houver somente 1 fila",
             },
+            lmStudioInfra: {
+              title: "IA local (LM Studio)",
+              description:
+                "La IA la sirve un único servidor LM Studio (API compatible con OpenAI), configurado por el administrador en el entorno del backend (LM_STUDIO_BASE_URL, LM_STUDIO_DEFAULT_MODEL, etc.). No se requieren claves API por empresa.",
+              testButton: "Probar conexión con el servidor de IA",
+            },
             geminiApiKey: {
               title: "Clave API de Gemini",
               placeholder: "Ingrese su clave API de Gemini",
-              helper: "Use su clave API de Gemini (modelo gratuito) para habilitar resúmenes de IA en el tablero.",
+              helper: "Obsoleto — use LM Studio en el servidor.",
             },
             openaiApiKey: {
               title: "Clave API de OpenAI",
               placeholder: "Ingrese su clave API de OpenAI",
-              helper: "Use su clave API de OpenAI para habilitar funciones de IA. Configure al menos una clave API (Gemini u OpenAI).",
+              helper: "Obsoleto — use LM Studio en el servidor.",
             },
             aiProviderConfig: {
               title: "Configuración de Proveedores de IA",
@@ -1654,6 +1659,15 @@ const messages = {
               saveButton: "Guardar Configuración del Chat",
               saving: "Guardando...",
               saveSuccess: "¡Configuración del chat guardada con éxito!",
+              maxArticles: "Máx. artículos de ayuda en el prompt",
+              maxArticlesHelper: "Cuántos artículos de ayuda entran en el contexto (1–30). Menos = respuestas más rápidas.",
+              contextMode: "Modo de contexto del chat",
+              contextModeHelper: "Compacto: solo métricas y lista de tickets. Detallado: incluye fragmentos de conversación. Automático: detalle cuando la pregunta lo pida o haya agente/contacto detectado.",
+              contextModeAuto: "Automático (recomendado)",
+              contextModeCompact: "Siempre compacto",
+              contextModeDetailed: "Siempre detallado",
+              statsCacheTtlSeconds: "Caché de estadísticas (segundos)",
+              statsCacheTtlSecondsHelper: "Tiempo para reutilizar conteos del tablero en el backend (0 = sin caché, máx. 600). Reduce carga en la base entre mensajes seguidos.",
             },
             apiCredentials: {
               title: "Credenciales de API",
@@ -1802,7 +1816,13 @@ const messages = {
           },
         },
         audio: {
-          transcribe: "Transcrever",
+          transcribe: "Transcribir",
+          transcribing: "Transcribiendo…",
+          viewTranscription: "Ver transcripción completa",
+          hideTranscription: "Ocultar transcripción",
+          transcriptionFailed: "No se pudo transcribir este audio.",
+          retryTranscription: "Intentar de nuevo",
+          retryStarted: "Transcripción reiniciada.",
         },
         lostCall: "Chamada de voz/vídeo perdida às",
         deletedMessage: "Essa mensagem foi apagada pelo contato",
@@ -1967,6 +1987,14 @@ const messages = {
           "Debe haber al menos un administrador activo en la empresa.",
         ERR_FORM_NOT_AGENDAMENTO:
           "Este formulario no está configurado para agendamiento. Edítelo en Formularios y defina el tipo como \"Agendamiento\".",
+        ERR_AI_CONFIG_MISSING:
+          "La IA no está disponible. Pida al administrador que configure el servidor (LM_STUDIO_BASE_URL y credenciales) en el backend.",
+        AI_KEY_MISSING:
+          "El servidor de IA no está configurado. Pida al administrador que defina LM_STUDIO_BASE_URL en el backend.",
+        GEMINI_KEY_MISSING:
+          "El servidor de IA no está configurado. Pida al administrador que defina LM_STUDIO_BASE_URL en el backend.",
+        AI_NOT_CONFIGURED:
+          "El servidor de IA no está configurado. Pida al administrador que defina LM_STUDIO_BASE_URL en el backend.",
       },
       lanchonetes: {
         hubName: "Home",

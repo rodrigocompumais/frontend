@@ -1563,7 +1563,6 @@ const messages = {
         title: "Configurações",
         tabs: {
           options: "Options",
-          ai: "Artificial Intelligence",
           api: "API / Integration",
           billing: "PIX Billing",
           schedules: "Schedules",
@@ -1618,15 +1617,21 @@ const messages = {
             sendGreetingMessageOneQueues: {
               title: "Enviar saudação quando houver somente 1 fila",
             },
+            lmStudioInfra: {
+              title: "Local AI (LM Studio)",
+              description:
+                "AI is served by a single LM Studio server (OpenAI-compatible API) configured by the administrator in the backend environment (LM_STUDIO_BASE_URL, LM_STUDIO_DEFAULT_MODEL, etc.). No per-company API keys are required.",
+              testButton: "Test connection to AI server",
+            },
             geminiApiKey: {
               title: "Gemini API Key",
               placeholder: "Enter your Gemini API key",
-              helper: "Use your Gemini API key (free model) to enable AI summaries in the dashboard.",
+              helper: "Deprecated — use LM Studio on the server.",
             },
             openaiApiKey: {
               title: "OpenAI API Key",
               placeholder: "Enter your OpenAI API key",
-              helper: "Use your OpenAI API key to enable AI features. Configure at least one API Key (Gemini or OpenAI).",
+              helper: "Deprecated — use LM Studio on the server.",
             },
             aiProviderConfig: {
               title: "AI Providers Configuration",
@@ -1658,6 +1663,15 @@ const messages = {
               saveButton: "Save Chat Configuration",
               saving: "Saving...",
               saveSuccess: "Chat configuration saved successfully!",
+              maxArticles: "Max help articles in prompt",
+              maxArticlesHelper: "How many help articles are injected into context (1–30). Fewer = faster responses.",
+              contextMode: "Chat context mode",
+              contextModeHelper: "Compact: metrics and ticket list only. Detailed: includes conversation snippets. Auto: detailed when the question asks or an agent/contact is detected.",
+              contextModeAuto: "Automatic (recommended)",
+              contextModeCompact: "Always compact",
+              contextModeDetailed: "Always detailed",
+              statsCacheTtlSeconds: "Stats cache (seconds)",
+              statsCacheTtlSecondsHelper: "How long the backend reuses dashboard aggregate counts (0 = off, max 600). Reduces database load between consecutive messages.",
             },
             apiCredentials: {
               title: "API Credentials",
@@ -1806,7 +1820,13 @@ const messages = {
           },
         },
         audio: {
-          transcribe: "Transcrever",
+          transcribe: "Transcribe",
+          transcribing: "Transcribing…",
+          viewTranscription: "Show full transcript",
+          hideTranscription: "Hide transcript",
+          transcriptionFailed: "Could not transcribe this audio.",
+          retryTranscription: "Try again",
+          retryStarted: "Transcription restarted.",
         },
         transcriptionModal: {
           title: "Audio Transcription",
@@ -1961,9 +1981,11 @@ const messages = {
         ERR_AI_QUOTA_EXCEEDED: "Transcription is temporarily unavailable. Please try again in a few minutes.",
         ERR_AI_AUDIO_TOO_LONG: "This audio is too long to transcribe. Try with a shorter audio.",
         ERR_AI_TRANSCRIPTION_EMPTY: "Could not detect speech in this audio. Check if the volume is adequate.",
-        ERR_AI_CONFIG_MISSING: "Configure AI in Settings → Integrations.",
-        AI_KEY_MISSING: "Configure AI in Settings → Integrations.",
-        GEMINI_KEY_MISSING: "Configure Gemini API key in Settings → Integrations.",
+        ERR_AI_CONFIG_MISSING:
+          "AI is not available. Ask your administrator to configure the server (LM_STUDIO_BASE_URL and credentials) on the backend.",
+        AI_KEY_MISSING: "AI server is not configured. Ask the administrator to set LM_STUDIO_BASE_URL on the backend.",
+        GEMINI_KEY_MISSING: "AI server is not configured. Ask the administrator to set LM_STUDIO_BASE_URL on the backend.",
+        AI_NOT_CONFIGURED: "AI server is not configured. Ask the administrator to set LM_STUDIO_BASE_URL on the backend.",
         ERR_CHAT_AI_TRANSCRIBE: "Could not transcribe the audio. Please try again shortly.",
         ERR_AI_TRANSCRIPTION_ERROR: "Something went wrong while transcribing. Please try again.",
         ERR_OTHER_OPEN_TICKET: "Já existe um tíquete aberto para este contato.",

@@ -12,8 +12,10 @@ import {
     MenuItem,
     Checkbox,
     FormControlLabel,
-    CircularProgress
+    CircularProgress,
+    Typography
 } from "@material-ui/core";
+import { i18n } from "../../translate/i18n";
 import { makeStyles } from "@material-ui/core/styles";
 
 const useStyles = makeStyles((theme) => ({
@@ -68,9 +70,6 @@ const TemplateConfigModal = ({
     setTemplateVariables,
     useCustomAgentName,
     setUseCustomAgentName,
-    selectedProvider,
-    handleChangeProvider,
-    apiKeyStatus,
     customPermissions,
     setCustomPermissions,
     onSave,
@@ -179,54 +178,9 @@ const TemplateConfigModal = ({
                     helperText="Observações específicas que serão adicionadas ao prompt base"
                 />
 
-                {/* Provider */}
-                <FormControl fullWidth margin="dense" variant="outlined">
-                    <InputLabel id="provider-label">Provider</InputLabel>
-                    <Select
-                        labelId="provider-label"
-                        value={selectedProvider}
-                        onChange={handleChangeProvider}
-                        label="Provider"
-                    >
-                        <MenuItem value="openai">OpenAI</MenuItem>
-                        <MenuItem value="gemini">Gemini</MenuItem>
-                    </Select>
-                </FormControl>
-
-                {/* API Key Status */}
-                {selectedProvider === "openai" && (
-                    <TextField
-                        label="API Key do OpenAI"
-                        value={apiKeyStatus.openai
-                            ? "✓ API Key configurada em Configurações → Integrações"
-                            : "⚠ API Key não configurada"}
-                        variant="outlined"
-                        margin="dense"
-                        fullWidth
-                        disabled
-                        error={!apiKeyStatus.openai}
-                        helperText={apiKeyStatus.openai
-                            ? "A API Key será obtida das configurações da empresa"
-                            : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
-                    />
-                )}
-
-                {selectedProvider === "gemini" && (
-                    <TextField
-                        label="API Key do Gemini"
-                        value={apiKeyStatus.gemini
-                            ? "✓ API Key configurada em Configurações → Integrações"
-                            : "⚠ API Key não configurada"}
-                        variant="outlined"
-                        margin="dense"
-                        fullWidth
-                        disabled
-                        error={!apiKeyStatus.gemini}
-                        helperText={apiKeyStatus.gemini
-                            ? "A API Key será obtida das configurações da empresa"
-                            : "Configure a API Key em Configurações → Integrações → Chave da API do Gemini"}
-                    />
-                )}
+                <Typography variant="body2" color="textSecondary" style={{ marginTop: 8, marginBottom: 8 }}>
+                    {i18n.t("settings.options.fields.lmStudioInfra.description")}
+                </Typography>
 
                 {/* Permissões */}
                 <div className={classes.permissionsSection}>

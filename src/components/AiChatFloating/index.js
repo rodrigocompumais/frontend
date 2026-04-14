@@ -417,11 +417,7 @@ const AiChatFloating = () => {
       };
       setMessages((prev) => [...prev, aiMessage]);
     } catch (err) {
-      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        toast.error("Configure a API Key do Gemini em Configurações → Integrações");
-      } else {
-        toastError(err);
-      }
+      toastError(err);
       setMessages((prev) => prev.slice(0, -1));
     } finally {
       setLoading(false);
@@ -536,11 +532,7 @@ const AiChatFloating = () => {
       // Remover mensagem de processamento
       setMessages((prev) => prev.filter(msg => !msg.isProcessing));
 
-      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        toast.error("Configure a API Key do Gemini em Configurações → Integrações");
-      } else {
-        toastError(err);
-      }
+      toastError(err);
     } finally {
       setAudioLoading(false);
     }

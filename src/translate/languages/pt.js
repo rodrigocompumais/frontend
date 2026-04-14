@@ -1576,7 +1576,6 @@ const messages = {
         title: "Configurações",
         tabs: {
           options: "Opções",
-          ai: "Inteligência Artificial",
           api: "API / Integração",
           billing: "Cobrança PIX",
           schedules: "Horários",
@@ -1631,15 +1630,21 @@ const messages = {
             sendGreetingMessageOneQueues: {
               title: "Enviar saudação quando houver somente 1 fila",
             },
+            lmStudioInfra: {
+              title: "IA local (LM Studio)",
+              description:
+                "A inteligência artificial é servida por um único servidor LM Studio (API compatível com OpenAI), configurado pelo administrador no ambiente do backend (variáveis LM_STUDIO_BASE_URL, LM_STUDIO_DEFAULT_MODEL, etc.). Não é necessário informar chaves de API por empresa.",
+              testButton: "Testar conexão com o servidor de IA",
+            },
             geminiApiKey: {
               title: "Gemini API Key",
               placeholder: "Informe sua chave da API Gemini",
-              helper: "Use sua chave da API Gemini (modelo gratuito) para ativar os resumos de IA no dashboard.",
+              helper: "Descontinuado — use LM Studio no servidor.",
             },
             openaiApiKey: {
               title: "OpenAI API Key",
               placeholder: "Informe sua chave da API OpenAI",
-              helper: "Use sua chave da API OpenAI para ativar funcionalidades de IA. Configure pelo menos uma API Key (Gemini ou OpenAI).",
+              helper: "Descontinuado — use LM Studio no servidor.",
             },
             aiProviderConfig: {
               title: "Configuração de Providers de IA",
@@ -1671,6 +1676,15 @@ const messages = {
               saveButton: "Salvar Configurações do Chat",
               saving: "Salvando...",
               saveSuccess: "Configurações do chat salvas com sucesso!",
+              maxArticles: "Máx. artigos de ajuda no prompt",
+              maxArticlesHelper: "Quantos artigos da base de ajuda entram no contexto (1–30). Menos = respostas mais rápidas.",
+              contextMode: "Modo de contexto do chat",
+              contextModeHelper: "Compacto: só métricas e lista de tickets. Detalhado: inclui trechos de conversa. Automático: detalhe quando a pergunta pedir ou houver atendente/contato detectado.",
+              contextModeAuto: "Automático (recomendado)",
+              contextModeCompact: "Sempre compacto",
+              contextModeDetailed: "Sempre detalhado",
+              statsCacheTtlSeconds: "Cache de estatísticas (segundos)",
+              statsCacheTtlSecondsHelper: "Tempo para reutilizar contagens do dashboard no backend (0 = sem cache, máx. 600). Reduz carga no banco entre mensagens seguidas.",
             },
             apiCredentials: {
               title: "Credenciais de API",
@@ -1824,6 +1838,12 @@ const messages = {
         },
         audio: {
           transcribe: "Transcrever",
+          transcribing: "A transcrever…",
+          viewTranscription: "Ver transcrição completa",
+          hideTranscription: "Ocultar transcrição",
+          transcriptionFailed: "Não foi possível transcrever este áudio.",
+          retryTranscription: "Tentar novamente",
+          retryStarted: "Transcrição reiniciada.",
         },
         transcriptionModal: {
           title: "Transcrição de Áudio",
@@ -1975,9 +1995,11 @@ const messages = {
         ERR_AI_QUOTA_EXCEEDED: "A transcrição está temporariamente indisponível. Por favor, tente novamente em alguns minutos.",
         ERR_AI_AUDIO_TOO_LONG: "Este áudio é muito longo para transcrever. Tente com um áudio mais curto.",
         ERR_AI_TRANSCRIPTION_EMPTY: "Não foi possível identificar fala neste áudio. Verifique se o áudio tem volume adequado.",
-        ERR_AI_CONFIG_MISSING: "Configure a inteligência artificial em Configurações → Integrações.",
-        AI_KEY_MISSING: "Configure a inteligência artificial em Configurações → Integrações.",
-        GEMINI_KEY_MISSING: "Configure a chave da API do Gemini em Configurações → Integrações.",
+        ERR_AI_CONFIG_MISSING:
+          "A IA não está disponível. Peça ao administrador para configurar o servidor (LM_STUDIO_BASE_URL e credenciais) no backend.",
+        AI_KEY_MISSING: "O servidor de IA não está configurado. Peça ao administrador para definir LM_STUDIO_BASE_URL no backend.",
+        GEMINI_KEY_MISSING: "O servidor de IA não está configurado. Peça ao administrador para definir LM_STUDIO_BASE_URL no backend.",
+        AI_NOT_CONFIGURED: "O servidor de IA não está configurado. Peça ao administrador para definir LM_STUDIO_BASE_URL no backend.",
         ERR_CHAT_AI_TRANSCRIBE: "Não foi possível transcrever o áudio. Tente novamente em alguns instantes.",
         ERR_AI_TRANSCRIPTION_ERROR: "Ocorreu um problema ao transcrever. Tente novamente.",
         ERR_OTHER_OPEN_TICKET: "Já existe um tíquete aberto para este contato.",

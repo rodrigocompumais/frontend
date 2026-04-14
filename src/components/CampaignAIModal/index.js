@@ -22,6 +22,7 @@ import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import { toast } from "react-toastify";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import isAiBackendConfigError from "../../errors/isAiBackendConfigError";
 import GeminiIcon from "../GeminiIcon";
 
 const useStyles = makeStyles((theme) => ({
@@ -158,10 +159,9 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
       setStep(1);
       toast.success("Mensagem inicial gerada com sucesso!");
     } catch (err) {
-      if (err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        toast.error("Configure a API Key do Gemini em Configurações → Integrações");
+      if (isAiBackendConfigError(err)) {
+        toastError(err);
       } else if (err.response?.data?.message) {
-        // Mensagem específica do backend
         toast.error(err.response.data.message);
       } else {
         toastError(err);
@@ -205,8 +205,8 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
       setStep(3);
       toast.success(`${data.variations?.length || 0} variações geradas com sucesso!`);
     } catch (err) {
-      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        toast.error("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
+      if (isAiBackendConfigError(err)) {
+        toastError(err);
       } else if (err.response?.data?.message) {
         toast.error(err.response.data.message);
       } else {

@@ -824,11 +824,7 @@ const Dashboard = () => {
       const { data } = await api.post("/ai/summary/agent", params);
       setSummaryText(data.summary || "Nenhum resumo disponível.");
     } catch (err) {
-      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        toast.error("Configure a API Key do Gemini em Configuracoes -> Integracoes");
-      } else {
-        toastError(err);
-      }
+      toastError(err);
       setSummaryModalOpen(false);
     } finally {
       setSummaryLoading(false);
@@ -860,11 +856,7 @@ const Dashboard = () => {
       const { data } = await api.post("/ai/summary/agent", params);
       setGeneralSummary(data.summary || "Nenhum resumo disponível.");
     } catch (err) {
-      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        toast.error("Configure a API Key do Gemini em Configurações → Integrações");
-      } else {
-        toastError(err);
-      }
+      toastError(err);
     } finally {
       setGeneralSummaryLoading(false);
     }
@@ -894,11 +886,7 @@ const Dashboard = () => {
         toast.info(data?.message || "Nao foi possivel executar este comando.");
       }
     } catch (err) {
-      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        toast.error("Configure a API Key do Gemini em Configuracoes -> Integracoes");
-      } else {
-        toastError(err);
-      }
+      toastError(err);
     } finally {
       setDashboardCommandLoading(false);
     }

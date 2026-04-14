@@ -14,7 +14,7 @@ import DialogContent from "@material-ui/core/DialogContent";
 import DialogTitle from "@material-ui/core/DialogTitle";
 import CircularProgress from "@material-ui/core/CircularProgress";
 import { i18n } from "../../translate/i18n";
-import { MenuItem, FormControl, InputLabel, Select, Menu, Grid, FormControlLabel, Checkbox } from "@material-ui/core";
+import { MenuItem, FormControl, InputLabel, Select, FormControlLabel, Checkbox, Typography } from "@material-ui/core";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -131,8 +131,7 @@ const useStyles = makeStyles(theme => ({
     },
 }));
 
-// Schema será criado dinamicamente baseado no provider
-const getPromptSchema = (provider) => {
+const getPromptSchema = () => {
     const baseSchema = {
         name: Yup.string().min(5, i18n.t("promptModal.formErrors.name.short")).max(100, i18n.t("promptModal.formErrors.name.long")).required(i18n.t("promptModal.formErrors.name.required")),
         prompt: Yup.string().min(50, i18n.t("promptModal.formErrors.prompt.short")).required(i18n.t("promptModal.formErrors.prompt.required")),
@@ -149,10 +148,7 @@ const getPromptSchema = (provider) => {
 
 const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const classes = useStyles();
-    const [selectedModel, setSelectedModel] = useState("gpt-3.5-turbo-1106");
-    const [selectedProvider, setSelectedProvider] = useState("openai");
-    const [apiKeyStatus, setApiKeyStatus] = useState({ gemini: false, openai: false });
-    const [loadingApiKeyStatus, setLoadingApiKeyStatus] = useState(false);
+    const [selectedModel, setSelectedModel] = useState("local-model");
     const [selectedTemplate, setSelectedTemplate] = useState(null);
     const [templates, setTemplates] = useState([]);
     const [templateVariables, setTemplateVariables] = useState({
@@ -174,7 +170,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const initialState = {
         name: "",
         prompt: "",
-        model: "gpt-3.5-turbo-1106",
+        model: "local-model",
         provider: "openai",
         maxTokens: 100,
         temperature: 1,
@@ -329,8 +325,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         const fetchPrompt = async () => {
             if (!promptId) {
                 setPrompt(initialState);
-                setSelectedProvider("openai");
-                setSelectedModel("gpt-3.5-turbo-1106");
+                setSelectedModel("local-model");
                 setSelectedTemplate(null);
                 setTemplateVariables({
                     nome_agente: "",
@@ -340,11 +335,13 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             } else {
                 try {
                     const { data } = await api.get(`/prompt/${promptId}`);
+                    const prov = data.provider === "gemini" ? "openai" : (data.provider || "openai");
+                    const model = data.model || "local-model";
                     setPrompt({
                         name: data.name || "",
                         prompt: data.prompt || "",
-                        model: data.model || "gpt-3.5-turbo-1106",
-                        provider: data.provider || "openai",
+                        model,
+                        provider: prov,
                         maxTokens: data.maxTokens || 100,
                         temperature: data.temperature !== undefined ? data.temperature : 1,
                         maxMessages: data.maxMessages || 10,
@@ -357,73 +354,22 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                             saturdayAndSunday: "Closed"
                         }
                     });
-                    console.log("Prompt Data Loaded:", data);
-                    console.log("Permissions Debug:", {
-                        internal: convertToBoolean(data.canSendInternalMessages),
-                        transfer: convertToBoolean(data.canTransferToAgent),
-                        tag: convertToBoolean(data.canChangeTag),
-                        schedule: convertToBoolean(data.permitirCriarAgendamentos)
-                    });
-
-                    setSelectedModel(data.model || "gpt-3.5-turbo-1106");
-                    setSelectedProvider(data.provider || "openai");
+                    setSelectedModel(model);
                 } catch (err) {
                     toastError(err);
                 }
             }
         };
 
-        const checkApiKeys = async () => {
-            setLoadingApiKeyStatus(true);
-            try {
-                const { data } = await api.get("/settings");
-                const geminiKey = data.find(s => s.key === "geminiApiKey");
-                const openaiKey = data.find(s => s.key === "openaiApiKey");
-
-                setApiKeyStatus({
-                    gemini: !!geminiKey?.value,
-                    openai: !!openaiKey?.value
-                });
-            } catch (err) {
-                console.error("Erro ao verificar API keys:", err);
-            } finally {
-                setLoadingApiKeyStatus(false);
-            }
-        };
-
         if (open) {
             fetchPrompt();
-            checkApiKeys();
         }
     }, [promptId, open]);
 
     const handleClose = () => {
         setPrompt(initialState);
-        setSelectedModel("gpt-3.5-turbo-1106");
-        setSelectedProvider("openai");
+        setSelectedModel("local-model");
         onClose();
-    };
-
-    const handleChangeModel = (e) => {
-        const newModel = e.target.value;
-        setSelectedModel(newModel);
-        // Atualizar também no estado do prompt para sincronizar com Formik
-        setPrompt(prev => ({ ...prev, model: newModel }));
-    };
-
-    const handleChangeProvider = (e) => {
-        const newProvider = e.target.value;
-        setSelectedProvider(newProvider);
-        // Se mudar para Gemini, resetar modelo para o padrão do Gemini
-        let defaultModel;
-        if (newProvider === "gemini") {
-            defaultModel = "gemini-2.5-flash";
-        } else {
-            defaultModel = "gpt-3.5-turbo-1106";
-        }
-        setSelectedModel(defaultModel);
-        // Atualizar também no estado do prompt
-        setPrompt(prev => ({ ...prev, provider: newProvider, model: defaultModel }));
     };
 
     const handleSaveTemplate = async () => {
@@ -435,7 +381,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         const promptData = {
             tipoAgente: selectedTemplate.tipo,
             model: selectedModel,
-            provider: selectedProvider,
+            provider: "openai",
             maxMessages: 10,
             maxTokens: 100,
             temperature: 1,
@@ -458,29 +404,13 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     };
 
     const handleSavePrompt = async values => {
-        // Verificar se há API key configurada para o provider selecionado
-        if (selectedProvider === "openai" && !apiKeyStatus.openai) {
-            toast.error(
-                "Para usar OpenAI, configure a API Key em Configurações → Integrações → Chave da API do OpenAI"
-            );
-            return;
-        }
-
-        if (selectedProvider === "gemini" && !apiKeyStatus.gemini) {
-            toast.error(
-                "Para usar Gemini, configure a API Key em Configurações → Integrações → Chave da API do Gemini"
-            );
-            return;
-        }
-
         const promptData = {
             ...values,
             model: selectedModel,
-            provider: selectedProvider,
+            provider: "openai",
             businessHours: values.businessHours
         };
 
-        // Não enviar apiKey - será buscada das Settings
         delete promptData.apiKey;
         try {
             if (promptId) {
@@ -513,7 +443,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                 <Formik
                     initialValues={prompt}
                     enableReinitialize={true}
-                    validationSchema={getPromptSchema(selectedProvider)}
+                    validationSchema={getPromptSchema()}
                     onSubmit={(values, actions) => {
                         setTimeout(() => {
                             handleSavePrompt(values);
@@ -583,55 +513,9 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                             margin="dense"
                                             fullWidth
                                         />
-                                        <FormControl fullWidth margin="dense" variant="outlined">
-                                            <InputLabel id="provider-select-label">Provider</InputLabel>
-                                            <Select
-                                                labelId="provider-select-label"
-                                                id="provider-select"
-                                                value={selectedProvider}
-                                                onChange={handleChangeProvider}
-                                                label="Provider"
-                                            >
-                                                <MenuItem value="openai">OpenAI</MenuItem>
-                                                <MenuItem value="gemini">Gemini</MenuItem>
-                                            </Select>
-                                        </FormControl>
-                                        {selectedProvider === "openai" && (
-                                            <FormControl fullWidth margin="dense" variant="outlined">
-                                                <TextField
-                                                    label="API Key do OpenAI"
-                                                    value={apiKeyStatus.openai
-                                                        ? "✓ API Key configurada em Configurações → Integrações"
-                                                        : "⚠ API Key não configurada"}
-                                                    variant="outlined"
-                                                    margin="dense"
-                                                    fullWidth
-                                                    disabled
-                                                    error={!apiKeyStatus.openai}
-                                                    helperText={apiKeyStatus.openai
-                                                        ? "A API Key será obtida das configurações da empresa"
-                                                        : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
-                                                />
-                                            </FormControl>
-                                        )}
-                                        {selectedProvider === "gemini" && (
-                                            <FormControl fullWidth margin="dense" variant="outlined">
-                                                <TextField
-                                                    label="API Key do Gemini"
-                                                    value={apiKeyStatus.gemini
-                                                        ? "✓ API Key configurada em Configurações → Integrações"
-                                                        : "⚠ API Key não configurada"}
-                                                    variant="outlined"
-                                                    margin="dense"
-                                                    fullWidth
-                                                    disabled
-                                                    error={!apiKeyStatus.gemini}
-                                                    helperText={apiKeyStatus.gemini
-                                                        ? "A API Key será obtida das configurações da empresa"
-                                                        : "Configure a API Key em Configurações → Integrações → Chave da API do Gemini"}
-                                                />
-                                            </FormControl>
-                                        )}
+                                        <Typography variant="body2" color="textSecondary" style={{ marginBottom: 8 }}>
+                                            {i18n.t("settings.options.fields.lmStudioInfra.description")}
+                                        </Typography>
                                         <Field
                                             as={TextField}
                                             label={i18n.t("promptModal.form.prompt")}
@@ -703,13 +587,12 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                                     }}
                                                     displayEmpty={false}
                                                 >
-                                                    {selectedProvider === "openai" ? [
+                                                    {[
+                                                        <MenuItem key="local-model" value="local-model">local-model (LM Studio)</MenuItem>,
                                                         <MenuItem key="gpt-3.5-turbo-1106" value="gpt-3.5-turbo-1106">GPT 3.5 turbo</MenuItem>,
                                                         <MenuItem key="gpt-4o-mini" value="gpt-4o-mini">GPT 4.0 Mini</MenuItem>,
                                                         <MenuItem key="gpt-4o" value="gpt-4o">GPT 4.0</MenuItem>
-                                                    ] : (
-                                                        <MenuItem value="gemini-2.5-flash">Gemini 2.5 Flash</MenuItem>
-                                                    )}
+                                                    ]}
                                                 </Select>
                                             </FormControl>
                                             <Field
@@ -860,9 +743,6 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                 setTemplateVariables={setTemplateVariables}
                 useCustomAgentName={useCustomAgentName}
                 setUseCustomAgentName={setUseCustomAgentName}
-                selectedProvider={selectedProvider}
-                handleChangeProvider={handleChangeProvider}
-                apiKeyStatus={apiKeyStatus}
                 customPermissions={customPermissions}
                 setCustomPermissions={setCustomPermissions}
                 onSave={handleSaveTemplate}

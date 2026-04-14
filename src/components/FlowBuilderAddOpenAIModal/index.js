@@ -10,11 +10,9 @@ import Dialog from "@material-ui/core/Dialog";
 import DialogActions from "@material-ui/core/DialogActions";
 import DialogContent from "@material-ui/core/DialogContent";
 import DialogTitle from "@material-ui/core/DialogTitle";
+import Typography from "@material-ui/core/Typography";
 import { i18n } from "../../translate/i18n";
 import TextField from "@material-ui/core/TextField";
-import api from "../../services/api";
-import { toast } from "react-toastify";
-
 const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
@@ -75,7 +73,6 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
   };
 
   const [selectedVoice, setSelectedVoice] = useState("texto");
-  const [apiKeyStatus, setApiKeyStatus] = useState(false);
 
   const [activeModal, setActiveModal] = useState(false);
   const [integration, setIntegration] = useState();
@@ -85,16 +82,6 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
   });
 
   useEffect(() => {
-    const checkApiKey = async () => {
-      try {
-        const { data } = await api.get("/settings");
-        const openaiKey = data.find(s => s.key === "openaiApiKey");
-        setApiKeyStatus(!!openaiKey?.value);
-      } catch (err) {
-        console.error("Erro ao verificar API key:", err);
-      }
-    };
-
     if (open === "edit") {
       setLabels({
         title: "Editar OpenAI do fluxo",
@@ -114,10 +101,6 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
       setActiveModal(true);
     }
 
-    if (open) {
-      checkApiKey();
-    }
-
     return () => {
       isMounted.current = false;
     };
@@ -133,15 +116,6 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
   };
 
   const handleSavePrompt = (values) => {
-    // Verificar se há API key configurada
-    if (!apiKeyStatus) {
-      toast.error(
-        "Para usar OpenAI, configure a API Key em Configurações → Integrações → Chave da API do OpenAI"
-      );
-      return;
-    }
-
-    // Remover apiKey dos valores - será buscada das Settings
     const { apiKey, ...valuesWithoutApiKey } = values;
 
     if (open === "edit") {
@@ -198,22 +172,9 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
                   fullWidth
                   required
                 />
-                <FormControl fullWidth margin="dense" variant="outlined">
-                  <TextField
-                    label="API Key do OpenAI"
-                    value={apiKeyStatus 
-                      ? "✓ API Key configurada em Configurações → Integrações" 
-                      : "⚠ API Key não configurada"}
-                    variant="outlined"
-                    margin="dense"
-                    fullWidth
-                    disabled
-                    error={!apiKeyStatus}
-                    helperText={apiKeyStatus 
-                      ? "A API Key será obtida das configurações da empresa" 
-                      : "Configure a API Key em Configurações → Integrações → Chave da API do OpenAI"}
-                  />
-                </FormControl>
+                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 8 }}>
+                  {i18n.t("settings.options.fields.lmStudioInfra.description")}
+                </Typography>
                 <Field
                   as={TextField}
                   label={i18n.t("promptModal.form.prompt")}

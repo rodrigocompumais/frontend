@@ -1280,8 +1280,6 @@ const MessageInputCustom = (props) => {
 
       if (err.response?.status === 404) {
         toast.error("Rota não encontrada. Verifique se o backend está rodando e a rota /chat-ai/improve está disponível.");
-      } else if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        toast.error("Configure a API Key do Gemini em Configurações → Integrações");
       } else if (err.response?.status === 400) {
         const errorMessage = err.response?.data?.error || err.response?.data?.message || err.response?.data?.detail || "Erro ao melhorar mensagem";
         toast.error(errorMessage);

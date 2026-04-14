@@ -34,11 +34,10 @@ import whatsBackgroundDark from "../../assets/wa-background-dark.png"; //DARK MO
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import isAiBackendConfigError from "../../errors/isAiBackendConfigError";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
-import ChatAIButton from "../ChatAIButton";
 import ChatAIModal from "../ChatAIModal";
-import AudioTranscriptionModal from "../AudioTranscriptionModal";
 import AudioMessagePlayer from "../AudioMessagePlayer";
 import { toast } from "react-toastify";
 import useMessageTranslation from "../../hooks/useMessageTranslation";
@@ -479,7 +478,7 @@ const reducer = (state, action) => {
     const messageIndex = state.findIndex((m) => m.id === messageToUpdate.id);
     if (messageIndex !== -1) {
       const next = [...state];
-      next[messageIndex] = messageToUpdate;
+      next[messageIndex] = { ...next[messageIndex], ...messageToUpdate };
       return next;
     }
     return state;
@@ -516,13 +515,6 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
   const [aiKeyPoints, setAiKeyPoints] = useState([]);
   const [aiAudioSummary, setAiAudioSummary] = useState("");
   const [aiAudioCount, setAiAudioCount] = useState(0);
-
-  // Estados para transcrição de áudio
-  const [transcriptionModalOpen, setTranscriptionModalOpen] = useState(false);
-  const [transcriptionLoading, setTranscriptionLoading] = useState(false);
-  const [transcription, setTranscription] = useState("");
-  const [transcriptionError, setTranscriptionError] = useState(null);
-  const [transcriptionMessageId, setTranscriptionMessageId] = useState(null);
 
   const socketManager = useContext(SocketContext);
   const { user, companyLanguage: authCompanyLanguage } = useContext(AuthContext);
@@ -858,6 +850,15 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
     setAnchorPosition(null);
   }, []);
 
+  const handleRetryTranscription = useCallback(async (messageId) => {
+    try {
+      await api.post(`/chat-ai/transcribe/${messageId}`, { force: true });
+      toast.success(i18n.t("messagesList.audio.retryStarted"));
+    } catch (err) {
+      toastError(err);
+    }
+  }, []);
+
   const checkMessageMedia = (message, index = -1) => {
     // Check for vCard first (can be in body even if mediaType is not set)
     const isVCard = message.mediaType === "vcard" || 
@@ -907,8 +908,10 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
           messageId={message.id}
           mediaUrl={message.mediaUrl}
           nextAudiosInQueue={nextAudios}
-          onTranscribe={handleTranscribeAudio}
-          transcriptionLoading={transcriptionLoading}
+          transcription={message.transcription}
+          transcriptionStatus={message.transcriptionStatus}
+          transcriptionError={message.transcriptionError}
+          onRetryTranscription={handleRetryTranscription}
         />
       );
     } else if (message.mediaType === "video") {
@@ -1073,6 +1076,11 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
               <AudioMessagePlayer
                 messageId={quoted.id}
                 mediaUrl={quoted.mediaUrl}
+                compact
+                transcription={quoted.transcription}
+                transcriptionStatus={quoted.transcriptionStatus}
+                transcriptionError={quoted.transcriptionError}
+                onRetryTranscription={handleRetryTranscription}
               />
             </div>
           )}
@@ -1621,10 +1629,8 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
       setAiAnalysis(data.analysis || "");
       setAiKeyPoints(data.keyPoints || []);
     } catch (err) {
-      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        toast.error("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
-      } else {
-        toastError(err);
+      toastError(err);
+      if (!isAiBackendConfigError(err)) {
         toast.error("Erro ao analisar conversa");
       }
     } finally {
@@ -1646,10 +1652,8 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
       setAiAudioSummary(data.summary || "");
       setAiAudioCount(data.audioCount || 0);
     } catch (err) {
-      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        toast.error("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
-      } else {
-        toastError(err);
+      toastError(err);
+      if (!isAiBackendConfigError(err)) {
         toast.error("Erro ao resumir áudios");
       }
     } finally {
@@ -1671,10 +1675,8 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
       setAiSuggestions(data.suggestions || []);
       setAiKeyPoints(data.keyPoints || []);
     } catch (err) {
-      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        toast.error("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
-      } else {
-        toastError(err);
+      toastError(err);
+      if (!isAiBackendConfigError(err)) {
         toast.error("Erro ao sugerir resposta");
       }
     } finally {
@@ -1692,10 +1694,8 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
       setAiAnalysis(data.analysis || "");
       setAiKeyPoints(data.keyPoints || []);
     } catch (err) {
-      if (err.response?.status === 400 && err.response?.data?.error === "GEMINI_KEY_MISSING") {
-        toast.error("Configure a API Key do Gemini em Configurações → Integrações → Chave da API do Gemini");
-      } else {
-        toastError(err);
+      toastError(err);
+      if (!isAiBackendConfigError(err)) {
         toast.error("Erro ao processar pergunta");
       }
     } finally {
@@ -1707,28 +1707,6 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
     // Copiar sugestão para área de transferência ou input
     navigator.clipboard.writeText(suggestion);
     toast.success("Sugestão copiada para área de transferência!");
-  };
-
-  const handleTranscribeAudio = async (messageId) => {
-    setTranscriptionModalOpen(true);
-    setTranscriptionLoading(true);
-    setTranscription("");
-    setTranscriptionError(null);
-    setTranscriptionMessageId(messageId);
-    
-    try {
-      const { data } = await api.post(`/chat-ai/transcribe/${messageId}`);
-      setTranscription(data.transcription || "");
-    } catch (err) {
-      const errorCode = err.response?.data?.error;
-      const friendlyMessage = errorCode && i18n.exists(`backendErrors.${errorCode}`)
-        ? i18n.t(`backendErrors.${errorCode}`)
-        : (errorCode || i18n.t("backendErrors.ERR_CHAT_AI_TRANSCRIBE"));
-      setTranscriptionError(friendlyMessage);
-      toastError(err);
-    } finally {
-      setTranscriptionLoading(false);
-    }
   };
 
   // Expor handlers para o componente pai
@@ -1776,19 +1754,6 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
         audioCount={aiAudioCount}
         onSendQuestion={handleSendQuestion}
         onSelectSuggestion={handleSelectSuggestion}
-      />
-      <AudioTranscriptionModal
-        open={transcriptionModalOpen}
-        onClose={() => {
-          setTranscriptionModalOpen(false);
-          setTranscription("");
-          setTranscriptionError(null);
-          setTranscriptionMessageId(null);
-        }}
-        onRetry={transcriptionError ? () => handleTranscribeAudio(transcriptionMessageId) : undefined}
-        loading={transcriptionLoading}
-        transcription={transcription}
-        error={transcriptionError}
       />
       <Popover
         open={Boolean(reactionPopover.anchorEl)}

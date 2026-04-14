@@ -108,26 +108,9 @@ const isTicketGroup = (ticket) => {
   return false;
 };
 
-const sortClosedListOrder = (arr) =>
-  [...arr].sort((a, b) => {
-    const da = new Date(a.updatedAt).getTime();
-    const db = new Date(b.updatedAt).getTime();
-    if (db !== da) return db - da;
-    return (b.id || 0) - (a.id || 0);
-  });
-
 const reducer = (state, action) => {
   if (action.type === "LOAD_TICKETS") {
     const newTickets = action.payload;
-    const closed = action.listStatus === "closed";
-
-    if (closed) {
-      const byId = new Map(state.map((t) => [t.id, t]));
-      newTickets.forEach((ticket) => {
-        byId.set(ticket.id, ticket);
-      });
-      return sortClosedListOrder(Array.from(byId.values()));
-    }
 
     newTickets.forEach((ticket) => {
       const ticketIndex = state.findIndex((t) => t.id === ticket.id);
@@ -158,7 +141,6 @@ const reducer = (state, action) => {
   if (action.type === "UPDATE_TICKET") {
     const ticket = action.payload;
     const isOpenTicket = action.isOpenTicket || false; // Indica se o ticket está aberto no momento
-    const closed = action.listStatus === "closed";
 
     const ticketIndex = state.findIndex((t) => t.id === ticket.id);
     if (ticketIndex !== -1) {
@@ -168,8 +150,7 @@ const reducer = (state, action) => {
       // Reposicionar se:
       // 1. Tem mensagens não lidas, OU
       // 2. O ticket está aberto (mesmo que unreadMessages seja 0, pois pode ter sido marcado como lido)
-      // Em fechados, manter ordem da API (últimos resolvidos primeiro) — não puxar para o topo via socket.
-      if (!closed && (ticket.unreadMessages > 0 || isOpenTicket)) {
+      if (ticket.unreadMessages > 0 || isOpenTicket) {
         state.unshift(state.splice(ticketIndex, 1)[0]);
       }
     } else {
@@ -182,7 +163,6 @@ const reducer = (state, action) => {
   if (action.type === "UPDATE_TICKET_UNREAD_MESSAGES") {
     const ticket = action.payload;
     const isOpenTicket = action.isOpenTicket || false;
-    const closed = action.listStatus === "closed";
 
     const ticketIndex = state.findIndex((t) => t.id === ticket.id);
     if (ticketIndex !== -1) {
@@ -222,9 +202,7 @@ const reducer = (state, action) => {
       state[ticketIndex] = merged;
       // Sempre reposicionar quando recebe nova mensagem, mesmo que o ticket esteja aberto
       // Isso garante que tickets abertos com novas mensagens sejam reposicionados
-      if (!closed) {
-        state.unshift(state.splice(ticketIndex, 1)[0]);
-      }
+      state.unshift(state.splice(ticketIndex, 1)[0]);
     } else {
       state.unshift(ticket);
     }
@@ -341,7 +319,7 @@ const TicketsListCustom = (props) => {
       if (!Number.isNaN(key)) ticketGroupByIdRef.current.set(key, isTicketGroup(t));
     });
 
-    dispatch({ type: "LOAD_TICKETS", payload: ticketsToDispatch, listStatus: status });
+    dispatch({ type: "LOAD_TICKETS", payload: ticketsToDispatch });
   }, [tickets, status, searchParam, queues, profile, filterIsGroup]);
 
   useEffect(() => {
@@ -417,7 +395,6 @@ const TicketsListCustom = (props) => {
           type: "UPDATE_TICKET",
           payload: data.ticket,
           isOpenTicket: isOpenTicket,
-          listStatus: status,
         });
       }
 
@@ -434,7 +411,6 @@ const TicketsListCustom = (props) => {
         dispatch({
           type: "UPDATE_TICKET",
           payload: data.ticket,
-          listStatus: status,
         });
       }
     };
@@ -449,7 +425,6 @@ const TicketsListCustom = (props) => {
           type: "UPDATE_TICKET_UNREAD_MESSAGES",
           payload: data.ticket,
           isOpenTicket: isOpenTicket,
-          listStatus: status,
         });
       }
     };

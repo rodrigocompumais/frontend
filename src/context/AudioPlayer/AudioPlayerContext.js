@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useRef, useState, useCallback } from "react";
+import React, { createContext, useContext, useRef, useState, useCallback, useEffect } from "react";
 
 const AudioPlayerContext = createContext(null);
 
@@ -6,8 +6,9 @@ export const AudioPlayerProvider = ({ children }) => {
   const audioRef = useRef(typeof Audio !== "undefined" ? new Audio() : null);
   const [currentPlayingMessageId, setCurrentPlayingMessageId] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
   const playingIdRef = useRef(null);
-
   const queueRef = useRef([]);
 
   const playNextInQueue = useCallback(() => {
@@ -20,7 +21,10 @@ export const AudioPlayerProvider = ({ children }) => {
 
     playingIdRef.current = next.messageId;
     audio.src = next.url;
-    audio.play()
+    setCurrentTime(0);
+    setDuration(0);
+    audio
+      .play()
       .then(() => {
         setCurrentPlayingMessageId(next.messageId);
         setIsPlaying(true);
@@ -28,30 +32,37 @@ export const AudioPlayerProvider = ({ children }) => {
       .catch((err) => console.warn("Erro ao reproduzir próximo áudio:", err));
   }, []);
 
-  const playAudio = useCallback((url, messageId, nextInQueue = []) => {
-    const audio = audioRef.current;
-    if (!audio) return;
+  const playAudio = useCallback(
+    (url, messageId, nextInQueue = []) => {
+      const audio = audioRef.current;
+      if (!audio) return;
 
-    // Se já está tocando este áudio, pausar
-    if (playingIdRef.current === messageId && !audio.paused) {
-      audio.pause();
-      playingIdRef.current = null;
-      queueRef.current = [];
-      setCurrentPlayingMessageId(null);
-      setIsPlaying(false);
-      return;
-    }
+      if (playingIdRef.current === messageId && !audio.paused) {
+        audio.pause();
+        playingIdRef.current = null;
+        queueRef.current = [];
+        setCurrentPlayingMessageId(null);
+        setIsPlaying(false);
+        setCurrentTime(0);
+        setDuration(0);
+        return;
+      }
 
-    queueRef.current = Array.isArray(nextInQueue) ? [...nextInQueue] : [];
-    playingIdRef.current = messageId;
-    audio.src = url;
-    audio.play()
-      .then(() => {
-        setCurrentPlayingMessageId(messageId);
-        setIsPlaying(true);
-      })
-      .catch((err) => console.warn("Erro ao reproduzir áudio:", err));
-  }, []);
+      queueRef.current = Array.isArray(nextInQueue) ? [...nextInQueue] : [];
+      playingIdRef.current = messageId;
+      audio.src = url;
+      setCurrentTime(0);
+      setDuration(0);
+      audio
+        .play()
+        .then(() => {
+          setCurrentPlayingMessageId(messageId);
+          setIsPlaying(true);
+        })
+        .catch((err) => console.warn("Erro ao reproduzir áudio:", err));
+    },
+    []
+  );
 
   const stopAudio = useCallback(() => {
     if (audioRef.current) {
@@ -62,11 +73,31 @@ export const AudioPlayerProvider = ({ children }) => {
     playingIdRef.current = null;
     setCurrentPlayingMessageId(null);
     setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
   }, []);
 
-  React.useEffect(() => {
+  const seekAudio = useCallback((ratio) => {
+    const audio = audioRef.current;
+    if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+    const r = Math.min(1, Math.max(0, ratio));
+    audio.currentTime = r * audio.duration;
+    setCurrentTime(audio.currentTime);
+    setDuration(audio.duration);
+  }, []);
+
+  useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    const syncTime = () => {
+      if (playingIdRef.current) {
+        setCurrentTime(audio.currentTime || 0);
+        if (Number.isFinite(audio.duration) && audio.duration > 0) {
+          setDuration(audio.duration);
+        }
+      }
+    };
 
     const handleEnded = () => {
       if (queueRef.current.length > 0) {
@@ -75,6 +106,8 @@ export const AudioPlayerProvider = ({ children }) => {
         playingIdRef.current = null;
         setCurrentPlayingMessageId(null);
         setIsPlaying(false);
+        setCurrentTime(0);
+        setDuration(0);
       }
     };
 
@@ -89,25 +122,30 @@ export const AudioPlayerProvider = ({ children }) => {
     audio.addEventListener("ended", handleEnded);
     audio.addEventListener("pause", handlePause);
     audio.addEventListener("play", handlePlay);
+    audio.addEventListener("timeupdate", syncTime);
+    audio.addEventListener("loadedmetadata", syncTime);
+    audio.addEventListener("durationchange", syncTime);
     return () => {
       audio.removeEventListener("ended", handleEnded);
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("timeupdate", syncTime);
+      audio.removeEventListener("loadedmetadata", syncTime);
+      audio.removeEventListener("durationchange", syncTime);
     };
   }, [playNextInQueue]);
 
   const value = {
     playAudio,
     stopAudio,
+    seekAudio,
     currentPlayingMessageId,
     isPlaying,
+    currentTime,
+    duration,
   };
 
-  return (
-    <AudioPlayerContext.Provider value={value}>
-      {children}
-    </AudioPlayerContext.Provider>
-  );
+  return <AudioPlayerContext.Provider value={value}>{children}</AudioPlayerContext.Provider>;
 };
 
 export const useAudioPlayer = () => {
