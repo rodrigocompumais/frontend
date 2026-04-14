@@ -50,6 +50,8 @@ import toastError from "../../errors/toastError";
 import useQuickMessages from "../../hooks/useQuickMessages";
 import ChatAIButton from "../ChatAIButton";
 import MessageImproveModal from "../MessageImproveModal";
+import AiProgressModal from "../AiProgressModal";
+import useAiJob from "../../hooks/useAiJob";
 import { toast } from "react-toastify";
 
 const Mp3Recorder = new MicRecorder({ bitRate: 128 });
@@ -683,8 +685,18 @@ const MessageInputCustom = (props) => {
   const [loading, setLoading] = useState(false);
   const [recording, setRecording] = useState(false);
   const [improveModalOpen, setImproveModalOpen] = useState(false);
-  const [improveLoading, setImproveLoading] = useState(false);
   const [improvedText, setImprovedText] = useState("");
+  const [improvePendingActions, setImprovePendingActions] = useState(null);
+  const [improveModelReplyForActions, setImproveModelReplyForActions] = useState(null);
+  const [improveApplyActionsLoading, setImproveApplyActionsLoading] = useState(false);
+
+  const {
+    startJob: startImproveJob,
+    cancelJob: cancelImproveJob,
+    jobOpen: improveJobOpen,
+    progress: improveJobProgress,
+    phase: improveJobPhase,
+  } = useAiJob();
   const [isInternalMessage, setIsInternalMessage] = useState(false);
   const [mentionAnchorEl, setMentionAnchorEl] = useState(null);
   const [participants, setParticipants] = useState([]);
@@ -1235,68 +1247,70 @@ const MessageInputCustom = (props) => {
       return;
     }
 
-    setImproveModalOpen(true);
-    setImproveLoading(true);
     setImprovedText("");
+    setImprovePendingActions(null);
+    setImproveModelReplyForActions(null);
 
+    const draftText = inputMessage.trim();
+    const result = await startImproveJob("improve_message", {
+      ticketId,
+      draftText: draftText || "",
+    });
+
+    if (result) {
+      setImprovedText(result.improvedText || result.improved || "");
+      setImprovePendingActions(
+        Array.isArray(result.pendingActions) && result.pendingActions.length
+          ? result.pendingActions
+          : null
+      );
+      setImproveModelReplyForActions(
+        result.modelReplyForActions && String(result.modelReplyForActions).trim()
+          ? result.modelReplyForActions
+          : null
+      );
+      setImproveModalOpen(true);
+    } else {
+      toast.error("Erro ao melhorar mensagem. Tente novamente.");
+    }
+  };
+
+  const resetImproveModalExtras = () => {
+    setImprovePendingActions(null);
+    setImproveModelReplyForActions(null);
+  };
+
+  const handleApplyImproveReplyActions = async () => {
+    if (!ticketId || !improveModelReplyForActions?.trim()) {
+      toast.error("Não há resposta da IA guardada para aplicar as ações.");
+      return;
+    }
+    setImproveApplyActionsLoading(true);
     try {
-      // Preparar o payload
-      const draftText = inputMessage.trim();
-
-      // Construir payload - o backend pode ter comportamentos diferentes
-      // baseado se há texto ou não na caixa
-      let payload;
-
-      if (draftText && draftText.length > 0) {
-        // Quando há texto: enviar com draftText
-        payload = {
-          ticketId: ticketId,
-          draftText: draftText,
-        };
-      } else {
-        // Quando não há texto: tentar sem o campo primeiro
-        // Se falhar, tentaremos com string vazia
-        payload = {
-          ticketId: ticketId,
-        };
-      }
-
-      console.log("Enviando payload para /chat-ai/improve:", payload);
-      console.log("Texto na caixa:", draftText ? `"${draftText.substring(0, 50)}..."` : "(vazio)");
-
-      const response = await api.post("/chat-ai/improve", payload);
-      const data = response.data;
-
-      setImprovedText(data.improvedText || data.improved || "");
-    } catch (err) {
-      console.error("Erro ao melhorar mensagem:", err);
-      console.error("Detalhes do erro:", {
-        status: err.response?.status,
-        data: err.response?.data,
-        message: err.message
+      await api.post("/chat-ai/apply-reply-actions", {
+        ticketId,
+        modelReply: improveModelReplyForActions,
       });
-
+      toast.success("Ações aplicadas no ticket.");
+      resetImproveModalExtras();
+    } catch (err) {
+      console.error("Erro ao aplicar ações da IA:", err);
       toastError(err);
-
-      if (err.response?.status === 404) {
-        toast.error("Rota não encontrada. Verifique se o backend está rodando e a rota /chat-ai/improve está disponível.");
-      } else if (err.response?.status === 400) {
-        const errorMessage = err.response?.data?.error || err.response?.data?.message || err.response?.data?.detail || "Erro ao melhorar mensagem";
-        toast.error(errorMessage);
-        console.error("Mensagem de erro do backend:", errorMessage);
-      } else {
-        toast.error("Erro ao melhorar mensagem. Verifique sua conexão.");
-      }
-      setImproveModalOpen(false);
     } finally {
-      setImproveLoading(false);
+      setImproveApplyActionsLoading(false);
     }
   };
 
   const handleUseImprovedText = (text) => {
+    if (improvePendingActions?.length) {
+      toast.info(
+        "As ações propostas (interna, fila, tag, agendamento) não foram aplicadas. Use «Aplicar ações no ticket» se precisar delas."
+      );
+    }
     setInputMessage(text);
     setImproveModalOpen(false);
     setImprovedText("");
+    resetImproveModalExtras();
     // Focar no input após aplicar o texto
     setTimeout(() => {
       if (inputRef.current) {
@@ -1560,16 +1574,31 @@ const MessageInputCustom = (props) => {
             />
           </div>
         </Paper>
+        <AiProgressModal
+          open={improveJobOpen}
+          onClose={cancelImproveJob}
+          progress={improveJobProgress}
+          phase={improveJobPhase}
+          title="A IA está a melhorar a mensagem…"
+        />
         <MessageImproveModal
           open={improveModalOpen}
           onClose={() => {
             setImproveModalOpen(false);
             setImprovedText("");
+            resetImproveModalExtras();
           }}
-          loading={improveLoading}
+          loading={false}
           originalText={inputMessage.trim()}
           improvedText={improvedText}
           onUseImproved={handleUseImprovedText}
+          pendingActions={improvePendingActions}
+          onApplyActions={
+            improvePendingActions?.length && improveModelReplyForActions
+              ? handleApplyImproveReplyActions
+              : null
+          }
+          applyActionsLoading={improveApplyActionsLoading}
         />
 
         <Dialog

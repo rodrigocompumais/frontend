@@ -20,10 +20,11 @@ import { green } from "@material-ui/core/colors";
 import AutorenewIcon from "@material-ui/icons/Autorenew";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import { toast } from "react-toastify";
-import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import isAiBackendConfigError from "../../errors/isAiBackendConfigError";
 import GeminiIcon from "../GeminiIcon";
+import useAiJob from "../../hooks/useAiJob";
+import AiProgressModal from "../AiProgressModal";
 
 const useStyles = makeStyles((theme) => ({
   dialog: {
@@ -121,11 +122,12 @@ const useStyles = makeStyles((theme) => ({
 
 const CampaignAIModal = ({ open, onClose, onApply }) => {
   const classes = useStyles();
-  const [step, setStep] = useState(0); // 0: objetivo, 1: preview, 2: gerando variações, 3: sucesso
+  const [step, setStep] = useState(0); // 0: objetivo, 1: preview, 3: sucesso
   const [objective, setObjective] = useState("");
   const [initialMessage, setInitialMessage] = useState("");
   const [variations, setVariations] = useState([]);
-  const [loading, setLoading] = useState(false);
+
+  const { startJob, cancelJob, jobOpen, progress, phase } = useAiJob();
 
   const steps = ["Definir Objetivo", "Revisar Mensagem", "Gerar Variações"];
 
@@ -134,7 +136,7 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
     setObjective("");
     setInitialMessage("");
     setVariations([]);
-    setLoading(false);
+    cancelJob();
     onClose();
   };
 
@@ -143,78 +145,42 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
       toast.warn("Por favor, descreva o objetivo da campanha");
       return;
     }
-
     if (objective.trim().length < 10) {
       toast.warn("Objetivo deve ter pelo menos 10 caracteres");
       return;
     }
 
-    setLoading(true);
-    try {
-      const { data } = await api.post("/ai/campaign/initial", {
-        objective: objective.trim(),
-      });
-
-      setInitialMessage(data.message);
+    const result = await startJob("campaign_initial", { objective: objective.trim() });
+    if (result) {
+      setInitialMessage(result.message);
       setStep(1);
       toast.success("Mensagem inicial gerada com sucesso!");
-    } catch (err) {
-      if (isAiBackendConfigError(err)) {
-        toastError(err);
-      } else if (err.response?.data?.message) {
-        toast.error(err.response.data.message);
-      } else {
-        toastError(err);
-      }
-    } finally {
-      setLoading(false);
+    } else {
+      toast.error("Erro ao gerar mensagem. Tente novamente.");
     }
   };
 
   const handleRegenerate = async () => {
-    setLoading(true);
-    try {
-      const { data } = await api.post("/ai/campaign/initial", {
-        objective: objective.trim(),
-      });
-
-      setInitialMessage(data.message);
+    const result = await startJob("campaign_initial", { objective: objective.trim() });
+    if (result) {
+      setInitialMessage(result.message);
       toast.success("Nova mensagem gerada!");
-    } catch (err) {
-      if (err.response?.data?.message) {
-        toast.error(err.response.data.message);
-      } else {
-        toastError(err);
-      }
-    } finally {
-      setLoading(false);
+    } else {
+      toast.error("Erro ao regenerar mensagem.");
     }
   };
 
   const handleGenerateVariations = async () => {
-    setStep(2);
-    setLoading(true);
-
-    try {
-      const { data } = await api.post("/ai/campaign/variations", {
-        originalMessage: initialMessage,
-        objective: objective.trim(),
-      });
-
-      setVariations(data.variations || []);
+    const result = await startJob("campaign_variations", {
+      originalMessage: initialMessage,
+      objective: objective.trim(),
+    });
+    if (result) {
+      setVariations(result.variations || []);
       setStep(3);
-      toast.success(`${data.variations?.length || 0} variações geradas com sucesso!`);
-    } catch (err) {
-      if (isAiBackendConfigError(err)) {
-        toastError(err);
-      } else if (err.response?.data?.message) {
-        toast.error(err.response.data.message);
-      } else {
-        toastError(err);
-      }
-      setStep(1); // Volta para o passo anterior em caso de erro
-    } finally {
-      setLoading(false);
+      toast.success(`${result.variations?.length || 0} variações geradas com sucesso!`);
+    } else {
+      toast.error("Erro ao gerar variações. Tente novamente.");
     }
   };
 
@@ -266,20 +232,6 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
       );
     }
 
-    if (step === 2) {
-      return (
-        <Box className={classes.loadingBox}>
-          <CircularProgress size={60} thickness={4} />
-          <Typography variant="h6">Gerando variações criativas...</Typography>
-          <Typography variant="body2" color="textSecondary" align="center">
-            A IA está criando 4 versões diferentes da sua mensagem.
-            <br />
-            Isso pode levar alguns segundos.
-          </Typography>
-        </Box>
-      );
-    }
-
     if (step === 3) {
       return (
         <Box>
@@ -323,11 +275,10 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
               onClick={handleGenerateInitial}
               color="primary"
               variant="contained"
-              disabled={loading || !objective.trim() || objective.trim().length < 10}
+              disabled={!objective.trim() || objective.trim().length < 10}
             >
               Gerar Mensagem
             </Button>
-            {loading && <CircularProgress size={24} className={classes.buttonProgress} />}
           </Box>
         </>
       );
@@ -342,7 +293,6 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
           <Box className={classes.btnWrapper}>
             <IconButton
               onClick={handleRegenerate}
-              disabled={loading}
               color="primary"
               title="Gerar outra mensagem"
             >
@@ -354,18 +304,12 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
               onClick={handleGenerateVariations}
               color="primary"
               variant="contained"
-              disabled={loading}
             >
               Aprovar e Gerar Variações
             </Button>
-            {loading && <CircularProgress size={24} className={classes.buttonProgress} />}
           </Box>
         </>
       );
-    }
-
-    if (step === 2) {
-      return null; // Sem ações durante o loading
     }
 
     if (step === 3) {
@@ -383,14 +327,20 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
   };
 
   return (
+    <>
+    <AiProgressModal
+      open={jobOpen}
+      onClose={cancelJob}
+      progress={progress}
+      phase={phase}
+      title="Gerando com IA…"
+    />
     <Dialog
       open={open}
-      onClose={loading ? undefined : handleClose}
+      onClose={handleClose}
       maxWidth="md"
       fullWidth
       className={classes.dialog}
-      disableBackdropClick={loading}
-      disableEscapeKeyDown={loading}
     >
       <Box className={classes.header}>
         <GeminiIcon size={32} className={classes.geminiIcon} />
@@ -416,6 +366,7 @@ const CampaignAIModal = ({ open, onClose, onApply }) => {
 
       <DialogActions style={{ padding: "16px 24px" }}>{renderActions()}</DialogActions>
     </Dialog>
+    </>
   );
 };
 

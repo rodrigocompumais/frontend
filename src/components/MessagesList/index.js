@@ -39,6 +39,8 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 import { i18n } from "../../translate/i18n";
 import ChatAIModal from "../ChatAIModal";
 import AudioMessagePlayer from "../AudioMessagePlayer";
+import AiProgressModal from "../AiProgressModal";
+import useAiJob from "../../hooks/useAiJob";
 import { toast } from "react-toastify";
 import useMessageTranslation from "../../hooks/useMessageTranslation";
 import { AuthContext } from "../../context/Auth/AuthContext";
@@ -515,6 +517,14 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
   const [aiKeyPoints, setAiKeyPoints] = useState([]);
   const [aiAudioSummary, setAiAudioSummary] = useState("");
   const [aiAudioCount, setAiAudioCount] = useState(0);
+
+  const {
+    startJob: startAnalyzeJob,
+    cancelJob: cancelAnalyzeJob,
+    jobOpen: analyzeJobOpen,
+    progress: analyzeJobProgress,
+    phase: analyzeJobPhase,
+  } = useAiJob();
 
   const socketManager = useContext(SocketContext);
   const { user, companyLanguage: authCompanyLanguage } = useContext(AuthContext);
@@ -1616,25 +1626,17 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
   };
 
   const handleAnalyzeChat = async () => {
-    setAiModalOpen(true);
     setAiMode("analyze");
-    setAiLoading(true);
     setAiAnalysis("");
     setAiKeyPoints([]);
-    
-    try {
-      const { data } = await api.post("/chat-ai/analyze", {
-        ticketId: ticketId,
-      });
-      setAiAnalysis(data.analysis || "");
-      setAiKeyPoints(data.keyPoints || []);
-    } catch (err) {
-      toastError(err);
-      if (!isAiBackendConfigError(err)) {
-        toast.error("Erro ao analisar conversa");
-      }
-    } finally {
-      setAiLoading(false);
+
+    const result = await startAnalyzeJob("analyze_chat", { ticketId });
+    if (result) {
+      setAiAnalysis(result.analysis || "");
+      setAiKeyPoints(result.keyPoints || []);
+      setAiModalOpen(true);
+    } else {
+      toast.error("Erro ao analisar conversa. Tente novamente.");
     }
   };
 
@@ -1662,44 +1664,32 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
   };
 
   const handleSuggestResponse = async () => {
-    setAiModalOpen(true);
     setAiMode("suggest");
-    setAiLoading(true);
     setAiSuggestions([]);
-    
-    try {
-      const { data } = await api.post("/chat-ai/analyze", {
-        ticketId: ticketId,
-        suggestResponse: true,
-      });
-      setAiSuggestions(data.suggestions || []);
-      setAiKeyPoints(data.keyPoints || []);
-    } catch (err) {
-      toastError(err);
-      if (!isAiBackendConfigError(err)) {
-        toast.error("Erro ao sugerir resposta");
-      }
-    } finally {
-      setAiLoading(false);
+
+    const result = await startAnalyzeJob("analyze_chat", {
+      ticketId,
+      suggestResponse: true,
+    });
+    if (result) {
+      setAiSuggestions(result.suggestions || []);
+      setAiKeyPoints(result.keyPoints || []);
+      setAiModalOpen(true);
+    } else {
+      toast.error("Erro ao sugerir resposta. Tente novamente.");
     }
   };
 
   const handleSendQuestion = async (question) => {
-    setAiLoading(true);
-    try {
-      const { data } = await api.post("/chat-ai/analyze", {
-        ticketId: ticketId,
-        question: question,
-      });
-      setAiAnalysis(data.analysis || "");
-      setAiKeyPoints(data.keyPoints || []);
-    } catch (err) {
-      toastError(err);
-      if (!isAiBackendConfigError(err)) {
-        toast.error("Erro ao processar pergunta");
-      }
-    } finally {
-      setAiLoading(false);
+    const result = await startAnalyzeJob("analyze_chat", {
+      ticketId,
+      question,
+    });
+    if (result) {
+      setAiAnalysis(result.analysis || "");
+      setAiKeyPoints(result.keyPoints || []);
+    } else {
+      toast.error("Erro ao processar pergunta. Tente novamente.");
     }
   };
 
@@ -1742,11 +1732,18 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
           <CircularProgress className={classes.circleLoading} />
         </div>
       )}
+      <AiProgressModal
+        open={analyzeJobOpen}
+        onClose={cancelAnalyzeJob}
+        progress={analyzeJobProgress}
+        phase={analyzeJobPhase}
+        title="A IA está a analisar a conversa…"
+      />
       <ChatAIModal
         open={aiModalOpen}
         onClose={() => setAiModalOpen(false)}
         mode={aiMode}
-        loading={aiLoading}
+        loading={false}
         analysis={aiAnalysis}
         suggestions={aiSuggestions}
         keyPoints={aiKeyPoints}

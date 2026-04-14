@@ -72,6 +72,8 @@ import useDashboard from "../../hooks/useDashboard";
 import useContacts from "../../hooks/useContacts";
 import useCompanyModules from "../../hooks/useCompanyModules";
 import api from "../../services/api";
+import useAiJob from "../../hooks/useAiJob";
+import AiProgressModal from "../../components/AiProgressModal";
 
 import RestaurantIcon from "@material-ui/icons/Restaurant";
 import QueueIcon from "@material-ui/icons/Queue";
@@ -600,6 +602,14 @@ const Dashboard = () => {
   const [dashboardCommand, setDashboardCommand] = useState("");
   const [dashboardCommandLoading, setDashboardCommandLoading] = useState(false);
   const [dashboardCommandResult, setDashboardCommandResult] = useState(null);
+
+  const {
+    startJob: startAiJob,
+    cancelJob: cancelAiJob,
+    jobOpen: aiJobOpen,
+    progress: aiJobProgress,
+    phase: aiJobPhase,
+  } = useAiJob();
   // Estados para modal de tickets por status
   const [ticketModalOpen, setTicketModalOpen] = useState(false);
   const [ticketModalTitle, setTicketModalTitle] = useState("");
@@ -792,73 +802,48 @@ const Dashboard = () => {
       .format("HH[h] mm[m]");
   }
 
+  const buildDateParams = () => {
+    const params = { maxMessages: 200 };
+    if (!isEmpty(dateFrom) && moment(dateFrom).isValid()) {
+      params.dateStart = moment(dateFrom).format("YYYY-MM-DD");
+    }
+    if (!isEmpty(dateTo) && moment(dateTo).isValid()) {
+      params.dateEnd = moment(dateTo).format("YYYY-MM-DD");
+    }
+    if (period > 0 && isEmpty(dateFrom) && isEmpty(dateTo)) {
+      params.dateStart = moment().subtract(period, "days").format("YYYY-MM-DD");
+      params.dateEnd = moment().format("YYYY-MM-DD");
+    }
+    return params;
+  };
+
   const handleGenerateSummary = async () => {
-    // Gerar resumo por atendente
-    setSummaryLoading(true);
-    setSummaryText("");
-    
     const selectedAgent = attendants.find((a) => a.id === Number(selectedAgentId));
     setSummaryAgentName(selectedAgent?.name || "Atendente");
-    setSummaryModalOpen(true);
+    setSummaryText("");
 
-    try {
-      const params = {
-        maxMessages: 200,
-        agentId: Number(selectedAgentId),
-      };
+    const result = await startAiJob("agent_summary", {
+      ...buildDateParams(),
+      agentId: Number(selectedAgentId),
+    });
 
-      if (!isEmpty(dateFrom) && moment(dateFrom).isValid()) {
-        params.dateStart = moment(dateFrom).format("YYYY-MM-DD");
-      }
-
-      if (!isEmpty(dateTo) && moment(dateTo).isValid()) {
-        params.dateEnd = moment(dateTo).format("YYYY-MM-DD");
-      }
-
-      if (period > 0 && isEmpty(dateFrom) && isEmpty(dateTo)) {
-        const startDate = moment().subtract(period, "days");
-        params.dateStart = startDate.format("YYYY-MM-DD");
-        params.dateEnd = moment().format("YYYY-MM-DD");
-      }
-
-      const { data } = await api.post("/ai/summary/agent", params);
-      setSummaryText(data.summary || "Nenhum resumo disponível.");
-    } catch (err) {
-      toastError(err);
-      setSummaryModalOpen(false);
-    } finally {
-      setSummaryLoading(false);
+    if (result) {
+      setSummaryText(result.summary || "Nenhum resumo disponível.");
+      setSummaryModalOpen(true);
+    } else {
+      toast.error("Erro ao gerar resumo. Tente novamente.");
     }
   };
 
   const handleGenerateGeneralSummary = async () => {
-    setGeneralSummaryLoading(true);
     setGeneralSummary("");
-    try {
-      const params = {
-        maxMessages: 200,
-      };
 
-      if (!isEmpty(dateFrom) && moment(dateFrom).isValid()) {
-        params.dateStart = moment(dateFrom).format("YYYY-MM-DD");
-      }
+    const result = await startAiJob("general_summary", buildDateParams());
 
-      if (!isEmpty(dateTo) && moment(dateTo).isValid()) {
-        params.dateEnd = moment(dateTo).format("YYYY-MM-DD");
-      }
-
-      if (period > 0 && isEmpty(dateFrom) && isEmpty(dateTo)) {
-        const startDate = moment().subtract(period, "days");
-        params.dateStart = startDate.format("YYYY-MM-DD");
-        params.dateEnd = moment().format("YYYY-MM-DD");
-      }
-
-      const { data } = await api.post("/ai/summary/agent", params);
-      setGeneralSummary(data.summary || "Nenhum resumo disponível.");
-    } catch (err) {
-      toastError(err);
-    } finally {
-      setGeneralSummaryLoading(false);
+    if (result) {
+      setGeneralSummary(result.summary || "Nenhum resumo disponível.");
+    } else {
+      toast.error("Erro ao gerar resumo geral. Tente novamente.");
     }
   };
 
@@ -868,27 +853,22 @@ const Dashboard = () => {
       return;
     }
 
-    setDashboardCommandLoading(true);
     setDashboardCommandResult(null);
 
-    try {
-      const { data } = await api.post("/ai/dashboard/command", {
-        command: dashboardCommand.trim(),
-      });
+    const result = await startAiJob("dashboard_command", {
+      command: dashboardCommand.trim(),
+    });
 
-      setDashboardCommandResult(data);
-
-      if (data?.success) {
-        toast.success(data?.message || "Comando executado com sucesso.");
-        // Atualiza a aba de tarefas/agendamentos para refletir novas criacoes
+    if (result) {
+      setDashboardCommandResult(result);
+      if (result?.success) {
+        toast.success(result?.message || "Comando executado com sucesso.");
         fetchTasksAndAppointments();
       } else {
-        toast.info(data?.message || "Nao foi possivel executar este comando.");
+        toast.info(result?.message || "Não foi possível executar este comando.");
       }
-    } catch (err) {
-      toastError(err);
-    } finally {
-      setDashboardCommandLoading(false);
+    } else {
+      toast.error("Erro ao executar comando. Tente novamente.");
     }
   };
 
@@ -955,6 +935,13 @@ const Dashboard = () => {
 
   return (
     <div className={classes.root}>
+      <AiProgressModal
+        open={aiJobOpen}
+        onClose={cancelAiJob}
+        progress={aiJobProgress}
+        phase={aiJobPhase}
+        title="Processando com IA…"
+      />
       <Container maxWidth="xl" className={classes.container}>
         {/* Header */}
         <Box className={classes.header}>
@@ -1387,11 +1374,11 @@ const Dashboard = () => {
                     color="primary"
                     fullWidth
                     onClick={handleGenerateSummary}
-                    disabled={summaryLoading || !selectedAgentId}
-                    startIcon={summaryLoading ? <CircularProgress size={20} /> : <PeopleIcon />}
+                    disabled={!selectedAgentId}
+                    startIcon={<PeopleIcon />}
                     style={{ marginTop: 16, textTransform: "none", borderRadius: 8, padding: "10px 16px" }}
                   >
-                    {summaryLoading ? "Gerando..." : "Gerar Resumo do Atendente"}
+                    Gerar Resumo do Atendente
                   </Button>
                   {summaryText && (
                     <Box marginTop={3}>
@@ -1474,11 +1461,10 @@ const Dashboard = () => {
                     color="primary"
                     fullWidth
                     onClick={handleGenerateGeneralSummary}
-                    disabled={generalSummaryLoading}
-                    startIcon={generalSummaryLoading ? <CircularProgress size={20} /> : <GeminiIcon />}
+                    startIcon={<GeminiIcon />}
                     style={{ marginTop: 16, textTransform: "none", borderRadius: 8, padding: "10px 16px" }}
                   >
-                    {generalSummaryLoading ? "Gerando Resumo..." : "Gerar Resumo Geral"}
+                    Gerar Resumo Geral
                   </Button>
                   {generalSummary && (
                     <Box marginTop={3}>
@@ -1579,11 +1565,10 @@ const Dashboard = () => {
                       variant="contained"
                       color="primary"
                       onClick={handleExecuteDashboardCommand}
-                      disabled={dashboardCommandLoading}
-                      startIcon={dashboardCommandLoading ? <CircularProgress size={20} /> : <GeminiIcon />}
+                      startIcon={<GeminiIcon />}
                       style={{ textTransform: "none", borderRadius: 8, padding: "10px 16px" }}
                     >
-                      {dashboardCommandLoading ? "Executando..." : "Executar comando"}
+                      Executar comando
                     </Button>
                   </Box>
 
@@ -1868,17 +1853,7 @@ const Dashboard = () => {
             </Box>
           </DialogTitle>
           <DialogContent>
-            {summaryLoading ? (
-              <Box className={classes.summaryLoadingBox}>
-                <CircularProgress size={48} />
-                <Typography variant="body1" color="textSecondary">
-                  Gerando resumo com IA...
-                </Typography>
-                <Typography variant="body2" color="textSecondary" style={{ textAlign: "center", maxWidth: 400 }}>
-                  Isso pode levar alguns segundos. Por favor, aguarde.
-                </Typography>
-              </Box>
-            ) : (
+            {(
               <Box style={{ maxHeight: "60vh", overflowY: "auto", ...classes.scrollbarStyles }}>
                 {summaryText ? (
                   <FormattedSummary text={summaryText} classes={classes} />

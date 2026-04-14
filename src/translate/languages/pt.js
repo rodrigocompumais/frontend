@@ -45,6 +45,10 @@ const messages = {
         form: {
           email: "Email",
           password: "Senha",
+          rememberMe: "Lembrar de mim",
+          rememberMeUnsupported: "Indisponível neste navegador (requer contexto seguro)",
+          savedAccountsMenuTitle: "Contas guardadas neste dispositivo",
+          savedEncryptedHint: "Encriptado localmente",
         },
         buttons: {
           submit: "Entrar",

@@ -1,4 +1,4 @@
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { Link as RouterLink } from "react-router-dom";
 
 import Button from "@material-ui/core/Button";
@@ -19,9 +19,21 @@ import { nomeEmpresa } from "../../../package.json";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import logo from "../../assets/logo.png";
 import {LanguageOutlined} from "@material-ui/icons";
-import { IconButton, Menu, MenuItem } from "@material-ui/core";
+import {
+	IconButton,
+	Menu,
+	MenuItem,
+	FormControlLabel,
+	Checkbox,
+	ListItemText,
+	ListSubheader,
+} from "@material-ui/core";
 import LanguageControl from "../../components/LanguageControl";
 import ParticlesBackground from "../../components/ParticlesBackground";
+import {
+	loadRememberedCredentialsList,
+	isRememberCredentialsSupported,
+} from "../../helpers/loginRememberedCredentials";
 
 
 const Copyright = () => {
@@ -88,6 +100,11 @@ const Login = () => {
 
 	const [user, setUser] = useState({ email: "", password: "" });
 	const [showPassword, setShowPassword] = useState(false);
+	const [rememberMe, setRememberMe] = useState(false);
+	const [savedMenuAnchor, setSavedMenuAnchor] = useState(null);
+	const [savedAccounts, setSavedAccounts] = useState([]);
+
+	const rememberSupported = isRememberCredentialsSupported();
 
 	// Languages
 	const [anchorElLanguage, setAnchorElLanguage] = useState(null);
@@ -95,13 +112,38 @@ const Login = () => {
 
 	const { handleLogin } = useContext(AuthContext);
 
+	useEffect(() => {
+		if (!rememberSupported) return;
+		let cancelled = false;
+		loadRememberedCredentialsList().then(list => {
+			if (!cancelled) setSavedAccounts(list);
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [rememberSupported]);
+
 	const handleChangeInput = e => {
 		setUser({ ...user, [e.target.name]: e.target.value });
 	};
 
 	const handlSubmit = e => {
 		e.preventDefault();
-		handleLogin(user);
+		handleLogin({ ...user, rememberMe: rememberSupported && rememberMe });
+	};
+
+	const handleEmailFieldClick = async event => {
+		if (!rememberSupported) return;
+		const list = await loadRememberedCredentialsList();
+		setSavedAccounts(list);
+		if (list.length > 0) {
+			setSavedMenuAnchor(event.currentTarget);
+		}
+	};
+
+	const handlePickSavedAccount = entry => {
+		setUser({ email: entry.email, password: entry.password });
+		setSavedMenuAnchor(null);
 	};
 
 	const handlemenuLanguage = ( event ) => {
@@ -168,9 +210,44 @@ const Login = () => {
 						name="email"
 						value={user.email}
 						onChange={handleChangeInput}
+						onClick={handleEmailFieldClick}
 						autoComplete="email"
 						autoFocus
+						inputProps={{
+							"aria-haspopup": savedAccounts.length > 0 ? "listbox" : undefined,
+							"aria-expanded": Boolean(savedMenuAnchor),
+						}}
 					/>
+					<Menu
+						anchorEl={savedMenuAnchor}
+						open={Boolean(savedMenuAnchor) && savedAccounts.length > 0}
+						onClose={() => setSavedMenuAnchor(null)}
+						anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+						transformOrigin={{ vertical: "top", horizontal: "left" }}
+						getContentAnchorEl={null}
+						PaperProps={{
+							style: {
+								minWidth: savedMenuAnchor ? savedMenuAnchor.offsetWidth : undefined,
+								maxHeight: 280,
+							},
+						}}
+					>
+						<ListSubheader component="div" disableSticky>
+							{i18n.t("login.form.savedAccountsMenuTitle")}
+						</ListSubheader>
+						{savedAccounts.map(acc => (
+							<MenuItem
+								key={acc.email}
+								dense
+								onClick={() => handlePickSavedAccount(acc)}
+							>
+								<ListItemText
+									primary={acc.email}
+									secondary={i18n.t("login.form.savedEncryptedHint")}
+								/>
+							</MenuItem>
+						))}
+					</Menu>
 					<TextField
 						variant="outlined"
 						margin="normal"
@@ -196,6 +273,33 @@ const Login = () => {
 								</InputAdornment>
 							),
 						}}
+					/>
+
+					<FormControlLabel
+						control={
+							<Checkbox
+								checked={rememberMe}
+								onChange={e => setRememberMe(e.target.checked)}
+								color="primary"
+								disabled={!rememberSupported}
+							/>
+						}
+						label={
+							<span>
+								{i18n.t("login.form.rememberMe")}
+								{!rememberSupported && (
+									<Typography
+										component="span"
+										variant="caption"
+										color="textSecondary"
+										display="block"
+									>
+										{i18n.t("login.form.rememberMeUnsupported")}
+									</Typography>
+								)}
+							</span>
+						}
+						style={{ width: "100%", alignItems: "center", marginTop: 4, marginBottom: 0 }}
 					/>
 					
 					{/* <Grid container justify="flex-end">

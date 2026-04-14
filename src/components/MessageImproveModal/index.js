@@ -85,6 +85,33 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+const summarizePendingActions = (pendingActions) => {
+  if (!pendingActions || !pendingActions.length) return "";
+  const parts = [];
+  pendingActions.forEach((a) => {
+    if (a.type === "internal_notes" && a.bodies?.length) {
+      parts.push(`${a.bodies.length} nota(s) interna(s)`);
+    }
+    if (a.type === "change_tag") {
+      parts.push(`alterar tag (${a.tagName || "?"})`);
+    }
+    if (a.type === "transfer_queue") {
+      parts.push(
+        a.queueName
+          ? `transferir para fila "${a.queueName}"`
+          : "transferir de fila (padrão)"
+      );
+    }
+    if (a.type === "transfer_wait_only") {
+      parts.push("avisar cliente (fila sem transferência automática)");
+    }
+    if (a.type === "agendar_commands" && a.commands?.length) {
+      parts.push(`${a.commands.length} comando(s) de agendamento`);
+    }
+  });
+  return parts.join(", ");
+};
+
 const MessageImproveModal = ({
   open,
   onClose,
@@ -92,8 +119,12 @@ const MessageImproveModal = ({
   originalText = "",
   improvedText = "",
   onUseImproved,
+  pendingActions = null,
+  onApplyActions = null,
+  applyActionsLoading = false,
 }) => {
   const classes = useStyles();
+  const pendingSummary = summarizePendingActions(pendingActions);
 
   return (
     <Dialog
@@ -156,8 +187,18 @@ const MessageImproveModal = ({
               />
             </Box>
             <Typography variant="caption" color="textSecondary" style={{ display: "block", marginTop: 8 }}>
-              Você pode editar o texto acima antes de usar, ou clicar em "Usar Texto Melhorado" para aplicar diretamente.
+              O texto acima já está sem marcadores técnicos para enviar ao cliente. Se a IA propôs ações no ticket (interna, fila, tag, agendamento), aplique-as com o botão abaixo antes de enviar a mensagem.
             </Typography>
+            {pendingSummary ? (
+              <Box className={classes.textBox} style={{ marginTop: 16 }}>
+                <Typography variant="subtitle2" color="primary" gutterBottom>
+                  Ações pendentes no ticket
+                </Typography>
+                <Typography variant="body2" style={{ whiteSpace: "pre-wrap" }}>
+                  {pendingSummary}
+                </Typography>
+              </Box>
+            ) : null}
           </>
         ) : (
           <Box className={classes.emptyState}>
@@ -171,6 +212,16 @@ const MessageImproveModal = ({
         <Button onClick={onClose} color="default">
           Cancelar
         </Button>
+        {pendingSummary && onApplyActions ? (
+          <Button
+            onClick={onApplyActions}
+            color="secondary"
+            variant="outlined"
+            disabled={applyActionsLoading}
+          >
+            {applyActionsLoading ? "Aplicando…" : "Aplicar ações no ticket"}
+          </Button>
+        ) : null}
         {improvedText && (
           <Button
             onClick={() => onUseImproved && onUseImproved(improvedText)}

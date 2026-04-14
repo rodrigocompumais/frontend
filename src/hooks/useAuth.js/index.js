@@ -7,6 +7,7 @@ import { toast } from "react-toastify";
 import { i18n } from "../../translate/i18n";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { saveRememberedCredential } from "../../helpers/loginRememberedCredentials";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import moment from "moment";
 const useAuth = () => {
@@ -161,8 +162,14 @@ const useAuth = () => {
   const handleLogin = async (userData) => {
     setLoading(true);
 
+    const rememberMe = Boolean(userData.rememberMe);
+    const loginPayload = {
+      email: userData.email,
+      password: userData.password
+    };
+
     try {
-      const { data } = await api.post("/auth/login", userData);
+      const { data } = await api.post("/auth/login", loginPayload);
       const {
         user: { companyId, id, company },
       } = data;
@@ -209,6 +216,14 @@ const useAuth = () => {
         }
       }
       
+      if (rememberMe && loginPayload.email && loginPayload.password != null) {
+        try {
+          await saveRememberedCredential(loginPayload.email, loginPayload.password);
+        } catch (credErr) {
+          console.error("Não foi possível guardar credenciais lembradas:", credErr);
+        }
+      }
+
       if (before === true) {
         toast.success(i18n.t("auth.toasts.success"));
         if (Math.round(dias) < 5 && Math.round(dias) > 0) {
