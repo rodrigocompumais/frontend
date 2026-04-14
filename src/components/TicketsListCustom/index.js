@@ -328,6 +328,8 @@ const TicketsListCustom = (props) => {
 
     const selectedQueueIdSet = new Set(selectedQueueIds.map((id) => Number(id)));
     const hasQueueFilter = selectedQueueIdSet.size > 0;
+    const selectedUserIdSet = new Set((users || []).map((id) => Number(id)));
+    const hasUserFilter = selectedUserIdSet.size > 0;
 
     const shouldUpdateTicket = (ticket) => {
       const meetsUser =
@@ -336,13 +338,15 @@ const TicketsListCustom = (props) => {
           allowUnassignedPending: status === "pending",
           allowUnassignedWithoutQueue: true
         });
+      const meetsSelectedAttendant =
+        !hasUserFilter || selectedUserIdSet.has(Number(ticket?.userId));
 
       const meetsQueue =
         !hasQueueFilter ||
         !ticket.queueId ||
         selectedQueueIdSet.has(Number(ticket.queueId));
 
-      const meetsQueueAndUser = meetsUser && meetsQueue;
+      const meetsQueueAndUser = meetsUser && meetsQueue && meetsSelectedAttendant;
       
       // Se há filtro de grupo, verificar também
       if (filterIsGroup !== undefined && meetsQueueAndUser) {

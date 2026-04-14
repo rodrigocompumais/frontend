@@ -4,17 +4,22 @@ import CssBaseline from "@material-ui/core/CssBaseline";
 
 import App from "./App";
 
-// Registrar Service Worker para PWA
+// Desativa SW legado e limpa caches antigos para evitar ficar preso
+// em versões antigas do frontend (problema de precisar Ctrl+F5).
 if ('serviceWorker' in navigator) {
 	window.addEventListener('load', () => {
-		navigator.serviceWorker.register('/service-worker.js')
-			.then((registration) => {
-				console.log('Service Worker registrado com sucesso:', registration.scope);
-				registration.update();
-				setInterval(() => registration.update(), 60 * 60 * 1000);
+		navigator.serviceWorker.getRegistrations()
+			.then((registrations) => {
+				return Promise.all(registrations.map((registration) => registration.unregister()));
+			})
+			.then(async () => {
+				if ('caches' in window) {
+					const keys = await caches.keys();
+					await Promise.all(keys.map((key) => caches.delete(key)));
+				}
 			})
 			.catch((error) => {
-				console.log('Erro ao registrar Service Worker:', error);
+				console.log('Erro ao limpar Service Worker/cache legado:', error);
 			});
 	});
 }

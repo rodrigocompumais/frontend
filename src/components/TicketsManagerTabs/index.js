@@ -539,6 +539,17 @@ const TicketsManagerTabs = () => {
               onChange={(values) => setSelectedQueueIds(values)}
             />
           </Box>
+          {profile === "admin" && (
+            <>
+              <Divider />
+              <Box className={classes.filterMenuSection}>
+                <Typography variant="caption" color="textSecondary" style={{ padding: "8px 16px" }}>
+                  Atendentes
+                </Typography>
+                <UsersFilter onFiltered={handleSelectedUsers} initialUsers={selectedUsers} />
+              </Box>
+            </>
+          )}
           <Divider />
           <Box className={classes.filterMenuSection}>
             <Typography variant="caption" color="textSecondary" style={{ padding: "8px 16px" }}>
@@ -576,6 +587,7 @@ const TicketsManagerTabs = () => {
           <TicketsList
             status="open"
             showAll={showAllTickets}
+            users={selectedUsers}
             selectedQueueIds={selectedQueueIds}
             updateCount={(data) => {
               const val = typeof data === "object" ? data.total : data;
@@ -591,6 +603,7 @@ const TicketsManagerTabs = () => {
           <TicketsList
             status="open"
             showAll={showAllTickets}
+            users={selectedUsers}
             selectedQueueIds={selectedQueueIds}
             updateCount={(data) => {
               const val = typeof data === "object" ? data.total : data;
@@ -607,6 +620,7 @@ const TicketsManagerTabs = () => {
         <TicketsList
           status="pending"
           showAll={showAllTickets}
+          users={selectedUsers}
           selectedQueueIds={selectedQueueIds}
           updateCount={(data) => setPendingCount(typeof data === "object" ? data.total : data)}
         />
@@ -615,6 +629,7 @@ const TicketsManagerTabs = () => {
         <TicketsList
           status="closed"
           showAll={true}
+          users={selectedUsers}
           selectedQueueIds={selectedQueueIds}
         />
       </TabPanel>
