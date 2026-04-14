@@ -116,7 +116,18 @@ const Login = () => {
 		if (!rememberSupported) return;
 		let cancelled = false;
 		loadRememberedCredentialsList().then(list => {
-			if (!cancelled) setSavedAccounts(list);
+			if (!cancelled) {
+				setSavedAccounts(list);
+				if (list.length > 0) {
+					const lastUsed = list[list.length - 1];
+					setUser(prev => ({
+						...prev,
+						email: lastUsed.email || "",
+						password: lastUsed.password || "",
+					}));
+					setRememberMe(true);
+				}
+			}
 		});
 		return () => {
 			cancelled = true;

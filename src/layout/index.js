@@ -139,10 +139,18 @@ const LoggedInLayout = ({ children, themeToggle }) => {
         setTimeout(() => {
           // Preservar flags de tour antes de limpar
           const tourKeys = [];
+          const rememberKeys = [];
           for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
             if (key && (key.startsWith('tourCompleted_') || key.startsWith('tourCompleted_global_'))) {
               tourKeys.push({ key, value: localStorage.getItem(key) });
+            }
+            if (
+              key &&
+              (key === "compuchat_remembered_logins_v1" ||
+                key === "compuchat_remembered_ls_salt_v1")
+            ) {
+              rememberKeys.push({ key, value: localStorage.getItem(key) });
             }
           }
           
@@ -151,6 +159,9 @@ const LoggedInLayout = ({ children, themeToggle }) => {
           // Restaurar flags de tour após limpar
           tourKeys.forEach(({ key, value }) => {
             localStorage.setItem(key, value);
+          });
+          rememberKeys.forEach(({ key, value }) => {
+            if (value != null) localStorage.setItem(key, value);
           });
           
           window.location.reload();
