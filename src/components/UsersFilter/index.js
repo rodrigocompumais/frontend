@@ -5,6 +5,16 @@ import toastError from "../../errors/toastError";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 
+function normalizeUserIds(initialUsers) {
+  if (!Array.isArray(initialUsers) || initialUsers.length === 0) return [];
+  return initialUsers
+    .map((x) => {
+      if (x != null && typeof x === "object") return Number(x.id);
+      return Number(x);
+    })
+    .filter((id) => !Number.isNaN(id));
+}
+
 export function UsersFilter({ onFiltered, initialUsers }) {
   const [users, setUsers] = useState([]);
   const [selecteds, setSelecteds] = useState([]);
@@ -16,16 +26,19 @@ export function UsersFilter({ onFiltered, initialUsers }) {
     fetchData();
   }, []);
 
+  // Sincroniza seleção quando o pai envia IDs (não chama onFiltered — evita loop e valores undefined no .id)
   useEffect(() => {
-    setSelecteds([]);
-    if (
-      Array.isArray(initialUsers) &&
-      Array.isArray(users) &&
-      users.length > 0
-    ) {
-      onChange(initialUsers);
+    if (initialUsers === undefined) return;
+    if (!Array.isArray(users) || users.length === 0) return;
+    const ids = normalizeUserIds(initialUsers);
+    if (ids.length === 0) {
+      setSelecteds([]);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const resolved = ids
+      .map((id) => users.find((u) => Number(u.id) === id))
+      .filter(Boolean);
+    setSelecteds(resolved);
   }, [initialUsers, users]);
 
   const loadUsers = async () => {
@@ -38,9 +51,10 @@ export function UsersFilter({ onFiltered, initialUsers }) {
     }
   };
 
-  const onChange = async (value) => {
-    setSelecteds(value);
-    onFiltered(value);
+  const onChange = (value) => {
+    const next = value || [];
+    setSelecteds(next);
+    onFiltered(next);
   };
 
   return (
@@ -50,12 +64,14 @@ export function UsersFilter({ onFiltered, initialUsers }) {
         size="small"
         options={users}
         value={selecteds}
-        onChange={(e, v, r) => onChange(v)}
-        getOptionLabel={(option) => option.name}
+        onChange={(e, v) => onChange(v)}
+        getOptionLabel={(option) => (option && option.name) || ""}
         getOptionSelected={(option, value) => {
           return (
             option?.id === value?.id ||
-            option?.name.toLowerCase() === value?.name.toLowerCase()
+            (option?.name &&
+              value?.name &&
+              option.name.toLowerCase() === value.name.toLowerCase())
           );
         }}
         renderTags={(value, getUserProps) =>
@@ -67,7 +83,7 @@ export function UsersFilter({ onFiltered, initialUsers }) {
                 textShadow: "1px 1px 1px #000",
                 color: "white",
               }}
-              label={option.name}
+              label={option?.name || ""}
               {...getUserProps({ index })}
               size="small"
             />

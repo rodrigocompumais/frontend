@@ -78,6 +78,8 @@ const SocketManager = {
   currentUserId: -1,
   currentSocket: null,
   socketReady: false,
+  /** Uma instância por conexão — evita centenas de listeners `connect` no mesmo socket (tempestade de polling). */
+  managedSocketInstance: null,
 
   getSocket: function(companyId) {
     let userId = null;
@@ -94,6 +96,7 @@ const SocketManager = {
     }
 
     if (companyId !== this.currentCompanyId || userId !== this.currentUserId) {
+      this.managedSocketInstance = null;
       if (this.currentSocket) {
         if (process.env.NODE_ENV !== 'production') {
           console.warn("closing old socket - company or user changed");
@@ -118,7 +121,8 @@ const SocketManager = {
 
       this.currentCompanyId = companyId;
       this.currentUserId = userId;
-      
+      this.socketReady = false;
+
       if (!token) {
         if (process.env.NODE_ENV !== 'production') {
           console.error("❌ [Socket] Token não encontrado no localStorage");
@@ -139,9 +143,11 @@ const SocketManager = {
       }
       
       this.currentSocket = openSocket(backendUrl, {
-        transports: ["polling"],
+        transports: ["websocket", "polling"],
         pingTimeout: 18000,
         pingInterval: 18000,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 8000,
         query: { token },
       });
       
@@ -177,21 +183,16 @@ const SocketManager = {
         }
         
         if (reason.startsWith("io ")) {
-          if (process.env.NODE_ENV !== 'production') {
-            console.warn("🔄 [Socket] Tentando reconectar...", this.currentSocket);
-          }
-          
           const { exp } = jwt.decode(token);
-          if ( Date.now()-180 >= exp*1000) {
+          if (exp != null && Date.now() - 180 >= exp * 1000) {
             if (process.env.NODE_ENV !== 'production') {
               console.warn("⏰ [Socket] Token expirado, recarregando app");
             }
             window.location.reload();
             return;
           }
-
-          this.currentSocket.connect();
-        }        
+          // Reconexão: o cliente socket.io já possui engine de retry; evitar connect() manual (pode duplicar tentativas / loop de polling).
+        }
       });
       
       this.currentSocket.onAny((event, ...args) => {
@@ -209,8 +210,14 @@ const SocketManager = {
       });
 
     }
-    
-    return new ManagedSocket(this);
+
+    if (!this.currentSocket) {
+      return new DummySocket();
+    }
+    if (!this.managedSocketInstance) {
+      this.managedSocketInstance = new ManagedSocket(this);
+    }
+    return this.managedSocketInstance;
   },
   
   onReady: function( callbackReady ) {

@@ -341,8 +341,11 @@ const TicketsManagerTabs = () => {
   };
 
   const handleSelectedUsers = (selecteds) => {
-    const users = selecteds.map((t) => t.id);
-    setSelectedUsers(users);
+    const ids = (selecteds || [])
+      .map((t) => (t != null && typeof t === "object" ? t.id : t))
+      .filter((id) => id != null && !Number.isNaN(Number(id)))
+      .map((id) => Number(id));
+    setSelectedUsers(ids);
   };
 
   const handleOpenFilterMenu = (event) => {
@@ -636,7 +639,7 @@ const TicketsManagerTabs = () => {
       <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
         <TagsFilter onFiltered={handleSelectedTags} />
         {profile === "admin" && (
-          <UsersFilter onFiltered={handleSelectedUsers} />
+          <UsersFilter onFiltered={handleSelectedUsers} initialUsers={selectedUsers} />
         )}
         <TicketsList
           searchParam={searchParam}
