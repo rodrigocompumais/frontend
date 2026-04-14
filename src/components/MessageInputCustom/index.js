@@ -751,8 +751,9 @@ const MessageInputCustom = (props) => {
   }, [inputMessage, ticketId]);
 
   useEffect(() => {
-    inputRef.current.focus();
-  }, [replyingMessage]);
+    if (ticketStatus !== "open") return;
+    if (inputRef.current) inputRef.current.focus();
+  }, [replyingMessage, ticketStatus]);
 
   // Carregar rascunho quando o ticketId muda
   useEffect(() => {
@@ -767,8 +768,10 @@ const MessageInputCustom = (props) => {
     } else {
       setInputMessage("");
     }
-    
-    inputRef.current.focus();
+
+    if (ticketStatus === "open" && inputRef.current) {
+      inputRef.current.focus();
+    }
     return () => {
       // Não limpar o rascunho aqui, apenas limpar outros estados
       setShowEmoji(false);
@@ -785,7 +788,7 @@ const MessageInputCustom = (props) => {
       setParticipants([]);
       setMentionAnchorEl(null);
     };
-  }, [ticketId, setReplyingMessage]);
+  }, [ticketId, setReplyingMessage, ticketStatus]);
 
   // Filtrar apenas imagens para o carrossel
   const imageMedias = medias.filter(media => media.preview);
@@ -1318,6 +1321,10 @@ const MessageInputCustom = (props) => {
       }
     }, 100);
   };
+
+  if (ticketStatus !== "open") {
+    return null;
+  }
 
   const getReplyPreviewText = (message) => {
     if (message.isDeleted) return "(Mensagem excluída)";
