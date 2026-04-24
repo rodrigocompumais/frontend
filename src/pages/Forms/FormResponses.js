@@ -28,6 +28,7 @@ import {
   FormControl,
   InputLabel,
   Select,
+  CircularProgress,
 } from "@material-ui/core";
 
 import MainContainer from "../../components/MainContainer";
@@ -50,6 +51,7 @@ import GetAppIcon from "@material-ui/icons/GetApp";
 import MoreVertIcon from "@material-ui/icons/MoreVert";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import RadioButtonUncheckedIcon from "@material-ui/icons/RadioButtonUnchecked";
+import PrintIcon from "@material-ui/icons/Print";
 
 import { format } from "date-fns";
 
@@ -128,6 +130,7 @@ const FormResponses = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuResponse, setMenuResponse] = useState(null);
+  const [reprintingId, setReprintingId] = useState(null);
 
   useEffect(() => {
     loadForm();
@@ -290,6 +293,22 @@ const FormResponses = () => {
       }
     } catch (err) {
       toastError(err);
+    }
+  };
+
+  const handleReprintPrint = async (response) => {
+    if (!response?.id) return;
+    setReprintingId(response.id);
+    try {
+      const { data } = await api.post(
+        `/forms/${formId}/responses/${response.id}/reprint-print`
+      );
+      toast.success(data.message || "Reimpressão solicitada.");
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setReprintingId(null);
+      handleMenuClose();
     }
   };
 
@@ -513,15 +532,30 @@ const FormResponses = () => {
         onClose={handleMenuClose}
       >
         {menuResponse ? (
-          <MenuItem
-            onClick={() => {
-              handleDelete(menuResponse.id);
-              handleMenuClose();
-            }}
-          >
-            <DeleteIcon fontSize="small" style={{ marginRight: 8 }} />
-            Excluir
-          </MenuItem>
+          <>
+            {isCardapioForm && (
+              <MenuItem
+                onClick={() => handleReprintPrint(menuResponse)}
+                disabled={reprintingId === menuResponse.id}
+              >
+                {reprintingId === menuResponse.id ? (
+                  <CircularProgress size={18} style={{ marginRight: 12 }} />
+                ) : (
+                  <PrintIcon fontSize="small" style={{ marginRight: 8 }} />
+                )}
+                Reimprimir pedido
+              </MenuItem>
+            )}
+            <MenuItem
+              onClick={() => {
+                handleDelete(menuResponse.id);
+                handleMenuClose();
+              }}
+            >
+              <DeleteIcon fontSize="small" style={{ marginRight: 8 }} />
+              Excluir
+            </MenuItem>
+          </>
         ) : null}
       </Menu>
 
@@ -755,6 +789,23 @@ const FormResponses = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailModalOpen(false)}>Fechar</Button>
+          {selectedResponse && isCardapioForm && (
+            <Button
+              color="primary"
+              variant="outlined"
+              onClick={() => handleReprintPrint(selectedResponse)}
+              disabled={reprintingId === selectedResponse.id}
+              startIcon={
+                reprintingId === selectedResponse.id ? (
+                  <CircularProgress size={18} />
+                ) : (
+                  <PrintIcon />
+                )
+              }
+            >
+              Reimprimir
+            </Button>
+          )}
           {selectedResponse && (
             <Button
               color="secondary"
