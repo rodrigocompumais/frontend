@@ -138,10 +138,12 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
     }
   };
 
-  if (!mesa) return null;
+  /* Após liberar, o pai zera `mesa` ao chamar onClose(); ainda precisamos montar o ReciboPdvModal. */
+  if (!mesa && !showRecibo) return null;
 
   return (
     <>
+    {mesa ? (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>
         {i18n.t("mesas.closeAccountTitle")} {mesa.number || mesa.name}
@@ -351,6 +353,7 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
         </Button>
       </DialogActions>
     </Dialog>
+    ) : null}
 
     <ReciboPdvModal
       open={showRecibo}

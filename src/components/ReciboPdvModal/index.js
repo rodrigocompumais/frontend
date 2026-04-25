@@ -24,17 +24,12 @@ import {
   isPlaceholderMesaPhone,
 } from "../../helpers/aggregateReciboMenuItems";
 
-/**
- * Recibo em formato térmico (80mm) para PDV.
- * Exibe "Documento sem valor fiscal" e permite imprimir.
- */
 const THERMAL_WIDTH_MM = 80;
-const CHARS_PER_LINE = 48;
 
 const useStyles = makeStyles((theme) => ({
   dialogPaper: {
     "& .MuiDialog-paper": {
-      maxWidth: 400,
+      maxWidth: 420,
     },
   },
   actions: {
@@ -48,27 +43,78 @@ const useStyles = makeStyles((theme) => ({
     margin: "0 auto",
     fontFamily: "'Courier New', Courier, monospace",
     fontSize: 12,
-    lineHeight: 1.35,
+    lineHeight: 1.4,
     padding: theme.spacing(2),
     backgroundColor: "#fff",
     color: "#000",
     border: "1px dashed #ccc",
     borderRadius: 4,
   },
-  reciboLine: {
-    whiteSpace: "pre-wrap",
-    wordBreak: "break-word",
+  title: {
+    textAlign: "center",
+    fontWeight: 600,
+    letterSpacing: 0.5,
     marginBottom: 2,
   },
-  reciboCenter: {
+  subtitle: {
     textAlign: "center",
+    fontSize: 11,
+    color: "#333",
+    marginBottom: 4,
   },
-  reciboTotal: {
-    fontWeight: 700,
+  hr: {
+    border: "none",
+    borderTop: "1px dashed #999",
+    margin: "8px 0",
+  },
+  metaLine: {
+    textAlign: "left",
+    marginBottom: 2,
+    wordBreak: "break-word",
+  },
+  pedidoHeader: {
+    fontWeight: 600,
     marginTop: 8,
-    borderTop: "2px solid #000",
-    paddingTop: 8,
+    marginBottom: 4,
+    fontSize: 11,
+    color: "#444",
   },
+  itemRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: theme.spacing(1.5),
+    width: "100%",
+    marginBottom: 4,
+  },
+  itemLeft: {
+    flex: 1,
+    minWidth: 0,
+    textAlign: "left",
+    wordBreak: "break-word",
+    paddingRight: theme.spacing(0.5),
+  },
+  itemRight: {
+    flexShrink: 0,
+    whiteSpace: "nowrap",
+    textAlign: "right",
+    fontVariantNumeric: "tabular-nums",
+  },
+  totalRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    fontWeight: 700,
+    marginTop: 10,
+    paddingTop: 8,
+    borderTop: "2px solid #000",
+  },
+  footer: {
+    textAlign: "center",
+    marginTop: 12,
+    fontSize: 11,
+  },
+  spacerSm: { height: 6 },
   "@media print": {
     reciboWrap: {
       width: `${THERMAL_WIDTH_MM}mm !important`,
@@ -80,24 +126,15 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-function centerText(text, width = CHARS_PER_LINE) {
-  if (!text || text.length >= width) return text;
-  const pad = Math.max(0, Math.floor((width - text.length) / 2));
-  return " ".repeat(pad) + text;
+function formatMoney(n) {
+  return `R$ ${Number(n || 0).toFixed(2).replace(".", ",")}`;
 }
 
-function padRight(text, width) {
-  const t = String(text || "").slice(0, width);
-  return t + " ".repeat(Math.max(0, width - t.length));
-}
-
-function padLeft(text, width) {
-  const t = String(text || "").slice(0, width);
-  return " ".repeat(Math.max(0, width - t.length)) + t;
-}
-
-/** @param {"detalhado"|"reduzido"} modo */
-function buildReciboLines(data, modo) {
+/**
+ * Linhas estruturadas: evita pad com espaços (quebra com pre-wrap / largura variável).
+ * @returns {Array<{kind: string, ...}>}
+ */
+function buildReciboRows(data, modo) {
   if (!data) return [];
 
   const isVendaDireta = !data.mesa;
@@ -112,29 +149,33 @@ function buildReciboLines(data, modo) {
   });
   const clienteNome = data.cliente?.name || data.cliente?.number || "";
 
-  const lines = [];
-  lines.push(centerText("RECIBO"));
-  lines.push("");
-  lines.push(centerText("DOCUMENTO SEM VALOR FISCAL"));
-  lines.push("");
-  lines.push(centerText("--------------------------------"));
-  lines.push(numeroConta ? `${tipoConta}: ${numeroConta}` : tipoConta);
-  lines.push(`Data/Hora: ${dataHora}`);
-  if (!isVendaDireta && clienteNome) lines.push(`Cliente: ${clienteNome.slice(0, CHARS_PER_LINE - 10)}`);
-  lines.push("--------------------------------");
-  lines.push("");
+  const rows = [];
+  rows.push({ kind: "title", text: "RECIBO" });
+  rows.push({ kind: "blank" });
+  rows.push({ kind: "subtitle", text: "DOCUMENTO SEM VALOR FISCAL" });
+  rows.push({ kind: "blank" });
+  rows.push({ kind: "hr" });
+  rows.push({
+    kind: "left",
+    text: numeroConta ? `${tipoConta}: ${numeroConta}` : tipoConta,
+  });
+  rows.push({ kind: "left", text: `Data/Hora: ${dataHora}` });
+  if (!isVendaDireta && clienteNome) {
+    rows.push({ kind: "left", text: `Cliente: ${clienteNome}` });
+  }
+  rows.push({ kind: "hr" });
+  rows.push({ kind: "blank" });
 
   if (modo === "reduzido") {
-    lines.push(centerText("(Itens agrupados)"));
-    lines.push("");
-    const agg = aggregateReciboMenuItems(data.pedidos || []);
-    agg.forEach((row) => {
-      const name = (row.productName || "").slice(0, 28);
-      const line = `  ${row.quantity}x ${name}`.slice(0, 32);
-      const valStr = `R$ ${Number(row.lineTotal).toFixed(2).replace(".", ",")}`;
-      lines.push(padRight(line, CHARS_PER_LINE - valStr.length) + valStr);
+    rows.push({ kind: "subtitle", text: "(Itens agrupados)" });
+    rows.push({ kind: "blank" });
+    aggregateReciboMenuItems(data.pedidos || []).forEach((row) => {
+      rows.push({
+        kind: "row",
+        left: `${row.quantity}x ${row.productName || "Item"}`,
+        right: formatMoney(row.lineTotal),
+      });
     });
-    lines.push("");
   } else {
     (data.pedidos || []).forEach((pedido) => {
       const protocol = pedido.protocol || `#${pedido.id}`;
@@ -146,56 +187,154 @@ function buildReciboLines(data, modo) {
             minute: "2-digit",
           })
         : "";
-      lines.push(`${protocol} ${dataPedido}`);
+      rows.push({ kind: "pedidoHeader", text: `${protocol} ${dataPedido}`.trim() });
       let pedidoSub = 0;
       (pedido.menuItems || []).forEach((item) => {
         const qty = Number(item.quantity) || 0;
-        const name = (item.productName || "").slice(0, 28);
+        const name = item.productName || "Item";
         const subtotal = menuItemLineTotal(item);
         pedidoSub += subtotal;
-        const line = `  ${qty}x ${name}`.slice(0, 32);
-        const valStr = `R$ ${subtotal.toFixed(2).replace(".", ",")}`;
-        lines.push(padRight(line, CHARS_PER_LINE - valStr.length) + valStr);
+        rows.push({
+          kind: "row",
+          left: `${qty}x ${name}`,
+          right: formatMoney(subtotal),
+        });
       });
-      lines.push(
-        padLeft(`Subtotal: R$ ${Number(pedidoSub).toFixed(2).replace(".", ",")}`, CHARS_PER_LINE)
-      );
-      lines.push("");
+      rows.push({
+        kind: "row",
+        left: "Subtotal",
+        right: formatMoney(pedidoSub),
+        muted: true,
+      });
+      rows.push({ kind: "blank" });
     });
   }
 
-  lines.push("--------------------------------");
-  const totalStr = `R$ ${Number(data.total || 0).toFixed(2).replace(".", ",")}`;
-  lines.push(padLeft(`TOTAL: ${totalStr}`, CHARS_PER_LINE));
+  rows.push({ kind: "hr" });
+  rows.push({
+    kind: "total",
+    left: "TOTAL:",
+    right: formatMoney(Number(data.total || 0)),
+  });
+
   if (Array.isArray(data.meiosPagamento) && data.meiosPagamento.length > 0) {
-    lines.push("");
-    lines.push("Pagamento:");
+    rows.push({ kind: "blank" });
+    rows.push({ kind: "left", text: "Pagamento:" });
     data.meiosPagamento.forEach((p) => {
       const metodo = String(p?.metodo || "").toUpperCase() || "OUTRO";
       const val = Number(p?.valor || 0);
-      lines.push(padLeft(`${metodo}: R$ ${val.toFixed(2).replace(".", ",")}`, CHARS_PER_LINE));
+      rows.push({ kind: "row", left: metodo, right: formatMoney(val) });
     });
   }
-  lines.push("--------------------------------");
-  lines.push("");
-  lines.push(centerText("Obrigado! Volte sempre."));
-  return lines;
+
+  rows.push({ kind: "hr" });
+  rows.push({ kind: "blank" });
+  rows.push({ kind: "footer", text: "Obrigado! Volte sempre." });
+  return rows;
 }
 
-function buildPrintHtml(linesArray) {
-  const esc = (s) =>
-    String(s || "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  return linesArray
-    .map((line, i) => {
-      const isCenter = i <= 3 || line === "Obrigado! Volte sempre." || line === centerText("(Itens agrupados)");
-      const isTotal = line.startsWith("TOTAL:");
-      const cls = ["line", isCenter ? "center" : "", isTotal ? "total" : ""].filter(Boolean).join(" ");
-      return `<div class="${cls}">${esc(line || " ")}</div>`;
-    })
-    .join("");
+function esc(s) {
+  return String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function rowsToPrintHtml(rows) {
+  const parts = rows.map((row) => {
+    switch (row.kind) {
+      case "title":
+        return `<div class="t-center t-strong">${esc(row.text)}</div>`;
+      case "subtitle":
+        return `<div class="t-center t-small">${esc(row.text)}</div>`;
+      case "blank":
+        return '<div class="blank"></div>';
+      case "hr":
+        return '<div class="hr"></div>';
+      case "left":
+        return `<div class="t-left">${esc(row.text)}</div>`;
+      case "pedidoHeader":
+        return `<div class="t-pedido">${esc(row.text)}</div>`;
+      case "row":
+        return `<div class="row${row.muted ? " muted" : ""}"><span class="row-l">${esc(row.left)}</span><span class="row-r">${esc(row.right)}</span></div>`;
+      case "total":
+        return `<div class="row total"><span class="row-l">${esc(row.left)}</span><span class="row-r">${esc(row.right)}</span></div>`;
+      case "footer":
+        return `<div class="t-footer">${esc(row.text)}</div>`;
+      default:
+        return "";
+    }
+  });
+  return parts.join("");
+}
+
+function ReciboBody({ rows, classes }) {
+  return (
+    <>
+      {rows.map((row, i) => {
+        switch (row.kind) {
+          case "title":
+            return (
+              <Typography key={i} component="div" className={classes.title}>
+                {row.text}
+              </Typography>
+            );
+          case "subtitle":
+            return (
+              <Typography key={i} component="div" className={classes.subtitle}>
+                {row.text}
+              </Typography>
+            );
+          case "blank":
+            return <Box key={i} className={classes.spacerSm} />;
+          case "hr":
+            return <Box key={i} component="hr" className={classes.hr} />;
+          case "left":
+            return (
+              <Typography key={i} component="div" className={classes.metaLine}>
+                {row.text}
+              </Typography>
+            );
+          case "pedidoHeader":
+            return (
+              <Typography key={i} component="div" className={classes.pedidoHeader}>
+                {row.text}
+              </Typography>
+            );
+          case "row":
+            return (
+              <Box
+                key={i}
+                className={classes.itemRow}
+                style={row.muted ? { opacity: 0.85, fontSize: 11 } : undefined}
+              >
+                <Typography component="span" variant="body2" className={classes.itemLeft}>
+                  {row.left}
+                </Typography>
+                <Typography component="span" variant="body2" className={classes.itemRight}>
+                  {row.right}
+                </Typography>
+              </Box>
+            );
+          case "total":
+            return (
+              <Box key={i} className={classes.totalRow}>
+                <Typography component="span">{row.left}</Typography>
+                <Typography component="span">{row.right}</Typography>
+              </Box>
+            );
+          case "footer":
+            return (
+              <Typography key={i} component="div" className={classes.footer}>
+                {row.text}
+              </Typography>
+            );
+          default:
+            return null;
+        }
+      })}
+    </>
+  );
 }
 
 export default function ReciboPdvModal({ open, onClose, data, mesa }) {
@@ -214,11 +353,7 @@ export default function ReciboPdvModal({ open, onClose, data, mesa }) {
 
   const effectiveModo = tab === 1 ? "reduzido" : "detalhado";
 
-  const lines = useMemo(() => (data ? buildReciboLines(data, effectiveModo) : []), [data, effectiveModo]);
-
-  const handleTabChange = (_e, v) => {
-    setTab(v);
-  };
+  const rows = useMemo(() => (data ? buildReciboRows(data, effectiveModo) : []), [data, effectiveModo]);
 
   const dataForApi = useMemo(() => {
     if (!data) return null;
@@ -275,7 +410,7 @@ export default function ReciboPdvModal({ open, onClose, data, mesa }) {
       window.print();
       return;
     }
-    const printContent = buildPrintHtml(lines);
+    const printContent = rowsToPrintHtml(rows);
     const titleMesa = (mesa?.number ?? mesa?.name ?? data?.mesa?.number ?? data?.mesa?.name ?? "Conta")
       .toString()
       .replace(/</g, "");
@@ -290,7 +425,7 @@ export default function ReciboPdvModal({ open, onClose, data, mesa }) {
             body {
               font-family: 'Courier New', Courier, monospace;
               font-size: 12px;
-              line-height: 1.35;
+              line-height: 1.4;
               width: ${THERMAL_WIDTH_MM}mm;
               max-width: ${THERMAL_WIDTH_MM}mm;
               padding: 4mm;
@@ -298,9 +433,26 @@ export default function ReciboPdvModal({ open, onClose, data, mesa }) {
               background: #fff;
               color: #000;
             }
-            .line { white-space: pre-wrap; word-break: break-word; margin-bottom: 2px; }
-            .center { text-align: center; }
-            .total { font-weight: 700; margin-top: 8px; border-top: 2px solid #000; padding-top: 8px; }
+            .t-center { text-align: center; }
+            .t-strong { font-weight: 600; }
+            .t-small { font-size: 11px; color: #333; }
+            .t-left { text-align: left; margin-bottom: 2px; word-break: break-word; }
+            .t-pedido { font-weight: 600; margin-top: 8px; margin-bottom: 4px; font-size: 11px; color: #444; }
+            .blank { height: 6px; }
+            .hr { border: none; border-top: 1px dashed #999; margin: 8px 0; }
+            .row {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              gap: 12px;
+              width: 100%;
+              margin-bottom: 4px;
+            }
+            .row.muted { opacity: 0.85; font-size: 11px; }
+            .row-l { flex: 1; min-width: 0; text-align: left; word-break: break-word; }
+            .row-r { flex-shrink: 0; white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
+            .row.total { font-weight: 700; margin-top: 10px; padding-top: 8px; border-top: 2px solid #000; }
+            .t-footer { text-align: center; margin-top: 12px; font-size: 11px; }
           </style>
         </head>
         <body>${printContent}</body>
@@ -325,32 +477,13 @@ export default function ReciboPdvModal({ open, onClose, data, mesa }) {
       <Dialog open={open} onClose={onClose} className={classes.dialogPaper} maxWidth="sm" fullWidth>
         <DialogTitle>Recibo — {numeroConta ? `${tipoConta} ${numeroConta}` : tipoConta}</DialogTitle>
         <DialogContent>
-          <Tabs value={tab} onChange={handleTabChange} indicatorColor="primary" textColor="primary">
+          <Tabs value={tab} onChange={(_e, v) => setTab(v)} indicatorColor="primary" textColor="primary">
             <Tab label="Detalhado (por pedido)" />
             <Tab label="Impressão reduzida" />
           </Tabs>
           <Box mt={1}>
             <Box className={classes.reciboWrap} id="recibo-termico-pdv">
-              {(() => {
-                const groupedTitle = centerText("(Itens agrupados)");
-                return lines.map((line, i) => {
-                const isCenter =
-                  i <= 3 ||
-                  line === "Obrigado! Volte sempre." ||
-                  line === groupedTitle;
-                const isTotal = line.startsWith("TOTAL:");
-                return (
-                  <div
-                    key={`${i}-${line}`}
-                    className={`${classes.reciboLine} ${isCenter ? classes.reciboCenter : ""} ${
-                      isTotal ? classes.reciboTotal : ""
-                    }`}
-                  >
-                    {line || " "}
-                  </div>
-                );
-              });
-              })()}
+              <ReciboBody rows={rows} classes={classes} />
             </Box>
           </Box>
         </DialogContent>
