@@ -26,6 +26,7 @@ import { QrCode2 as QrCodeIcon } from "@mui/icons-material";
 import { formatDistanceToNow } from "date-fns";
 import MesaQRModal from "../MesaQRModal";
 import { ptBR } from "date-fns/locale";
+import { formatMesaComandaTitle } from "../../helpers/mesaDisplayLabel";
 
 const useStyles = makeStyles((theme) => ({
   card: {
@@ -147,12 +148,7 @@ const MesaCard = ({
     }
   };
 
-  // Verificar se o nome já contém o prefixo para evitar duplicação (ex: "Mesa Mesa 1")
-  const displayName = (mesa.name || mesa.number || "").trim();
-  const expectedPrefix = mesa.type === "comanda" ? "Comanda " : "Mesa ";
-  const displayNameLower = displayName.toLowerCase();
-  const alreadyHasPrefix = displayNameLower.startsWith("mesa ") || displayNameLower.startsWith("comanda ");
-  const finalDisplayName = alreadyHasPrefix ? displayName : (expectedPrefix + displayName);
+  const finalDisplayName = formatMesaComandaTitle(mesa);
 
   return (
     <Card className={`${classes.card} ${isOcupada ? classes.cardOcupada : classes.cardLivree} ${sectionClass}`}>

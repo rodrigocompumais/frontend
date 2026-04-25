@@ -43,6 +43,7 @@ import toastError from "../../errors/toastError";
 import useCompanyModules from "../../hooks/useCompanyModules";
 import { i18n } from "../../translate/i18n";
 import PedidoKanbanCard from "../../components/PedidoKanbanCard";
+import { formatMesaComandaTitle, formatOrderTableBadge } from "../../helpers/mesaDisplayLabel";
 
 // Pedidos mesa: Novo, Confirmado, Em preparo, Pronto, Entregue, Cancelado
 const MESA_ORDER_STAGES = [
@@ -718,18 +719,9 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                 <Box mt={2}>
                   <Typography variant="subtitle2" color="textSecondary" gutterBottom>Tipo</Typography>
                   <Typography variant="body2">
-                    {selectedOrder.metadata?.orderType === "delivery" ? "Delivery" : "Mesa"}
-                    {selectedOrder.metadata?.tableNumber != null && (() => {
-                      const tableNumber = String(selectedOrder.metadata.tableNumber).trim();
-                      // Remover prefixo "Mesa " ou "Comanda " se existir para evitar duplicação
-                      const tableNumberLower = tableNumber.toLowerCase();
-                      const cleanTableNumber = tableNumberLower.startsWith("mesa ") 
-                        ? tableNumber.substring(5) 
-                        : tableNumberLower.startsWith("comanda ")
-                        ? tableNumber.substring(8)
-                        : tableNumber;
-                      return ` • ${cleanTableNumber}`;
-                    })()}
+                    {selectedOrder.metadata?.orderType === "delivery"
+                      ? "Delivery"
+                      : formatOrderTableBadge(selectedOrder.metadata) || "—"}
                   </Typography>
                 </Box>
                 <Box mt={2}>
@@ -838,7 +830,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
               <MenuItem value="">Todas as mesas</MenuItem>
               {mesas.map((m) => (
                 <MenuItem key={m.id} value={String(m.id)}>
-                  {m.number || m.name || `Mesa ${m.id}`}
+                  {formatMesaComandaTitle(m)}
                 </MenuItem>
               ))}
             </Select>
@@ -898,18 +890,9 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                   Tipo
                 </Typography>
                 <Typography variant="body2">
-                  {selectedOrder.metadata?.orderType === "delivery" ? "Delivery" : "Mesa"}
-                  {selectedOrder.metadata?.tableNumber != null && (() => {
-                    const tableNumber = String(selectedOrder.metadata.tableNumber).trim();
-                    // Remover prefixo "Mesa " ou "Comanda " se existir para evitar duplicação
-                    const tableNumberLower = tableNumber.toLowerCase();
-                    const cleanTableNumber = tableNumberLower.startsWith("mesa ") 
-                      ? tableNumber.substring(5) 
-                      : tableNumberLower.startsWith("comanda ")
-                      ? tableNumber.substring(8)
-                      : tableNumber;
-                    return ` • ${cleanTableNumber}`;
-                  })()}
+                  {selectedOrder.metadata?.orderType === "delivery"
+                    ? "Delivery"
+                    : formatOrderTableBadge(selectedOrder.metadata) || "—"}
                 </Typography>
               </Box>
               <Box mt={2}>

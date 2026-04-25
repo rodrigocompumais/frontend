@@ -28,7 +28,6 @@ import {
   FormControl,
   InputLabel,
   Select,
-  CircularProgress,
 } from "@material-ui/core";
 
 import MainContainer from "../../components/MainContainer";
@@ -37,6 +36,7 @@ import Title from "../../components/Title";
 import MainHeaderButtonsWrapper from "../../components/MainHeaderButtonsWrapper";
 import TableRowSkeleton from "../../components/TableRowSkeleton";
 import toastError from "../../errors/toastError";
+import { formatMetadataTableDisplay } from "../../helpers/mesaDisplayLabel";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import useCompanyModules from "../../hooks/useCompanyModules";
@@ -51,7 +51,6 @@ import GetAppIcon from "@material-ui/icons/GetApp";
 import MoreVertIcon from "@material-ui/icons/MoreVert";
 import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import RadioButtonUncheckedIcon from "@material-ui/icons/RadioButtonUnchecked";
-import PrintIcon from "@material-ui/icons/Print";
 
 import { format } from "date-fns";
 
@@ -130,7 +129,6 @@ const FormResponses = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [menuResponse, setMenuResponse] = useState(null);
-  const [reprintingId, setReprintingId] = useState(null);
 
   useEffect(() => {
     loadForm();
@@ -296,22 +294,6 @@ const FormResponses = () => {
     }
   };
 
-  const handleReprintPrint = async (response) => {
-    if (!response?.id) return;
-    setReprintingId(response.id);
-    try {
-      const { data } = await api.post(
-        `/forms/${formId}/responses/${response.id}/reprint-print`
-      );
-      toast.success(data.message || "Reimpressão solicitada.");
-    } catch (err) {
-      toastError(err);
-    } finally {
-      setReprintingId(null);
-      handleMenuClose();
-    }
-  };
-
   return (
     <MainContainer>
       <MainHeader>
@@ -377,7 +359,7 @@ const FormResponses = () => {
               <TableCell>Email</TableCell>
               {isCardapioForm && (
                 <>
-                  <TableCell>Mesa</TableCell>
+                  <TableCell>Mesa / comanda</TableCell>
                   <TableCell align="right">Total</TableCell>
                   <TableCell align="center">Status Pedido</TableCell>
                 </>
@@ -460,7 +442,7 @@ const FormResponses = () => {
                       <TableCell>
                         <Typography variant="body2">
                           {(response.metadata?.tableNumber || response.metadata?.tableId)
-                            ? `Mesa ${response.metadata.tableNumber || response.metadata.tableId}`
+                            ? formatMetadataTableDisplay(response.metadata)
                             : "-"}
                         </Typography>
                       </TableCell>
@@ -532,30 +514,15 @@ const FormResponses = () => {
         onClose={handleMenuClose}
       >
         {menuResponse ? (
-          <>
-            {isCardapioForm && (
-              <MenuItem
-                onClick={() => handleReprintPrint(menuResponse)}
-                disabled={reprintingId === menuResponse.id}
-              >
-                {reprintingId === menuResponse.id ? (
-                  <CircularProgress size={18} style={{ marginRight: 12 }} />
-                ) : (
-                  <PrintIcon fontSize="small" style={{ marginRight: 8 }} />
-                )}
-                Reimprimir pedido
-              </MenuItem>
-            )}
-            <MenuItem
-              onClick={() => {
-                handleDelete(menuResponse.id);
-                handleMenuClose();
-              }}
-            >
-              <DeleteIcon fontSize="small" style={{ marginRight: 8 }} />
-              Excluir
-            </MenuItem>
-          </>
+          <MenuItem
+            onClick={() => {
+              handleDelete(menuResponse.id);
+              handleMenuClose();
+            }}
+          >
+            <DeleteIcon fontSize="small" style={{ marginRight: 8 }} />
+            Excluir
+          </MenuItem>
         ) : null}
       </Menu>
 
@@ -638,9 +605,9 @@ const FormResponses = () => {
                 </Box>
                 {isCardapioForm && (selectedResponse.metadata?.tableNumber || selectedResponse.metadata?.tableId) && (
                   <Box className={classes.fieldAnswer}>
-                    <Typography className={classes.fieldLabel}>Mesa</Typography>
+                    <Typography className={classes.fieldLabel}>Mesa / comanda</Typography>
                     <Typography className={classes.fieldValue}>
-                      Mesa {selectedResponse.metadata.tableNumber || selectedResponse.metadata.tableId}
+                      {formatMetadataTableDisplay(selectedResponse.metadata)}
                     </Typography>
                   </Box>
                 )}
@@ -789,23 +756,6 @@ const FormResponses = () => {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailModalOpen(false)}>Fechar</Button>
-          {selectedResponse && isCardapioForm && (
-            <Button
-              color="primary"
-              variant="outlined"
-              onClick={() => handleReprintPrint(selectedResponse)}
-              disabled={reprintingId === selectedResponse.id}
-              startIcon={
-                reprintingId === selectedResponse.id ? (
-                  <CircularProgress size={18} />
-                ) : (
-                  <PrintIcon />
-                )
-              }
-            >
-              Reimprimir
-            </Button>
-          )}
           {selectedResponse && (
             <Button
               color="secondary"

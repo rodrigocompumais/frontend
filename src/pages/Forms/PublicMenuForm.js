@@ -42,6 +42,7 @@ import CloseIcon from "@material-ui/icons/Close";
 import InputMask from "react-input-mask";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { formatMesaComandaTitle } from "../../helpers/mesaDisplayLabel";
 import { isFieldVisible } from "../../utils/formUtils";
 import { getFormAppearanceStyles, FONT_IMPORTS } from "../../utils/formAppearanceStyles";
 import evaluateCardapioOrderHours, {
@@ -1820,6 +1821,7 @@ const PublicMenuForm = ({
       orderMetadata.tableId = mesaFromQR.id;
       orderMetadata.tableNumber = mesaFromQR.number || mesaFromQR.name || String(mesaFromQR.id);
       orderMetadata.orderType = "mesa";
+      orderMetadata.mesaType = mesaFromQR.type || "mesa";
     } else if (form.settings?.showMesaField && mesaValue && mesasEnabled) {
       const isSelect = (form.settings?.mesaFieldMode || "select") === "select";
       const mesaId = isSelect ? parseInt(mesaValue, 10) : null;
@@ -1828,6 +1830,7 @@ const PublicMenuForm = ({
       if (mesaId) orderMetadata.tableId = mesaId;
       orderMetadata.tableNumber = mesaNumber;
       orderMetadata.orderType = "mesa";
+      if (mesa) orderMetadata.mesaType = mesa.type || "mesa";
     }
     if (!orderMetadata.tableId && deliveryEnabled) {
       // Se existir condição vinculada a campo, só marcar como delivery quando a condição for verdadeira
@@ -2951,7 +2954,7 @@ const PublicMenuForm = ({
                 {mesaFromQR && !loadingMesa && (
                   <Box className={classes.fieldContainer} style={{ marginBottom: 24 * (appStyles?.spacingMultiplier || 1) }}>
                     <Typography variant="body1" style={{ fontWeight: 600 }}>
-                      Mesa {mesaFromQR.number || mesaFromQR.name || mesaFromQR.id}
+                      {formatMesaComandaTitle(mesaFromQR)}
                     </Typography>
                     {mesaFromQR.status === "ocupada" && mesaFromQR.contact && (
                       <Typography variant="body2" color="textSecondary">

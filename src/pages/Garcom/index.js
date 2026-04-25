@@ -46,6 +46,7 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import ContactModal from "../../components/ContactModal";
 import LiberarMesaModal from "../../components/LiberarMesaModal";
 import OrderNotificationPopup from "../../components/OrderNotificationPopup";
+import { formatMesaComandaTitle } from "../../helpers/mesaDisplayLabel";
 
 const filter = createFilterOptions({ trim: true });
 
@@ -985,6 +986,7 @@ const Garcom = () => {
       const metadata = {
         tableId: mesaParaPedido.id,
         tableNumber: mesaParaPedido.number || mesaParaPedido.name,
+        mesaType: mesaParaPedido.type || "mesa",
         orderType: "mesa",
         garcomName: user?.name || "",
       };
@@ -1093,7 +1095,7 @@ const Garcom = () => {
                   <CardContent className={classes.mesaCardContent}>
                     <Typography className={classes.mesaNumber}>
                       <EventSeatIcon style={{ fontSize: "1.2rem", verticalAlign: "middle", marginRight: 4 }} />
-                      {mesa.type === "comanda" ? "Comanda" : "Mesa"} {mesa.number || mesa.name || mesa.id}
+                      {formatMesaComandaTitle(mesa)}
                     </Typography>
                     <Typography
                       className={classes.mesaStatus}
@@ -1156,7 +1158,7 @@ const Garcom = () => {
         fullScreen={isXs}
       >
         <DialogTitle>
-          Pedido - Mesa {mesaParaPedido?.number || mesaParaPedido?.name}
+          Pedido — {mesaParaPedido ? formatMesaComandaTitle(mesaParaPedido) : ""}
           {contactParaPedido?.name && (
             <Typography variant="body2" color="textSecondary">
               Cliente: {contactParaPedido.name}

@@ -21,6 +21,7 @@ import {
 } from "@material-ui/icons";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { formatOrderKindShort, formatOrderTableBadge } from "../../helpers/mesaDisplayLabel";
 
 const useStyles = makeStyles((theme) => ({
   card: {
@@ -271,7 +272,7 @@ const PedidoKanbanCard = ({
               <Typography variant="caption" color="textSecondary" style={{ fontFamily: "monospace", display: "block" }}>
                 {order.protocol || `#${order.id}`}
                 <span style={{ marginLeft: 8, fontFamily: "inherit" }}>
-                  • {(order?.metadata?.orderType === "delivery" ? "Delivery" : "Mesa")}
+                  • {formatOrderKindShort(order?.metadata)}
                 </span>
               </Typography>
             )}
@@ -310,7 +311,7 @@ const PedidoKanbanCard = ({
               }}
             >
               <EventSeatIcon style={{ fontSize: "0.75rem" }} />
-              Mesa {order.metadata.tableNumber || order.metadata.tableId}
+              {formatOrderTableBadge(order.metadata) || order.metadata.tableNumber || order.metadata.tableId}
             </Typography>
           </Tooltip>
         )}

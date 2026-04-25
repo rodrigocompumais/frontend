@@ -12,6 +12,7 @@ import {
 } from "@material-ui/core";
 import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
 import EventSeatIcon from "@material-ui/icons/EventSeat";
+import { formatOrderTableBadge } from "../../helpers/mesaDisplayLabel";
 
 const useStyles = makeStyles((theme) => ({
   dialogContent: {
@@ -61,7 +62,10 @@ const OrderNotificationPopup = ({ open, order, onView, onClose }) => {
 
   const metadata = order.metadata || {};
   const menuItems = metadata.menuItems || [];
-  const tableNumber = metadata.tableNumber || "N/A";
+  const lugarMesa =
+    metadata.orderType === "delivery"
+      ? "Delivery"
+      : formatOrderTableBadge(metadata) || metadata.tableNumber || metadata.tableId || "N/A";
   const total = metadata.total != null 
     ? Number(metadata.total) 
     : menuItems.reduce((sum, item) => sum + (Number(item.quantity) || 0) * (Number(item.productValue) || 0), 0);
@@ -83,7 +87,7 @@ const OrderNotificationPopup = ({ open, order, onView, onClose }) => {
           <Box className={classes.infoRow}>
             <EventSeatIcon fontSize="small" color="action" />
             <Typography variant="body2">
-              <strong>Mesa:</strong> {tableNumber}
+              <strong>{metadata.orderType === "delivery" ? "Tipo" : "Mesa / comanda"}:</strong> {lugarMesa}
             </Typography>
           </Box>
           {order.protocol && (

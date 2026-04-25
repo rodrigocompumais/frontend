@@ -53,6 +53,7 @@ import LiberarMesaModal from "../../components/LiberarMesaModal";
 import OrderNotificationPopup from "../../components/OrderNotificationPopup";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { formatMesaComandaTitle, formatOrderTableBadge } from "../../helpers/mesaDisplayLabel";
 import useCompanyModules from "../../hooks/useCompanyModules";
 import { i18n } from "../../translate/i18n";
 import { SocketContext } from "../../context/Socket/SocketContext";
@@ -1125,6 +1126,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       const metadata = {
         tableId: mesaParaPedido.id,
         tableNumber: mesaParaPedido.number || mesaParaPedido.name,
+        mesaType: mesaParaPedido.type || "mesa",
         orderType: "mesa",
         garcomName: user?.name || "",
       };
@@ -1510,7 +1512,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         scroll="paper"
       >
         <DialogTitle>
-          Adicionar pedido - Mesa {mesaParaPedido?.number || mesaParaPedido?.name}
+          Adicionar pedido — {mesaParaPedido ? formatMesaComandaTitle(mesaParaPedido) : ""}
           {mesaParaPedido?.contact && (
             <Typography variant="body2" color="textSecondary" display="block">
               Cliente: {mesaParaPedido.contact.name || mesaParaPedido.contact.number || "—"}
@@ -2165,7 +2167,13 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                   }, 0);
                 };
                 const total = getOrderTotal(order);
-                const mesaNumber = order.metadata?.tableNumber || order.metadata?.tableId || "N/A";
+                const mesaLabel =
+                  order.metadata?.orderType === "delivery"
+                    ? "Delivery"
+                    : formatOrderTableBadge(order.metadata) ||
+                      order.metadata?.tableNumber ||
+                      order.metadata?.tableId ||
+                      "N/A";
                 return (
                   <ListItem
                     key={order.id}
@@ -2180,7 +2188,9 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                       secondary={
                         <>
                           <Typography variant="body2" component="span">
-                            Mesa: {mesaNumber} • Total: R$ {total.toFixed(2).replace(".", ",")}
+                            {`${order.metadata?.orderType === "delivery" ? "Tipo" : "Mesa / comanda"}: ${mesaLabel} • Total: R$ ${total
+                              .toFixed(2)
+                              .replace(".", ",")}`}
                           </Typography>
                           <br />
                           <Typography variant="caption" color="textSecondary">
@@ -2228,17 +2238,9 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                   Tipo
                 </Typography>
                 <Typography variant="body2">
-                  {selectedPendingOrder.metadata?.orderType === "delivery" ? "Delivery" : "Mesa"}
-                  {selectedPendingOrder.metadata?.tableNumber != null && (() => {
-                    const tableNumber = String(selectedPendingOrder.metadata.tableNumber).trim();
-                    const tableNumberLower = tableNumber.toLowerCase();
-                    const cleanTableNumber = tableNumberLower.startsWith("mesa ") 
-                      ? tableNumber.substring(5) 
-                      : tableNumberLower.startsWith("comanda ")
-                      ? tableNumber.substring(8)
-                      : tableNumber;
-                    return ` • ${cleanTableNumber}`;
-                  })()}
+                  {selectedPendingOrder.metadata?.orderType === "delivery"
+                    ? "Delivery"
+                    : formatOrderTableBadge(selectedPendingOrder.metadata) || "—"}
                 </Typography>
               </Box>
               <Box mt={2}>

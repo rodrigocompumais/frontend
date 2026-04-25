@@ -12,6 +12,7 @@ import {
 import QRCode from "qrcode.react";
 import { toast } from "react-toastify";
 import api from "../../services/api";
+import { formatMesaComandaTitle } from "../../helpers/mesaDisplayLabel";
 
 const MesaQRModal = ({ open, onClose, mesa, cardapioSlug }) => {
   const qrRef = useRef(null);
@@ -38,7 +39,7 @@ const MesaQRModal = ({ open, onClose, mesa, cardapioSlug }) => {
 
   if (!mesa?.id) return null;
 
-  const mesaLabel = mesa.name || mesa.number || `Mesa ${mesa.id}`;
+  const mesaLabel = formatMesaComandaTitle(mesa);
 
   const handleCopyLink = () => {
     if (navigator.clipboard) {
