@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo, useState, useEffect, useCallback } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -6,9 +6,23 @@ import {
   DialogActions,
   Button,
   Box,
+  Tabs,
+  Tab,
+  TextField,
+  CircularProgress,
+  Typography,
 } from "@material-ui/core";
 import PrintIcon from "@material-ui/icons/Print";
+import WhatsAppIcon from "@material-ui/icons/WhatsApp";
 import { makeStyles } from "@material-ui/core/styles";
+import api from "../../services/api";
+import toastError from "../../errors/toastError";
+import { toast } from "react-toastify";
+import {
+  aggregateReciboMenuItems,
+  menuItemLineTotal,
+  isPlaceholderMesaPhone,
+} from "../../helpers/aggregateReciboMenuItems";
 
 /**
  * Recibo em formato térmico (80mm) para PDV.
@@ -20,14 +34,14 @@ const CHARS_PER_LINE = 48;
 const useStyles = makeStyles((theme) => ({
   dialogPaper: {
     "& .MuiDialog-paper": {
-      maxWidth: 360,
+      maxWidth: 400,
     },
   },
   actions: {
     padding: theme.spacing(2),
     flexWrap: "wrap",
+    gap: theme.spacing(1),
   },
-  /** Área do recibo: largura de impressora térmica 80mm (≈302px @96dpi) */
   reciboWrap: {
     width: `${THERMAL_WIDTH_MM}mm`,
     maxWidth: "100%",
@@ -55,7 +69,6 @@ const useStyles = makeStyles((theme) => ({
     borderTop: "2px solid #000",
     paddingTop: 8,
   },
-  /** Usado na impressão: esconder resto da página e mostrar só o recibo em 80mm */
   "@media print": {
     reciboWrap: {
       width: `${THERMAL_WIDTH_MM}mm !important`,
@@ -83,19 +96,177 @@ function padLeft(text, width) {
   return " ".repeat(Math.max(0, width - t.length)) + t;
 }
 
+/** @param {"detalhado"|"reduzido"} modo */
+function buildReciboLines(data, modo) {
+  if (!data) return [];
+
+  const isVendaDireta = !data.mesa;
+  const tipoConta = isVendaDireta ? "VENDA PDV" : data.mesa?.type === "comanda" ? "COMANDA" : "MESA";
+  const numeroConta = isVendaDireta ? "" : data.mesa?.number || data.mesa?.name || "";
+  const dataHora = new Date().toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const clienteNome = data.cliente?.name || data.cliente?.number || "";
+
+  const lines = [];
+  lines.push(centerText("RECIBO"));
+  lines.push("");
+  lines.push(centerText("DOCUMENTO SEM VALOR FISCAL"));
+  lines.push("");
+  lines.push(centerText("--------------------------------"));
+  lines.push(numeroConta ? `${tipoConta}: ${numeroConta}` : tipoConta);
+  lines.push(`Data/Hora: ${dataHora}`);
+  if (!isVendaDireta && clienteNome) lines.push(`Cliente: ${clienteNome.slice(0, CHARS_PER_LINE - 10)}`);
+  lines.push("--------------------------------");
+  lines.push("");
+
+  if (modo === "reduzido") {
+    lines.push(centerText("(Itens agrupados)"));
+    lines.push("");
+    const agg = aggregateReciboMenuItems(data.pedidos || []);
+    agg.forEach((row) => {
+      const name = (row.productName || "").slice(0, 28);
+      const line = `  ${row.quantity}x ${name}`.slice(0, 32);
+      const valStr = `R$ ${Number(row.lineTotal).toFixed(2).replace(".", ",")}`;
+      lines.push(padRight(line, CHARS_PER_LINE - valStr.length) + valStr);
+    });
+    lines.push("");
+  } else {
+    (data.pedidos || []).forEach((pedido) => {
+      const protocol = pedido.protocol || `#${pedido.id}`;
+      const dataPedido = pedido.submittedAt
+        ? new Date(pedido.submittedAt).toLocaleString("pt-BR", {
+            day: "2-digit",
+            month: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        : "";
+      lines.push(`${protocol} ${dataPedido}`);
+      let pedidoSub = 0;
+      (pedido.menuItems || []).forEach((item) => {
+        const qty = Number(item.quantity) || 0;
+        const name = (item.productName || "").slice(0, 28);
+        const subtotal = menuItemLineTotal(item);
+        pedidoSub += subtotal;
+        const line = `  ${qty}x ${name}`.slice(0, 32);
+        const valStr = `R$ ${subtotal.toFixed(2).replace(".", ",")}`;
+        lines.push(padRight(line, CHARS_PER_LINE - valStr.length) + valStr);
+      });
+      lines.push(
+        padLeft(`Subtotal: R$ ${Number(pedidoSub).toFixed(2).replace(".", ",")}`, CHARS_PER_LINE)
+      );
+      lines.push("");
+    });
+  }
+
+  lines.push("--------------------------------");
+  const totalStr = `R$ ${Number(data.total || 0).toFixed(2).replace(".", ",")}`;
+  lines.push(padLeft(`TOTAL: ${totalStr}`, CHARS_PER_LINE));
+  if (Array.isArray(data.meiosPagamento) && data.meiosPagamento.length > 0) {
+    lines.push("");
+    lines.push("Pagamento:");
+    data.meiosPagamento.forEach((p) => {
+      const metodo = String(p?.metodo || "").toUpperCase() || "OUTRO";
+      const val = Number(p?.valor || 0);
+      lines.push(padLeft(`${metodo}: R$ ${val.toFixed(2).replace(".", ",")}`, CHARS_PER_LINE));
+    });
+  }
+  lines.push("--------------------------------");
+  lines.push("");
+  lines.push(centerText("Obrigado! Volte sempre."));
+  return lines;
+}
+
+function buildPrintHtml(linesArray) {
+  const esc = (s) =>
+    String(s || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  return linesArray
+    .map((line, i) => {
+      const isCenter = i <= 3 || line === "Obrigado! Volte sempre." || line === centerText("(Itens agrupados)");
+      const isTotal = line.startsWith("TOTAL:");
+      const cls = ["line", isCenter ? "center" : "", isTotal ? "total" : ""].filter(Boolean).join(" ");
+      return `<div class="${cls}">${esc(line || " ")}</div>`;
+    })
+    .join("");
+}
+
 export default function ReciboPdvModal({ open, onClose, data, mesa }) {
   const classes = useStyles();
+  const [tab, setTab] = useState(0);
+  const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
+  const [phoneInput, setPhoneInput] = useState("");
+  const [sendingWa, setSendingWa] = useState(false);
 
-  const buildPrintHtml = (linesArray) => {
-    const esc = (s) => String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    return linesArray
-      .map((line, i) => {
-        const isCenter = i <= 3 || line === "Obrigado! Volte sempre.";
-        const isTotal = line.startsWith("TOTAL:");
-        const cls = ["line", isCenter ? "center" : "", isTotal ? "total" : ""].filter(Boolean).join(" ");
-        return `<div class="${cls}">${esc(line || " ")}</div>`;
-      })
-      .join("");
+  useEffect(() => {
+    if (open) {
+      setTab(0);
+      setPhoneInput("");
+    }
+  }, [open, data]);
+
+  const effectiveModo = tab === 1 ? "reduzido" : "detalhado";
+
+  const lines = useMemo(() => (data ? buildReciboLines(data, effectiveModo) : []), [data, effectiveModo]);
+
+  const handleTabChange = (_e, v) => {
+    setTab(v);
+  };
+
+  const dataForApi = useMemo(() => {
+    if (!data) return null;
+    return { ...data, mesa: data.mesa || mesa || null };
+  }, [data, mesa]);
+
+  const sendPdfToNumber = useCallback(
+    async (digits) => {
+      if (!dataForApi) return;
+      const clean = String(digits || "").replace(/\D/g, "");
+      if (clean.length < 10) {
+        toast.error("Informe um número válido (DDD + número).");
+        return;
+      }
+      const variant = effectiveModo === "reduzido" ? "reduced" : "full";
+      setSendingWa(true);
+      try {
+        const pdfRes = await api.post(
+          "/recibos/pdf",
+          { variant, data: dataForApi },
+          { responseType: "blob" }
+        );
+        const blob = pdfRes.data;
+        const fd = new FormData();
+        fd.append("file", blob, "recibo.pdf");
+        fd.append("number", clean);
+        fd.append("body", "Segue o recibo da sua conta.");
+        await api.post("/messages/send-media-by-phone", fd);
+        toast.success("PDF enviado para o WhatsApp.");
+        setPhoneDialogOpen(false);
+        setPhoneInput("");
+      } catch (e) {
+        toastError(e);
+      } finally {
+        setSendingWa(false);
+      }
+    },
+    [dataForApi, effectiveModo]
+  );
+
+  const handleWhatsAppClick = () => {
+    const num = data?.cliente?.number;
+    if (num && !isPlaceholderMesaPhone(num)) {
+      sendPdfToNumber(num);
+      return;
+    }
+    setPhoneInput("");
+    setPhoneDialogOpen(true);
   };
 
   const handlePrint = () => {
@@ -105,12 +276,15 @@ export default function ReciboPdvModal({ open, onClose, data, mesa }) {
       return;
     }
     const printContent = buildPrintHtml(lines);
+    const titleMesa = (mesa?.number ?? mesa?.name ?? data?.mesa?.number ?? data?.mesa?.name ?? "Conta")
+      .toString()
+      .replace(/</g, "");
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
           <meta charset="utf-8">
-          <title>Recibo - ${(mesa?.number ?? mesa?.name ?? (data?.mesa ? "Conta" : "PDV")).toString().replace(/</g, "")}</title>
+          <title>Recibo - ${titleMesa}</title>
           <style>
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body {
@@ -143,91 +317,89 @@ export default function ReciboPdvModal({ open, onClose, data, mesa }) {
   if (!data) return null;
 
   const isVendaDireta = !data.mesa;
-  const tipoConta = isVendaDireta ? "VENDA PDV" : (data.mesa?.type === "comanda" ? "COMANDA" : "MESA");
-  const numeroConta = isVendaDireta ? "" : (data.mesa?.number || data.mesa?.name || "");
-  const dataHora = new Date().toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const clienteNome = data.cliente?.name || data.cliente?.number || "";
-
-  const lines = [];
-  lines.push(centerText("RECIBO"));
-  lines.push("");
-  lines.push(centerText("DOCUMENTO SEM VALOR FISCAL"));
-  lines.push("");
-  lines.push(centerText("--------------------------------"));
-  lines.push(numeroConta ? `${tipoConta}: ${numeroConta}` : tipoConta);
-  lines.push(`Data/Hora: ${dataHora}`);
-  if (!isVendaDireta && clienteNome) lines.push(`Cliente: ${clienteNome.slice(0, CHARS_PER_LINE - 10)}`);
-  lines.push("--------------------------------");
-  lines.push("");
-
-  (data.pedidos || []).forEach((pedido) => {
-    const protocol = pedido.protocol || `#${pedido.id}`;
-    const dataPedido = pedido.submittedAt
-      ? new Date(pedido.submittedAt).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })
-      : "";
-    lines.push(`${protocol} ${dataPedido}`);
-    (pedido.menuItems || []).forEach((item) => {
-      const qty = item.quantity || 0;
-      const name = (item.productName || "").slice(0, 28);
-      const unitVal = Number(item.productValue) || 0;
-      const subtotal = qty * unitVal;
-      const line = `  ${qty}x ${name}`.slice(0, 32);
-      const valStr = `R$ ${subtotal.toFixed(2).replace(".", ",")}`;
-      lines.push(padRight(line, CHARS_PER_LINE - valStr.length) + valStr);
-    });
-    lines.push(padLeft(`Subtotal: R$ ${Number(pedido.total || 0).toFixed(2).replace(".", ",")}`, CHARS_PER_LINE));
-    lines.push("");
-  });
-
-  lines.push("--------------------------------");
-  const totalStr = `R$ ${Number(data.total || 0).toFixed(2).replace(".", ",")}`;
-  lines.push(padLeft(`TOTAL: ${totalStr}`, CHARS_PER_LINE));
-  if (Array.isArray(data.meiosPagamento) && data.meiosPagamento.length > 0) {
-    lines.push("");
-    lines.push("Pagamento:");
-    data.meiosPagamento.forEach((p) => {
-      const metodo = String(p?.metodo || "").toUpperCase() || "OUTRO";
-      const val = Number(p?.valor || 0);
-      lines.push(padLeft(`${metodo}: R$ ${val.toFixed(2).replace(".", ",")}`, CHARS_PER_LINE));
-    });
-  }
-  lines.push("--------------------------------");
-  lines.push("");
-  lines.push(centerText("Obrigado! Volte sempre."));
+  const tipoConta = isVendaDireta ? "VENDA PDV" : data.mesa?.type === "comanda" ? "COMANDA" : "MESA";
+  const numeroConta = isVendaDireta ? "" : data.mesa?.number || data.mesa?.name || "";
 
   return (
-    <Dialog open={open} onClose={onClose} className={classes.dialogPaper}>
-      <DialogTitle>Recibo — {numeroConta ? `${tipoConta} ${numeroConta}` : tipoConta}</DialogTitle>
-      <DialogContent>
-        <Box className={classes.reciboWrap} id="recibo-termico-pdv">
-          {lines.map((line, i) => {
-            const isCenter = i <= 3 || line === "Obrigado! Volte sempre.";
-            const isTotal = line.startsWith("TOTAL:");
-            return (
-              <div
-                key={i}
-                className={`${classes.reciboLine} ${isCenter ? classes.reciboCenter : ""} ${isTotal ? classes.reciboTotal : ""}`}
-              >
-                {line || " "}
-              </div>
-            );
-          })}
-        </Box>
-      </DialogContent>
-      <DialogActions className={classes.actions}>
-        <Button onClick={onClose} color="primary" variant="outlined">
-          Fechar
-        </Button>
-        <Button onClick={handlePrint} color="primary" variant="contained" startIcon={<PrintIcon />}>
-          Imprimir
-        </Button>
-      </DialogActions>
-    </Dialog>
+    <>
+      <Dialog open={open} onClose={onClose} className={classes.dialogPaper} maxWidth="sm" fullWidth>
+        <DialogTitle>Recibo — {numeroConta ? `${tipoConta} ${numeroConta}` : tipoConta}</DialogTitle>
+        <DialogContent>
+          <Tabs value={tab} onChange={handleTabChange} indicatorColor="primary" textColor="primary">
+            <Tab label="Detalhado (por pedido)" />
+            <Tab label="Impressão reduzida" />
+          </Tabs>
+          <Box mt={1}>
+            <Box className={classes.reciboWrap} id="recibo-termico-pdv">
+              {(() => {
+                const groupedTitle = centerText("(Itens agrupados)");
+                return lines.map((line, i) => {
+                const isCenter =
+                  i <= 3 ||
+                  line === "Obrigado! Volte sempre." ||
+                  line === groupedTitle;
+                const isTotal = line.startsWith("TOTAL:");
+                return (
+                  <div
+                    key={`${i}-${line}`}
+                    className={`${classes.reciboLine} ${isCenter ? classes.reciboCenter : ""} ${
+                      isTotal ? classes.reciboTotal : ""
+                    }`}
+                  >
+                    {line || " "}
+                  </div>
+                );
+              });
+              })()}
+            </Box>
+          </Box>
+        </DialogContent>
+        <DialogActions className={classes.actions}>
+          <Button onClick={onClose} color="primary" variant="outlined">
+            Fechar
+          </Button>
+          <Button onClick={handlePrint} color="primary" variant="contained" startIcon={<PrintIcon />}>
+            Imprimir
+          </Button>
+          <Button
+            onClick={handleWhatsAppClick}
+            color="primary"
+            variant="contained"
+            style={{ backgroundColor: "#25D366", color: "#fff" }}
+            startIcon={sendingWa ? <CircularProgress size={18} color="inherit" /> : <WhatsAppIcon />}
+            disabled={sendingWa}
+          >
+            PDF no WhatsApp
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={phoneDialogOpen} onClose={() => !sendingWa && setPhoneDialogOpen(false)} maxWidth="xs" fullWidth>
+        <DialogTitle>Telefone para envio</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="textSecondary" paragraph>
+            Não há telefone válido no cadastro da mesa. Informe o número com DDD (apenas números).
+          </Typography>
+          <TextField
+            fullWidth
+            label="WhatsApp"
+            value={phoneInput}
+            onChange={(e) => setPhoneInput(e.target.value)}
+            placeholder="5511999998888"
+            variant="outlined"
+            margin="dense"
+            disabled={sendingWa}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setPhoneDialogOpen(false)} disabled={sendingWa}>
+            Cancelar
+          </Button>
+          <Button color="primary" variant="contained" disabled={sendingWa} onClick={() => sendPdfToNumber(phoneInput)}>
+            {sendingWa ? <CircularProgress size={22} /> : "Enviar PDF"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }
