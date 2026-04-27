@@ -40,7 +40,9 @@ class ManagedSocket {
   
   off(event, callback) {
     const i = this.callbacks.findIndex((c) => c.event === event && c.callback === callback);
-    this.callbacks.splice(i, 1);
+    if (i >= 0) {
+      this.callbacks.splice(i, 1);
+    }
     return this.rawSocket.off(event, callback);
   }
   
@@ -78,8 +80,6 @@ const SocketManager = {
   currentUserId: -1,
   currentSocket: null,
   socketReady: false,
-  /** Uma instância por conexão — evita centenas de listeners `connect` no mesmo socket (tempestade de polling). */
-  managedSocketInstance: null,
 
   getSocket: function(companyId) {
     let userId = null;
@@ -96,7 +96,6 @@ const SocketManager = {
     }
 
     if (companyId !== this.currentCompanyId || userId !== this.currentUserId) {
-      this.managedSocketInstance = null;
       if (this.currentSocket) {
         if (process.env.NODE_ENV !== 'production') {
           console.warn("closing old socket - company or user changed");
@@ -211,13 +210,7 @@ const SocketManager = {
 
     }
 
-    if (!this.currentSocket) {
-      return new DummySocket();
-    }
-    if (!this.managedSocketInstance) {
-      this.managedSocketInstance = new ManagedSocket(this);
-    }
-    return this.managedSocketInstance;
+    return this.currentSocket ? new ManagedSocket(this) : new DummySocket();
   },
   
   onReady: function( callbackReady ) {
