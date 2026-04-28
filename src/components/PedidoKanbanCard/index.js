@@ -18,6 +18,7 @@ import {
   EventSeat as EventSeatIcon,
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
+  Print as PrintIcon,
 } from "@material-ui/icons";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -132,6 +133,19 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     gap: 2,
     marginTop: theme.spacing(1),
+    justifyContent: "space-between",
+  },
+  mainActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: 2,
+  },
+  reprintButton: {
+    textTransform: "none",
+    fontWeight: 700,
+    borderRadius: 10,
+    paddingLeft: theme.spacing(1.25),
+    paddingRight: theme.spacing(1.25),
   },
   stageButtonsRow: {
     display: "grid",
@@ -194,6 +208,7 @@ const PedidoKanbanCard = ({
   onCardClick,
   onViewDetails,
   onWhatsApp,
+  onReprint,
   showStageButtons = false,
   canBack = false,
   canAdvance = false,
@@ -201,6 +216,7 @@ const PedidoKanbanCard = ({
   onAdvance,
   isDragging = false,
   isUpdating = false,
+  isReprinting = false,
   provided,
 }) => {
   const classes = useStyles();
@@ -326,33 +342,51 @@ const PedidoKanbanCard = ({
           </Typography>
         </Box>
         <Box className={classes.actions}>
-          {onViewDetails && (
-            <Tooltip title="Ver detalhes">
-              <IconButton
-                size="small"
-                className={classes.actionButton}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onViewDetails(order);
-                }}
-              >
-                <VisibilityIcon />
-              </IconButton>
-            </Tooltip>
-          )}
-          {onWhatsApp && order?.responderPhone && (
-            <Tooltip title="WhatsApp">
-              <IconButton
-                size="small"
-                className={classes.actionButton}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onWhatsApp(order);
-                }}
-              >
-                <WhatsAppIcon style={{ color: "#25D366" }} />
-              </IconButton>
-            </Tooltip>
+          <Box className={classes.mainActions}>
+            {onViewDetails && (
+              <Tooltip title="Ver detalhes">
+                <IconButton
+                  size="small"
+                  className={classes.actionButton}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onViewDetails(order);
+                  }}
+                >
+                  <VisibilityIcon />
+                </IconButton>
+              </Tooltip>
+            )}
+            {onWhatsApp && order?.responderPhone && (
+              <Tooltip title="WhatsApp">
+                <IconButton
+                  size="small"
+                  className={classes.actionButton}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onWhatsApp(order);
+                  }}
+                >
+                  <WhatsAppIcon style={{ color: "#25D366" }} />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
+          {onReprint && (
+            <Button
+              size="small"
+              variant="contained"
+              color="primary"
+              className={classes.reprintButton}
+              startIcon={isReprinting ? <CircularProgress size={14} color="inherit" /> : <PrintIcon />}
+              onClick={(e) => {
+                e.stopPropagation();
+                onReprint(order);
+              }}
+              disabled={isReprinting || isUpdating}
+            >
+              {isReprinting ? "Enviando..." : "Reimprimir"}
+            </Button>
           )}
         </Box>
         {showStageButtons && (

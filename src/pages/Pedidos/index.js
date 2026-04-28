@@ -202,6 +202,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [pendingStatusByOrderId, setPendingStatusByOrderId] = useState({});
+  const [pendingReprintByOrderId, setPendingReprintByOrderId] = useState({});
 
   const fetchOrders = useCallback(async (opts = {}) => {
     const silent = !!opts.silent;
@@ -526,6 +527,30 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
     }
   };
 
+  const handleReprintOrder = async (order) => {
+    const orderId = order?.id;
+    const orderFormId = order?.formId || order?.form?.id;
+    if (!orderId || !orderFormId) {
+      toast.error("Não foi possível identificar o pedido para reimpressão.");
+      return;
+    }
+    if (pendingReprintByOrderId[orderId]) return;
+
+    setPendingReprintByOrderId((prev) => ({ ...prev, [orderId]: true }));
+    try {
+      const { data } = await api.post(`/forms/${orderFormId}/responses/${orderId}/reprint-print`, {});
+      toast.success(data?.message || "Pedido enviado para reimpressão.");
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setPendingReprintByOrderId((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+    }
+  };
+
   if (!hasLanchonetes && !modulesLoading) return null;
 
   const wrap = (content) =>
@@ -620,6 +645,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                                   onCardClick={handleOpenOrderModal}
                                   onViewDetails={handleViewDetails}
                                   onWhatsApp={handleWhatsApp}
+                                  onReprint={handleReprintOrder}
                                   showStageButtons={minimal}
                                   canBack={!!prevStage}
                                   canAdvance={!!nextStage}
@@ -671,6 +697,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                                   }}
                                   isDragging={snapshot.isDragging}
                                   isUpdating={!!pendingStatusByOrderId[order.id]}
+                                  isReprinting={!!pendingReprintByOrderId[order.id]}
                                   provided={provided}
                                 />
                               );
