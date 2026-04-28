@@ -221,6 +221,8 @@ const Garcom = () => {
   const [searchContact, setSearchContact] = useState("");
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
+  const [semTelefone, setSemTelefone] = useState(false);
+  const [nomeSemTelefone, setNomeSemTelefone] = useState("");
   const [keywordDialogOpen, setKeywordDialogOpen] = useState(false);
   const [occupationKeyword, setOccupationKeyword] = useState("");
   const [pendingMesaConfirmation, setPendingMesaConfirmation] = useState(null);
@@ -785,38 +787,53 @@ const Garcom = () => {
       setMesaParaOcupar(mesa);
       setSelectedContact(null);
       setSearchContact("");
+      setSemTelefone(false);
+      setNomeSemTelefone("");
       setClienteDialogOpen(true);
     }
   };
 
   const handleConfirmarCliente = async () => {
-    if (!selectedContact) {
+    if (!semTelefone && !selectedContact) {
       toast.error("Selecione ou crie o cliente");
+      return;
+    }
+    const nomeSemTel = String(nomeSemTelefone || "").trim();
+    if (semTelefone && !nomeSemTel) {
+      toast.error("Informe o nome para ocupar sem telefone.");
       return;
     }
     if (!mesaParaOcupar) return;
     setSubmitting(true);
     try {
-      const { data: ticket } = await api.post("/tickets", {
-        contactId: selectedContact.id,
-        status: "open",
-        reuseOpenTicket: true,
-      });
+      let ticket = null;
+      if (!semTelefone) {
+        const { data } = await api.post("/tickets", {
+          contactId: selectedContact.id,
+          status: "open",
+          reuseOpenTicket: true,
+        });
+        ticket = data;
+      }
       const { data: occupyResult } = await api.put(`/mesas/${mesaParaOcupar.id}/ocupar`, {
-        contactId: selectedContact.id,
+        ...(semTelefone ? { contactName: nomeSemTel } : { contactId: selectedContact.id }),
         ticketId: ticket?.id,
         transferir: true,
       });
       if (occupyResult?.status === "pending_confirmation") {
         setPendingMesaConfirmation({
           mesaId: mesaParaOcupar.id,
-          contact: selectedContact,
+          contact: semTelefone
+            ? { id: null, name: nomeSemTel, number: "" }
+            : selectedContact,
         });
         setOccupationKeyword("");
         setKeywordDialogOpen(true);
         setClienteDialogOpen(false);
         setMesaParaOcupar(null);
         setSelectedContact(null);
+        setSemTelefone(false);
+        setNomeSemTelefone("");
         toast.info("Palavra-chave enviada para o WhatsApp do cliente. Confirme para liberar a mesa.");
       } else {
         toast.success("Mesa ocupada");
@@ -826,18 +843,20 @@ const Garcom = () => {
         const mesaAtualizada = (mesasRes.data || []).find((m) => m.id === mesaParaOcupar.id) || {
           ...mesaParaOcupar,
           status: "ocupada",
-          contactId: selectedContact.id,
-          contact: selectedContact,
+          contactId: semTelefone ? null : selectedContact.id,
+          contact: semTelefone ? { id: null, name: nomeSemTel, number: "" } : selectedContact,
           ticketId: ticket?.id,
         };
         setMesaParaPedido(mesaAtualizada);
-        setContactParaPedido(selectedContact);
+        setContactParaPedido(semTelefone ? { id: null, name: nomeSemTel, number: "" } : selectedContact);
         setOrderLines([]);
         setHalfAndHalfItems([]);
         setOrderDialogTab(0);
         setOrderDialogOpen(true);
         setMesaParaOcupar(null);
         setSelectedContact(null);
+        setSemTelefone(false);
+        setNomeSemTelefone("");
       }
     } catch (err) {
       toastError(err);
@@ -1586,52 +1605,86 @@ const Garcom = () => {
           <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
             Selecione ou crie o cliente para ocupar a mesa e em seguida fazer o pedido.
           </Typography>
-          <Autocomplete
-            options={contacts}
-            getOptionLabel={(opt) =>
-              opt.isNew ? `Criar: ${opt.name}` : (opt.name ? `${opt.name} (${opt.number})` : opt.number || "")
-            }
-            value={selectedContact}
-            onChange={(_, val) => {
-              if (val?.isNew) {
-                setNewContactInitial({ name: val.name });
-                setContactModalOpen(true);
-              } else setSelectedContact(val);
-            }}
-            onInputChange={(_, v) => setSearchContact(v)}
-            loading={loadingContacts}
-            filterOptions={(opts, params) => {
-              const f = filter(opts, params);
-              if (params.inputValue?.trim() && searchContact.length >= 2) {
-                f.push({ name: params.inputValue.trim(), number: "", isNew: true });
-              }
-              return f;
-            }}
-            renderInput={(params) => (
-              <TextField {...params} label="Buscar ou criar contato" variant="outlined" fullWidth />
-            )}
-          />
-          <Button
-            size="small"
-            startIcon={<AddCircleIcon />}
-            onClick={() => {
-              setNewContactInitial({});
-              setContactModalOpen(true);
-            }}
-            style={{ marginTop: 8 }}
-          >
-            Novo contato
-          </Button>
+          <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+            <Typography variant="body2" color="textSecondary">
+              Modo de ocupação
+            </Typography>
+            <Button
+              size="small"
+              variant={semTelefone ? "contained" : "outlined"}
+              color="primary"
+              onClick={() => setSemTelefone((v) => !v)}
+              disabled={submitting}
+            >
+              {semTelefone ? "Sem telefone (ativo)" : "Ocupar sem telefone"}
+            </Button>
+          </Box>
+          {semTelefone ? (
+            <TextField
+              label="Nome do cliente"
+              variant="outlined"
+              fullWidth
+              value={nomeSemTelefone}
+              onChange={(e) => setNomeSemTelefone(e.target.value)}
+            />
+          ) : (
+            <>
+              <Autocomplete
+                options={contacts}
+                getOptionLabel={(opt) =>
+                  opt.isNew ? `Criar: ${opt.name}` : (opt.name ? `${opt.name} (${opt.number})` : opt.number || "")
+                }
+                value={selectedContact}
+                onChange={(_, val) => {
+                  if (val?.isNew) {
+                    setNewContactInitial({ name: val.name });
+                    setContactModalOpen(true);
+                  } else setSelectedContact(val);
+                }}
+                onInputChange={(_, v) => setSearchContact(v)}
+                loading={loadingContacts}
+                filterOptions={(opts, params) => {
+                  const f = filter(opts, params);
+                  if (params.inputValue?.trim() && searchContact.length >= 2) {
+                    f.push({ name: params.inputValue.trim(), number: "", isNew: true });
+                  }
+                  return f;
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} label="Buscar ou criar contato" variant="outlined" fullWidth />
+                )}
+              />
+              <Button
+                size="small"
+                startIcon={<AddCircleIcon />}
+                onClick={() => {
+                  setNewContactInitial({});
+                  setContactModalOpen(true);
+                }}
+                style={{ marginTop: 8 }}
+              >
+                Novo contato
+              </Button>
+            </>
+          )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => { setClienteDialogOpen(false); setMesaParaOcupar(null); setSelectedContact(null); }}>
+          <Button
+            onClick={() => {
+              setClienteDialogOpen(false);
+              setMesaParaOcupar(null);
+              setSelectedContact(null);
+              setSemTelefone(false);
+              setNomeSemTelefone("");
+            }}
+          >
             Cancelar
           </Button>
           <Button
             variant="contained"
             color="primary"
             onClick={handleConfirmarCliente}
-            disabled={!selectedContact || submitting}
+            disabled={(semTelefone ? !String(nomeSemTelefone || "").trim() : !selectedContact) || submitting}
           >
             {submitting ? <CircularProgress size={24} /> : "Ocupar mesa e fazer pedido"}
           </Button>

@@ -672,13 +672,6 @@ const FormBuilder = () => {
     : ["gerais", "campos", "aparencia", "integracoes"];
   const currentTabKey = tabKeys[Math.min(tabValue, tabKeys.length - 1)];
 
-  // Ao trocar para um tipo que não é cardápio, ajustar índice para não ultrapassar as abas visíveis
-  useEffect(() => {
-    if (!isMenuForm && tabValue >= tabKeys.length) {
-      setTabValue(tabKeys.length - 1);
-    }
-  }, [isMenuForm, tabKeys.length, tabValue]);
-
   const DEFAULT_ORDER_STAGES = [
     { id: "novo", label: "Novo", color: "#6366F1" },
     { id: "confirmado", label: "Confirmado", color: "#3B82F6" },
@@ -1819,6 +1812,38 @@ const FormBuilder = () => {
                         </Grid>
                       </Grid>
                     </Grid>
+                      </AccordionDetails>
+                    </Accordion>
+
+                    <Accordion className={classes.settingsAccordion}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Typography className={classes.accordionTitle}>Carrinho (rodapé)</Typography>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12}>
+                            <TextField
+                              fullWidth
+                              variant="outlined"
+                              multiline
+                              minRows={2}
+                              maxRows={6}
+                              label="Mensagem no rodapé da aba Carrinho"
+                              placeholder="Ex.: Taxa de serviço opcional. Entrega sujeita a disponibilidade."
+                              value={formData.settings?.cartFooterMessage || ""}
+                              onChange={(e) =>
+                                setFormData({
+                                  ...formData,
+                                  settings: {
+                                    ...formData.settings,
+                                    cartFooterMessage: e.target.value,
+                                  },
+                                })
+                              }
+                              helperText="Opcional. Essa mensagem aparece no fim do resumo do carrinho no formulário público."
+                            />
+                          </Grid>
+                        </Grid>
                       </AccordionDetails>
                     </Accordion>
 

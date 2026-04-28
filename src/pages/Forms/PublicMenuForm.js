@@ -3053,6 +3053,13 @@ const PublicMenuForm = ({
                         R$ {total.toFixed(2).replace(".", ",")}
                       </Typography>
                     </Box>
+                    {String(form?.settings?.cartFooterMessage || "").trim() && (
+                      <Box style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed rgba(0,0,0,0.12)" }}>
+                        <Typography variant="body2" color="textSecondary" style={{ whiteSpace: "pre-line" }}>
+                          {String(form.settings.cartFooterMessage).trim()}
+                        </Typography>
+                      </Box>
+                    )}
                         </>
                       );
                     })()}
