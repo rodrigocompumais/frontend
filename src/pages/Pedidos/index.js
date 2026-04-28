@@ -30,6 +30,7 @@ import {
   Refresh as RefreshIcon,
   Restaurant as RestaurantIcon,
   Queue as QueueIcon,
+  Print as PrintIcon,
 } from "@material-ui/icons";
 import ReactDOM from "react-dom";
 import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
@@ -813,6 +814,16 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
           </DialogContent>
           <DialogActions>
             <Button onClick={handleCloseOrderModal}>Fechar</Button>
+            {selectedOrder && (
+              <Button
+                variant="outlined"
+                startIcon={<PrintIcon />}
+                onClick={() => handleReprintOrder(selectedOrder)}
+                disabled={!!pendingReprintByOrderId[selectedOrder.id] || updatingStatus}
+              >
+                {pendingReprintByOrderId[selectedOrder.id] ? "Enviando..." : "Reimprimir pedido"}
+              </Button>
+            )}
             {selectedOrder && getNextStage(selectedOrder) && (
               <Button variant="contained" color="primary" onClick={handleProximaEtapa} disabled={updatingStatus}>
                 {updatingStatus ? "Atualizando..." : `Próxima etapa (${getNextStage(selectedOrder)?.label})`}
@@ -1041,6 +1052,16 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseOrderModal}>Fechar</Button>
+          {selectedOrder && (
+            <Button
+              variant="outlined"
+              startIcon={<PrintIcon />}
+              onClick={() => handleReprintOrder(selectedOrder)}
+              disabled={!!pendingReprintByOrderId[selectedOrder.id] || updatingStatus}
+            >
+              {pendingReprintByOrderId[selectedOrder.id] ? "Enviando..." : "Reimprimir pedido"}
+            </Button>
+          )}
           {selectedOrder && getNextStage(selectedOrder) && (
             <Button
               variant="contained"

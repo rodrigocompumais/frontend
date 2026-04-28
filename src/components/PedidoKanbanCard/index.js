@@ -133,19 +133,6 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     gap: 2,
     marginTop: theme.spacing(1),
-    justifyContent: "space-between",
-  },
-  mainActions: {
-    display: "flex",
-    alignItems: "center",
-    gap: 2,
-  },
-  reprintButton: {
-    textTransform: "none",
-    fontWeight: 700,
-    borderRadius: 10,
-    paddingLeft: theme.spacing(1.25),
-    paddingRight: theme.spacing(1.25),
   },
   stageButtonsRow: {
     display: "grid",
@@ -342,51 +329,50 @@ const PedidoKanbanCard = ({
           </Typography>
         </Box>
         <Box className={classes.actions}>
-          <Box className={classes.mainActions}>
-            {onViewDetails && (
-              <Tooltip title="Ver detalhes">
-                <IconButton
-                  size="small"
-                  className={classes.actionButton}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onViewDetails(order);
-                  }}
-                >
-                  <VisibilityIcon />
-                </IconButton>
-              </Tooltip>
-            )}
-            {onWhatsApp && order?.responderPhone && (
-              <Tooltip title="WhatsApp">
-                <IconButton
-                  size="small"
-                  className={classes.actionButton}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onWhatsApp(order);
-                  }}
-                >
-                  <WhatsAppIcon style={{ color: "#25D366" }} />
-                </IconButton>
-              </Tooltip>
-            )}
-          </Box>
+          {onViewDetails && (
+            <Tooltip title="Ver detalhes">
+              <IconButton
+                size="small"
+                className={classes.actionButton}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewDetails(order);
+                }}
+              >
+                <VisibilityIcon />
+              </IconButton>
+            </Tooltip>
+          )}
+          {onWhatsApp && order?.responderPhone && (
+            <Tooltip title="WhatsApp">
+              <IconButton
+                size="small"
+                className={classes.actionButton}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onWhatsApp(order);
+                }}
+              >
+                <WhatsAppIcon style={{ color: "#25D366" }} />
+              </IconButton>
+            </Tooltip>
+          )}
           {onReprint && (
-            <Button
-              size="small"
-              variant="contained"
-              color="primary"
-              className={classes.reprintButton}
-              startIcon={isReprinting ? <CircularProgress size={14} color="inherit" /> : <PrintIcon />}
-              onClick={(e) => {
-                e.stopPropagation();
-                onReprint(order);
-              }}
-              disabled={isReprinting || isUpdating}
-            >
-              {isReprinting ? "Enviando..." : "Reimprimir"}
-            </Button>
+            <Tooltip title={isReprinting ? "Enviando reimpressão..." : "Reimprimir"}>
+              <span>
+                <IconButton
+                  size="small"
+                  className={classes.actionButton}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReprint(order);
+                  }}
+                  disabled={isReprinting || isUpdating}
+                >
+                  {isReprinting ? <CircularProgress size={16} /> : <PrintIcon />}
+                </IconButton>
+              </span>
+            </Tooltip>
           )}
         </Box>
         {showStageButtons && (
@@ -406,6 +392,7 @@ const PedidoKanbanCard = ({
               Voltar
             </Button>
             <Button
+              size="small"
               variant="contained"
               color="primary"
               endIcon={<ArrowForwardIcon />}
