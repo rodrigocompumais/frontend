@@ -269,7 +269,15 @@ function Chat(props) {
 
     socket.on(`company-${companyId}-chat-user-${user.id}`, (data) => {
       if (data.action === "create") {
-        setChats((prev) => [data.record, ...prev]);
+        setChats((prev) => {
+          const alreadyExists = prev.some((chat) => chat.id === data.record.id);
+          if (alreadyExists) {
+            return prev.map((chat) =>
+              chat.id === data.record.id ? { ...chat, ...data.record } : chat
+            );
+          }
+          return [data.record, ...prev];
+        });
       }
       if (data.action === "update") {
         const changedChats = chats.map((chat) => {

@@ -18,6 +18,13 @@ const useChatNotifications = () => {
     pathnameRef.current = location.pathname;
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, []);
+
   // Extrair ID do chat da URL atual
   useEffect(() => {
     const pathMatch = location.pathname.match(/\/chats\/([^\/]+)/);
@@ -92,6 +99,32 @@ const useChatNotifications = () => {
           draggable: true,
         }
       );
+
+      if (!("Notification" in window)) return;
+      if (Notification.permission !== "granted") return;
+
+      try {
+        const notification = new Notification(`Chat interno - ${senderName}`, {
+          body: messagePreview || "Nova mensagem",
+          icon: senderAvatar
+            ? `${process.env.REACT_APP_BACKEND_URL}/public/${senderAvatar}`
+            : undefined,
+          tag: `internal-chat-${chat.id}-msg-${newMessage.id}`,
+          renotify: true,
+          requireInteraction: false,
+        });
+
+        notification.onclick = (event) => {
+          event.preventDefault();
+          window.focus();
+          notification.close();
+          history.push(`/chats/${chatUuid}`);
+        };
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Falha ao criar notificação de chat interno:", error);
+        }
+      }
     };
 
     socket.on(`company-${companyId}-chat`, handleChatMessage);

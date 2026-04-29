@@ -39,6 +39,6 @@ export const canUserAccessTicket = (ticket, user, options = {}) => {
 
 export const canNotifyBrowserForTicket = (ticket, user) =>
   canUserAccessTicket(ticket, user, {
-    allowUnassignedPending: false,
-    allowUnassignedWithoutQueue: false
+    allowUnassignedPending: true,
+    allowUnassignedWithoutQueue: true
   });
