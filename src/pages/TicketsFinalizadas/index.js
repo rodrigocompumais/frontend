@@ -7,7 +7,7 @@ import Box from "@material-ui/core/Box";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 import useMediaQuery from "@material-ui/core/useMediaQuery";
 import HistoryIcon from "@material-ui/icons/History";
-import PersonSearchIcon from "@material-ui/icons/PersonSearch";
+import PersonIcon from "@material-ui/icons/Person";
 import ListAltIcon from "@material-ui/icons/ListAlt";
 import ChatIcon from "@material-ui/icons/Chat";
 import TicketsHistoryManager from "../../components/TicketsHistoryManager";
@@ -96,7 +96,7 @@ const useStyles = makeStyles((theme) => ({
 const WelcomeSteps = ({ classes }) => (
   <Box mt={3} width="100%" display="flex" flexDirection="column" alignItems="center">
     {[
-      { n: 1, text: i18n.t("ticketsHistory.welcomeStep1"), icon: <PersonSearchIcon color="primary" /> },
+      { n: 1, text: i18n.t("ticketsHistory.welcomeStep1"), icon: <PersonIcon color="primary" /> },
       { n: 2, text: i18n.t("ticketsHistory.welcomeStep2"), icon: <ListAltIcon color="primary" /> },
       { n: 3, text: i18n.t("ticketsHistory.welcomeStep3"), icon: <ChatIcon color="primary" /> },
     ].map((step) => (
