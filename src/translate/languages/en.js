@@ -907,6 +907,9 @@ const messages = {
         listaClientes: "Customers",
         messageFromCompany: "Your company",
         messageFromClient: "Customer",
+        reopenConversation: "Reopen conversation",
+        reopenSuccess: "Conversation reopened. Redirecting to Tickets…",
+        reopenHint: "You can send messages again in the main tickets screen.",
       },
       transferTicketModal: {
         title: "Transferir Ticket",

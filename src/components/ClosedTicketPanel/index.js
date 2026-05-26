@@ -12,6 +12,7 @@ import {
 } from "@material-ui/core";
 import ArrowBackIcon from "@material-ui/icons/ArrowBack";
 import LockOutlinedIcon from "@material-ui/icons/LockOutlined";
+import ReplayIcon from "@material-ui/icons/Replay";
 import TicketHeader from "../TicketHeader";
 import TicketInfo from "../TicketInfo";
 import MessagesList from "../MessagesList";
@@ -56,6 +57,11 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
   },
+  reopenBar: {
+    padding: theme.spacing(1.5, 2),
+    borderBottom: `1px solid ${theme.palette.divider}`,
+    backgroundColor: theme.palette.background.default,
+  },
   stepBadge: {
     display: "inline-block",
     backgroundColor: theme.palette.primary.main,
@@ -77,6 +83,7 @@ const ClosedTicketPanel = ({ ticketUuid, onBack }) => {
   const [loading, setLoading] = useState(true);
   const [ticket, setTicket] = useState({});
   const [contact, setContact] = useState({});
+  const [reopenLoading, setReopenLoading] = useState(false);
 
   useEffect(() => {
     setTicket({});
@@ -146,6 +153,27 @@ const ClosedTicketPanel = ({ ticketUuid, onBack }) => {
     }
   };
 
+  const canReopen =
+    ticket?.status === "closed" || ticket?.status === "rating";
+
+  const handleReopen = async () => {
+    if (!ticket?.id || !canReopen) return;
+    setReopenLoading(true);
+    try {
+      await api.put(`/tickets/${ticket.id}`, {
+        status: "open",
+        userId: user?.id,
+        queueId: ticket?.queue?.id ?? null,
+      });
+      toast.success(i18n.t("ticketsHistory.reopenSuccess"));
+      history.push(`/tickets/${ticket.uuid}`);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setReopenLoading(false);
+    }
+  };
+
   return (
     <div className={classes.root}>
       {onBack && (
@@ -186,6 +214,26 @@ const ClosedTicketPanel = ({ ticketUuid, onBack }) => {
           )}
         </Box>
       </div>
+
+      {canReopen && (
+        <Box className={classes.reopenBar}>
+          <Typography variant="body2" color="textSecondary" style={{ marginBottom: 8, lineHeight: 1.5 }}>
+            {i18n.t("ticketsHistory.reopenHint")}
+          </Typography>
+          <Button
+            fullWidth
+            variant="contained"
+            color="primary"
+            size="large"
+            startIcon={reopenLoading ? <CircularProgress size={22} color="inherit" /> : <ReplayIcon />}
+            disabled={reopenLoading}
+            onClick={handleReopen}
+            style={{ textTransform: "none", fontWeight: 700, padding: "12px 16px" }}
+          >
+            {i18n.t("ticketsHistory.reopenConversation")}
+          </Button>
+        </Box>
+      )}
 
       <Typography
         variant="body2"

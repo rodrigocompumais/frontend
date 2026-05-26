@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useHistory } from "react-router-dom";
+import { toast } from "react-toastify";
 import {
   Box,
   Typography,
@@ -9,7 +10,6 @@ import {
   Paper,
   Button,
   Card,
-  CardActionArea,
   CardContent,
 } from "@material-ui/core";
 import { format, parseISO, isValid } from "date-fns";
@@ -18,9 +18,11 @@ import ArrowBackIcon from "@material-ui/icons/ArrowBack";
 import ViewListIcon from "@material-ui/icons/ViewList";
 import TimelineIcon from "@material-ui/icons/Timeline";
 import ChatBubbleOutlineIcon from "@material-ui/icons/ChatBubbleOutline";
+import ReplayIcon from "@material-ui/icons/Replay";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { i18n } from "../../translate/i18n";
+import { AuthContext } from "../../context/Auth/AuthContext";
 import MergedTimelineView from "../MergedTimelineView";
 
 const useStyles = makeStyles((theme) => ({
@@ -95,6 +97,12 @@ const useStyles = makeStyles((theme) => ({
     textTransform: "none",
     fontWeight: 600,
   },
+  sessionActions: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+    marginTop: theme.spacing(1),
+  },
 }));
 
 const formatDate = (value) => {
@@ -110,9 +118,11 @@ const formatDate = (value) => {
 const ClosedContactPanel = ({ contact, group, onBack }) => {
   const classes = useStyles();
   const history = useHistory();
+  const { user } = useContext(AuthContext);
   const [viewMode, setViewMode] = useState("sessions");
   const [sessions, setSessions] = useState(group?.sessions || []);
   const [loading, setLoading] = useState(false);
+  const [reopeningId, setReopeningId] = useState(null);
 
   const contactId = contact?.id;
 
@@ -142,6 +152,27 @@ const ClosedContactPanel = ({ contact, group, onBack }) => {
   const openSession = (session) => {
     if (session?.uuid) {
       history.push(`/tickets/finalizadas/${session.uuid}`);
+    }
+  };
+
+  const canReopenSession = (session) =>
+    session?.status === "closed" || session?.status === "rating";
+
+  const handleReopenSession = async (session) => {
+    if (!session?.id || !canReopenSession(session)) return;
+    setReopeningId(session.id);
+    try {
+      await api.put(`/tickets/${session.id}`, {
+        status: "open",
+        userId: user?.id,
+        queueId: session?.queue?.id ?? null,
+      });
+      toast.success(i18n.t("ticketsHistory.reopenSuccess"));
+      history.push(`/tickets/${session.uuid}`);
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setReopeningId(null);
     }
   };
 
@@ -236,8 +267,7 @@ const ClosedContactPanel = ({ contact, group, onBack }) => {
             ) : (
               sessions.map((session) => (
                 <Card key={session.id} className={classes.sessionCard} variant="outlined">
-                  <CardActionArea onClick={() => openSession(session)}>
-                    <CardContent>
+                  <CardContent>
                       <Box display="flex" alignItems="center" mb={1}>
                         <Avatar style={{ backgroundColor: "#25D366", width: 40, height: 40, marginRight: 12 }}>
                           <WhatsAppIcon />
@@ -276,21 +306,40 @@ const ClosedContactPanel = ({ contact, group, onBack }) => {
                           {session.lastMessage}
                         </Typography>
                       )}
-                      <Button
-                        size="small"
-                        color="primary"
-                        variant="contained"
-                        className={classes.viewBtn}
-                        startIcon={<ChatBubbleOutlineIcon />}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openSession(session);
-                        }}
-                      >
-                        {i18n.t("ticketsHistory.viewConversation")}
-                      </Button>
+                      <Box className={classes.sessionActions}>
+                        <Button
+                          size="small"
+                          color="primary"
+                          variant="contained"
+                          className={classes.viewBtn}
+                          style={{ marginTop: 0 }}
+                          startIcon={<ChatBubbleOutlineIcon />}
+                          onClick={() => openSession(session)}
+                        >
+                          {i18n.t("ticketsHistory.viewConversation")}
+                        </Button>
+                        {canReopenSession(session) && (
+                          <Button
+                            size="small"
+                            color="secondary"
+                            variant="outlined"
+                            className={classes.viewBtn}
+                            style={{ marginTop: 0 }}
+                            startIcon={
+                              reopeningId === session.id ? (
+                                <CircularProgress size={18} />
+                              ) : (
+                                <ReplayIcon />
+                              )
+                            }
+                            disabled={reopeningId === session.id}
+                            onClick={() => handleReopenSession(session)}
+                          >
+                            {i18n.t("ticketsHistory.reopenConversation")}
+                          </Button>
+                        )}
+                      </Box>
                     </CardContent>
-                  </CardActionArea>
                 </Card>
               ))
             )}
