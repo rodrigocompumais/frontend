@@ -5,6 +5,7 @@ import { ToastContainer } from "react-toastify";
 import LoggedInLayout from "../layout";
 import HomePage from "../pages/HomePage";
 import TicketResponsiveContainer from "../pages/TicketResponsiveContainer";
+import TicketsFinalizadas from "../pages/TicketsFinalizadas";
 import Signup from "../pages/Signup/";
 import SignupSuccess from "../pages/Signup/Success";
 import SignupFailure from "../pages/Signup/Failure";
@@ -109,6 +110,12 @@ const Routes = () => {
               <LoggedInLayout>
                 <Switch>
                 <Route exact path="/dashboard" component={HomePage} isPrivate />
+                <Route
+                  exact
+                  path="/tickets/finalizadas/:ticketId?"
+                  component={TicketsFinalizadas}
+                  isPrivate
+                />
                 <Route
                   exact
                   path="/tickets/:ticketId?"

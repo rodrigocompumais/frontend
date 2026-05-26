@@ -492,7 +492,7 @@ const reducer = (state, action) => {
   return state;
 };
 
-const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTranslationEnabled = false, scrollToMessageId, onScrollToMessageDone, onScrollToMessageRequest }, ref) => {
+const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady, realTimeTranslationEnabled = false, scrollToMessageId, onScrollToMessageDone, onScrollToMessageRequest, readOnly = false }, ref) => {
   const classes = useStyles();
 
   const [messagesList, dispatch] = useReducer(reducer, []);
@@ -842,19 +842,21 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
   };
 
   const handleOpenMessageOptionsMenu = useCallback((e, message) => {
+    if (readOnly) return;
     const rect = e.currentTarget.getBoundingClientRect();
     setAnchorPosition({ left: rect.right, top: rect.bottom });
     setMenuAnchorOrigin({ vertical: "top", horizontal: "right" });
     setSelectedMessage(message);
-  }, []);
+  }, [readOnly]);
 
   const handleContextMenu = useCallback((e, message) => {
+    if (readOnly) return;
     e.preventDefault();
     e.stopPropagation();
     setAnchorPosition({ left: e.clientX, top: e.clientY });
     setMenuAnchorOrigin({ vertical: "top", horizontal: "left" });
     setSelectedMessage(message);
-  }, []);
+  }, [readOnly]);
 
   const handleCloseMessageOptionsMenu = useCallback(() => {
     setAnchorPosition(null);
@@ -1701,17 +1703,17 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
 
   // Expor handlers para o componente pai
   useEffect(() => {
-    if (onAiHandlersReady && ticketId) {
-      onAiHandlersReady({
-        handleAnalyzeChat,
-        handleSummarizeAudios,
-        handleSuggestResponse
-      });
-    }
-  }, [ticketId, onAiHandlersReady]);
+    if (readOnly || !onAiHandlersReady || !ticketId) return;
+    onAiHandlersReady({
+      handleAnalyzeChat,
+      handleSummarizeAudios,
+      handleSuggestResponse
+    });
+  }, [ticketId, onAiHandlersReady, readOnly]);
 
   return (
     <div className={classes.messagesListWrapper}>
+      {!readOnly && (
       <MessageOptionsMenu
         message={selectedMessage}
         anchorPosition={anchorPosition}
@@ -1720,6 +1722,7 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
         handleClose={handleCloseMessageOptionsMenu}
         ticketId={ticketId}
       />
+      )}
       <div
         id="messagesList"
         className={classes.messagesList}

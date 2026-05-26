@@ -33,6 +33,7 @@ import {
   HelpOutline as HelpOutlineIcon,
   SettingsOutlined as SettingsOutlinedIcon,
   HeadsetMic as HeadsetMicIcon,
+  History as HistoryIcon,
   BusinessCenter as BusinessCenterIcon,
   Extension as ExtensionIcon,
   Security as SecurityIcon,
@@ -194,6 +195,15 @@ const NavigationMenus = () => {
             </Badge>
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.tickets")} />
+        </MenuItem>
+        <MenuItem
+          className={classes.menuItem}
+          onClick={() => handleNavigate('/tickets/finalizadas', () => setAtendimentoAnchor(null))}
+        >
+          <ListItemIcon>
+            <HistoryIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary={i18n.t("mainDrawer.listItems.ticketsFinalizadas")} />
         </MenuItem>
         {showKanban && (
           <MenuItem

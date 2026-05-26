@@ -589,9 +589,6 @@ const SignUp = () => {
         if (!isMounted) return;
         setPlans(list);
         // Se veio do botão "Começar gratuitamente", selecionar primeiro plano disponível (todos terão período de teste)
-        // #region agent log
-        fetch('http://127.0.0.1:7722/ingest/1dc2964f-dbc4-42bf-9ebd-070565292249',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6145bb'},body:JSON.stringify({sessionId:'6145bb',location:'Signup/index.js:fetchPlans',message:'plans loaded',data:{count:list?.length,isFreeFlow,planIdFromUrl},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-        // #endregion
         if (list.length > 0) {
           if (isFreeFlow) {
             // Fluxo gratuito: procurar plano gratuito primeiro, se não houver, selecionar o primeiro disponível
@@ -631,9 +628,6 @@ const SignUp = () => {
       } catch (err) {
         if (!isMounted) return;
         console.error("Erro ao carregar planos:", err);
-        // #region agent log
-        fetch('http://127.0.0.1:7722/ingest/1dc2964f-dbc4-42bf-9ebd-070565292249',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6145bb'},body:JSON.stringify({sessionId:'6145bb',location:'Signup/index.js:fetchPlans',message:'plans load failed',data:{status:err?.response?.status,errMsg:err?.message},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-        // #endregion
         toast.error("Erro ao carregar planos. Por favor, recarregue a página.");
       } finally {
         if (isMounted) {
@@ -667,9 +661,6 @@ const SignUp = () => {
 
 
   const handleSignUp = async (values) => {
-    // #region agent log
-    fetch('http://127.0.0.1:7722/ingest/1dc2964f-dbc4-42bf-9ebd-070565292249',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6145bb'},body:JSON.stringify({sessionId:'6145bb',location:'Signup/index.js:handleSignUp',message:'handleSignUp entered',data:{selectedPlanId,isFreeFlow,requiresCpfCnpj,cpfCnpjLen:(values?.cpfCnpj||'').replace(/\D/g,'').length,hasEmail:!!values?.email},timestamp:Date.now(),hypothesisId:'H1,H5',runId:'post-fix'})}).catch(()=>{});
-    // #endregion
     if (!selectedPlanId) {
       toast.error("Por favor, selecione um plano.");
       return;
@@ -696,9 +687,6 @@ const SignUp = () => {
           ...(selectedModuleSlug && { modules: [selectedModuleSlug] }),
         });
 
-        // #region agent log
-        fetch('http://127.0.0.1:7722/ingest/1dc2964f-dbc4-42bf-9ebd-070565292249',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6145bb'},body:JSON.stringify({sessionId:'6145bb',location:'Signup/index.js:handleSignUp',message:'create-free-account response',data:{success:!!response?.data?.success,status:response?.status},timestamp:Date.now(),hypothesisId:'H3,H4'})}).catch(()=>{});
-        // #endregion
         if (response.data && response.data.success) {
           toast.success(response.data.message || "Conta criada com sucesso!");
           setTimeout(() => history.push("/login"), 2000);
@@ -790,9 +778,6 @@ const SignUp = () => {
       }
     } catch (err) {
       console.error("Erro ao processar cadastro:", err);
-      // #region agent log
-      fetch('http://127.0.0.1:7722/ingest/1dc2964f-dbc4-42bf-9ebd-070565292249',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6145bb'},body:JSON.stringify({sessionId:'6145bb',location:'Signup/index.js:handleSignUp',message:'handleSignUp error',data:{shouldCreateFreeAccount,status:err?.response?.status,apiErr:err?.response?.data?.error||err?.response?.data?.message||err?.message},timestamp:Date.now(),hypothesisId:'H3,H4'})}).catch(()=>{});
-      // #endregion
       let errorMessage = shouldCreateFreeAccount
         ? "Erro ao criar conta. Por favor, tente novamente."
         : "Erro ao criar assinatura. Por favor, tente novamente.";
@@ -889,9 +874,6 @@ const SignUp = () => {
                         if (e.path) errors[e.path] = e.message;
                       });
                     }
-                    // #region agent log
-                    fetch('http://127.0.0.1:7722/ingest/1dc2964f-dbc4-42bf-9ebd-070565292249',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6145bb'},body:JSON.stringify({sessionId:'6145bb',location:'Signup/index.js:validate',message:'form validation failed',data:{errors,requiresCpfCnpj,isFreeFlow,cpfCnpjLen:(values?.cpfCnpj||'').replace(/\D/g,'').length},timestamp:Date.now(),hypothesisId:'H1',runId:'post-fix'})}).catch(()=>{});
-                    // #endregion
                     return errors;
                   }
                 }}

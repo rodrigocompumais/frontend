@@ -15,6 +15,7 @@ import {
 import MenuIcon from '@material-ui/icons/Menu';
 import {
   WhatsApp as WhatsAppIcon,
+  History as HistoryIcon,
   TableChart as TableChartIcon,
   Forum as ForumIcon,
   FlashOn as FlashOnIcon,
@@ -172,6 +173,12 @@ const MobileNavigationMenu = () => {
                 <WhatsAppIcon />
               </ListItemIcon>
               <ListItemText primary={i18n.t("mainDrawer.listItems.tickets")} />
+            </ListItem>
+            <ListItem button onClick={() => handleNavigate('/tickets/finalizadas')}>
+              <ListItemIcon>
+                <HistoryIcon />
+              </ListItemIcon>
+              <ListItemText primary={i18n.t("mainDrawer.listItems.ticketsFinalizadas")} />
             </ListItem>
             {showKanban && (
               <ListItem button onClick={() => handleNavigate('/kanban')}>

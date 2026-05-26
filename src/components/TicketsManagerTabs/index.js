@@ -8,6 +8,7 @@ import InputBase from "@material-ui/core/InputBase";
 import Badge from "@material-ui/core/Badge";
 import MoveToInboxIcon from "@material-ui/icons/MoveToInbox";
 import CheckBoxIcon from "@material-ui/icons/CheckBox";
+import HistoryIcon from "@material-ui/icons/History";
 import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
 import FilterListIcon from "@material-ui/icons/FilterList";
 import AddIcon from "@material-ui/icons/Add";
@@ -316,6 +317,10 @@ const TicketsManagerTabs = () => {
   };
 
   const handleChangeTab = (e, newValue) => {
+    if (newValue === "finalizadas") {
+      history.push("/tickets/finalizadas");
+      return;
+    }
     setTab(newValue);
     // Resetar sub-aba quando mudar de aba principal
     if (newValue === "open") {
@@ -369,7 +374,7 @@ const TicketsManagerTabs = () => {
       />
       <Paper elevation={0} square className={classes.tabsHeader}>
         <Tabs
-          value={tab === "search" || tab === "closed" ? "open" : tab}
+          value={tab === "search" ? "open" : tab}
           onChange={(e, newValue) => handleChangeTab(e, newValue)}
           variant="fullWidth"
           indicatorColor="primary"
@@ -410,20 +415,22 @@ const TicketsManagerTabs = () => {
             }
             className={classes.tab}
           />
+          <Tab
+            value="finalizadas"
+            icon={<HistoryIcon fontSize="small" />}
+            label={
+              <Typography variant="body2" style={{ paddingLeft: 8 }}>
+                {i18n.t("tickets.tabs.finalizadas.title")}
+              </Typography>
+            }
+            className={classes.tab}
+          />
         </Tabs>
         {tab === "search" && (
           <Box display="flex" alignItems="center" style={{ marginLeft: "auto", paddingRight: 8 }}>
             <SearchIcon fontSize="small" style={{ marginRight: 4 }} />
             <Typography variant="body2" color="textSecondary">
               {i18n.t("tickets.tabs.search.title")}
-            </Typography>
-          </Box>
-        )}
-        {tab === "closed" && (
-          <Box display="flex" alignItems="center" style={{ marginLeft: "auto", paddingRight: 8 }}>
-            <CheckBoxIcon fontSize="small" style={{ marginRight: 4 }} />
-            <Typography variant="body2" color="textSecondary">
-              {i18n.t("tickets.tabs.closed.title")}
             </Typography>
           </Box>
         )}
@@ -560,14 +567,14 @@ const TicketsManagerTabs = () => {
             </Typography>
             <MenuItem 
               onClick={() => {
-                setTab("closed");
+                history.push("/tickets/finalizadas");
                 handleCloseFilterMenu();
               }}
               className={classes.filterMenuItem}
             >
               <Box display="flex" alignItems="center" gap={1}>
-                <CheckBoxIcon fontSize="small" />
-                <Typography>{i18n.t("tickets.tabs.closed.title")}</Typography>
+                <HistoryIcon fontSize="small" />
+                <Typography>{i18n.t("tickets.tabs.finalizadas.title")}</Typography>
               </Box>
             </MenuItem>
             <MenuItem 
@@ -626,14 +633,6 @@ const TicketsManagerTabs = () => {
           users={selectedUsers}
           selectedQueueIds={selectedQueueIds}
           updateCount={(data) => setPendingCount(typeof data === "object" ? data.total : data)}
-        />
-      </TabPanel>
-      <TabPanel value={tab} name="closed" className={classes.ticketsWrapper}>
-        <TicketsList
-          status="closed"
-          showAll={showAllTickets}
-          users={selectedUsers}
-          selectedQueueIds={selectedQueueIds}
         />
       </TabPanel>
       <TabPanel value={tab} name="search" className={classes.ticketsWrapper}>
