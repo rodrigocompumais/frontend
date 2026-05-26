@@ -631,7 +631,7 @@ const TicketsManagerTabs = () => {
       <TabPanel value={tab} name="closed" className={classes.ticketsWrapper}>
         <TicketsList
           status="closed"
-          showAll={true}
+          showAll={showAllTickets}
           users={selectedUsers}
           selectedQueueIds={selectedQueueIds}
         />

@@ -44,6 +44,7 @@ import axios from "axios";
 import RecordingTimer from "./RecordingTimer";
 import { ReplyMessageContext } from "../../context/ReplyingMessage/ReplyingMessageContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { canUserSendTicketMessages } from "../../utils/ticketEligibility";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
 import toastError from "../../errors/toastError";
 
@@ -676,7 +677,19 @@ const CustomInput = (props) => {
 };
 
 const MessageInputCustom = (props) => {
-  const { ticketStatus, ticketId, isGroup = false, onAnalyzeChat, onSummarizeAudios, onSuggestResponse, onOptimisticMessage, onOptimisticMessageFailed, onScrollToBottom } = props;
+  const {
+    ticketStatus,
+    ticketUserId,
+    ticketQueueId,
+    ticketId,
+    isGroup = false,
+    onAnalyzeChat,
+    onSummarizeAudios,
+    onSuggestResponse,
+    onOptimisticMessage,
+    onOptimisticMessageFailed,
+    onScrollToBottom,
+  } = props;
   const classes = useStyles();
 
   const [medias, setMedias] = useState([]);
@@ -713,6 +726,11 @@ const MessageInputCustom = (props) => {
   const { setReplyingMessage, replyingMessage } =
     useContext(ReplyMessageContext);
   const { user } = useContext(AuthContext);
+
+  const canSendMessages = canUserSendTicketMessages(
+    { status: ticketStatus, userId: ticketUserId, queueId: ticketQueueId },
+    user
+  );
 
   const [signMessage, setSignMessage] = useLocalStorage("signOption", true);
 
@@ -1241,7 +1259,7 @@ const MessageInputCustom = (props) => {
   // Não incluir loading: apenas o botão de enviar fica desabilitado durante envio,
   // para o usuário poder continuar digitando (otimização de UX).
   const disableOption = () => {
-    return recording || ticketStatus !== "open";
+    return recording || !canSendMessages;
   };
 
   const handleImproveMessage = async () => {
@@ -1323,7 +1341,25 @@ const MessageInputCustom = (props) => {
   };
 
   if (ticketStatus !== "open") {
-    return null;
+    return (
+      <div className={classes.newMessageBox}>
+        <Typography variant="body2" color="textSecondary" align="center" style={{ padding: 16 }}>
+          {ticketStatus === "pending"
+            ? "Aceite o atendimento para enviar mensagens."
+            : i18n.t("messagesInput.placeholderClosed")}
+        </Typography>
+      </div>
+    );
+  }
+
+  if (!canSendMessages) {
+    return (
+      <div className={classes.newMessageBox}>
+        <Typography variant="body2" color="textSecondary" align="center" style={{ padding: 16 }}>
+          Assuma o atendimento para enviar mensagens.
+        </Typography>
+      </div>
+    );
   }
 
   const getReplyPreviewText = (message) => {

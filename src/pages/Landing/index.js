@@ -829,7 +829,7 @@ const Landing = () => {
     const fetchPlans = async () => {
       try {
         const { data } = await api.get("/plans/list");
-        setPlans(data);
+        setPlans(data.filter(plan => plan.value <= 3));
       } catch (err) {
         console.error("Erro ao carregar planos:", err);
       } finally {

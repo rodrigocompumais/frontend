@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import qs from "query-string";
 import * as Yup from "yup";
 import { useHistory } from "react-router-dom";
@@ -499,26 +499,32 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const UserSchema = Yup.object().shape({
-  name: Yup.string()
-    .min(2, "Nome deve ter no mínimo 2 caracteres")
-    .max(50, "Nome deve ter no máximo 50 caracteres")
-    .required("Nome da empresa é obrigatório"),
-  email: Yup.string()
-    .email("Email inválido")
-    .required("Email é obrigatório"),
-  password: Yup.string()
-    .min(5, "Senha deve ter no mínimo 5 caracteres")
-    .max(50, "Senha deve ter no máximo 50 caracteres")
-    .required("Senha é obrigatória"),
-  phone: Yup.string().required("Telefone é obrigatório"),
-  cpfCnpj: Yup.string()
-    .test("cpfcnpj-len", "CPF (11 dígitos) ou CNPJ (14 dígitos) inválido", (v) => {
-      const digits = (v ?? "").replace(/\D/g, "");
-      return digits.length === 11 || digits.length === 14;
-    })
-    .required("CPF/CNPJ é obrigatório"),
-});
+const buildUserSchema = (requireCpfCnpj) => {
+  const cpfCnpjField = requireCpfCnpj
+    ? Yup.string()
+        .test("cpfcnpj-len", "CPF (11 dígitos) ou CNPJ (14 dígitos) inválido", (v) => {
+          const digits = (v ?? "").replace(/\D/g, "");
+          return digits.length === 11 || digits.length === 14;
+        })
+        .required("CPF/CNPJ é obrigatório")
+    : Yup.string().notRequired();
+
+  return Yup.object().shape({
+    name: Yup.string()
+      .min(2, "Nome deve ter no mínimo 2 caracteres")
+      .max(50, "Nome deve ter no máximo 50 caracteres")
+      .required("Nome da empresa é obrigatório"),
+    email: Yup.string()
+      .email("Email inválido")
+      .required("Email é obrigatório"),
+    password: Yup.string()
+      .min(5, "Senha deve ter no mínimo 5 caracteres")
+      .max(50, "Senha deve ter no máximo 50 caracteres")
+      .required("Senha é obrigatória"),
+    phone: Yup.string().required("Telefone é obrigatório"),
+    cpfCnpj: cpfCnpjField,
+  });
+};
 
 const SignUp = () => {
   const classes = useStyles();
@@ -564,6 +570,17 @@ const SignUp = () => {
 
   const dueDate = moment().add(7, "day").format();
 
+  const requiresCpfCnpj = useMemo(() => {
+    if (isFreeFlow) return false;
+    const selPlan = plans.find((p) => p.id === selectedPlanId);
+    return !!(selPlan && selPlan.value > 0);
+  }, [isFreeFlow, plans, selectedPlanId]);
+
+  const userValidationSchema = useMemo(
+    () => buildUserSchema(requiresCpfCnpj),
+    [requiresCpfCnpj]
+  );
+
   useEffect(() => {
     let isMounted = true;
     async function fetchData() {
@@ -572,6 +589,9 @@ const SignUp = () => {
         if (!isMounted) return;
         setPlans(list);
         // Se veio do botão "Começar gratuitamente", selecionar primeiro plano disponível (todos terão período de teste)
+        // #region agent log
+        fetch('http://127.0.0.1:7722/ingest/1dc2964f-dbc4-42bf-9ebd-070565292249',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6145bb'},body:JSON.stringify({sessionId:'6145bb',location:'Signup/index.js:fetchPlans',message:'plans loaded',data:{count:list?.length,isFreeFlow,planIdFromUrl},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
         if (list.length > 0) {
           if (isFreeFlow) {
             // Fluxo gratuito: procurar plano gratuito primeiro, se não houver, selecionar o primeiro disponível
@@ -611,6 +631,9 @@ const SignUp = () => {
       } catch (err) {
         if (!isMounted) return;
         console.error("Erro ao carregar planos:", err);
+        // #region agent log
+        fetch('http://127.0.0.1:7722/ingest/1dc2964f-dbc4-42bf-9ebd-070565292249',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6145bb'},body:JSON.stringify({sessionId:'6145bb',location:'Signup/index.js:fetchPlans',message:'plans load failed',data:{status:err?.response?.status,errMsg:err?.message},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
         toast.error("Erro ao carregar planos. Por favor, recarregue a página.");
       } finally {
         if (isMounted) {
@@ -644,6 +667,9 @@ const SignUp = () => {
 
 
   const handleSignUp = async (values) => {
+    // #region agent log
+    fetch('http://127.0.0.1:7722/ingest/1dc2964f-dbc4-42bf-9ebd-070565292249',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6145bb'},body:JSON.stringify({sessionId:'6145bb',location:'Signup/index.js:handleSignUp',message:'handleSignUp entered',data:{selectedPlanId,isFreeFlow,requiresCpfCnpj,cpfCnpjLen:(values?.cpfCnpj||'').replace(/\D/g,'').length,hasEmail:!!values?.email},timestamp:Date.now(),hypothesisId:'H1,H5',runId:'post-fix'})}).catch(()=>{});
+    // #endregion
     if (!selectedPlanId) {
       toast.error("Por favor, selecione um plano.");
       return;
@@ -670,6 +696,9 @@ const SignUp = () => {
           ...(selectedModuleSlug && { modules: [selectedModuleSlug] }),
         });
 
+        // #region agent log
+        fetch('http://127.0.0.1:7722/ingest/1dc2964f-dbc4-42bf-9ebd-070565292249',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6145bb'},body:JSON.stringify({sessionId:'6145bb',location:'Signup/index.js:handleSignUp',message:'create-free-account response',data:{success:!!response?.data?.success,status:response?.status},timestamp:Date.now(),hypothesisId:'H3,H4'})}).catch(()=>{});
+        // #endregion
         if (response.data && response.data.success) {
           toast.success(response.data.message || "Conta criada com sucesso!");
           setTimeout(() => history.push("/login"), 2000);
@@ -761,6 +790,9 @@ const SignUp = () => {
       }
     } catch (err) {
       console.error("Erro ao processar cadastro:", err);
+      // #region agent log
+      fetch('http://127.0.0.1:7722/ingest/1dc2964f-dbc4-42bf-9ebd-070565292249',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6145bb'},body:JSON.stringify({sessionId:'6145bb',location:'Signup/index.js:handleSignUp',message:'handleSignUp error',data:{shouldCreateFreeAccount,status:err?.response?.status,apiErr:err?.response?.data?.error||err?.response?.data?.message||err?.message},timestamp:Date.now(),hypothesisId:'H3,H4'})}).catch(()=>{});
+      // #endregion
       let errorMessage = shouldCreateFreeAccount
         ? "Erro ao criar conta. Por favor, tente novamente."
         : "Erro ao criar assinatura. Por favor, tente novamente.";
@@ -842,10 +874,26 @@ const SignUp = () => {
               <Formik
                 initialValues={user}
                 enableReinitialize={true}
-                validationSchema={UserSchema}
                 onSubmit={async (values, actions) => {
                   await handleSignUp(values);
                   actions.setSubmitting(false);
+                }}
+                validate={(values) => {
+                  try {
+                    userValidationSchema.validateSync(values, { abortEarly: false });
+                    return {};
+                  } catch (yupErr) {
+                    const errors = {};
+                    if (yupErr.inner) {
+                      yupErr.inner.forEach((e) => {
+                        if (e.path) errors[e.path] = e.message;
+                      });
+                    }
+                    // #region agent log
+                    fetch('http://127.0.0.1:7722/ingest/1dc2964f-dbc4-42bf-9ebd-070565292249',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6145bb'},body:JSON.stringify({sessionId:'6145bb',location:'Signup/index.js:validate',message:'form validation failed',data:{errors,requiresCpfCnpj,isFreeFlow,cpfCnpjLen:(values?.cpfCnpj||'').replace(/\D/g,'').length},timestamp:Date.now(),hypothesisId:'H1',runId:'post-fix'})}).catch(()=>{});
+                    // #endregion
+                    return errors;
+                  }
                 }}
               >
                 {({ touched, errors, isSubmitting }) => (

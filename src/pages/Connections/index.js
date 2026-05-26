@@ -194,11 +194,6 @@ const Connections = () => {
 		setSelectedWhatsApp(null);
 	}, [setSelectedWhatsApp, setWhatsAppModalOpen]);
 
-	const handleOpenInstagramModal = () => {
-		setSelectedWhatsApp(null);
-		setInstagramModalOpen(true);
-	};
-
 	const handleCloseInstagramModal = useCallback(() => {
 		setInstagramModalOpen(false);
 		setSelectedWhatsApp(null);
@@ -403,14 +398,6 @@ const Connections = () => {
 									onClick={handleOpenWhatsAppModal}
 								>
 									{i18n.t("connections.buttons.add")}
-								</Button>
-								<Button
-									variant="contained"
-									color="primary"
-									onClick={handleOpenInstagramModal}
-									style={{ marginLeft: '10px' }}
-								>
-									Adicionar Instagram
 								</Button>
 							</>
 						)}

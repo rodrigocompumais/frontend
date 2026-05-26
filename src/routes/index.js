@@ -70,6 +70,7 @@ import Garcom from "../pages/Garcom";
 import Cozinha from "../pages/Cozinha";
 import Entregador from "../pages/Entregador";
 import Pdv from "../pages/Pdv";
+import PrivacyPolicy from "../pages/PrivacyPolicy";
 
 const Routes = () => {
   const [showCampaigns, setShowCampaigns] = useState(false);
@@ -89,6 +90,7 @@ const Routes = () => {
           <TicketsContextProvider>
             <Switch>
             <Route exact path="/" component={Landing} />
+            <Route exact path="/privacy" component={PrivacyPolicy} isPublic={true} />
             <Route exact path="/proposta-personalizada" component={CustomProposalForm} isPublic={true} />
             <Route exact path="/f/:publicId/cancelar" component={PublicAgendamentoCancelar} isPublic={true} />
             <Route exact path="/f/:publicId/reagendar" component={PublicAgendamentoReagendar} isPublic={true} />

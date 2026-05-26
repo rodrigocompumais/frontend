@@ -297,19 +297,20 @@ const TicketsListCustom = (props) => {
       });
     }
 
+    const allticket = user.allTicket === "enabled";
     let ticketsToDispatch = [];
 
-    if (profile === "user") {
-      ticketsToDispatch = filteredTickets;
-    } else {
-      // Para admin, também aplicar filtro de grupo nos tickets gerais
+    if (profile === "admin" || allticket) {
       ticketsToDispatch = tickets;
-      if (filterIsGroup !== undefined) {
-        ticketsToDispatch = tickets.filter((t) => {
-          const ticketIsGroup = isTicketGroup(t);
-          return filterIsGroup ? ticketIsGroup : !ticketIsGroup;
-        });
-      }
+    } else {
+      ticketsToDispatch = filteredTickets;
+    }
+
+    if (filterIsGroup !== undefined) {
+      ticketsToDispatch = ticketsToDispatch.filter((t) => {
+        const ticketIsGroup = isTicketGroup(t);
+        return filterIsGroup ? ticketIsGroup : !ticketIsGroup;
+      });
     }
 
     // Atualizar mapa para fallback de classificação no realtime.
@@ -320,7 +321,7 @@ const TicketsListCustom = (props) => {
     });
 
     dispatch({ type: "LOAD_TICKETS", payload: ticketsToDispatch });
-  }, [tickets, status, searchParam, queues, profile, filterIsGroup]);
+  }, [tickets, status, searchParam, queues, profile, filterIsGroup, user.allTicket]);
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");

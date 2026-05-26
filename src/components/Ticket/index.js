@@ -28,6 +28,7 @@ import { i18n } from "../../translate/i18n";
 import IframeModal from "../IframeModal";
 import SearchMessagesModal from "../SearchMessagesModal";
 import { useLocalStorage } from "../../hooks/useLocalStorage";
+import { canUserViewTicket } from "../../utils/ticketEligibility";
 
 const drawerWidth = 320;
 
@@ -115,11 +116,7 @@ const Ticket = () => {
             return;
           }
 
-          const { queueId } = data;
-          const { queues, profile } = user;
-
-          const queueAllowed = queues.find((q) => q.id === queueId);
-          if (queueAllowed === undefined && profile !== "admin") {
+          if (!canUserViewTicket(data, user)) {
             toast.error(i18n.t("tickets.toasts.unauthorized"));
             history.push("/tickets");
             return;
@@ -288,6 +285,8 @@ const Ticket = () => {
         <MessageInput
           ticketId={ticket.id}
           ticketStatus={ticket.status}
+          ticketUserId={ticket.userId}
+          ticketQueueId={ticket.queueId}
           isGroup={ticket.isGroup}
           onAnalyzeChat={aiHandlers?.handleAnalyzeChat}
           onSummarizeAudios={aiHandlers?.handleSummarizeAudios}

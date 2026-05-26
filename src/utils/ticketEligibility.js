@@ -7,6 +7,49 @@ export const normalizeNumber = value => {
 export const getUserQueueIds = user =>
   (user?.queues || []).map(queue => normalizeNumber(queue?.id)).filter(id => id !== null);
 
+/** Acesso à fila do ticket (inclui allTicket para tickets sem fila). */
+export const userHasQueueAccess = (queueId, user) => {
+  if (!user?.id) return false;
+  if (user.profile === "admin") return true;
+
+  const normalizedQueueId = normalizeNumber(queueId);
+  if (normalizedQueueId === null) {
+    return user.allTicket === "enabled";
+  }
+
+  const userQueueIds = getUserQueueIds(user);
+  return userQueueIds.includes(normalizedQueueId);
+};
+
+/** Pode abrir/visualizar o ticket (atribuído ao usuário ou fila permitida). */
+export const canUserViewTicket = (ticket, user) => {
+  if (!ticket || !user?.id) return false;
+  if (user.profile === "admin") return true;
+
+  const ticketUserId = normalizeNumber(ticket.userId);
+  const userId = normalizeNumber(user.id);
+  if (ticketUserId !== null && ticketUserId === userId) {
+    return true;
+  }
+
+  return userHasQueueAccess(ticket.queueId, user);
+};
+
+/** Pode enviar mensagens no ticket (aberto + atribuído ao usuário ou aberto na fila dele). */
+export const canUserSendTicketMessages = (ticket, user) => {
+  if (!ticket || !user?.id) return false;
+  if (ticket.status !== "open") return false;
+  if (user.profile === "admin") return true;
+
+  const ticketUserId = normalizeNumber(ticket.userId);
+  const userId = normalizeNumber(user.id);
+  if (ticketUserId !== null) {
+    return ticketUserId === userId;
+  }
+
+  return userHasQueueAccess(ticket.queueId, user);
+};
+
 export const canUserAccessTicket = (ticket, user, options = {}) => {
   const { allowUnassignedPending = true, allowUnassignedWithoutQueue = true } = options;
   if (!ticket || !user?.id) return false;
