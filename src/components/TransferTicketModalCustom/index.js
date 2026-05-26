@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { useHistory } from "react-router-dom";
+import { toast } from "react-toastify";
 
 import Button from "@material-ui/core/Button";
 import TextField from "@material-ui/core/TextField";
@@ -28,6 +29,12 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 const useStyles = makeStyles((theme) => ({
   maxWidth: {
     width: "100%",
+  },
+  online: {
+    color: "#25D366",
+  },
+  offline: {
+    color: "#E1306C",
   },
 }));
 
@@ -126,13 +133,17 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
   const handleSaveTicket = async (e) => {
     e.preventDefault();
     if (!ticketid) return;
-    if (!selectedQueue || selectedQueue === "") return;
+    if (!selectedQueue || selectedQueue === "") {
+      toast.error(i18n.t("transferTicketModal.fieldQueuePlaceholder"));
+      return;
+    }
     setLoading(true);
     try {
       let data = {};
 
       if (selectedUser) {
         data.userId = selectedUser.id;
+        data.status = "open";
       }
 
       if (selectedQueue && selectedQueue !== null) {
@@ -145,10 +156,10 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
       }
 
       if (selectedWhatsapp) {
-        data.whatsappId = selectedWhatsapp
+        data.whatsappId = selectedWhatsapp;
       }
       await api.put(`/tickets/${ticketid}`, data);
-
+      setLoading(false);
       history.push(`/tickets`);
     } catch (err) {
       setLoading(false);
@@ -168,11 +179,14 @@ const TransferTicketModalCustom = ({ modalOpen, onClose, ticketid }) => {
             getOptionLabel={(option) => `${option.name}`}
             onChange={(e, newValue) => {
               setSelectedUser(newValue);
-              if (newValue != null && Array.isArray(newValue.queues)) {
+              if (newValue != null && Array.isArray(newValue.queues) && newValue.queues.length > 0) {
                 setQueues(newValue.queues);
+                setSelectedQueue(newValue.queues[0].id);
               } else {
                 setQueues(allQueues);
-                setSelectedQueue("");
+                if (!selectedQueue && allQueues.length === 1) {
+                  setSelectedQueue(allQueues[0].id);
+                }
               }
             }}
             options={options}
