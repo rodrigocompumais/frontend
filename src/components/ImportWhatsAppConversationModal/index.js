@@ -29,7 +29,6 @@ import {
 } from "@material-ui/core";
 import Autocomplete, { createFilterOptions } from "@material-ui/lab/Autocomplete";
 import { format } from "date-fns";
-import JSZip from "jszip";
 import { toast } from "react-toastify";
 
 import api from "../../services/api";
@@ -78,42 +77,17 @@ const useStyles = makeStyles((theme) => ({
 const filter = createFilterOptions({ trim: true });
 const STEPS = ["contact", "file", "mapping", "preview", "import"];
 
-const countZipMediaFiles = (zip) =>
-  Object.keys(zip.files).filter((name) => {
-    if (zip.files[name].dir) return false;
-    const base = name.split("/").pop();
-    if (!base || /\.txt$/i.test(base)) return false;
-    if (name.includes("__MACOSX")) return false;
-    return /\.(jpe?g|png|gif|webp|mp4|mov|opus|ogg|mp3|m4a|aac|wav|pdf|doc|docx|ptt|stk|vid|aud|img|doc)/i.test(
-      base
-    ) || /^(IMG-|VID-|AUD-|PTT-|STK-|DOC-)/i.test(base);
-  }).length;
-
-const readTxtFromFile = async (file) => {
-  if (file.name.toLowerCase().endsWith(".txt")) {
-    return {
-      text: await file.text(),
-      txtFileName: file.name,
-      zipMediaCount: 0,
-    };
-  }
-  const zip = await JSZip.loadAsync(file);
-  const txtNames = Object.keys(zip.files).filter(
-    (n) => !zip.files[n].dir && /\.txt$/i.test(n) && !n.includes("__MACOSX")
-  );
-  if (!txtNames.length) {
-    throw new Error(i18n.t("whatsappImport.errors.noTxtInZip"));
-  }
-  const txtName = txtNames.sort(
-    (a, b) => (zip.files[b]._data?.uncompressedSize || 0) - (zip.files[a]._data?.uncompressedSize || 0)
-  )[0];
-  const text = await zip.file(txtName).async("string");
-  return {
-    text,
-    txtFileName: txtName.split("/").pop(),
-    zipMediaCount: countZipMediaFiles(zip),
-  };
-};
+const normalizePreviewFromApi = (data) => ({
+  participants: data.participants || [],
+  systemLinesSkipped: data.systemLinesSkipped || 0,
+  mediaPlaceholderCount: data.mediaPlaceholderCount || 0,
+  chatTitleHint: data.chatTitleHint || null,
+  messageCount: data.messageCount || data.messages?.length || 0,
+  messages: (data.messages || []).map((m) => ({
+    ...m,
+    datetime: m.datetime ? new Date(m.datetime) : new Date(0),
+  })),
+});
 
 const ImportWhatsAppConversationModal = ({
   open,
@@ -219,15 +193,32 @@ const ImportWhatsAppConversationModal = ({
     }
     setLoading(true);
     try {
-      const { text, txtFileName, zipMediaCount: zc } = await readTxtFromFile(file);
-      const parsed = parseWhatsAppExport(text, { fileName: file.name, txtFileName });
-      if (!parsed.messages.length) {
+      const isZip = file.name.toLowerCase().endsWith(".zip");
+      let parsed;
+      let zipCount = 0;
+
+      if (isZip) {
+        const form = new FormData();
+        form.append("file", file);
+        const { data } = await api.post("/contacts/import-whatsapp/preview", form, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+        parsed = normalizePreviewFromApi(data);
+        zipCount = data.zipMediaCount || 0;
+      } else {
+        const text = await file.text();
+        parsed = parseWhatsAppExport(text, { fileName: file.name, txtFileName: file.name });
+        parsed.messageCount = parsed.messages.length;
+      }
+
+      if (!parsed.messageCount && !parsed.messages?.length) {
         toast.error(i18n.t("whatsappImport.errors.emptyChat"));
         return;
       }
+
       setUploadFile(file);
       setParseResult(parsed);
-      setZipMediaCount(zc);
+      setZipMediaCount(zipCount);
       const mapping = suggestParticipantMapping(
         parsed.participants,
         selectedContact?.name,
@@ -384,7 +375,7 @@ const ImportWhatsAppConversationModal = ({
     <div>
       <Typography variant="body2" gutterBottom>
         {i18n.t("whatsappImport.stats", {
-          total: parseResult?.messages?.length || 0,
+          total: parseResult?.messageCount ?? parseResult?.messages?.length ?? 0,
           media: parseResult?.mediaPlaceholderCount || 0,
           zipMedia: zipMediaCount,
         })}
