@@ -23,6 +23,8 @@ import {  WhatsApp } from "@material-ui/icons";
 import { Grid, ListItemText, MenuItem, Select } from "@material-ui/core";
 import Typography from "@material-ui/core/Typography";
 import { toast } from "react-toastify";
+import ImportWhatsAppConversationModal from "../ImportWhatsAppConversationModal";
+import { useHistory } from "react-router-dom";
 //import ShowTicketOpen from "../ShowTicketOpenModal";
 
 const useStyles = makeStyles((theme) => ({
@@ -42,6 +44,7 @@ const filter = createFilterOptions({
 
 const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
   const classes = useStyles();
+  const history = useHistory();
   const [options, setOptions] = useState([]);
 
   const [loading, setLoading] = useState(false);
@@ -53,6 +56,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
   const [whatsapps, setWhatsapps] = useState([]);
   const [queues, setQueues] = useState([]);
   const [contactModalOpen, setContactModalOpen] = useState(false);
+  const [whatsappImportOpen, setWhatsappImportOpen] = useState(false);
   const { user } = useContext(AuthContext);
   const { companyId, whatsappId } = user;
 
@@ -317,6 +321,16 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
         onClose={handleCloseContactModal}
         onSave={handleAddNewContactTicket}
       ></ContactModal>
+      <ImportWhatsAppConversationModal
+        open={whatsappImportOpen}
+        onClose={() => setWhatsappImportOpen(false)}
+        initialContact={selectedContact}
+        onImported={(data) => {
+          setWhatsappImportOpen(false);
+          onClose({ id: data.ticketId });
+          history.push(`/tickets/${data.ticketId}`);
+        }}
+      />
       <Dialog open={modalOpen} onClose={handleClose}>
         <DialogTitle id="form-dialog-title">
           {i18n.t("newTicketModal.title")}
@@ -415,6 +429,13 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
           </Grid>
         </DialogContent>
         <DialogActions>
+          <Button
+            onClick={() => setWhatsappImportOpen(true)}
+            color="primary"
+            disabled={loading}
+          >
+            {i18n.t("newTicketModal.importHistory")}
+          </Button>
           <Button
             onClick={handleClose}
             color="secondary"

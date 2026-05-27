@@ -42,6 +42,7 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 
 import {CSVLink} from "react-csv";
 import ImportContactsModal from "../../components/ImportContactsModal";
+import ImportWhatsAppConversationModal from "../../components/ImportWhatsAppConversationModal";
 
 const reducer = (state, action) => {
   if (action.type === "LOAD_CONTACTS") {
@@ -145,6 +146,7 @@ const Contacts = () => {
   const [hasMore, setHasMore] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [openModalImport, setOpenModalImport] = useState(false);
+  const [whatsappImportOpen, setWhatsappImportOpen] = useState(false);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
   
@@ -341,6 +343,11 @@ const Contacts = () => {
         open={openModalImport}
         onClose={handleCloseModalImport}
       />
+      <ImportWhatsAppConversationModal
+        open={whatsappImportOpen}
+        onClose={() => setWhatsappImportOpen(false)}
+        onImported={(data) => history.push(`/tickets/${data.ticketId}`)}
+      />
       <NewTicketModal
         modalOpen={newTicketModalOpen}
         initialContact={contactTicket}
@@ -403,6 +410,13 @@ const Contacts = () => {
             onClick={handleOpenImportModal}
           >
             {i18n.t("contacts.buttons.import")}
+          </Button>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => setWhatsappImportOpen(true)}
+          >
+            {i18n.t("contacts.buttons.importConversation")}
           </Button>
           <Button
             variant="contained"

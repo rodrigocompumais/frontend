@@ -444,6 +444,7 @@ const messages = {
         },
         buttons: {
           import: "Importar Contatos",
+          importConversation: "Importar conversación",
           add: "Adicionar Contato",
           export: "Exportar Contatos",
           delete: "Excluir Todos Contatos",
@@ -1002,8 +1003,49 @@ const messages = {
         ticketNav: "Ticket",
         attendanceNav: "Atendimentos",
       },
+      whatsappImport: {
+        title: "Importar conversación de WhatsApp",
+        steps: {
+          contact: "Contacto",
+          file: "Archivo",
+          mapping: "Participantes",
+          preview: "Revisión",
+          import: "Importar",
+        },
+        contactLabel: "Seleccione o cree el contacto",
+        fileHint: "Clic para subir export de WhatsApp (.zip con medios o .txt)",
+        mappingHint: "Indique cliente (recibidos) vs su empresa (enviados):",
+        sideContact: "Recibida (contacto)",
+        sideMe: "Enviada (mi empresa)",
+        ticketStatus: "Estado del ticket tras importar",
+        statusOpen: "Abierto",
+        statusPending: "Pendiente",
+        statusClosed: "Cerrado",
+        appendToExisting: "Anexar al ticket existente de este contacto (si hay)",
+        stats:
+          "{{total}} mensajes · {{media}} marcadores de medio en TXT · {{zipMedia}} archivos en ZIP",
+        mediaMismatch:
+          "Hay más marcadores de medio en TXT que archivos en ZIP. Exporte con medios.",
+        colDate: "Fecha",
+        colAuthor: "Autor",
+        colSide: "Lado",
+        colBody: "Contenido",
+        mediaLabel: "[Medio]",
+        next: "Siguiente",
+        back: "Volver",
+        cancel: "Cancelar",
+        import: "Importar historial",
+        success: "Importados {{count}} mensajes ({{media}} con archivo de medio).",
+        errors: {
+          invalidExtension: "Use un archivo .zip o .txt de WhatsApp.",
+          fileTooLarge: "Archivo demasiado grande (máx. 150 MB).",
+          emptyChat: "No se reconocieron mensajes en el archivo.",
+          noTxtInZip: "No se encontró .txt dentro del ZIP.",
+        },
+      },
       newTicketModal: {
         title: "Criar Ticket",
+        importHistory: "Importar historial",
         fieldLabel: "Digite para pesquisar o contato",
         add: "Adicionar",
         searchQueueError:
@@ -2092,6 +2134,19 @@ const messages = {
         ERR_NO_WAPP_FOUND: "Nenhum WhatsApp encontrado com este ID.",
         ERR_CREATING_MESSAGE: "Erro ao criar mensagem no banco de dados.",
         ERR_CREATING_TICKET: "Erro ao criar tíquete no banco de dados.",
+        ERR_WHATSAPP_IMPORT_NO_FILE: "Seleccione el archivo de exportación de WhatsApp.",
+        ERR_WHATSAPP_IMPORT_FILE_TOO_LARGE:
+          "Archivo demasiado grande (máximo 150 MB).",
+        ERR_WHATSAPP_IMPORT_INVALID_FILE: "Formato inválido. Use .zip o .txt de WhatsApp.",
+        ERR_WHATSAPP_IMPORT_NO_TXT: "No se encontró .txt en el ZIP.",
+        ERR_WHATSAPP_IMPORT_EMPTY: "No hay mensajes válidos para importar.",
+        ERR_WHATSAPP_IMPORT_TOO_MANY: "Demasiados mensajes (máx. 10 000 por importación).",
+        ERR_WHATSAPP_IMPORT_CONTACT: "Contacto inválido.",
+        ERR_WHATSAPP_IMPORT_STATUS: "Estado del ticket inválido.",
+        ERR_WHATSAPP_IMPORT_MAPPING: "Mapeo de participantes inválido.",
+        ERR_WHATSAPP_IMPORT_TICKET_HAS_MESSAGES:
+          "El ticket ya tiene mensajes. Active anexar o elija otro contacto.",
+        ERR_CONTACT_NO_NUMBER: "El contacto debe tener número de teléfono.",
         ERR_FETCH_WAPP_MSG:
           "Erro ao buscar a mensagem no WhtasApp, talvez ela seja muito antiga.",
         ERR_QUEUE_COLOR_ALREADY_EXISTS:
