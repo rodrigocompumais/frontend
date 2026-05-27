@@ -6,6 +6,7 @@ import {
   Button,
   CircularProgress,
   makeStyles,
+  useTheme,
 } from "@material-ui/core";
 import { PlayArrow, Pause } from "@material-ui/icons";
 import { useAudioPlayer } from "../../context/AudioPlayer/AudioPlayerContext";
@@ -56,18 +57,28 @@ const useStyles = makeStyles((theme) => ({
   },
   times: {
     fontSize: "0.75rem",
-    color: theme.palette.text.secondary,
     minWidth: 36,
     textAlign: "right",
     fontVariantNumeric: "tabular-nums",
+  },
+  timesOnDarkBubble: {
+    color: "rgba(233, 237, 239, 0.75)",
+  },
+  timesOnLightBubble: {
+    color: "#64748b",
   },
   transcription: {
     marginTop: theme.spacing(0.75),
     fontSize: "0.8125rem",
     lineHeight: 1.45,
-    color: theme.palette.text.primary,
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
+  },
+  transcriptionOnDarkBubble: {
+    color: "rgba(233, 237, 239, 0.95)",
+  },
+  transcriptionOnLightBubble: {
+    color: "#1e293b",
   },
   transcribing: {
     marginTop: theme.spacing(0.5),
@@ -75,7 +86,12 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     gap: theme.spacing(0.75),
     fontSize: "0.75rem",
-    color: theme.palette.text.secondary,
+  },
+  transcribingOnDarkBubble: {
+    color: "rgba(233, 237, 239, 0.75)",
+  },
+  transcribingOnLightBubble: {
+    color: "#64748b",
   },
   errorRow: {
     marginTop: theme.spacing(0.5),
@@ -96,8 +112,21 @@ const AudioMessagePlayer = ({
   transcriptionError,
   onRetryTranscription,
   compact = false,
+  lightColoredBubble = false,
 }) => {
   const classes = useStyles();
+  const theme = useTheme();
+  const isDarkBubble =
+    !lightColoredBubble && theme.palette.type === "dark";
+  const transcriptionClass = isDarkBubble
+    ? classes.transcriptionOnDarkBubble
+    : classes.transcriptionOnLightBubble;
+  const transcribingClass = isDarkBubble
+    ? classes.transcribingOnDarkBubble
+    : classes.transcribingOnLightBubble;
+  const timesClass = isDarkBubble
+    ? classes.timesOnDarkBubble
+    : classes.timesOnLightBubble;
   const {
     playAudio,
     currentPlayingMessageId,
@@ -166,7 +195,7 @@ const AudioMessagePlayer = ({
     if (compact) return null;
     if (statusPending) {
       return (
-        <div className={classes.transcribing}>
+        <div className={`${classes.transcribing} ${transcribingClass}`}>
           <CircularProgress size={14} />
           <span>{i18n.t("messagesList.audio.transcribing")}</span>
         </div>
@@ -191,7 +220,11 @@ const AudioMessagePlayer = ({
       if (longText && !showFullTranscription) {
         return (
           <div>
-            <Typography variant="body2" className={classes.transcription} component="div" color="textSecondary">
+            <Typography
+              variant="body2"
+              className={`${classes.transcription} ${transcriptionClass}`}
+              component="div"
+            >
               {text.slice(0, 200)}…
             </Typography>
             <Button size="small" onClick={() => setShowFullTranscription(true)} style={{ padding: "0 4px", minWidth: 0 }}>
@@ -202,7 +235,11 @@ const AudioMessagePlayer = ({
       }
       return (
         <div>
-          <Typography variant="body2" className={classes.transcription} component="div">
+          <Typography
+            variant="body2"
+            className={`${classes.transcription} ${transcriptionClass}`}
+            component="div"
+          >
             {text}
           </Typography>
           {longText && (
@@ -230,7 +267,7 @@ const AudioMessagePlayer = ({
         >
           <LinearProgress variant="determinate" value={progress * 100} className={classes.bar} />
         </div>
-        <span className={classes.times}>
+        <span className={`${classes.times} ${timesClass}`}>
           {formatTime(displayCurrent)} / {formatTime(displayDuration)}
         </span>
       </div>

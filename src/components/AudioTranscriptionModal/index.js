@@ -45,6 +45,7 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(2),
     whiteSpace: "pre-wrap",
     wordBreak: "break-word",
+    color: theme.palette.type === "dark" ? "#E5E7EB" : theme.palette.text.primary,
   },
   loadingBox: {
     display: "flex",
@@ -110,10 +111,8 @@ const AudioTranscriptionModal = ({
             </Typography>
           </Box>
         ) : transcription ? (
-          <Box className={classes.transcriptionBox}>
-            <Typography variant="body1">
-              {transcription}
-            </Typography>
+          <Box className={classes.transcriptionBox} component="div">
+            {transcription}
           </Box>
         ) : (
           <Typography variant="body2" color="textSecondary">

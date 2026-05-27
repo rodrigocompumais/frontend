@@ -92,8 +92,8 @@ const useStyles = makeStyles((theme) => ({
     },
 
     whiteSpace: "pre-wrap",
-    backgroundColor: "#ffffff",
-    color: "#303030",
+    backgroundColor: theme.mode === "dark" ? "#202c33" : "#ffffff",
+    color: theme.mode === "dark" ? "#e9edef" : "#303030",
     alignSelf: "flex-start",
     borderTopLeftRadius: 0,
     borderTopRightRadius: 8,
@@ -146,8 +146,8 @@ const useStyles = makeStyles((theme) => ({
     },
 
     whiteSpace: "pre-wrap",
-    backgroundColor: "#dcf8c6",
-    color: "#303030",
+    backgroundColor: theme.mode === "dark" ? "#005c4b" : "#dcf8c6",
+    color: theme.mode === "dark" ? "#e9edef" : "#303030",
     alignSelf: "flex-end",
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
@@ -915,6 +915,7 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
       const nextAudios = index >= 0
         ? messagesList.slice(index + 1).filter((m) => m.mediaType === "audio").map((m) => ({ url: m.mediaUrl, messageId: m.id }))
         : [];
+      const lightColoredBubble = Boolean(isGroup && !message.fromMe);
       return (
         <AudioMessagePlayer
           messageId={message.id}
@@ -924,6 +925,7 @@ const MessagesList = forwardRef(({ ticket, ticketId, isGroup, onAiHandlersReady,
           transcriptionStatus={message.transcriptionStatus}
           transcriptionError={message.transcriptionError}
           onRetryTranscription={handleRetryTranscription}
+          lightColoredBubble={lightColoredBubble}
         />
       );
     } else if (message.mediaType === "video") {

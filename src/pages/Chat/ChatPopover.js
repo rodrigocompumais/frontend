@@ -59,6 +59,14 @@ const useStyles = makeStyles((theme) => ({
       color: theme.palette.text.secondary,
     },
   },
+  /** Dot visível no fundo azul/âmbar da barra superior (evita verde secondary) */
+  chatUnreadBadge: {
+    "& .MuiBadge-badge": {
+      backgroundColor: "#FBBF24",
+      color: "#0F172A",
+      boxShadow: "0 0 0 2px rgba(15, 23, 42, 0.45)",
+    },
+  },
 }));
 
 const reducer = (state, action) => {
@@ -255,7 +263,12 @@ export default function ChatPopover() {
         onClick={handleClick}
         style={{ color: "white" }}
       >
-        <Badge color="secondary" variant="dot" invisible={invisible}>
+        <Badge
+          variant="dot"
+          invisible={invisible}
+          className={classes.chatUnreadBadge}
+          overlap="circular"
+        >
           <ForumIcon />
         </Badge>
       </IconButton>
