@@ -29,11 +29,6 @@ const useStyles = makeStyles((theme) => ({
     fontSize: "0.85rem",
     color: theme.palette.text.secondary,
   },
-  hint: {
-    marginBottom: theme.spacing(1),
-    fontSize: "0.8rem",
-    color: theme.palette.text.secondary,
-  },
   checkboxRow: {
     marginLeft: 0,
   },
@@ -93,14 +88,6 @@ const UserPagePermissionsEditor = ({
       <Typography variant="subtitle1" style={{ marginTop: 16 }}>
         {i18n.t("userModal.pageAccess.title")}
       </Typography>
-      <Typography className={classes.hint}>
-        {i18n.t("userModal.pageAccess.hint")}
-      </Typography>
-      {!hasLanchonetes && (
-        <Typography className={classes.hint}>
-          {i18n.t("userModal.pageAccess.hintLanchonetesHidden")}
-        </Typography>
-      )}
       {pagesByGroup.map(({ group, pages }) => (
         <div key={group}>
           <Typography className={classes.groupTitle}>

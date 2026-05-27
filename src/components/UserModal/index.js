@@ -43,8 +43,8 @@ import UserAvailabilitySettings from "../UserAvailabilitySettings";
 import UserPagePermissionsEditor from "../UserPagePermissionsEditor";
 import useCompanyModules from "../../hooks/useCompanyModules";
 import {
-	filterDefaultRouteOptionsByModules,
 	filterPageAccessForModules,
+	getLanchoneteDefaultRouteOptions,
 	isDefaultRouteAvailableForModules,
 } from "../../constants/pagePermissions";
 
@@ -146,7 +146,7 @@ const UserModal = ({ open, onClose, userId }) => {
 	const { loading, whatsApps } = useWhatsApps();
 	const { hasLanchonetes, hasAgendamento } = useCompanyModules();
 	const moduleFlags = { hasLanchonetes, hasAgendamento };
-	const defaultRouteOptions = filterDefaultRouteOptionsByModules(moduleFlags);
+	const lanchoneteDefaultRouteOptions = getLanchoneteDefaultRouteOptions();
 
 	useEffect(() => {
 		const fetchUser = async () => {
@@ -190,6 +190,10 @@ const UserModal = ({ open, onClose, userId }) => {
 	}, [userId, open, loggedInUser?.id]);
 
 	useEffect(() => {
+		if (!hasLanchonetes && user.defaultRoute) {
+			setUser((prev) => ({ ...prev, defaultRoute: "" }));
+			return;
+		}
 		if (
 			user.defaultRoute &&
 			!isDefaultRouteAvailableForModules(user.defaultRoute, moduleFlags)
@@ -239,6 +243,7 @@ const UserModal = ({ open, onClose, userId }) => {
 
 	const handleSaveUser = async values => {
 		const safeDefaultRoute =
+			hasLanchonetes &&
 			values.defaultRoute &&
 			isDefaultRouteAvailableForModules(values.defaultRoute, moduleFlags)
 				? values.defaultRoute
@@ -397,22 +402,24 @@ const UserModal = ({ open, onClose, userId }) => {
 											)}
 										/>
 									</FormControl>
-									<FormControl variant="outlined" className={classes.formControl} margin="dense" fullWidth>
-										<InputLabel id="defaultRoute-label">Página inicial (após login)</InputLabel>
-										<Field
-											as={Select}
-											label="Página inicial (após login)"
-											name="defaultRoute"
-											labelId="defaultRoute-label"
-											id="defaultRoute-select"
-										>
-											{defaultRouteOptions.map((option) => (
-												<MenuItem key={option.value || "default"} value={option.value}>
-													{option.label}
-												</MenuItem>
-											))}
+									{hasLanchonetes && (
+										<FormControl variant="outlined" className={classes.formControl} margin="dense" fullWidth>
+											<InputLabel id="defaultRoute-label">Página inicial (após login)</InputLabel>
+											<Field
+												as={Select}
+												label="Página inicial (após login)"
+												name="defaultRoute"
+												labelId="defaultRoute-label"
+												id="defaultRoute-select"
+											>
+												{lanchoneteDefaultRouteOptions.map((option) => (
+													<MenuItem key={option.value} value={option.value}>
+														{option.label}
+													</MenuItem>
+												))}
 											</Field>
-									</FormControl>
+										</FormControl>
+									)}
 								</div>
 								{loggedInUser.profile === "admin" && values.profile === "user" && (
 									<UserPagePermissionsEditor

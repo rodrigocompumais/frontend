@@ -156,6 +156,10 @@ export const filterDefaultRouteOptionsByModules = (moduleFlags = {}) =>
     return true;
   });
 
+/** Rotas iniciais exclusivas do módulo Lanchonetes (modal de usuário). */
+export const getLanchoneteDefaultRouteOptions = () =>
+  DEFAULT_ROUTE_OPTIONS.filter((o) => o.requiredModule === "lanchonetes");
+
 export const filterPageAccessForModules = (pageAccess, moduleFlags = {}) => {
   if (!pageAccess) return null;
   const granted = (pageAccess.granted || []).filter((key) =>
