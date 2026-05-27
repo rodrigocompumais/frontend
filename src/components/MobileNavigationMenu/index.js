@@ -44,8 +44,10 @@ import {
   } from '@material-ui/icons';
 import { Badge } from '@material-ui/core';
 import { i18n } from '../../translate/i18n';
-import { Can } from '../Can';
+import NavPageGate from '../NavPageGate';
 import { AuthContext } from '../../context/Auth/AuthContext';
+import { ADMIN_PAGE_KEYS } from '../../constants/pagePermissions';
+import usePageAccess from '../../hooks/usePageAccess';
 import { WhatsAppsContext } from '../../context/WhatsApp/WhatsAppsContext';
 import usePlans from '../../hooks/usePlans';
 import useCompanyModules from '../../hooks/useCompanyModules';
@@ -77,11 +79,20 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+const PageListItem = ({ pageKey, onClick, children, ...rest }) => (
+  <NavPageGate pageKey={pageKey}>
+    <ListItem button onClick={onClick} {...rest}>
+      {children}
+    </ListItem>
+  </NavPageGate>
+);
+
 const MobileNavigationMenu = () => {
   const classes = useStyles();
   const [open, setOpen] = useState(false);
   const history = useHistory();
   const { user } = useContext(AuthContext);
+  const { hasAnyPageAccess, canAccessPage } = usePageAccess();
   const { whatsApps } = useContext(WhatsAppsContext);
   const { getPlanCompany } = usePlans();
   const { hasLanchonetes, hasAgendamento } = useCompanyModules();
@@ -147,6 +158,16 @@ const MobileNavigationMenu = () => {
     setOpen(false);
   };
 
+  const showAdminSection = hasAnyPageAccess(user, ADMIN_PAGE_KEYS);
+  const showAutomacaoMenu =
+    (showCampaigns || showOpenAi) &&
+    hasAnyPageAccess(user, [
+      "campaigns",
+      "contact-lists",
+      "flowbuilders",
+      "prompts",
+    ]);
+
   return (
     <>
       <IconButton
@@ -168,42 +189,42 @@ const MobileNavigationMenu = () => {
             <ListSubheader className={classes.subheader}>
               {i18n.t("navigation.atendimento")}
             </ListSubheader>
-            <ListItem button onClick={() => handleNavigate('/tickets')}>
+            <PageListItem pageKey="tickets" onClick={() => handleNavigate('/tickets')}>
               <ListItemIcon>
                 <WhatsAppIcon />
               </ListItemIcon>
               <ListItemText primary={i18n.t("mainDrawer.listItems.tickets")} />
-            </ListItem>
-            <ListItem button onClick={() => handleNavigate('/tickets/finalizadas')}>
+            </PageListItem>
+            <PageListItem pageKey="tickets-finalizadas" onClick={() => handleNavigate('/tickets/finalizadas')}>
               <ListItemIcon>
                 <HistoryIcon />
               </ListItemIcon>
               <ListItemText primary={i18n.t("mainDrawer.listItems.ticketsFinalizadas")} />
-            </ListItem>
+            </PageListItem>
             {showKanban && (
-              <ListItem button onClick={() => handleNavigate('/kanban')}>
+              <PageListItem pageKey="kanban" onClick={() => handleNavigate('/kanban')}>
                 <ListItemIcon>
                   <TableChartIcon />
                 </ListItemIcon>
                 <ListItemText primary="Kanban" />
-              </ListItem>
+              </PageListItem>
             )}
             {showInternalChat && (
-              <ListItem button onClick={() => handleNavigate('/chats')}>
+              <PageListItem pageKey="chats" onClick={() => handleNavigate('/chats')}>
                 <ListItemIcon>
                   <Badge badgeContent={unreadChatCount > 0 ? unreadChatCount : 0} color="error" max={99}>
                     <ForumIcon />
                   </Badge>
                 </ListItemIcon>
                 <ListItemText primary={i18n.t("mainDrawer.listItems.chats")} />
-              </ListItem>
+              </PageListItem>
             )}
-            <ListItem button onClick={() => handleNavigate('/quick-messages')}>
+            <PageListItem pageKey="quick-messages" onClick={() => handleNavigate('/quick-messages')}>
               <ListItemIcon>
                 <FlashOnIcon />
               </ListItemIcon>
               <ListItemText primary={i18n.t("mainDrawer.listItems.quickMessages")} />
-            </ListItem>
+            </PageListItem>
 
             <Divider />
 
@@ -272,7 +293,7 @@ const MobileNavigationMenu = () => {
                 </>
             )}
 
-            {(showCampaigns || showOpenAi) && (
+            {showAutomacaoMenu && (
               <>
                 <Divider />
 
@@ -318,10 +339,7 @@ const MobileNavigationMenu = () => {
               </>
             )}
 
-            <Can
-              role={user.profile}
-              perform="drawer-admin-items:view"
-              yes={() => (
+            {showAdminSection && (
                 <>
                   <Divider />
 
@@ -329,65 +347,64 @@ const MobileNavigationMenu = () => {
                   <ListSubheader className={classes.subheader}>
                     {i18n.t("navigation.administracao")}
                   </ListSubheader>
-                  <ListItem button onClick={() => handleNavigate('/users')}>
+                  <PageListItem pageKey="users" onClick={() => handleNavigate('/users')}>
                     <ListItemIcon>
                       <PeopleIcon />
                     </ListItemIcon>
                     <ListItemText primary={i18n.t("mainDrawer.listItems.users")} />
-                  </ListItem>
-                  <ListItem button onClick={() => handleNavigate('/connections')}>
+                  </PageListItem>
+                  <PageListItem pageKey="connections" onClick={() => handleNavigate('/connections')}>
                     <ListItemIcon>
                       <Badge badgeContent={connectionWarning ? "!" : 0} color="error">
                         <SyncAltIcon />
                       </Badge>
                     </ListItemIcon>
                     <ListItemText primary={i18n.t("mainDrawer.listItems.connections")} />
-                  </ListItem>
-                  <ListItem button onClick={() => handleNavigate('/queues')}>
+                  </PageListItem>
+                  <PageListItem pageKey="queues" onClick={() => handleNavigate('/queues')}>
                     <ListItemIcon>
                       <AccountTreeOutlinedIcon />
                     </ListItemIcon>
                     <ListItemText primary={i18n.t("mainDrawer.listItems.queues")} />
-                  </ListItem>
-                  <ListItem button onClick={() => handleNavigate('/files')}>
+                  </PageListItem>
+                  <PageListItem pageKey="files" onClick={() => handleNavigate('/files')}>
                     <ListItemIcon>
                       <AttachFileIcon />
                     </ListItemIcon>
                     <ListItemText primary={i18n.t("mainDrawer.listItems.files")} />
-                  </ListItem>
+                  </PageListItem>
                   {showIntegrations && (
-                    <ListItem button onClick={() => handleNavigate('/queue-integration')}>
+                    <PageListItem pageKey="queue-integration" onClick={() => handleNavigate('/queue-integration')}>
                       <ListItemIcon>
                         <DeviceHubOutlinedIcon />
                       </ListItemIcon>
                       <ListItemText primary={i18n.t("mainDrawer.listItems.queueIntegration")} />
-                    </ListItem>
+                    </PageListItem>
                   )}
                   {showExternalApi && (
-                    <ListItem button onClick={() => handleNavigate('/messages-api')}>
+                    <PageListItem pageKey="messages-api" onClick={() => handleNavigate('/messages-api')}>
                       <ListItemIcon>
                         <CodeRoundedIcon />
                       </ListItemIcon>
                       <ListItemText primary={i18n.t("mainDrawer.listItems.messagesAPI")} />
-                    </ListItem>
+                    </PageListItem>
                   )}
-                  <ListItem button onClick={() => handleNavigate('/financeiro')}>
+                  <PageListItem pageKey="financeiro" onClick={() => handleNavigate('/financeiro')}>
                     <ListItemIcon>
                       <LocalAtmIcon />
                     </ListItemIcon>
                     <ListItemText primary={i18n.t("mainDrawer.listItems.financeiro")} />
-                  </ListItem>
-                  {user.super && (
-                    <ListItem button onClick={() => handleNavigate('/announcements')}>
+                  </PageListItem>
+                  {user.super && canAccessPage(user, "announcements") && (
+                    <PageListItem pageKey="announcements" onClick={() => handleNavigate('/announcements')}>
                       <ListItemIcon>
                         <AnnouncementIcon />
                       </ListItemIcon>
                       <ListItemText primary={i18n.t("mainDrawer.listItems.annoucements")} />
-                    </ListItem>
+                    </PageListItem>
                   )}
                 </>
-              )}
-            />
+            )}
 
             <Divider />
 
@@ -395,24 +412,18 @@ const MobileNavigationMenu = () => {
             <ListSubheader className={classes.subheader}>
               {i18n.t("navigation.sistema")}
             </ListSubheader>
-            <ListItem button onClick={() => handleNavigate('/helps')}>
+            <PageListItem pageKey="helps" onClick={() => handleNavigate('/helps')}>
               <ListItemIcon>
                 <HelpOutlineIcon />
               </ListItemIcon>
               <ListItemText primary={i18n.t("mainDrawer.listItems.helps")} />
-            </ListItem>
-            <Can
-              role={user.profile}
-              perform="drawer-admin-items:view"
-              yes={() => (
-                <ListItem button onClick={() => handleNavigate('/settings')}>
-                  <ListItemIcon>
-                    <SettingsOutlinedIcon />
-                  </ListItemIcon>
-                  <ListItemText primary={i18n.t("mainDrawer.listItems.settings")} />
-                </ListItem>
-              )}
-            />
+            </PageListItem>
+            <PageListItem pageKey="settings" onClick={() => handleNavigate('/settings')}>
+              <ListItemIcon>
+                <SettingsOutlinedIcon />
+              </ListItemIcon>
+              <ListItemText primary={i18n.t("mainDrawer.listItems.settings")} />
+            </PageListItem>
           </List>
         </div>
       </Drawer>

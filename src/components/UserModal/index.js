@@ -40,6 +40,13 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
 import useWhatsApps from "../../hooks/useWhatsApps";
 import UserAvailabilitySettings from "../UserAvailabilitySettings";
+import UserPagePermissionsEditor from "../UserPagePermissionsEditor";
+import useCompanyModules from "../../hooks/useCompanyModules";
+import {
+	filterDefaultRouteOptionsByModules,
+	filterPageAccessForModules,
+	isDefaultRouteAvailableForModules,
+} from "../../constants/pagePermissions";
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -135,7 +142,11 @@ const UserModal = ({ open, onClose, userId }) => {
 	const [avatarPreview, setAvatarPreview] = useState(null);
 	const [userContacts, setUserContacts] = useState([]);
 	const [loadingContacts, setLoadingContacts] = useState(false);
+	const [pageAccess, setPageAccess] = useState(null);
 	const { loading, whatsApps } = useWhatsApps();
+	const { hasLanchonetes, hasAgendamento } = useCompanyModules();
+	const moduleFlags = { hasLanchonetes, hasAgendamento };
+	const defaultRouteOptions = filterDefaultRouteOptionsByModules(moduleFlags);
 
 	useEffect(() => {
 		const fetchUser = async () => {
@@ -153,6 +164,7 @@ const UserModal = ({ open, onClose, userId }) => {
 				} else {
 					setAvatarPreview(null);
 				}
+				setPageAccess(data.pageAccess || null);
 			} catch (err) {
 				toastError(err);
 			}
@@ -177,12 +189,22 @@ const UserModal = ({ open, onClose, userId }) => {
 		}
 	}, [userId, open, loggedInUser?.id]);
 
+	useEffect(() => {
+		if (
+			user.defaultRoute &&
+			!isDefaultRouteAvailableForModules(user.defaultRoute, moduleFlags)
+		) {
+			setUser((prev) => ({ ...prev, defaultRoute: "" }));
+		}
+	}, [hasLanchonetes, hasAgendamento, user.defaultRoute]);
+
 	const handleClose = () => {
 		onClose();
 		setUser(initialState);
 		setAvatarFile(null);
 		setAvatarPreview(null);
 		setUserContacts([]);
+		setPageAccess(null);
 	};
 
 	const handleAvatarChange = (e) => {
@@ -216,12 +238,22 @@ const UserModal = ({ open, onClose, userId }) => {
 	};
 
 	const handleSaveUser = async values => {
+		const safeDefaultRoute =
+			values.defaultRoute &&
+			isDefaultRouteAvailableForModules(values.defaultRoute, moduleFlags)
+				? values.defaultRoute
+				: null;
+
 		const userData = {
 			...values,
 			whatsappId,
 			queueIds: selectedQueueIds,
 			allTicket: values.allTicket,
-			defaultRoute: values.defaultRoute || null
+			defaultRoute: safeDefaultRoute,
+			pageAccess:
+				values.profile === "user"
+					? filterPageAccessForModules(pageAccess, moduleFlags)
+					: null,
 		};
 		try {
 			if (userId) {
@@ -241,7 +273,7 @@ const UserModal = ({ open, onClose, userId }) => {
 			<Dialog
 				open={open}
 				onClose={handleClose}
-				maxWidth="xs"
+				maxWidth="sm"
 				fullWidth
 				scroll="paper"
 			>
@@ -261,7 +293,7 @@ const UserModal = ({ open, onClose, userId }) => {
 						}, 400);
 					}}
 				>
-					{({ touched, errors, isSubmitting }) => (
+					{({ touched, errors, isSubmitting, values }) => (
 						<Form>
 							<DialogContent dividers>
 								{userId && (
@@ -374,20 +406,22 @@ const UserModal = ({ open, onClose, userId }) => {
 											labelId="defaultRoute-label"
 											id="defaultRoute-select"
 										>
-											<MenuItem value="">Padrão (Atendimentos)</MenuItem>
-											<MenuItem value="dashboard">Dashboard</MenuItem>
-											<MenuItem value="tickets">Atendimentos</MenuItem>
-											<MenuItem value="cozinha">Cozinha</MenuItem>
-											<MenuItem value="entregador">Entregador</MenuItem>
-											<MenuItem value="garcom">Garçom</MenuItem>
-											<MenuItem value="pedidos">Pedidos</MenuItem>
-											<MenuItem value="mesas">Mesas</MenuItem>
-											<MenuItem value="forms">Formulários</MenuItem>
-											<MenuItem value="lanchonetes">Lanchonetes</MenuItem>
-											<MenuItem value="pdv">PDV</MenuItem>
+											{defaultRouteOptions.map((option) => (
+												<MenuItem key={option.value || "default"} value={option.value}>
+													{option.label}
+												</MenuItem>
+											))}
 											</Field>
 									</FormControl>
 								</div>
+								{loggedInUser.profile === "admin" && values.profile === "user" && (
+									<UserPagePermissionsEditor
+										profile={values.profile}
+										pageAccess={pageAccess}
+										onChange={setPageAccess}
+										targetUserSuper={Boolean(user.super)}
+									/>
+								)}
 								<Can
 									role={loggedInUser.profile}
 									perform="user-modal:editQueues"

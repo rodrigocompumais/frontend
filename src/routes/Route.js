@@ -4,9 +4,15 @@ import moment from "moment";
 
 import { AuthContext } from "../context/Auth/AuthContext";
 import BackdropLoading from "../components/BackdropLoading";
+import usePageAccess from "../hooks/usePageAccess";
 
 const Route = ({ component: Component, isPrivate = false, isPublic = false, allowExpired = false, ...rest }) => {
 	const { isAuth, loading, user } = useContext(AuthContext);
+	const {
+		canAccessPath,
+		getFirstAccessiblePath,
+		loading: modulesLoading,
+	} = usePageAccess();
 
 	// Verificar se a assinatura está vencida (dueDate deve vir no refresh — ver ShowUserService)
 	const isSubscriptionExpired = () => {
@@ -38,16 +44,10 @@ const Route = ({ component: Component, isPrivate = false, isPublic = false, allo
 
 	// Se está autenticado e a rota não é privada (ex: login, signup)
 	// Redireciona para página de expiração, ou para a função do usuário (defaultRoute), ou dashboard
-	if (isAuth && !isPrivate && !isPublic) {
-		let redirectPath = "/dashboard";
+	if (isAuth && !isPrivate && !isPublic && !modulesLoading) {
+		let redirectPath = getFirstAccessiblePath(user);
 		if (isSubscriptionExpired()) {
 			redirectPath = "/subscription-expired";
-		} else if (user?.defaultRoute) {
-			const route = typeof user.defaultRoute === "string" ? user.defaultRoute.trim() : "";
-			const allowed = ["dashboard", "tickets", "cozinha", "entregador", "garcom", "pedidos", "mesas", "forms", "lanchonetes", "pdv", "products"];
-			if (route && allowed.includes(route)) {
-				redirectPath = `/${route}`;
-			}
 		}
 		return (
 			<>
@@ -65,6 +65,26 @@ const Route = ({ component: Component, isPrivate = false, isPublic = false, allo
 				<Redirect to={{ pathname: "/subscription-expired", state: { from: rest.location } }} />
 			</>
 		);
+	}
+
+	if (isAuth && isPrivate && user && !modulesLoading) {
+		const pathname =
+			rest.location?.pathname ||
+			(rest.path ? String(rest.path).replace(/:\w+\??/g, "") : "");
+
+		if (pathname && !canAccessPath(user, pathname)) {
+			return (
+				<>
+					{loading && <BackdropLoading />}
+					<Redirect
+						to={{
+							pathname: getFirstAccessiblePath(user),
+							state: { from: rest.location, pageAccessDenied: true },
+						}}
+					/>
+				</>
+			);
+		}
 	}
 
 	return (

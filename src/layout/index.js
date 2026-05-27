@@ -27,6 +27,7 @@ import ChatPopover from "../pages/Chat/ChatPopover";
 import AiChatFloating from "../components/AiChatFloating";
 import useChatNotifications from "../hooks/useChatNotifications";
 import useTicketNotifications from "../hooks/useTicketNotifications";
+import useAnnouncementNotifications from "../hooks/useAnnouncementNotifications";
 import useCompanyModules from "../hooks/useCompanyModules";
 import { i18n } from "../translate/i18n";
 
@@ -126,6 +127,7 @@ const LoggedInLayout = ({ children, themeToggle }) => {
   // Hooks de notificação de chats
   useChatNotifications();
   useTicketNotifications();
+  useAnnouncementNotifications();
 
   useEffect(() => {
     const companyId = localStorage.getItem("companyId");

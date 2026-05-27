@@ -44,8 +44,10 @@ import {
 } from '@material-ui/icons';
 import { Badge } from '@material-ui/core';
 import { i18n } from '../../translate/i18n';
-import { Can } from '../Can';
+import NavPageGate from '../NavPageGate';
 import { AuthContext } from '../../context/Auth/AuthContext';
+import { ADMIN_PAGE_KEYS } from '../../constants/pagePermissions';
+import usePageAccess from '../../hooks/usePageAccess';
 import { WhatsAppsContext } from '../../context/WhatsApp/WhatsAppsContext';
 import usePlans from '../../hooks/usePlans';
 import useCompanyModules from '../../hooks/useCompanyModules';
@@ -86,10 +88,19 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+const PageMenuItem = ({ pageKey, className, onClick, children }) => (
+  <NavPageGate pageKey={pageKey}>
+    <MenuItem className={className} onClick={onClick}>
+      {children}
+    </MenuItem>
+  </NavPageGate>
+);
+
 const NavigationMenus = () => {
   const classes = useStyles();
   const history = useHistory();
   const { user } = useContext(AuthContext);
+  const { hasAnyPageAccess, canAccessPage } = usePageAccess();
   const { whatsApps } = useContext(WhatsAppsContext);
   const { getPlanCompany } = usePlans();
   const { hasLanchonetes, hasAgendamento } = useCompanyModules();
@@ -156,6 +167,16 @@ const NavigationMenus = () => {
     closeMenu();
   };
 
+  const showAdminSection = hasAnyPageAccess(user, ADMIN_PAGE_KEYS);
+  const showAutomacaoMenu =
+    (showCampaigns || showOpenAi) &&
+    hasAnyPageAccess(user, [
+      "campaigns",
+      "contact-lists",
+      "flowbuilders",
+      "prompts",
+    ]);
+
   return (
     <div className={classes.root}>
       {/* 1. ATENDIMENTO */}
@@ -181,7 +202,8 @@ const NavigationMenus = () => {
           transformOrigin={{ vertical: 'top', horizontal: 'left' }}
           className={classes.menu}
         >
-        <MenuItem
+        <PageMenuItem
+          pageKey="tickets"
           className={classes.menuItem}
           onClick={() => handleNavigate('/tickets', () => setAtendimentoAnchor(null))}
         >
@@ -195,8 +217,9 @@ const NavigationMenus = () => {
             </Badge>
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.tickets")} />
-        </MenuItem>
-        <MenuItem
+        </PageMenuItem>
+        <PageMenuItem
+          pageKey="tickets-finalizadas"
           className={classes.menuItem}
           onClick={() => handleNavigate('/tickets/finalizadas', () => setAtendimentoAnchor(null))}
         >
@@ -204,9 +227,10 @@ const NavigationMenus = () => {
             <HistoryIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.ticketsFinalizadas")} />
-        </MenuItem>
+        </PageMenuItem>
         {showKanban && (
-          <MenuItem
+          <PageMenuItem
+            pageKey="kanban"
             className={classes.menuItem}
             onClick={() => handleNavigate('/kanban', () => setAtendimentoAnchor(null))}
           >
@@ -214,10 +238,11 @@ const NavigationMenus = () => {
               <TableChartIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText primary="Kanban" />
-          </MenuItem>
+          </PageMenuItem>
         )}
         {showInternalChat && (
-          <MenuItem
+          <PageMenuItem
+            pageKey="chats"
             className={classes.menuItem}
             onClick={() => handleNavigate('/chats', () => setAtendimentoAnchor(null))}
           >
@@ -227,9 +252,10 @@ const NavigationMenus = () => {
               </Badge>
             </ListItemIcon>
             <ListItemText primary={i18n.t("mainDrawer.listItems.chats")} />
-          </MenuItem>
+          </PageMenuItem>
         )}
-        <MenuItem
+        <PageMenuItem
+          pageKey="quick-messages"
           className={classes.menuItem}
           onClick={() => handleNavigate('/quick-messages', () => setAtendimentoAnchor(null))}
         >
@@ -237,7 +263,7 @@ const NavigationMenus = () => {
             <FlashOnIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.quickMessages")} />
-        </MenuItem>
+        </PageMenuItem>
         </Menu>
       </div>
 
@@ -260,7 +286,8 @@ const NavigationMenus = () => {
           transformOrigin={{ vertical: 'top', horizontal: 'left' }}
           className={classes.menu}
         >
-        <MenuItem
+        <PageMenuItem
+          pageKey="todolist"
           className={classes.menuItem}
           onClick={() => handleNavigate('/todolist', () => setGestaoAnchor(null))}
         >
@@ -268,8 +295,9 @@ const NavigationMenus = () => {
             <BorderColorIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.tasks")} />
-        </MenuItem>
-        <MenuItem
+        </PageMenuItem>
+        <PageMenuItem
+          pageKey="schedules"
           className={classes.menuItem}
           onClick={() => handleNavigate('/schedules', () => setGestaoAnchor(null))}
         >
@@ -277,8 +305,9 @@ const NavigationMenus = () => {
             <EventIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.schedules")} />
-        </MenuItem>
-        <MenuItem
+        </PageMenuItem>
+        <PageMenuItem
+          pageKey="contacts"
           className={classes.menuItem}
           onClick={() => handleNavigate('/contacts', () => setGestaoAnchor(null))}
         >
@@ -286,8 +315,9 @@ const NavigationMenus = () => {
             <ContactPhoneIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.contacts")} />
-        </MenuItem>
-        <MenuItem
+        </PageMenuItem>
+        <PageMenuItem
+          pageKey="tags"
           className={classes.menuItem}
           onClick={() => handleNavigate('/tags', () => setGestaoAnchor(null))}
         >
@@ -295,8 +325,9 @@ const NavigationMenus = () => {
             <LocalOfferIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.tags")} />
-        </MenuItem>
-        <MenuItem
+        </PageMenuItem>
+        <PageMenuItem
+          pageKey="forms"
           className={classes.menuItem}
           onClick={() => handleNavigate('/forms', () => setGestaoAnchor(null))}
         >
@@ -304,10 +335,11 @@ const NavigationMenus = () => {
             <AssignmentIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.forms")} />
-        </MenuItem>
+        </PageMenuItem>
         {hasLanchonetes && (
           <>
-            <MenuItem
+            <PageMenuItem
+              pageKey="products"
               className={classes.menuItem}
               onClick={() => handleNavigate('/products', () => setGestaoAnchor(null))}
             >
@@ -315,8 +347,9 @@ const NavigationMenus = () => {
                 <ShoppingCartIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText primary="Produtos" />
-            </MenuItem>
-            <MenuItem
+            </PageMenuItem>
+            <PageMenuItem
+              pageKey="lanchonetes"
               className={classes.menuItem}
               onClick={() => handleNavigate('/lanchonetes', () => setGestaoAnchor(null))}
             >
@@ -324,8 +357,9 @@ const NavigationMenus = () => {
                 <RestaurantIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText primary={i18n.t("lanchonetes.hubName")} />
-            </MenuItem>
-            <MenuItem
+            </PageMenuItem>
+            <PageMenuItem
+              pageKey="pdv"
               className={classes.menuItem}
               onClick={() => handleNavigate('/pdv', () => setGestaoAnchor(null))}
             >
@@ -333,11 +367,12 @@ const NavigationMenus = () => {
                 <ReceiptIcon fontSize="small" />
               </ListItemIcon>
               <ListItemText primary="PDV" />
-            </MenuItem>
+            </PageMenuItem>
           </>
         )}
         {hasAgendamento && (
-          <MenuItem
+          <PageMenuItem
+            pageKey="agendamento"
             className={classes.menuItem}
             onClick={() => handleNavigate('/agendamento', () => setGestaoAnchor(null))}
           >
@@ -345,13 +380,13 @@ const NavigationMenus = () => {
               <EventIcon fontSize="small" />
             </ListItemIcon>
             <ListItemText primary={i18n.t("agendamento.hubName")} />
-          </MenuItem>
+          </PageMenuItem>
         )}
         </Menu>
       </div>
 
       {/* 3. AUTOMAÇÃO & IA */}
-      {(showCampaigns || showOpenAi) && (
+      {showAutomacaoMenu && (
         <>
           <div>
             <Button
@@ -373,7 +408,8 @@ const NavigationMenus = () => {
             >
             {showCampaigns && (
               <>
-                <MenuItem
+                <PageMenuItem
+                  pageKey="campaigns"
                   className={classes.menuItem}
                   onClick={() => handleNavigate('/campaigns', () => setAutomacaoAnchor(null))}
                 >
@@ -381,8 +417,9 @@ const NavigationMenus = () => {
                     <EventAvailableIcon fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary={i18n.t("mainDrawer.listItems.campaigns")} />
-                </MenuItem>
-                <MenuItem
+                </PageMenuItem>
+                <PageMenuItem
+                  pageKey="contact-lists"
                   className={classes.menuItem}
                   onClick={() => handleNavigate('/contact-lists', () => setAutomacaoAnchor(null))}
                 >
@@ -390,8 +427,9 @@ const NavigationMenus = () => {
                     <PeopleIcon fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary="Listas de Contatos" />
-                </MenuItem>
-                <MenuItem
+                </PageMenuItem>
+                <PageMenuItem
+                  pageKey="flowbuilders"
                   className={classes.menuItem}
                   onClick={() => handleNavigate('/flowbuilders', () => setAutomacaoAnchor(null))}
                 >
@@ -399,11 +437,12 @@ const NavigationMenus = () => {
                     <AccountTreeIcon fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary={i18n.t("mainDrawer.listItems.flows")} />
-                </MenuItem>
+                </PageMenuItem>
               </>
             )}
             {showOpenAi && (
-              <MenuItem
+              <PageMenuItem
+                pageKey="prompts"
                 className={classes.menuItem}
                 onClick={() => handleNavigate('/prompts', () => setAutomacaoAnchor(null))}
               >
@@ -411,7 +450,7 @@ const NavigationMenus = () => {
                   <AllInclusiveIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText primary={i18n.t("mainDrawer.listItems.prompts")} />
-              </MenuItem>
+              </PageMenuItem>
             )}
             </Menu>
           </div>
@@ -419,10 +458,7 @@ const NavigationMenus = () => {
       )}
 
       {/* 4. ADMINISTRAÇÃO */}
-      <Can
-        role={user.profile}
-        perform="drawer-admin-items:view"
-        yes={() => (
+      {showAdminSection && (
           <>
             <div>
               <Button
@@ -442,7 +478,8 @@ const NavigationMenus = () => {
                 transformOrigin={{ vertical: 'top', horizontal: 'left' }}
                 className={classes.menu}
               >
-              <MenuItem
+              <PageMenuItem
+                pageKey="users"
                 className={classes.menuItem}
                 onClick={() => handleNavigate('/users', () => setAdministracaoAnchor(null))}
               >
@@ -450,8 +487,9 @@ const NavigationMenus = () => {
                   <PeopleIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText primary={i18n.t("mainDrawer.listItems.users")} />
-              </MenuItem>
-              <MenuItem
+              </PageMenuItem>
+              <PageMenuItem
+                pageKey="connections"
                 className={classes.menuItem}
                 onClick={() => handleNavigate('/connections', () => setAdministracaoAnchor(null))}
               >
@@ -461,8 +499,9 @@ const NavigationMenus = () => {
                   </Badge>
                 </ListItemIcon>
                 <ListItemText primary={i18n.t("mainDrawer.listItems.connections")} />
-              </MenuItem>
-              <MenuItem
+              </PageMenuItem>
+              <PageMenuItem
+                pageKey="queues"
                 className={classes.menuItem}
                 onClick={() => handleNavigate('/queues', () => setAdministracaoAnchor(null))}
               >
@@ -470,8 +509,9 @@ const NavigationMenus = () => {
                   <AccountTreeOutlinedIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText primary={i18n.t("mainDrawer.listItems.queues")} />
-              </MenuItem>
-              <MenuItem
+              </PageMenuItem>
+              <PageMenuItem
+                pageKey="files"
                 className={classes.menuItem}
                 onClick={() => handleNavigate('/files', () => setAdministracaoAnchor(null))}
               >
@@ -479,9 +519,10 @@ const NavigationMenus = () => {
                   <AttachFileIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText primary={i18n.t("mainDrawer.listItems.files")} />
-              </MenuItem>
+              </PageMenuItem>
               {showIntegrations && (
-                <MenuItem
+                <PageMenuItem
+                  pageKey="queue-integration"
                   className={classes.menuItem}
                   onClick={() => handleNavigate('/queue-integration', () => setAdministracaoAnchor(null))}
                 >
@@ -489,10 +530,11 @@ const NavigationMenus = () => {
                     <DeviceHubOutlinedIcon fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary={i18n.t("mainDrawer.listItems.queueIntegration")} />
-                </MenuItem>
+                </PageMenuItem>
               )}
               {showExternalApi && (
-                <MenuItem
+                <PageMenuItem
+                  pageKey="messages-api"
                   className={classes.menuItem}
                   onClick={() => handleNavigate('/messages-api', () => setAdministracaoAnchor(null))}
                 >
@@ -500,9 +542,10 @@ const NavigationMenus = () => {
                     <CodeRoundedIcon fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary={i18n.t("mainDrawer.listItems.messagesAPI")} />
-                </MenuItem>
+                </PageMenuItem>
               )}
-              <MenuItem
+              <PageMenuItem
+                pageKey="financeiro"
                 className={classes.menuItem}
                 onClick={() => handleNavigate('/financeiro', () => setAdministracaoAnchor(null))}
               >
@@ -510,12 +553,13 @@ const NavigationMenus = () => {
                   <LocalAtmIcon fontSize="small" />
                 </ListItemIcon>
                 <ListItemText primary={i18n.t("mainDrawer.listItems.financeiro")} />
-              </MenuItem>
-              {user.super && (
+              </PageMenuItem>
+              {user.super && canAccessPage(user, "announcements") && (
                 <Divider className={classes.divider} />
               )}
-              {user.super && (
-                <MenuItem
+              {user.super && canAccessPage(user, "announcements") && (
+                <PageMenuItem
+                  pageKey="announcements"
                   className={classes.menuItem}
                   onClick={() => handleNavigate('/announcements', () => setAdministracaoAnchor(null))}
                 >
@@ -523,13 +567,12 @@ const NavigationMenus = () => {
                     <AnnouncementIcon fontSize="small" />
                   </ListItemIcon>
                   <ListItemText primary={i18n.t("mainDrawer.listItems.annoucements")} />
-                </MenuItem>
+                </PageMenuItem>
               )}
               </Menu>
             </div>
           </>
-        )}
-      />
+      )}
 
       {/* 5. SISTEMA */}
       <div>
@@ -550,7 +593,8 @@ const NavigationMenus = () => {
           transformOrigin={{ vertical: 'top', horizontal: 'left' }}
           className={classes.menu}
         >
-        <MenuItem
+        <PageMenuItem
+          pageKey="helps"
           className={classes.menuItem}
           onClick={() => handleNavigate('/helps', () => setSistemaAnchor(null))}
         >
@@ -558,22 +602,17 @@ const NavigationMenus = () => {
             <HelpOutlineIcon fontSize="small" />
           </ListItemIcon>
           <ListItemText primary={i18n.t("mainDrawer.listItems.helps")} />
-        </MenuItem>
-        <Can
-          role={user.profile}
-          perform="drawer-admin-items:view"
-          yes={() => (
-            <MenuItem
-              className={classes.menuItem}
-              onClick={() => handleNavigate('/settings', () => setSistemaAnchor(null))}
-            >
-              <ListItemIcon>
-                <SettingsOutlinedIcon fontSize="small" />
-              </ListItemIcon>
-              <ListItemText primary={i18n.t("mainDrawer.listItems.settings")} />
-            </MenuItem>
-          )}
-        />
+        </PageMenuItem>
+        <PageMenuItem
+          pageKey="settings"
+          className={classes.menuItem}
+          onClick={() => handleNavigate('/settings', () => setSistemaAnchor(null))}
+        >
+          <ListItemIcon>
+            <SettingsOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText primary={i18n.t("mainDrawer.listItems.settings")} />
+        </PageMenuItem>
         </Menu>
       </div>
     </div>
