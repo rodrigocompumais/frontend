@@ -264,7 +264,14 @@ const TicketsList = (props) => {
 	useEffect(() => {
 
 		const queueIds = queues.map((q) => q.id);
-		let filteredTickets = tickets.filter((t) => queueIds.indexOf(t.queueId) > -1);
+		const matchesUserQueues = (t) => {
+			if (t.queueId == null || t.queueId === "") {
+				// Grupos WhatsApp costumam não ter fila
+				return isTicketGroup(t);
+			}
+			return queueIds.indexOf(t.queueId) > -1;
+		};
+		let filteredTickets = tickets.filter(matchesUserQueues);
 		const allticket = user.allTicket === 'enabled';
 
 		// Função para identificação liberação da settings 

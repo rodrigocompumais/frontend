@@ -14,6 +14,7 @@ import ModulesManager from "../../components/ModulesManager";
 import Options from "../../components/Settings/Options";
 import OptionsAPI from "../../components/Settings/OptionsAPI";
 import OptionsPix from "../../components/Settings/OptionsPix";
+import OptionsAI from "../../components/Settings/OptionsAI";
 
 import { i18n } from "../../translate/i18n.js";
 import { toast } from "react-toastify";
@@ -105,13 +106,6 @@ const SettingsCustom = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Aba de IA removida: estado antigo ou deep link inválido
-  useEffect(() => {
-    if (tab === "ai") {
-      setTab("options");
-    }
-  }, [tab]);
-
   // Verificar se o usuário está tentando acessar a aba API sem permissão
   useEffect(() => {
     if (tab === "api" && currentUser.profile && !canAccessAPI()) {
@@ -122,8 +116,8 @@ const SettingsCustom = () => {
   }, [tab, currentUser.profile, hasLanchonetes]);
 
   const handleTabChange = (event, newValue) => {
-    if (newValue === "ai") {
-      setTab("options");
+    if (newValue === "ai" && !isAdmin()) {
+      toast.error("Você não tem permissão para acessar esta página.");
       return;
     }
     // Verificar se o usuário está tentando acessar a aba API sem permissão
@@ -207,6 +201,9 @@ const SettingsCustom = () => {
           className={classes.tab}
         >
           <Tab label={i18n.t("settings.tabs.options")} value={"options"} />
+          {isAdmin() && (
+            <Tab label={i18n.t("settings.tabs.ai")} value={"ai"} />
+          )}
           {canAccessAPI() && <Tab label={i18n.t("settings.tabs.api")} value={"api"} />}
           {hasLanchonetes && <Tab label={i18n.t("settings.tabs.billing")} value={"billing"} />}
           {schedulesEnabled && <Tab label={i18n.t("settings.tabs.schedules")} value={"schedules"} />}
@@ -286,6 +283,11 @@ const SettingsCustom = () => {
               }
             />
           </TabPanel>
+          {isAdmin() && (
+            <TabPanel className={classes.container} value={tab} name={"ai"}>
+              <OptionsAI settings={settings} />
+            </TabPanel>
+          )}
           {canAccessAPI() && (
             <TabPanel className={classes.container} value={tab} name={"api"}>
               <OptionsAPI />

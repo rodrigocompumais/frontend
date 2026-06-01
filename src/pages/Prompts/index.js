@@ -265,7 +265,7 @@ const Prompts = () => {
                       backgroundColor: prompt.provider === "gemini" ? "#E8F5E9" : "#E3F2FD",
                       color: prompt.provider === "gemini" ? "#2E7D32" : "#1976D2"
                     }}>
-                      {prompt.provider === "gemini" ? "Gemini" : "OpenAI"}
+                      {prompt.provider === "gemini" ? "Gemini" : "OpenAI (LM Studio)"}
                     </span>
                   </TableCell>
                   <TableCell align="left">{prompt.queue?.name}</TableCell>

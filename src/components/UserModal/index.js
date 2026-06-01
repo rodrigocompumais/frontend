@@ -144,7 +144,11 @@ const UserModal = ({ open, onClose, userId }) => {
 	const [loadingContacts, setLoadingContacts] = useState(false);
 	const [pageAccess, setPageAccess] = useState(null);
 	const { loading, whatsApps } = useWhatsApps();
-	const { hasLanchonetes, hasAgendamento } = useCompanyModules();
+	const {
+		hasLanchonetes,
+		hasAgendamento,
+		loading: modulesLoading,
+	} = useCompanyModules();
 	const moduleFlags = { hasLanchonetes, hasAgendamento };
 	const lanchoneteDefaultRouteOptions = getLanchoneteDefaultRouteOptions();
 
@@ -201,6 +205,13 @@ const UserModal = ({ open, onClose, userId }) => {
 			setUser((prev) => ({ ...prev, defaultRoute: "" }));
 		}
 	}, [hasLanchonetes, hasAgendamento, user.defaultRoute]);
+
+	useEffect(() => {
+		if (!open) return;
+		if (user.profile === "admin") {
+			setPageAccess(null);
+		}
+	}, [open, user.profile]);
 
 	const handleClose = () => {
 		onClose();
@@ -427,6 +438,8 @@ const UserModal = ({ open, onClose, userId }) => {
 										pageAccess={pageAccess}
 										onChange={setPageAccess}
 										targetUserSuper={Boolean(user.super)}
+										moduleFlags={moduleFlags}
+										modulesLoading={modulesLoading}
 									/>
 								)}
 								<Can

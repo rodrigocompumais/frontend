@@ -719,6 +719,7 @@ const messages = {
         pageAccess: {
           title: "Page access",
           hint: "Select what this user can open. Unchecked items are hidden from the menu and blocked by URL.",
+          loading: "Loading page list…",
           hintLanchonetesHidden:
             "Snack bar pages (POS, orders, tables, products, operations, etc.) only appear when the Lanchonetes module is enabled for the company.",
           groups: {
@@ -1726,6 +1727,7 @@ const messages = {
         title: "Configurações",
         tabs: {
           options: "Options",
+          ai: "Artificial Intelligence",
           api: "API / Integration",
           billing: "PIX Billing",
           schedules: "Schedules",
@@ -1788,8 +1790,16 @@ const messages = {
             },
             geminiApiKey: {
               title: "Gemini API Key",
-              placeholder: "Enter your Gemini API key",
-              helper: "Deprecated — use LM Studio on the server.",
+              placeholder: "Paste your Gemini API key (Google AI Studio)",
+              helper:
+                "Each company can use its own key from https://aistudio.google.com/apikey. Server GEMINI_API_KEY is used only when no key is saved here.",
+              configuredHint:
+                "Key saved for this company. Enter a new key below only to replace it.",
+              keepPlaceholder: "Leave blank to keep the current key",
+              saveButton: "Save Gemini key",
+              saveSuccess: "Gemini key saved successfully!",
+              envFallbackHint:
+                "No company key; using server GEMINI_API_KEY.",
             },
             openaiApiKey: {
               title: "OpenAI API Key",

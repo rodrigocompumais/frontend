@@ -149,6 +149,7 @@ const getPromptSchema = () => {
 const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const classes = useStyles();
     const [selectedModel, setSelectedModel] = useState("local-model");
+    const [selectedProvider, setSelectedProvider] = useState("openai");
     const [selectedTemplate, setSelectedTemplate] = useState(null);
     const [templates, setTemplates] = useState([]);
     const [templateVariables, setTemplateVariables] = useState({
@@ -326,6 +327,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             if (!promptId) {
                 setPrompt(initialState);
                 setSelectedModel("local-model");
+                setSelectedProvider("openai");
                 setSelectedTemplate(null);
                 setTemplateVariables({
                     nome_agente: "",
@@ -335,7 +337,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
             } else {
                 try {
                     const { data } = await api.get(`/prompt/${promptId}`);
-                    const prov = data.provider === "gemini" ? "openai" : (data.provider || "openai");
+                    const prov = data.provider || "openai";
                     const model = data.model || "local-model";
                     setPrompt({
                         name: data.name || "",
@@ -355,6 +357,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                         }
                     });
                     setSelectedModel(model);
+                    setSelectedProvider(prov);
                 } catch (err) {
                     toastError(err);
                 }
@@ -369,6 +372,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
     const handleClose = () => {
         setPrompt(initialState);
         setSelectedModel("local-model");
+        setSelectedProvider("openai");
         onClose();
     };
 
@@ -381,7 +385,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         const promptData = {
             tipoAgente: selectedTemplate.tipo,
             model: selectedModel,
-            provider: "openai",
+            provider: selectedProvider,
             maxMessages: 10,
             maxTokens: 100,
             temperature: 1,
@@ -407,7 +411,7 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
         const promptData = {
             ...values,
             model: selectedModel,
-            provider: "openai",
+            provider: selectedProvider,
             businessHours: values.businessHours
         };
 
@@ -574,6 +578,32 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
 
                                         <div className={classes.multFieldLine}>
                                             <FormControl fullWidth margin="dense" variant="outlined">
+                                                <InputLabel id="provider-select-label" shrink={!!selectedProvider}>
+                                                    Provider
+                                                </InputLabel>
+                                                <Select
+                                                    labelId="provider-select-label"
+                                                    id="provider-select"
+                                                    value={selectedProvider}
+                                                    onChange={(e) => {
+                                                        const provider = e.target.value;
+                                                        setFieldValue("provider", provider);
+                                                        setSelectedProvider(provider);
+                                                        if (provider === "gemini" && selectedModel === "local-model") {
+                                                            setSelectedModel("gemini-2.5-flash");
+                                                            setFieldValue("model", "gemini-2.5-flash");
+                                                        }
+                                                        if (provider === "openai" && selectedModel.startsWith("gemini")) {
+                                                            setSelectedModel("local-model");
+                                                            setFieldValue("model", "local-model");
+                                                        }
+                                                    }}
+                                                >
+                                                    <MenuItem value="openai">OpenAI (LM Studio)</MenuItem>
+                                                    <MenuItem value="gemini">Gemini</MenuItem>
+                                                </Select>
+                                            </FormControl>
+                                            <FormControl fullWidth margin="dense" variant="outlined">
                                                 <InputLabel id="model-select-label" shrink={!!selectedModel}>
                                                     {i18n.t("promptModal.form.model")}
                                                 </InputLabel>
@@ -587,12 +617,18 @@ const PromptModal = ({ open, onClose, promptId, refreshPrompts }) => {
                                                     }}
                                                     displayEmpty={false}
                                                 >
-                                                    {[
-                                                        <MenuItem key="local-model" value="local-model">local-model (LM Studio)</MenuItem>,
-                                                        <MenuItem key="gpt-3.5-turbo-1106" value="gpt-3.5-turbo-1106">GPT 3.5 turbo</MenuItem>,
-                                                        <MenuItem key="gpt-4o-mini" value="gpt-4o-mini">GPT 4.0 Mini</MenuItem>,
-                                                        <MenuItem key="gpt-4o" value="gpt-4o">GPT 4.0</MenuItem>
-                                                    ]}
+                                                    {selectedProvider === "gemini"
+                                                        ? [
+                                                            <MenuItem key="gemini-2.5-flash" value="gemini-2.5-flash">Gemini 2.5 Flash</MenuItem>,
+                                                            <MenuItem key="gemini-2.5-pro" value="gemini-2.5-pro">Gemini 2.5 Pro</MenuItem>,
+                                                            <MenuItem key="gemini-2.5-flash-lite" value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</MenuItem>
+                                                        ]
+                                                        : [
+                                                            <MenuItem key="local-model" value="local-model">local-model (LM Studio)</MenuItem>,
+                                                            <MenuItem key="gpt-3.5-turbo-1106" value="gpt-3.5-turbo-1106">GPT 3.5 turbo</MenuItem>,
+                                                            <MenuItem key="gpt-4o-mini" value="gpt-4o-mini">GPT 4.0 Mini</MenuItem>,
+                                                            <MenuItem key="gpt-4o" value="gpt-4o">GPT 4.0</MenuItem>
+                                                        ]}
                                                 </Select>
                                             </FormControl>
                                             <Field

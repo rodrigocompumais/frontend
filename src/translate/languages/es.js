@@ -719,6 +719,7 @@ const messages = {
         pageAccess: {
           title: "Acceso a páginas",
           hint: "Seleccione lo que este usuario puede abrir. Lo desmarcado se oculta del menú y se bloquea por URL.",
+          loading: "Cargando lista de páginas…",
           hintLanchonetesHidden:
             "Las páginas de lanchonete (PDV, pedidos, mesas, productos, operacional, etc.) solo aparecen si el módulo Lanchonetes está activo en la empresa.",
           groups: {
@@ -1722,6 +1723,7 @@ const messages = {
         title: "Configurações",
         tabs: {
           options: "Opciones",
+          ai: "Inteligencia Artificial",
           api: "API / Integración",
           billing: "Cobro PIX",
           schedules: "Horarios",
@@ -1784,8 +1786,16 @@ const messages = {
             },
             geminiApiKey: {
               title: "Clave API de Gemini",
-              placeholder: "Ingrese su clave API de Gemini",
-              helper: "Obsoleto — use LM Studio en el servidor.",
+              placeholder: "Pegue su clave API de Gemini (Google AI Studio)",
+              helper:
+                "Cada empresa puede usar su propia clave desde https://aistudio.google.com/apikey. GEMINI_API_KEY del servidor solo se usa si no hay clave guardada aquí.",
+              configuredHint:
+                "Clave guardada para esta empresa. Ingrese una nueva solo para reemplazarla.",
+              keepPlaceholder: "Deje en blanco para mantener la clave actual",
+              saveButton: "Guardar clave Gemini",
+              saveSuccess: "¡Clave Gemini guardada con éxito!",
+              envFallbackHint:
+                "Sin clave por empresa; usando GEMINI_API_KEY del servidor.",
             },
             openaiApiKey: {
               title: "Clave API de OpenAI",

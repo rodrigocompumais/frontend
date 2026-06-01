@@ -70,9 +70,13 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
     temperature: 1,
     queueId: null,
     maxMessages: 10,
+    provider: "openai",
+    model: "local-model",
   };
 
   const [selectedVoice, setSelectedVoice] = useState("texto");
+  const [selectedProvider, setSelectedProvider] = useState("openai");
+  const [selectedModel, setSelectedModel] = useState("local-model");
 
   const [activeModal, setActiveModal] = useState(false);
   const [integration, setIntegration] = useState();
@@ -88,9 +92,13 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
         btn: "Salvar",
       });
       console.log("FlowTybebotEdit", data);
-      setIntegration({
-        ...data.data.typebotIntegration,
-      });
+      const integrationData = { ...data.data.typebotIntegration };
+      setIntegration(integrationData);
+      setSelectedProvider(integrationData.provider || "openai");
+      setSelectedModel(
+        integrationData.model ||
+          (integrationData.provider === "gemini" ? "gemini-2.5-flash" : "local-model")
+      );
       setActiveModal(true);
     } else if (open === "create") {
       setLabels({
@@ -98,6 +106,8 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
         btn: "Salvar",
       });
       setIntegration(initialState);
+      setSelectedProvider("openai");
+      setSelectedModel("local-model");
       setActiveModal(true);
     }
 
@@ -122,7 +132,14 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
       handleClose();
       onUpdate({
         ...data,
-        data: { typebotIntegration: { ...valuesWithoutApiKey, voice: selectedVoice} },
+        data: {
+          typebotIntegration: {
+            ...valuesWithoutApiKey,
+            voice: selectedVoice,
+            provider: selectedProvider,
+            model: selectedModel,
+          },
+        },
       });
     } else if (open === "create") {
       valuesWithoutApiKey.projectName = valuesWithoutApiKey.name;
@@ -130,8 +147,10 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
       onSave({
         typebotIntegration: {
           ...valuesWithoutApiKey,
-          voice: selectedVoice
-        }
+          voice: selectedVoice,
+          provider: selectedProvider,
+          model: selectedModel,
+        },
       });
     }
   };
@@ -175,6 +194,62 @@ const FlowBuilderOpenAIModal = ({ open, onSave, data, onUpdate, close }) => {
                 <Typography variant="body2" color="textSecondary" style={{ marginBottom: 8 }}>
                   {i18n.t("settings.options.fields.lmStudioInfra.description")}
                 </Typography>
+                <div className={classes.multFieldLine}>
+                  <FormControl fullWidth margin="dense" variant="outlined">
+                    <InputLabel id="flow-provider-label" shrink>
+                      Provider
+                    </InputLabel>
+                    <Select
+                      labelId="flow-provider-label"
+                      id="flow-provider"
+                      value={selectedProvider}
+                      onChange={(e) => {
+                        const provider = e.target.value;
+                        setSelectedProvider(provider);
+                        if (provider === "gemini" && selectedModel === "local-model") {
+                          setSelectedModel("gemini-2.5-flash");
+                        }
+                        if (provider === "openai" && selectedModel.startsWith("gemini")) {
+                          setSelectedModel("local-model");
+                        }
+                      }}
+                      label="Provider"
+                    >
+                      <MenuItem value="openai">OpenAI (LM Studio)</MenuItem>
+                      <MenuItem value="gemini">Gemini</MenuItem>
+                    </Select>
+                  </FormControl>
+                  <FormControl fullWidth margin="dense" variant="outlined">
+                    <InputLabel id="flow-model-label" shrink>
+                      Modelo
+                    </InputLabel>
+                    <Select
+                      labelId="flow-model-label"
+                      id="flow-model"
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value)}
+                      label="Modelo"
+                    >
+                      {selectedProvider === "gemini"
+                        ? [
+                            <MenuItem key="gemini-2.5-flash" value="gemini-2.5-flash">
+                              Gemini 2.5 Flash
+                            </MenuItem>,
+                            <MenuItem key="gemini-2.5-pro" value="gemini-2.5-pro">
+                              Gemini 2.5 Pro
+                            </MenuItem>,
+                            <MenuItem key="gemini-2.5-flash-lite" value="gemini-2.5-flash-lite">
+                              Gemini 2.5 Flash Lite
+                            </MenuItem>,
+                          ]
+                        : [
+                            <MenuItem key="local-model" value="local-model">
+                              local-model
+                            </MenuItem>,
+                          ]}
+                    </Select>
+                  </FormControl>
+                </div>
                 <Field
                   as={TextField}
                   label={i18n.t("promptModal.form.prompt")}
