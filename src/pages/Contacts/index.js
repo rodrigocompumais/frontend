@@ -346,7 +346,7 @@ const Contacts = () => {
       <ImportWhatsAppConversationModal
         open={whatsappImportOpen}
         onClose={() => setWhatsappImportOpen(false)}
-        onImported={(data) => history.push(`/tickets/${data.ticketId}`)}
+        onImported={(data) => history.push(`/tickets/${data.uuid || data.ticketId}`)}
       />
       <NewTicketModal
         modalOpen={newTicketModalOpen}

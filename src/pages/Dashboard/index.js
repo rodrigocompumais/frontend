@@ -922,9 +922,10 @@ const Dashboard = () => {
   };
 
   // Função para abrir um ticket
-  const handleOpenTicket = (ticketId) => {
+  const handleOpenTicket = (ticket) => {
     setTicketModalOpen(false);
-    history.push(`/tickets/${ticketId}`);
+    const routeId = ticket?.uuid ?? ticket?.id ?? ticket;
+    history.push(`/tickets/${routeId}`);
   };
 
   // Função para formatar tempo relativo
@@ -1933,7 +1934,7 @@ const Dashboard = () => {
                         key={ticket.id} 
                         hover
                         style={{ cursor: "pointer" }}
-                        onClick={() => handleOpenTicket(ticket.id)}
+                        onClick={() => handleOpenTicket(ticket)}
                       >
                         <TableCell>
                           <Typography variant="body2" style={{ fontWeight: 500 }}>
@@ -1974,7 +1975,7 @@ const Dashboard = () => {
                               color="primary"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleOpenTicket(ticket.id);
+                                handleOpenTicket(ticket);
                               }}
                             >
                               <OpenInNewIcon fontSize="small" />

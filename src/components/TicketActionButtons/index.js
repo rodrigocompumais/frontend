@@ -51,7 +51,7 @@ const TicketActionButtons = ({ ticket }) => {
 
 			setLoading(false);
 			if (status === "open") {
-				history.push(`/tickets/${ticket.id}`);
+				history.push(`/tickets/${ticket.uuid || ticket.id}`);
 			} else {
 				history.push("/tickets");
 			}

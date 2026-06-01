@@ -328,7 +328,7 @@ const NewTicketModal = ({ modalOpen, onClose, initialContact }) => {
         onImported={(data) => {
           setWhatsappImportOpen(false);
           onClose({ id: data.ticketId });
-          history.push(`/tickets/${data.ticketId}`);
+          history.push(`/tickets/${data.uuid || data.ticketId}`);
         }}
       />
       <Dialog open={modalOpen} onClose={handleClose}>
