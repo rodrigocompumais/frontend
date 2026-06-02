@@ -194,8 +194,15 @@ const TicketsManager = () => {
   }, []);
 
   useEffect(() => {
-    setOpenCount(conversationsCount + groupsCount);
-  }, [conversationsCount, groupsCount]);
+    const effectiveGroupsCount = checkMsgIsGroup === "enabled" ? 0 : groupsCount;
+    setOpenCount(conversationsCount + effectiveGroupsCount);
+  }, [checkMsgIsGroup, conversationsCount, groupsCount]);
+
+  useEffect(() => {
+    if (checkMsgIsGroup === "enabled" && subTab === "grupos") {
+      setSubTab("conversas");
+    }
+  }, [checkMsgIsGroup, subTab]);
 
   const handleBulkClose = async () => {
     setBulkCloseLoading(true);
@@ -235,6 +242,8 @@ const TicketsManager = () => {
   const handleChangeSubTab = (e, newValue) => {
     setSubTab(newValue);
   };
+
+  const hideGroupsTab = checkMsgIsGroup === "enabled";
 
   const applyPanelStyle = (status) => {
     if (tabOpen !== status) {
@@ -376,20 +385,22 @@ const TicketsManager = () => {
               }
               className={classes.subTab}
             />
-            <Tab
-              value="grupos"
-              label={
-                <Badge
-                  className={classes.badge}
-                  badgeContent={groupsCount}
-                  overlap="rectangular"
-                  color="secondary"
-                >
-                  {i18n.t("tickets.tabs.subTabs.groups")}
-                </Badge>
-              }
-              className={classes.subTab}
-            />
+            {!hideGroupsTab && (
+              <Tab
+                value="grupos"
+                label={
+                  <Badge
+                    className={classes.badge}
+                    badgeContent={groupsCount}
+                    overlap="rectangular"
+                    color="secondary"
+                  >
+                    {i18n.t("tickets.tabs.subTabs.groups")}
+                  </Badge>
+                }
+                className={classes.subTab}
+              />
+            )}
           </Tabs>
         </Paper>
       )}
@@ -406,7 +417,7 @@ const TicketsManager = () => {
               style={applyPanelStyle("open")}
             />
           )}
-          {subTab === "grupos" && (
+          {!hideGroupsTab && subTab === "grupos" && (
             <TicketsList
               status="open"
               showAll={showAllTickets}

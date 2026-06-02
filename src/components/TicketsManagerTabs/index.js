@@ -37,6 +37,7 @@ import { Button } from "@material-ui/core";
 import { TagsFilter } from "../TagsFilter";
 import { UsersFilter } from "../UsersFilter";
 import usePendingTicketNotification from "../../hooks/usePendingTicketNotification";
+import useSettings from "../../hooks/useSettings";
 
 const check = (role, action, data) => {
 	const permissions = rules[role];
@@ -281,6 +282,8 @@ const TicketsManagerTabs = () => {
   const [selectedTags, setSelectedTags] = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
   const [filterMenuAnchor, setFilterMenuAnchor] = useState(null);
+  const [checkMsgIsGroup, setCheckMsgIsGroup] = useState("enabled");
+  const { getAll: getSettings } = useSettings();
 
   useEffect(() => {
     if (user.profile.toUpperCase() === "ADMIN") {
@@ -294,6 +297,31 @@ const TicketsManagerTabs = () => {
       searchInputRef.current.focus();
     }
   }, [tab]);
+
+  useEffect(() => {
+    const fetchGroupSetting = async () => {
+      try {
+        const settings = await getSettings();
+        const setting = settings.find((s) => s.key === "CheckMsgIsGroup");
+        setCheckMsgIsGroup(setting?.value || "enabled");
+      } catch (error) {
+        setCheckMsgIsGroup("enabled");
+      }
+    };
+
+    fetchGroupSetting();
+  }, [getSettings]);
+
+  useEffect(() => {
+    if (checkMsgIsGroup === "enabled" && subTab === "groups") {
+      setSubTab("conversations");
+    }
+  }, [checkMsgIsGroup, subTab]);
+
+  useEffect(() => {
+    const effectiveGroupsCount = checkMsgIsGroup === "enabled" ? 0 : groupsCount;
+    setOpenCount(conversationsCount + effectiveGroupsCount);
+  }, [checkMsgIsGroup, conversationsCount, groupsCount]);
 
   let searchTimeout;
 
@@ -362,6 +390,7 @@ const TicketsManagerTabs = () => {
   };
 
   const filterMenuOpen = Boolean(filterMenuAnchor);
+  const hideGroupsTab = checkMsgIsGroup === "enabled";
 
   return (
     <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper}>
@@ -468,29 +497,31 @@ const TicketsManagerTabs = () => {
                 }
                 style={{ minWidth: 90, textTransform: "none" }}
               />
-              <Tab
-                value="groups"
-                label={
-                  <Badge
-                    badgeContent={groupsCount > 0 ? groupsCount : 0}
-                    color="primary"
-                    className={classes.badge}
-                    invisible={groupsCount === 0}
-                  >
-                    <Box>
-                      <Typography variant="caption" style={{ fontWeight: 500 }}>
-                        {i18n.t("tickets.tabs.subTabs.groups")}
-                      </Typography>
-                      {groupsUnread > 0 && (
-                        <Typography variant="caption" display="block" style={{ color: "var(--primary-color, #1976d2)", fontWeight: 600, fontSize: "0.65rem" }}>
-                          {i18n.t("ticketsList.summaryUnread", { count: groupsUnread })}
+              {!hideGroupsTab && (
+                <Tab
+                  value="groups"
+                  label={
+                    <Badge
+                      badgeContent={groupsCount > 0 ? groupsCount : 0}
+                      color="primary"
+                      className={classes.badge}
+                      invisible={groupsCount === 0}
+                    >
+                      <Box>
+                        <Typography variant="caption" style={{ fontWeight: 500 }}>
+                          {i18n.t("tickets.tabs.subTabs.groups")}
                         </Typography>
-                      )}
-                    </Box>
-                  </Badge>
-                }
-                style={{ minWidth: 90, textTransform: "none" }}
-              />
+                        {groupsUnread > 0 && (
+                          <Typography variant="caption" display="block" style={{ color: "var(--primary-color, #1976d2)", fontWeight: 600, fontSize: "0.65rem" }}>
+                            {i18n.t("ticketsList.summaryUnread", { count: groupsUnread })}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Badge>
+                  }
+                  style={{ minWidth: 90, textTransform: "none" }}
+                />
+              )}
             </Tabs>
           </div>
         )}
@@ -604,12 +635,11 @@ const TicketsManagerTabs = () => {
               const unread = typeof data === "object" ? (data.unread || 0) : 0;
               setConversationsCount(val);
               setConversationsUnread(unread);
-              setOpenCount(val + groupsCount);
             }}
             filterIsGroup={false}
           />
         )}
-        {subTab === "groups" && (
+        {!hideGroupsTab && subTab === "groups" && (
           <TicketsList
             status="open"
             showAll={showAllTickets}
@@ -620,7 +650,6 @@ const TicketsManagerTabs = () => {
               const unread = typeof data === "object" ? (data.unread || 0) : 0;
               setGroupsCount(val);
               setGroupsUnread(unread);
-              setOpenCount(conversationsCount + val);
             }}
             filterIsGroup={true}
           />
