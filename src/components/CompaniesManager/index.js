@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   makeStyles,
   Paper,
@@ -18,12 +18,25 @@ import {
   IconButton,
   Select,
   Typography,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  Button,
+  Box,
+  Chip,
+  InputAdornment,
 } from "@material-ui/core";
 import { Formik, Form, Field } from "formik";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConfirmationModal from "../ConfirmationModal";
 
-import { Edit as EditIcon } from "@material-ui/icons";
+import {
+  Edit as EditIcon,
+  Add as AddIcon,
+  Search as SearchIcon,
+  VisibilityOff as VisibilityOffIcon,
+  CheckCircle as CheckCircleIcon,
+} from "@material-ui/icons";
 
 import { toast } from "react-toastify";
 import useCompanies from "../../hooks/useCompanies";
@@ -36,6 +49,8 @@ import { useDate } from "../../hooks/useDate";
 
 import moment from "moment";
 import { i18n } from "../../translate/i18n";
+
+const isCompanyActive = (company) => company?.status !== false;
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -51,26 +66,30 @@ const useStyles = makeStyles((theme) => ({
   },
   tableContainer: {
     width: "100%",
-    overflowX: "scroll",
+    overflowX: "auto",
     ...theme.scrollbarStyles,
   },
   textfield: {
     width: "100%",
   },
-  textRight: {
-    textAlign: "right",
+  toolbar: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+    alignItems: "center",
+    marginBottom: theme.spacing(2),
   },
-  row: {
-    paddingTop: theme.spacing(2),
-    paddingBottom: theme.spacing(2),
+  searchField: {
+    flex: 1,
+    minWidth: 220,
   },
-  control: {
-    paddingRight: theme.spacing(1),
-    paddingLeft: theme.spacing(1),
+  statusActive: {
+    backgroundColor: theme.palette.success.light,
+    color: theme.palette.success.contrastText,
   },
-  buttonContainer: {
-    textAlign: "right",
-    padding: theme.spacing(1),
+  statusInactive: {
+    backgroundColor: theme.palette.grey[400],
+    color: theme.palette.getContrastText(theme.palette.grey[400]),
   },
 }));
 
@@ -107,14 +126,13 @@ export function CompanyForm(props) {
 
   useEffect(() => {
     setRecord((prev) => {
-      if (moment(initialValue).isValid()) {
-        initialValue.dueDate = moment(initialValue.dueDate).format(
-          "YYYY-MM-DD"
-        );
+      const next = { ...initialValue };
+      if (moment(initialValue?.dueDate).isValid()) {
+        next.dueDate = moment(initialValue.dueDate).format("YYYY-MM-DD");
       }
       return {
         ...prev,
-        ...initialValue,
+        ...next,
       };
     });
   }, [initialValue]);
@@ -124,7 +142,6 @@ export function CompanyForm(props) {
       data.dueDate = null;
     }
     onSubmit({ ...data, modules: record.modules });
-    setRecord({ ...initialValue, dueDate: "", modules: [] });
   };
 
   const handleOpenModalUsers = async () => {
@@ -196,14 +213,9 @@ export function CompanyForm(props) {
         enableReinitialize
         className={classes.fullWidth}
         initialValues={record}
-        onSubmit={(values, { resetForm }) =>
-          setTimeout(() => {
-            handleSubmit(values);
-            resetForm();
-          }, 500)
-        }
+        onSubmit={(values) => handleSubmit(values)}
       >
-        {(values, setValues) => (
+        {() => (
           <Form className={classes.fullWidth}>
             <Grid spacing={2} justifyContent="flex-end" container>
               <Grid xs={12} sm={6} md={4} item>
@@ -272,14 +284,20 @@ export function CompanyForm(props) {
                     name="status"
                     margin="dense"
                   >
-                    <MenuItem value={true}>{i18n.t("settings.company.form.yes")}</MenuItem>
-                    <MenuItem value={false}>{i18n.t("settings.company.form.no")}</MenuItem>
+                    <MenuItem value={true}>
+                      {i18n.t("settings.company.status.active")}
+                    </MenuItem>
+                    <MenuItem value={false}>
+                      {i18n.t("settings.company.status.inactive")}
+                    </MenuItem>
                   </Field>
                 </FormControl>
               </Grid>
               <Grid xs={12} sm={6} md={2} item>
                 <FormControl margin="dense" variant="outlined" fullWidth>
-                  <InputLabel htmlFor="status-selection">{i18n.t("settings.company.form.campanhas")}</InputLabel>
+                  <InputLabel htmlFor="status-selection">
+                    {i18n.t("settings.company.form.campanhas")}
+                  </InputLabel>
                   <Field
                     as={Select}
                     id="campaigns-selection"
@@ -288,8 +306,12 @@ export function CompanyForm(props) {
                     name="campaignsEnabled"
                     margin="dense"
                   >
-                    <MenuItem value={true}>{i18n.t("settings.company.form.enabled")}</MenuItem>
-                    <MenuItem value={false}>{i18n.t("settings.company.form.disabled")}</MenuItem>
+                    <MenuItem value={true}>
+                      {i18n.t("settings.company.form.enabled")}
+                    </MenuItem>
+                    <MenuItem value={false}>
+                      {i18n.t("settings.company.form.disabled")}
+                    </MenuItem>
                   </Field>
                 </FormControl>
               </Grid>
@@ -322,18 +344,16 @@ export function CompanyForm(props) {
                     name="recurrence"
                     margin="dense"
                   >
-                    <MenuItem value="MENSAL">{i18n.t("settings.company.form.monthly")}</MenuItem>
-                    {/*<MenuItem value="BIMESTRAL">Bimestral</MenuItem>*/}
-                    {/*<MenuItem value="TRIMESTRAL">Trimestral</MenuItem>*/}
-                    {/*<MenuItem value="SEMESTRAL">Semestral</MenuItem>*/}
-                    {/*<MenuItem value="ANUAL">Anual</MenuItem>*/}
+                    <MenuItem value="MENSAL">
+                      {i18n.t("settings.company.form.monthly")}
+                    </MenuItem>
                   </Field>
                 </FormControl>
               </Grid>
               {record.id && (
                 <Grid xs={12} item>
                   <Typography variant="subtitle2" style={{ marginBottom: 8 }}>
-                    Módulos
+                    {i18n.t("settings.company.form.modules")}
                   </Typography>
                   <FormGroup row>
                     {availableModules.map((mod) => (
@@ -341,14 +361,19 @@ export function CompanyForm(props) {
                         key={mod.id}
                         control={
                           <Checkbox
-                            checked={Array.isArray(record.modules) && record.modules.includes(mod.id)}
+                            checked={
+                              Array.isArray(record.modules) &&
+                              record.modules.includes(mod.id)
+                            }
                             onChange={(e) => {
                               const checked = e.target.checked;
                               setRecord((prev) => ({
                                 ...prev,
                                 modules: checked
                                   ? [...(prev.modules || []), mod.id]
-                                  : (prev.modules || []).filter((m) => m !== mod.id),
+                                  : (prev.modules || []).filter(
+                                      (m) => m !== mod.id
+                                    ),
                               }));
                             }}
                           />
@@ -435,16 +460,33 @@ export function CompanyForm(props) {
 }
 
 export function CompaniesManagerGrid(props) {
-  const { records, onSelect } = props;
+  const {
+    records,
+    onSelect,
+    showActivate = false,
+    onActivate,
+    activatingId = null,
+  } = props;
   const classes = useStyles();
   const { dateToClient } = useDate();
 
-  const renderStatus = (row) => {
-    return row.status === false ? "Não" : "Sim";
+  const renderStatusChip = (row) => {
+    const active = isCompanyActive(row);
+    return (
+      <Chip
+        size="small"
+        label={
+          active
+            ? i18n.t("settings.company.status.active")
+            : i18n.t("settings.company.status.inactive")
+        }
+        className={active ? classes.statusActive : classes.statusInactive}
+      />
+    );
   };
 
   const renderPlan = (row) => {
-    return row.planId !== null ? row.plan.name : "-";
+    return row.planId !== null ? row.plan?.name : "-";
   };
 
   const renderCampaignsStatus = (row) => {
@@ -455,10 +497,12 @@ export function CompaniesManagerGrid(props) {
     ) {
       const setting = row.settings.find((s) => s.key === "campaignsEnabled");
       if (setting) {
-        return setting.value === "true" ? i18n.t("settings.company.form.enabled") : i18n.t("settings.company.form.disabled");
+        return setting.value === "true"
+          ? i18n.t("settings.company.form.enabled")
+          : i18n.t("settings.company.form.disabled");
       }
     }
-    return i18n.t("settings.company.form.disabled")
+    return i18n.t("settings.company.form.disabled");
   };
 
   const rowStyle = (record) => {
@@ -484,71 +528,122 @@ export function CompaniesManagerGrid(props) {
       <Table
         className={classes.fullWidth}
         size="small"
-        aria-label="a dense table"
+        aria-label="companies-table"
       >
         <TableHead>
           <TableRow>
             <TableCell align="center" style={{ width: "1%" }}>
               #
             </TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.name")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.email")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.phone")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.plan")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.campanhas")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.status")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.createdAt")}</TableCell>
-            <TableCell align="left">{i18n.t("settings.company.form.expire")}</TableCell>
+            <TableCell align="left">
+              {i18n.t("settings.company.form.name")}
+            </TableCell>
+            <TableCell align="left">
+              {i18n.t("settings.company.form.email")}
+            </TableCell>
+            <TableCell align="left">
+              {i18n.t("settings.company.form.phone")}
+            </TableCell>
+            <TableCell align="left">
+              {i18n.t("settings.company.form.plan")}
+            </TableCell>
+            <TableCell align="left">
+              {i18n.t("settings.company.form.campanhas")}
+            </TableCell>
+            <TableCell align="left">
+              {i18n.t("settings.company.form.status")}
+            </TableCell>
+            <TableCell align="left">
+              {i18n.t("settings.company.form.createdAt")}
+            </TableCell>
+            <TableCell align="left">
+              {i18n.t("settings.company.form.expire")}
+            </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {records.map((row, key) => (
-            <TableRow style={rowStyle(row)} key={key}>
-              <TableCell align="center" style={{ width: "1%" }}>
-                <IconButton onClick={() => onSelect(row)} aria-label="delete">
-                  <EditIcon />
-                </IconButton>
-              </TableCell>
-              <TableCell align="left">{row.name || "-"}</TableCell>
-              <TableCell align="left">{row.email || "-"}</TableCell>
-              <TableCell align="left">{row.phone || "-"}</TableCell>
-              <TableCell align="left">{renderPlan(row)}</TableCell>
-              <TableCell align="left">{renderCampaignsStatus(row)}</TableCell>
-              <TableCell align="left">{renderStatus(row)}</TableCell>
-              <TableCell align="left">{dateToClient(row.createdAt)}</TableCell>
-              <TableCell align="left">
-                {dateToClient(row.dueDate)}
-                <br />
-                <span>{row.recurrence}</span>
+          {records.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={9} align="center">
+                <Typography variant="body2" color="textSecondary">
+                  {i18n.t("settings.company.empty")}
+                </Typography>
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            records.map((row) => (
+              <TableRow style={rowStyle(row)} key={row.id}>
+                <TableCell align="center" style={{ width: "1%" }}>
+                  {showActivate ? (
+                    <IconButton
+                      onClick={() => onActivate(row)}
+                      aria-label="activate"
+                      disabled={activatingId === row.id}
+                      color="primary"
+                    >
+                      <CheckCircleIcon />
+                    </IconButton>
+                  ) : (
+                    <IconButton
+                      onClick={() => onSelect(row)}
+                      aria-label="edit"
+                    >
+                      <EditIcon />
+                    </IconButton>
+                  )}
+                </TableCell>
+                <TableCell align="left">{row.name || "-"}</TableCell>
+                <TableCell align="left">{row.email || "-"}</TableCell>
+                <TableCell align="left">{row.phone || "-"}</TableCell>
+                <TableCell align="left">{renderPlan(row)}</TableCell>
+                <TableCell align="left">{renderCampaignsStatus(row)}</TableCell>
+                <TableCell align="left">{renderStatusChip(row)}</TableCell>
+                <TableCell align="left">
+                  {dateToClient(row.createdAt)}
+                </TableCell>
+                <TableCell align="left">
+                  {dateToClient(row.dueDate)}
+                  <br />
+                  <span>{row.recurrence}</span>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </Paper>
   );
 }
 
+const emptyRecord = {
+  name: "",
+  email: "",
+  phone: "",
+  planId: "",
+  status: true,
+  campaignsEnabled: false,
+  dueDate: "",
+  recurrence: "",
+  modules: [],
+};
+
 export default function CompaniesManager() {
   const classes = useStyles();
-  const { list, save, update, remove, getModules, updateModules } = useCompanies();
+  const { list, save, update, remove, getModules, updateModules } =
+    useCompanies();
   const { listAvailable } = useModules();
   const [availableModules, setAvailableModules] = useState([]);
 
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState([]);
-  const [record, setRecord] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    planId: "",
-    status: true,
-    campaignsEnabled: false,
-    dueDate: "",
-    recurrence: "",
-    modules: [],
-  });
+  const [record, setRecord] = useState({ ...emptyRecord });
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [inactiveModalOpen, setInactiveModalOpen] = useState(false);
+  const [activeSearch, setActiveSearch] = useState("");
+  const [inactiveSearch, setInactiveSearch] = useState("");
+  const [activatingId, setActivatingId] = useState(null);
 
   useEffect(() => {
     loadPlans();
@@ -576,6 +671,37 @@ export default function CompaniesManager() {
     setLoading(false);
   };
 
+  const matchesSearch = (company, query) => {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (company.name || "").toLowerCase().includes(q) ||
+      (company.email || "").toLowerCase().includes(q) ||
+      (company.phone || "").toLowerCase().includes(q)
+    );
+  };
+
+  const activeRecords = useMemo(
+    () =>
+      records
+        .filter(isCompanyActive)
+        .filter((c) => matchesSearch(c, activeSearch)),
+    [records, activeSearch]
+  );
+
+  const inactiveRecords = useMemo(
+    () =>
+      records
+        .filter((c) => !isCompanyActive(c))
+        .filter((c) => matchesSearch(c, inactiveSearch)),
+    [records, inactiveSearch]
+  );
+
+  const inactiveCount = useMemo(
+    () => records.filter((c) => !isCompanyActive(c)).length,
+    [records]
+  );
+
   const handleSubmit = async (data) => {
     setLoading(true);
     try {
@@ -590,12 +716,10 @@ export default function CompaniesManager() {
       }
 
       await loadPlans();
-      handleCancel();
+      handleCloseEditModal();
       toast.success(i18n.t("settings.company.toasts.success"));
     } catch (e) {
-      toast.error(
-        i18n.t("settings.company.toasts.error")
-      );
+      toast.error(i18n.t("settings.company.toasts.error"));
     }
     setLoading(false);
   };
@@ -605,32 +729,27 @@ export default function CompaniesManager() {
     try {
       await remove(record.id);
       await loadPlans();
-      handleCancel();
+      handleCloseEditModal();
       toast.success(i18n.t("settings.company.toasts.success"));
     } catch (e) {
       toast.error(i18n.t("settings.company.toasts.errorOperation"));
     }
     setLoading(false);
+    setShowConfirmDialog(false);
   };
 
   const handleOpenDeleteDialog = () => {
     setShowConfirmDialog(true);
   };
 
-  const handleCancel = () => {
-    setRecord((prev) => ({
-      ...prev,
-      id: undefined,
-      name: "",
-      email: "",
-      phone: "",
-      planId: "",
-      status: true,
-      campaignsEnabled: false,
-      dueDate: "",
-      recurrence: "",
-      modules: [],
-    }));
+  const handleCloseEditModal = () => {
+    setEditModalOpen(false);
+    setRecord({ ...emptyRecord });
+  };
+
+  const handleOpenNew = () => {
+    setRecord({ ...emptyRecord });
+    setEditModalOpen(true);
   };
 
   const handleSelect = async (data) => {
@@ -646,13 +765,12 @@ export default function CompaniesManager() {
 
     let modules = [];
     try {
-      modules = await getModules(data.id) || [];
+      modules = (await getModules(data.id)) || [];
     } catch (e) {
       // ignore
     }
 
-    setRecord((prev) => ({
-      ...prev,
+    setRecord({
       id: data.id,
       name: data.name || "",
       phone: data.phone || "",
@@ -663,33 +781,141 @@ export default function CompaniesManager() {
       dueDate: data.dueDate || "",
       recurrence: data.recurrence || "",
       modules,
-    }));
+    });
+    setEditModalOpen(true);
   };
+
+  const handleActivate = async (company) => {
+    setActivatingId(company.id);
+    try {
+      await update({
+        id: company.id,
+        name: company.name,
+        email: company.email,
+        phone: company.phone,
+        planId: company.planId,
+        status: true,
+        dueDate: company.dueDate,
+        recurrence: company.recurrence,
+      });
+      await loadPlans();
+      toast.success(i18n.t("settings.company.toasts.reactivated"));
+    } catch (e) {
+      toast.error(i18n.t("settings.company.toasts.errorOperation"));
+    } finally {
+      setActivatingId(null);
+    }
+  };
+
+  const editModalTitle = record.id
+    ? i18n.t("settings.company.modal.editTitle")
+    : i18n.t("settings.company.modal.newTitle");
 
   return (
     <Paper className={classes.mainPaper} elevation={0}>
-      <Grid spacing={2} container>
-        <Grid xs={12} item>
+      <Box className={classes.toolbar}>
+        <TextField
+          className={classes.searchField}
+          variant="outlined"
+          size="small"
+          placeholder={i18n.t("settings.company.searchPlaceholder")}
+          value={activeSearch}
+          onChange={(e) => setActiveSearch(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon fontSize="small" color="action" />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<AddIcon />}
+          onClick={handleOpenNew}
+        >
+          {i18n.t("settings.company.buttons.new")}
+        </Button>
+        <Button
+          variant="outlined"
+          startIcon={<VisibilityOffIcon />}
+          onClick={() => {
+            setInactiveSearch("");
+            setInactiveModalOpen(true);
+          }}
+          disabled={inactiveCount === 0}
+        >
+          {i18n.t("settings.company.buttons.viewInactive")} ({inactiveCount})
+        </Button>
+      </Box>
+
+      <CompaniesManagerGrid records={activeRecords} onSelect={handleSelect} />
+
+      <Dialog
+        open={editModalOpen}
+        onClose={handleCloseEditModal}
+        maxWidth="lg"
+        fullWidth
+        scroll="paper"
+      >
+        <DialogTitle>{editModalTitle}</DialogTitle>
+        <DialogContent dividers>
           <CompanyForm
             initialValue={record}
             onDelete={handleOpenDeleteDialog}
             onSubmit={handleSubmit}
-            onCancel={handleCancel}
+            onCancel={handleCloseEditModal}
             loading={loading}
             availableModules={availableModules}
           />
-        </Grid>
-        <Grid xs={12} item>
-          <CompaniesManagerGrid records={records} onSelect={handleSelect} />
-        </Grid>
-      </Grid>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={inactiveModalOpen}
+        onClose={() => setInactiveModalOpen(false)}
+        maxWidth="lg"
+        fullWidth
+        scroll="paper"
+      >
+        <DialogTitle>{i18n.t("settings.company.modal.inactiveTitle")}</DialogTitle>
+        <DialogContent dividers>
+          <TextField
+            className={classes.fullWidth}
+            variant="outlined"
+            size="small"
+            placeholder={i18n.t("settings.company.searchInactivePlaceholder")}
+            value={inactiveSearch}
+            onChange={(e) => setInactiveSearch(e.target.value)}
+            style={{ marginBottom: 16 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+            }}
+          />
+          <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 8 }}>
+            {i18n.t("settings.company.inactiveHint")}
+          </Typography>
+          <CompaniesManagerGrid
+            records={inactiveRecords}
+            showActivate
+            onActivate={handleActivate}
+            activatingId={activatingId}
+          />
+        </DialogContent>
+      </Dialog>
+
       <ConfirmationModal
         title={i18n.t("settings.company.confirmModal.title")}
         open={showConfirmDialog}
         onClose={() => setShowConfirmDialog(false)}
         onConfirm={() => handleDelete()}
       >
-        {i18n.t("settings.company.confirmModal.message")}
+        {i18n.t("settings.company.confirmModal.confirm")}
       </ConfirmationModal>
     </Paper>
   );

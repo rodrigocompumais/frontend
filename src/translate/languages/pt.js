@@ -1950,11 +1950,25 @@ const messages = {
             error:
               "Não foi possível realizar a operação. Verifique se já existe uma empresa com o mesmo nome ou se os campos foram preenchidos corretamente",
             success: "Operação realizada com sucesso!",
+            reactivated: "Empresa reativada com sucesso!",
           },
           confirmModal: {
             title: "Exclusão de Registro",
             confirm: "Deseja realmente excluir esse registro?",
           },
+          status: {
+            active: "Ativo",
+            inactive: "Inativo",
+          },
+          modal: {
+            newTitle: "Nova empresa",
+            editTitle: "Editar empresa",
+            inactiveTitle: "Empresas inativas",
+          },
+          searchPlaceholder: "Buscar empresas ativas...",
+          searchInactivePlaceholder: "Buscar empresas inativas...",
+          inactiveHint: "Clique no ícone verde para reativar a empresa.",
+          empty: "Nenhuma empresa encontrada.",
           form: {
             name: "Nome",
             email: "E-mail",
@@ -1971,6 +1985,7 @@ const messages = {
             monthly: "Mensal",
             expire: "Vencimento",
             createdAt: "Criada Em",
+            modules: "Módulos",
           },
           buttons: {
             clear: "Limpar",
@@ -1978,6 +1993,8 @@ const messages = {
             expire: "+ Vencimento",
             user: "Usuário",
             save: "Salvar",
+            new: "Nova empresa",
+            viewInactive: "Ver inativas",
           },
         },
         schedules: {
