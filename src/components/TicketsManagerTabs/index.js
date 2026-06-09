@@ -1,8 +1,9 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import { useHistory } from "react-router-dom";
+import { useHistory, useLocation, useParams } from "react-router-dom";
 
 import { makeStyles } from "@material-ui/core/styles";
 import Paper from "@material-ui/core/Paper";
+import Grid from "@material-ui/core/Grid";
 import SearchIcon from "@material-ui/icons/Search";
 import InputBase from "@material-ui/core/InputBase";
 import Badge from "@material-ui/core/Badge";
@@ -12,6 +13,7 @@ import HistoryIcon from "@material-ui/icons/History";
 import HourglassEmptyIcon from "@material-ui/icons/HourglassEmpty";
 import FilterListIcon from "@material-ui/icons/FilterList";
 import AddIcon from "@material-ui/icons/Add";
+import DashboardIcon from "@material-ui/icons/Dashboard";
 
 import FormControlLabel from "@material-ui/core/FormControlLabel";
 import Switch from "@material-ui/core/Switch";
@@ -33,11 +35,13 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../Can";
 import rules from "../../rules";
 import TicketsQueueSelect from "../TicketsQueueSelect";
-import { Button } from "@material-ui/core";
+import { Button, Tooltip } from "@material-ui/core";
 import { TagsFilter } from "../TagsFilter";
 import { UsersFilter } from "../UsersFilter";
 import usePendingTicketNotification from "../../hooks/usePendingTicketNotification";
 import useSettings from "../../hooks/useSettings";
+import TicketsOverview from "../TicketsOverview";
+import Ticket from "../Ticket";
 
 const check = (role, action, data) => {
 	const permissions = rules[role];
@@ -168,6 +172,8 @@ const useStyles = makeStyles(theme => ({
 		display: "flex",
 		alignItems: "center",
 		gap: theme.spacing(1),
+		marginLeft: "auto",
+		flexShrink: 0,
 	},
 
 	filterMenu: {
@@ -251,15 +257,52 @@ const useStyles = makeStyles(theme => ({
 		'& .MuiInputLabel-outlined': {
 			marginTop: "-6px"
 		}
-	}
+	},
+
+	splitLayout: {
+		display: "flex",
+		height: "100%",
+		width: "100%",
+		minHeight: 0,
+		overflow: "hidden",
+	},
+
+	sidebarColumn: {
+		display: "flex",
+		height: "100%",
+		flexDirection: "column",
+		overflow: "hidden",
+		borderRight: `1px solid ${theme.palette.divider}`,
+	},
+
+	mainColumn: {
+		display: "flex",
+		height: "100%",
+		flexDirection: "column",
+		overflow: "hidden",
+		minHeight: 0,
+		backgroundColor: theme.palette.background.default,
+	},
+
+	welcomeMsg: {
+		backgroundColor: theme.palette.boxticket,
+		display: "flex",
+		justifyContent: "center",
+		alignItems: "center",
+		height: "100%",
+		textAlign: "center",
+	},
 }));
 
-const TicketsManagerTabs = () => {
+const TicketsManagerTabs = ({ overviewInMainPanel = false }) => {
   const classes = useStyles();
   const history = useHistory();
+  const location = useLocation();
+  const { ticketId } = useParams();
 
   const [searchParam, setSearchParam] = useState("");
   const [tab, setTab] = useState("open");
+  const [showOverview, setShowOverview] = useState(false);
   const [subTab, setSubTab] = useState("conversations"); // Sub-aba: "conversations" ou "groups"
   const [newTicketModalOpen, setNewTicketModalOpen] = useState(false);
   const [showAllTickets, setShowAllTickets] = useState(false);
@@ -291,6 +334,48 @@ const TicketsManagerTabs = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tabParam = params.get("tab");
+    if (!tabParam) return;
+
+    if (tabParam === "overview") {
+      setShowOverview(true);
+      setTab("open");
+    } else if (tabParam === "open" || tabParam === "pending") {
+      setTab(tabParam);
+    }
+
+    const queueIdsParam = params.get("queueIds");
+    if (queueIdsParam) {
+      try {
+        const parsed = JSON.parse(queueIdsParam);
+        if (Array.isArray(parsed)) {
+          setSelectedQueueIds(parsed);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    const usersParam = params.get("users");
+    if (usersParam) {
+      try {
+        const parsed = JSON.parse(usersParam);
+        if (Array.isArray(parsed)) {
+          setSelectedUsers(parsed);
+        }
+      } catch {
+        // ignore
+      }
+    }
+
+    if (tabParam === "open" || tabParam === "pending") {
+      history.replace(location.pathname);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search]);
 
   useEffect(() => {
     if (tab === "search") {
@@ -333,6 +418,7 @@ const TicketsManagerTabs = () => {
     if (searchedTerm === "") {
       setSearchParam(searchedTerm);
       setTab("open");
+      setShowOverview(false);
       return;
     }
 
@@ -360,13 +446,45 @@ const TicketsManagerTabs = () => {
     setSubTab(newValue);
   };
 
+  const handleOverviewDrillDown = ({ type, row }) => {
+    setShowOverview(false);
+    const targetTab =
+      row.pending > 0 && row.pending >= row.active ? "pending" : "open";
+
+    if (type === "queue" && row.id != null) {
+      setSelectedQueueIds([row.id]);
+      setSelectedUsers([]);
+      setTab(targetTab);
+      if (targetTab === "open") {
+        setSubTab("conversations");
+      }
+      return;
+    }
+    if (type === "user" && row.id != null) {
+      setSelectedUsers([row.id]);
+      if (!showAllTickets && user.profile.toUpperCase() !== "ADMIN") {
+        setShowAllTickets(true);
+      }
+      setTab(targetTab);
+      if (targetTab === "open") {
+        setSubTab("conversations");
+      }
+    }
+  };
 
   const handleCloseOrOpenTicket = (ticket) => {
     setNewTicketModalOpen(false);
     if (ticket !== undefined && ticket.uuid !== undefined) {
+      setShowOverview(false);
       history.push(`/tickets/${ticket.uuid}`);
     }
   };
+
+  useEffect(() => {
+    if (ticketId) {
+      setShowOverview(false);
+    }
+  }, [ticketId]);
 
   const handleSelectedTags = (selecteds) => {
     const tags = selecteds.map((t) => t.id);
@@ -392,7 +510,28 @@ const TicketsManagerTabs = () => {
   const filterMenuOpen = Boolean(filterMenuAnchor);
   const hideGroupsTab = checkMsgIsGroup === "enabled";
 
-  return (
+  const renderMainPanel = () => {
+    if (showOverview) {
+      return (
+        <TicketsOverview
+          showAllTickets={showAllTickets}
+          selectedQueueIds={selectedQueueIds}
+          onDrillDown={handleOverviewDrillDown}
+          onClose={() => setShowOverview(false)}
+        />
+      );
+    }
+
+    if (ticketId) {
+      return <Ticket />;
+    }
+
+    return (
+      <Paper square variant="outlined" className={classes.welcomeMsg} />
+    );
+  };
+
+  const sidebarContent = (
     <Paper elevation={0} variant="outlined" className={classes.ticketsWrapper}>
       <NewTicketModal
         modalOpen={newTicketModalOpen}
@@ -548,6 +687,20 @@ const TicketsManagerTabs = () => {
                 {showAllTickets ? "Todos" : "Meus"}
               </Button>
             )}
+            <Tooltip title={i18n.t("tickets.tabs.overview.title")}>
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={() => setShowOverview((prev) => !prev)}
+                style={
+                  showOverview
+                    ? { backgroundColor: "rgba(25, 118, 210, 0.12)" }
+                    : undefined
+                }
+              >
+                <DashboardIcon />
+              </IconButton>
+            </Tooltip>
             <IconButton
               color="primary"
               onClick={() => setNewTicketModalOpen(true)}
@@ -623,6 +776,15 @@ const TicketsManagerTabs = () => {
           </Box>
         </Menu>
       </Paper>
+      {showOverview && !overviewInMainPanel ? (
+        <TicketsOverview
+          showAllTickets={showAllTickets}
+          selectedQueueIds={selectedQueueIds}
+          onDrillDown={handleOverviewDrillDown}
+          onClose={() => setShowOverview(false)}
+        />
+      ) : (
+        <>
       <TabPanel value={tab} name="open" className={classes.ticketsWrapper} keepMounted={true}>
         {subTab === "conversations" && (
           <TicketsList
@@ -677,8 +839,27 @@ const TicketsManagerTabs = () => {
           selectedQueueIds={selectedQueueIds}
         />
       </TabPanel>
+        </>
+      )}
     </Paper>
   );
+
+  if (overviewInMainPanel) {
+    return (
+      <div className={classes.splitLayout}>
+        <Grid container spacing={0} style={{ height: "100%" }}>
+          <Grid item xs={4} className={classes.sidebarColumn}>
+            {sidebarContent}
+          </Grid>
+          <Grid item xs={8} className={classes.mainColumn}>
+            {renderMainPanel()}
+          </Grid>
+        </Grid>
+      </div>
+    );
+  }
+
+  return sidebarContent;
 };
 
 export default TicketsManagerTabs;

@@ -421,6 +421,7 @@ const messages = {
           four: "4 - Aponte seu celular para essa tela para capturar o QR Code",
         },
         waiting: "Aguardando leitura do QR Code",
+        generating: "Gerando QR Code...",
       },
       qrCode: {
         message: "Leia o QrCode para iniciar a sessão",
@@ -901,6 +902,48 @@ const messages = {
           sticker: "Figurinha",
         },
         tabs: {
+          overview: {
+            title: "Visão Geral",
+            subtitle: "Resumo em tempo real dos tickets por fila e atendente.",
+            close: "Fechar visão geral",
+            openList: "Ver conversas desta linha",
+            searchPlaceholder: "Pesquisar filas ou atendentes...",
+            refresh: "Atualizar",
+            hideOffline: "Ocultar atendentes offline",
+            showOffline: "Mostrar atendentes offline",
+            empty: "Nenhum registro encontrado.",
+            attendantOnline: "Online",
+            attendantOffline: "Offline",
+            kpiShort: {
+              newMessages: "Novas mensagens",
+              active: "Em atendimento",
+              pending: "Aguardando",
+              online: "Atendentes online",
+            },
+            colShort: {
+              new: "Novas",
+              active: "Ativos",
+              pending: "Pendentes",
+              returns: "Retornos",
+            },
+            legend: {
+              new: "Mensagens não lidas",
+              active: "Conversas em atendimento",
+              pending: "Aguardando atendente",
+              returns: "Cliente aguardando resposta",
+            },
+            col: {
+              name: "Nome",
+              newMessages: "Conversas com mensagens não lidas",
+              active: "Conversas em atendimento agora",
+              pending: "Conversas aguardando atendente",
+              returns: "Cliente enviou mensagem e aguarda resposta",
+            },
+            sections: {
+              queues: "Por fila",
+              attendants: "Por atendente",
+            },
+          },
           open: { title: "Abertas" },
           closed: { title: "Resolvidos" },
           finalizadas: { title: "Finalizadas" },
@@ -2197,6 +2240,9 @@ const messages = {
         ERR_USER_CREATION_DISABLED:
           "A criação do usuário foi desabilitada pelo administrador.",
         ERR_NO_PERMISSION: "Você não tem permissão para acessar este recurso.",
+        ERR_PUBLIC_FORM_COMPANY_UNAVAILABLE:
+          "Este formulário não está disponível no momento. Entre em contato com a empresa.",
+        ERR_FORM_NOT_FOUND: "Formulário não encontrado ou indisponível.",
         ERR_DUPLICATED_CONTACT: "Já existe um contato com este número.",
         ERR_NO_SETTING_FOUND: "Nenhuma configuração encontrada com este ID.",
         ERR_NO_CONTACT_FOUND: "Nenhum contato encontrado com este ID.",

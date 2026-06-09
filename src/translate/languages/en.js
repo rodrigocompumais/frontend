@@ -421,6 +421,7 @@ const messages = {
           four: "4 - Aponte seu celular para essa tela para capturar o QR Code",
         },
         waiting: "Aguardando leitura do QR Code",
+        generating: "Generating QR Code...",
       },
       qrCode: {
         message: "Leia o QrCode para iniciar a sessão",
@@ -901,6 +902,48 @@ const messages = {
           sticker: "Sticker",
         },
         tabs: {
+          overview: {
+            title: "Overview",
+            subtitle: "Real-time ticket summary by queue and attendant.",
+            close: "Close overview",
+            openList: "View conversations for this row",
+            searchPlaceholder: "Search queues or attendants...",
+            refresh: "Refresh",
+            hideOffline: "Hide offline attendants",
+            showOffline: "Show offline attendants",
+            empty: "No records found.",
+            attendantOnline: "Online",
+            attendantOffline: "Offline",
+            kpiShort: {
+              newMessages: "New messages",
+              active: "In progress",
+              pending: "Waiting",
+              online: "Online attendants",
+            },
+            colShort: {
+              new: "New",
+              active: "Active",
+              pending: "Pending",
+              returns: "Returns",
+            },
+            legend: {
+              new: "Unread messages",
+              active: "Conversations in progress",
+              pending: "Waiting for attendant",
+              returns: "Customer waiting for reply",
+            },
+            col: {
+              name: "Name",
+              newMessages: "Conversations with unread messages",
+              active: "Conversations currently in progress",
+              pending: "Conversations waiting for an attendant",
+              returns: "Customer sent a message and awaits a reply",
+            },
+            sections: {
+              queues: "By queue",
+              attendants: "By attendant",
+            },
+          },
           open: { title: "Open" },
           closed: { title: "Resolved" },
           finalizadas: { title: "Closed history" },
@@ -2182,8 +2225,11 @@ const messages = {
         ERR_SESSION_EXPIRED: "Sessão expirada. Por favor entre.",
         ERR_USER_CREATION_DISABLED:
           "A criação do usuário foi desabilitada pelo administrador.",
-        ERR_NO_PERMISSION: "Você não tem permissão para acessar este recurso.",
-        ERR_DUPLICATED_CONTACT: "Já existe um contato com este número.",
+        ERR_NO_PERMISSION: "You do not have permission to access this resource.",
+        ERR_PUBLIC_FORM_COMPANY_UNAVAILABLE:
+          "This form is not available at the moment. Please contact the company.",
+        ERR_FORM_NOT_FOUND: "Form not found or unavailable.",
+        ERR_DUPLICATED_CONTACT: "A contact with this number already exists.",
         ERR_NO_SETTING_FOUND: "Nenhuma configuração encontrada com este ID.",
         ERR_NO_CONTACT_FOUND: "Nenhum contato encontrado com este ID.",
         ERR_TICKET_CLOSED_CANNOT_SEND:

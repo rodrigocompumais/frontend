@@ -78,26 +78,27 @@ const useWhatsApps = () => {
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
 
-    socket.on(`company-${companyId}-whatsapp`, (data) => {
+    const handleWhatsApp = (data) => {
       if (data.action === "update") {
         dispatch({ type: "UPDATE_WHATSAPPS", payload: data.whatsapp });
       }
-    });
-
-    socket.on(`company-${companyId}-whatsapp`, (data) => {
       if (data.action === "delete") {
         dispatch({ type: "DELETE_WHATSAPPS", payload: data.whatsappId });
       }
-    });
+    };
 
-    socket.on(`company-${companyId}-whatsappSession`, (data) => {
+    const handleWhatsAppSession = (data) => {
       if (data.action === "update") {
         dispatch({ type: "UPDATE_SESSION", payload: data.session });
       }
-    });
+    };
+
+    socket.on(`company-${companyId}-whatsapp`, handleWhatsApp);
+    socket.on(`company-${companyId}-whatsappSession`, handleWhatsAppSession);
 
     return () => {
-      socket.disconnect();
+      socket.off(`company-${companyId}-whatsapp`, handleWhatsApp);
+      socket.off(`company-${companyId}-whatsappSession`, handleWhatsAppSession);
     };
   }, [socketManager]);
 

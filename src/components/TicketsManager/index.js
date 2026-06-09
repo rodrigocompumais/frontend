@@ -35,7 +35,6 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import usePendingTicketNotification from "../../hooks/usePendingTicketNotification";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
-import openSocket from "../../services/socket-io";
 
 const useStyles = makeStyles((theme) => ({
   ticketsWrapper: {

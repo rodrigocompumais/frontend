@@ -421,6 +421,7 @@ const messages = {
           four: "4 - Aponte seu celular para essa tela para capturar o QR Code",
         },
         waiting: "Aguardando leitura do QR Code",
+        generating: "Generando código QR...",
       },
       qrCode: {
         message: "Leia o QrCode para iniciar a sessão",
@@ -901,6 +902,48 @@ const messages = {
           sticker: "Sticker",
         },
         tabs: {
+          overview: {
+            title: "Visión general",
+            subtitle: "Resumen en tiempo real de tickets por fila y agente.",
+            close: "Cerrar vista general",
+            openList: "Ver conversaciones de esta fila",
+            searchPlaceholder: "Buscar filas o agentes...",
+            refresh: "Actualizar",
+            hideOffline: "Ocultar agentes offline",
+            showOffline: "Mostrar agentes offline",
+            empty: "No se encontraron registros.",
+            attendantOnline: "En línea",
+            attendantOffline: "Offline",
+            kpiShort: {
+              newMessages: "Nuevos mensajes",
+              active: "En atención",
+              pending: "En espera",
+              online: "Agentes en línea",
+            },
+            colShort: {
+              new: "Nuevas",
+              active: "Activas",
+              pending: "Pendientes",
+              returns: "Retornos",
+            },
+            legend: {
+              new: "Mensajes no leídos",
+              active: "Conversaciones en atención",
+              pending: "Esperando agente",
+              returns: "Cliente esperando respuesta",
+            },
+            col: {
+              name: "Nombre",
+              newMessages: "Conversaciones con mensajes no leídos",
+              active: "Conversaciones en atención ahora",
+              pending: "Conversaciones esperando agente",
+              returns: "El cliente envió mensaje y espera respuesta",
+            },
+            sections: {
+              queues: "Por fila",
+              attendants: "Por agente",
+            },
+          },
           open: { title: "Abiertas" },
           closed: { title: "Resueltos" },
           finalizadas: { title: "Finalizadas" },
@@ -2150,8 +2193,11 @@ const messages = {
         ERR_SESSION_EXPIRED: "Sessão expirada. Por favor entre.",
         ERR_USER_CREATION_DISABLED:
           "A criação do usuário foi desabilitada pelo administrador.",
-        ERR_NO_PERMISSION: "Você não tem permissão para acessar este recurso.",
-        ERR_DUPLICATED_CONTACT: "Já existe um contato com este número.",
+        ERR_NO_PERMISSION: "No tiene permiso para acceder a este recurso.",
+        ERR_PUBLIC_FORM_COMPANY_UNAVAILABLE:
+          "Este formulario no está disponible en este momento. Contacte a la empresa.",
+        ERR_FORM_NOT_FOUND: "Formulario no encontrado o no disponible.",
+        ERR_DUPLICATED_CONTACT: "Ya existe un contacto con este número.",
         ERR_NO_SETTING_FOUND: "Nenhuma configuração encontrada com este ID.",
         ERR_NO_CONTACT_FOUND: "Nenhum contato encontrado com este ID.",
         ERR_TICKET_CLOSED_CANNOT_SEND:

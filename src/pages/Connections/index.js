@@ -46,6 +46,7 @@ import toastError from "../../errors/toastError";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { Can } from "../../components/Can";
 import { SocketContext } from "../../context/Socket/SocketContext";
+import { isValidWhatsAppQrCode } from "../../utils/whatsappQrCode";
 
 const useStyles = makeStyles(theme => ({
 	mainPaper: {
@@ -131,16 +132,13 @@ const Connections = () => {
 				const whatsApp = data.session;
 				// Se o status mudou para qrcode e há um QR code válido, abrir modal
 				// Ignorar se for Instagram
-				if (whatsApp.status === "qrcode" && whatsApp.qrcode && whatsApp.qrcode.trim() !== "" && whatsApp.type !== "instagram") {
-					// Verificar se não é um QR code inválido
-					if (!whatsApp.qrcode.includes('linktr.ee') &&
-						!whatsApp.qrcode.includes('http://') &&
-						!whatsApp.qrcode.includes('https://') &&
-						!whatsApp.qrcode.startsWith('http')) {
-						setSelectedWhatsApp(whatsApp);
-						setQrModalOpen(true);
-						toast.success("QR Code gerado com sucesso!");
-					}
+				if (
+					whatsApp.status === "qrcode" &&
+					whatsApp.type !== "instagram" &&
+					isValidWhatsAppQrCode(whatsApp.qrcode)
+				) {
+					setSelectedWhatsApp(whatsApp);
+					setQrModalOpen(true);
 				}
 			}
 		};
@@ -152,13 +150,21 @@ const Connections = () => {
 		};
 	}, [socketManager]);
 
+	const openQrModalForWhatsApp = (whatsAppId) => {
+		const whatsApp = whatsApps.find(w => w.id === whatsAppId);
+		setSelectedWhatsApp(whatsApp || { id: whatsAppId });
+		setQrModalOpen(true);
+	};
+
 	const handleStartWhatsAppSession = async whatsAppId => {
 		setLoadingButtons(prev => ({ ...prev, [whatsAppId]: true }));
+		openQrModalForWhatsApp(whatsAppId);
 		try {
 			await api.post(`/whatsappsession/${whatsAppId}`);
 			toast.success("Iniciando conexão...");
 		} catch (err) {
 			toastError(err);
+			setQrModalOpen(false);
 		} finally {
 			setLoadingButtons(prev => ({ ...prev, [whatsAppId]: false }));
 		}
@@ -166,19 +172,13 @@ const Connections = () => {
 
 	const handleRequestNewQrCode = async whatsAppId => {
 		setLoadingButtons(prev => ({ ...prev, [`newQr_${whatsAppId}`]: true }));
+		openQrModalForWhatsApp(whatsAppId);
 		try {
 			await api.put(`/whatsappsession/${whatsAppId}`);
 			toast.success("Gerando novo QR Code...");
-			// Aguardar um pouco e abrir o modal se o QR code for gerado
-			setTimeout(() => {
-				const whatsApp = whatsApps.find(w => w.id === whatsAppId);
-				if (whatsApp) {
-					setSelectedWhatsApp(whatsApp);
-					setQrModalOpen(true);
-				}
-			}, 1500);
 		} catch (err) {
 			toastError(err);
+			setQrModalOpen(false);
 		} finally {
 			setLoadingButtons(prev => ({ ...prev, [`newQr_${whatsAppId}`]: false }));
 		}

@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useReducer, useContext } from "react";
-import openSocket from "../../services/socket-io";
 
 import { makeStyles } from "@material-ui/core/styles";
 import List from "@material-ui/core/List";
@@ -11,6 +10,7 @@ import TicketsListSkeleton from "../TicketsListSkeleton";
 import useTickets from "../../hooks/useTickets";
 import { i18n } from "../../translate/i18n";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import { SocketContext } from "../../context/Socket/SocketContext";
 
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -210,6 +210,7 @@ const TicketsList = (props) => {
 	const [pageNumber, setPageNumber] = useState(1);
 	const [ticketsList, dispatch] = useReducer(reducer, []);
 	const { user } = useContext(AuthContext);
+	const socketManager = useContext(SocketContext);
 	const { profile, queues } = user;
 	const [settings, setSettings] = useState([]);
 
@@ -295,10 +296,11 @@ const TicketsList = (props) => {
 	}, [tickets, status, searchParam, queues, profile, filterIsGroup, user.allTicket]);
 
 	useEffect(() => {
-		const socket = openSocket();
-    if (!socket) {
-      return () => {}; 
-    }
+		const companyId = localStorage.getItem("companyId");
+		const socket = socketManager.getSocket(companyId);
+		if (!socket) {
+			return () => {};
+		}
 
 		const shouldUpdateTicket = (ticket) =>
 			(!ticket.userId || ticket.userId === user?.id || showAll) &&
@@ -313,15 +315,15 @@ const TicketsList = (props) => {
 			return filterIsGroup ? isGroupTicket : !isGroupTicket;
 		};
 
-		socket.on("ready", () => {
+		const handleReady = () => {
 			if (status) {
 				socket.emit("joinTickets", status);
 			} else {
 				socket.emit("joinNotification");
 			}
-		});
+		};
 
-		socket.on("ticket", (data) => {
+		const handleTicket = (data) => {
 			if (data.action === "updateUnread") {
 				dispatch({
 					type: "RESET_UNREAD",
@@ -349,9 +351,9 @@ const TicketsList = (props) => {
 			if (data.action === "delete") {
 				dispatch({ type: "DELETE_TICKET", payload: data.ticketId });
 			}
-		});
+		};
 
-		socket.on("appMessage", (data) => {
+		const handleAppMessage = (data) => {
 			if (data.action === "create" && shouldUpdateTicket(data.ticket)) {
 				// Aplicar filtro de grupos antes de atualizar
 				if (matchesGroupFilter(data.ticket)) {
@@ -361,21 +363,29 @@ const TicketsList = (props) => {
 					});
 				}
 			}
-		});
+		};
 
-		socket.on("contact", (data) => {
+		const handleContact = (data) => {
 			if (data.action === "update") {
 				dispatch({
 					type: "UPDATE_TICKET_CONTACT",
 					payload: data.contact,
 				});
 			}
-		});
+		};
+
+		socket.on("ready", handleReady);
+		socket.on(`company-${companyId}-ticket`, handleTicket);
+		socket.on(`company-${companyId}-appMessage`, handleAppMessage);
+		socket.on(`company-${companyId}-contact`, handleContact);
 
 		return () => {
-			socket.disconnect();
+			socket.off("ready", handleReady);
+			socket.off(`company-${companyId}-ticket`, handleTicket);
+			socket.off(`company-${companyId}-appMessage`, handleAppMessage);
+			socket.off(`company-${companyId}-contact`, handleContact);
 		};
-	}, [status, showAll, user, selectedQueueIds, filterIsGroup]);
+	}, [status, showAll, user, selectedQueueIds, filterIsGroup, socketManager]);
 
 
 	useEffect(() => {
