@@ -2286,6 +2286,16 @@ const messages = {
           "Este contato já está em outra mesa. Libere a mesa atual antes de ocupar outra.",
         ERR_MESA_LINK_INVALID:
           "Link da mesa inválido ou expirado. Use o QR code da mesa para acessar o cardápio.",
+        ERR_MESA_QR_INVALID:
+          "QR Code inválido. Escaneie o QR impresso na mesa ou comanda, ou cole o link completo.",
+        ERR_MESA_QR_TOKEN_INVALID:
+          "Este QR Code não pertence à sua empresa ou está corrompido.",
+        ERR_MESA_QR_ID_UNAVAILABLE:
+          "Este identificador do QR já está em uso por outra empresa e não pode ser restaurado.",
+        ERR_MESA_RESTORE_ALREADY_EXISTS:
+          "Esta mesa ou comanda já está cadastrada. Não é necessário restaurar.",
+        ERR_MESA_NUMBER_ALREADY_EXISTS:
+          "Já existe uma mesa ou comanda com este número. Escolha outro número.",
         ERR_USER_INACTIVE:
           "Este usuário está inativo. Peça a um administrador para reativar o acesso.",
         ERR_CANNOT_DEACTIVATE_SELF:

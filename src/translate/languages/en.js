@@ -2261,6 +2261,16 @@ const messages = {
           "This contact is already at another table. Free the current table before occupying another.",
         ERR_MESA_LINK_INVALID:
           "Invalid or expired table link. Use the table QR code to access the menu.",
+        ERR_MESA_QR_INVALID:
+          "Invalid QR code. Scan the printed table or tab QR, or paste the full link.",
+        ERR_MESA_QR_TOKEN_INVALID:
+          "This QR code does not belong to your company or is corrupted.",
+        ERR_MESA_QR_ID_UNAVAILABLE:
+          "This QR identifier is already in use by another company and cannot be restored.",
+        ERR_MESA_RESTORE_ALREADY_EXISTS:
+          "This table or tab is already registered. No restore is needed.",
+        ERR_MESA_NUMBER_ALREADY_EXISTS:
+          "A table or tab with this number already exists. Choose another number.",
         ERR_USER_INACTIVE:
           "This user account is inactive. Ask an administrator to restore access.",
         ERR_CANNOT_DEACTIVATE_SELF:

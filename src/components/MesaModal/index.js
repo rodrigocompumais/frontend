@@ -23,7 +23,7 @@ const SECTIONS = [
   { value: "area_externa", label: "Área externa" },
 ];
 
-const MesaModal = ({ open, onClose, mesa, initialType = "mesa", onSuccess }) => {
+const MesaModal = ({ open, onClose, mesa, initialType = "mesa", onSuccess, onRestoreQr }) => {
   const [loading, setLoading] = useState(false);
   const [number, setNumber] = useState("");
   const [name, setName] = useState("");
@@ -153,6 +153,11 @@ const MesaModal = ({ open, onClose, mesa, initialType = "mesa", onSuccess }) => 
         </FormControl>
       </DialogContent>
       <DialogActions>
+        {!mesa && onRestoreQr && (
+          <Button onClick={onRestoreQr} color="primary" style={{ marginRight: "auto" }}>
+            Restaurar pelo QR
+          </Button>
+        )}
         <Button onClick={onClose}>Cancelar</Button>
         <Button
           variant="contained"

@@ -17,14 +17,28 @@ import { toast } from "react-toastify";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 
-const MesaBulkCreateModal = ({ open, onClose, onSuccess }) => {
+const defaultPrefixForType = (tipo) => (tipo === "comanda" ? "Comanda" : "Mesa");
+
+const MesaBulkCreateModal = ({ open, onClose, onSuccess, initialType = "mesa" }) => {
   const [loading, setLoading] = useState(false);
+  const [type, setType] = useState("mesa");
   const [count, setCount] = useState(10);
   const [prefix, setPrefix] = useState("Mesa");
   const [suffix, setSuffix] = useState("");
   const [startFrom, setStartFrom] = useState(1);
   const [formId, setFormId] = useState("");
   const [forms, setForms] = useState([]);
+
+  useEffect(() => {
+    if (!open) return;
+    const tipo = initialType === "comanda" ? "comanda" : "mesa";
+    setType(tipo);
+    setPrefix(defaultPrefixForType(tipo));
+    setCount(10);
+    setSuffix("");
+    setStartFrom(1);
+    setFormId("");
+  }, [open, initialType]);
 
   useEffect(() => {
     if (open) {
@@ -34,6 +48,16 @@ const MesaBulkCreateModal = ({ open, onClose, onSuccess }) => {
     }
   }, [open]);
 
+  const handleTypeChange = (newType) => {
+    const tipo = newType === "comanda" ? "comanda" : "mesa";
+    setType(tipo);
+    const expected = defaultPrefixForType(tipo);
+    const other = defaultPrefixForType(tipo === "comanda" ? "mesa" : "comanda");
+    if (!prefix || prefix === other) {
+      setPrefix(expected);
+    }
+  };
+
   const handleSubmit = async () => {
     if (count < 1 || count > 50) {
       toast.error("Quantidade deve ser entre 1 e 50");
@@ -41,14 +65,17 @@ const MesaBulkCreateModal = ({ open, onClose, onSuccess }) => {
     }
     setLoading(true);
     try {
-      await api.post("/mesas/bulk", {
+      const { data } = await api.post("/mesas/bulk", {
         count,
-        prefix: prefix || "Mesa",
+        type,
+        prefix: prefix || defaultPrefixForType(type),
         suffix: suffix || "",
         startFrom: startFrom || 1,
         formId: formId ? parseInt(formId, 10) : null,
       });
-      toast.success(`${count} mesas criadas com sucesso`);
+      const created = Array.isArray(data) ? data.length : count;
+      const label = type === "comanda" ? "comandas" : "mesas";
+      toast.success(`${created} ${label} criadas com sucesso`);
       onSuccess && onSuccess();
       onClose();
     } catch (err) {
@@ -58,10 +85,24 @@ const MesaBulkCreateModal = ({ open, onClose, onSuccess }) => {
     }
   };
 
+  const typeLabel = type === "comanda" ? "comandas" : "mesas";
+  const examplePrefix = prefix || defaultPrefixForType(type);
+
   return (
     <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
-      <DialogTitle>Criar várias mesas</DialogTitle>
+      <DialogTitle>Criar várias {typeLabel}</DialogTitle>
       <DialogContent>
+        <FormControl fullWidth margin="dense" variant="outlined">
+          <InputLabel>Tipo</InputLabel>
+          <Select
+            value={type}
+            onChange={(e) => handleTypeChange(e.target.value)}
+            label="Tipo"
+          >
+            <MenuItem value="mesa">Mesa</MenuItem>
+            <MenuItem value="comanda">Comanda</MenuItem>
+          </Select>
+        </FormControl>
         <TextField
           label="Quantidade"
           type="number"
@@ -75,7 +116,7 @@ const MesaBulkCreateModal = ({ open, onClose, onSuccess }) => {
           label="Prefixo"
           value={prefix}
           onChange={(e) => setPrefix(e.target.value)}
-          placeholder="Ex: Mesa"
+          placeholder={defaultPrefixForType(type)}
           fullWidth
           margin="dense"
         />
@@ -111,11 +152,12 @@ const MesaBulkCreateModal = ({ open, onClose, onSuccess }) => {
             ))}
           </Select>
           <Typography variant="caption" color="textSecondary" style={{ marginTop: 4, display: "block" }}>
-            Associar todas as mesas a um cardápio para gerar links de pedido
+            Associar todas as {typeLabel} a um cardápio para gerar links de pedido
           </Typography>
         </FormControl>
         <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 8 }}>
-          Exemplo: Mesa 1, Mesa 2, ... Mesa {count}
+          Exemplo: {examplePrefix} {startFrom}, {examplePrefix} {startFrom + 1}, ... {examplePrefix}{" "}
+          {startFrom + count - 1}
         </Typography>
       </DialogContent>
       <DialogActions>

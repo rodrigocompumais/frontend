@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useHistory } from "react-router-dom";
 import { makeStyles, useTheme } from "@material-ui/core/styles";
 import {
@@ -47,6 +47,11 @@ import ContactModal from "../../components/ContactModal";
 import LiberarMesaModal from "../../components/LiberarMesaModal";
 import OrderNotificationPopup from "../../components/OrderNotificationPopup";
 import { formatMesaComandaTitle } from "../../helpers/mesaDisplayLabel";
+import {
+  normalizeMesaSearch,
+  getOcupanteNome,
+  mesaMatchesSearch,
+} from "../../helpers/mesaSearch";
 
 const filter = createFilterOptions({ trim: true });
 
@@ -80,6 +85,21 @@ const useStyles = makeStyles((theme) => ({
       width: "100%",
       minWidth: 0,
     },
+  },
+  mesaSearchField: {
+    flex: 1,
+    minWidth: 220,
+    [theme.breakpoints.down("xs")]: {
+      width: "100%",
+      minWidth: 0,
+    },
+  },
+  searchHint: {
+    width: "100%",
+    fontSize: "0.75rem",
+    color: theme.palette.text.secondary,
+    marginTop: -theme.spacing(1),
+    marginBottom: theme.spacing(1),
   },
   mesaGrid: {
     marginTop: theme.spacing(2),
@@ -122,12 +142,31 @@ const useStyles = makeStyles((theme) => ({
     marginBottom: theme.spacing(1),
   },
   mesaCliente: {
-    fontSize: "0.85rem",
+    marginTop: theme.spacing(0.5),
+    marginBottom: theme.spacing(1.5),
+    padding: theme.spacing(0.75, 1),
+    borderRadius: 8,
+    backgroundColor: theme.palette.type === "dark"
+      ? "rgba(255,255,255,0.08)"
+      : "rgba(15,23,42,0.05)",
+    border: `1px solid ${theme.palette.divider}`,
+  },
+  mesaClienteLabel: {
+    fontSize: "0.65rem",
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
     color: theme.palette.text.secondary,
+    marginBottom: 2,
+  },
+  mesaClienteNome: {
+    fontSize: "0.95rem",
+    fontWeight: 800,
+    lineHeight: 1.25,
     display: "flex",
     alignItems: "center",
     gap: 4,
-    marginBottom: theme.spacing(2),
+    color: theme.palette.text.primary,
   },
   productCard: {
     marginBottom: theme.spacing(1),
@@ -242,6 +281,7 @@ const Garcom = () => {
   const [halfAndHalfModalBaseVariation, setHalfAndHalfModalBaseVariation] = useState(null);
 
   const [mesaStatusFilter, setMesaStatusFilter] = useState("");
+  const [mesaSearchQuery, setMesaSearchQuery] = useState("");
   const [orderProductSearch, setOrderProductSearch] = useState("");
 
   const [addOnModalOpen, setAddOnModalOpen] = useState(false);
@@ -1033,12 +1073,36 @@ const Garcom = () => {
 
   const groups = [...new Set(products.map((p) => p.grupo || "Outros"))].sort();
 
-  const filteredMesas = mesas.filter((m) => {
-    if (!mesaStatusFilter) return true;
-    if (mesaStatusFilter === "ocupada") return m.status === "ocupada";
-    if (mesaStatusFilter === "livre") return m.status === "livre";
-    return true;
-  });
+  const mesaSearchNormalized = useMemo(
+    () => normalizeMesaSearch(mesaSearchQuery),
+    [mesaSearchQuery]
+  );
+
+  const filteredMesas = useMemo(
+    () =>
+      mesas.filter((m) => {
+        if (mesaStatusFilter === "ocupada" && m.status !== "ocupada") return false;
+        if (mesaStatusFilter === "livre" && m.status !== "livre") return false;
+        return mesaMatchesSearch(m, mesaSearchNormalized);
+      }),
+    [mesas, mesaStatusFilter, mesaSearchNormalized]
+  );
+
+  const handleMesaSearchKeyDown = (e) => {
+    if (e.key !== "Enter") return;
+    const raw = mesaSearchQuery?.trim();
+    if (!raw) return;
+    if (filteredMesas.length === 1) {
+      abrirPedido(filteredMesas[0]);
+      setMesaSearchQuery("");
+      return;
+    }
+    if (filteredMesas.length > 1) {
+      toast.info(`${filteredMesas.length} mesas/comandas encontradas. Refine a busca ou toque na desejada.`);
+    } else {
+      toast.error("Nenhuma mesa ou comanda encontrada para essa busca.");
+    }
+  };
 
   const filterProductsBySearch = (list) => {
     if (!orderProductSearch.trim()) return list;
@@ -1071,7 +1135,7 @@ const Garcom = () => {
         ) : (
           <>
             <Box className={classes.headerRow}>
-              <Box display="flex" alignItems="center" gap={1}>
+              <Box display="flex" alignItems="center" gap={1} flex={1} minWidth={0}>
                 <Typography variant="body2" color="textSecondary">
                   Clique em &quot;Fazer pedido&quot; na mesa. Se estiver livre, informe o cliente primeiro.
                 </Typography>
@@ -1081,6 +1145,23 @@ const Garcom = () => {
                   </Badge>
                 )}
               </Box>
+              <TextField
+                className={classes.mesaSearchField}
+                size="small"
+                variant="outlined"
+                label="Mesa, comanda ou cliente"
+                placeholder="Número ou nome do ocupante"
+                value={mesaSearchQuery}
+                onChange={(e) => setMesaSearchQuery(e.target.value)}
+                onKeyDown={handleMesaSearchKeyDown}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
               <FormControl size="small" className={classes.headerFormControl}>
                 <InputLabel>Exibir mesas</InputLabel>
                 <Select
@@ -1094,12 +1175,21 @@ const Garcom = () => {
                 </Select>
               </FormControl>
             </Box>
+            {mesaSearchNormalized && (
+              <Typography className={classes.searchHint}>
+                {filteredMesas.length === 0
+                  ? "Nenhum resultado. Tente outro nome ou número."
+                  : `${filteredMesas.length} mesa(s)/comanda(s) encontrada(s)`}
+              </Typography>
+            )}
             <Grid container spacing={2} className={classes.mesaGrid}>
             {filteredMesas.length === 0 ? (
               <Grid item xs={12}>
                 <Paper style={{ padding: 24, textAlign: "center" }}>
                   <Typography color="textSecondary">
-                    {mesas.length === 0 ? "Nenhuma mesa cadastrada." : "Nenhuma mesa encontrada com o filtro selecionado."}
+                    {mesaSearchNormalized
+                      ? `Nenhum resultado para "${mesaSearchQuery.trim()}".`
+                      : "Nenhuma mesa encontrada com o filtro selecionado."}
                   </Typography>
                 </Paper>
               </Grid>
@@ -1122,11 +1212,14 @@ const Garcom = () => {
                     >
                       {mesa.status === "ocupada" ? "Ocupada" : "Livre"}
                     </Typography>
-                    {mesa.status === "ocupada" && (mesa.contact?.name || mesa.contact?.number) && (
-                      <Typography className={classes.mesaCliente}>
-                        <PersonIcon style={{ fontSize: "1rem" }} />
-                        {mesa.contact?.name || mesa.contact?.number || "Cliente"}
-                      </Typography>
+                    {mesa.status === "ocupada" && (getOcupanteNome(mesa) || mesa.contact?.number) && (
+                      <Box className={classes.mesaCliente}>
+                        <Typography className={classes.mesaClienteLabel}>Cliente</Typography>
+                        <Typography className={classes.mesaClienteNome} noWrap title={getOcupanteNome(mesa) || mesa.contact?.number}>
+                          <PersonIcon style={{ fontSize: "1rem", flexShrink: 0 }} />
+                          {getOcupanteNome(mesa) || mesa.contact?.number || "Cliente"}
+                        </Typography>
+                      </Box>
                     )}
                     <Box flex={1} />
                     <Box display="flex" flexDirection="column" style={{ marginTop: 8 }}>

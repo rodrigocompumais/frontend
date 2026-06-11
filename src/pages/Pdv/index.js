@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useCallback } from "react";
+import React, { useState, useEffect, useContext, useCallback, useMemo } from "react";
 import { useHistory } from "react-router-dom";
 import { makeStyles } from "@material-ui/core/styles";
 import {
@@ -39,6 +39,11 @@ import ReciboPdvModal from "../../components/ReciboPdvModal";
 import useCompanyModules from "../../hooks/useCompanyModules";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
+import {
+  normalizeMesaSearch,
+  getOcupanteNome,
+  mesaMatchesSearch,
+} from "../../helpers/mesaSearch";
 
 const SIDEBAR_WIDTH = 320;
 const BOTTOM_BAR_HEIGHT = 72;
@@ -125,7 +130,7 @@ const useStyles = makeStyles((theme) => {
   },
   mesaGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fill, minmax(156px, 1fr))",
     gap: theme.spacing(1.5),
     padding: theme.spacing(0, 0, 2, 0),
   },
@@ -178,6 +183,57 @@ const useStyles = makeStyles((theme) => {
     marginBottom: theme.spacing(0.5),
   },
   mesaCardMeta: {
+    fontSize: "0.75rem",
+    color: theme.palette.text.secondary,
+  },
+  mesaCardOcupanteWrap: {
+    marginTop: theme.spacing(0.75),
+    padding: theme.spacing(0.75, 1),
+    borderRadius: 8,
+    backgroundColor: theme.palette.type === "dark"
+      ? "rgba(255,255,255,0.1)"
+      : "rgba(15,23,42,0.06)",
+    border: `1px solid ${theme.palette.type === "dark" ? "rgba(255,255,255,0.12)" : "rgba(15,23,42,0.08)"}`,
+  },
+  mesaCardOcupanteLabel: {
+    fontSize: "0.65rem",
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+    color: theme.palette.text.secondary,
+    marginBottom: 2,
+  },
+  mesaCardOcupante: {
+    fontSize: "0.95rem",
+    fontWeight: 800,
+    lineHeight: 1.25,
+    color: theme.palette.type === "dark" ? "#f8fafc" : theme.palette.text.primary,
+  },
+  sidebarClienteBox: {
+    marginTop: theme.spacing(1.5),
+    padding: theme.spacing(1.25, 1.5),
+    borderRadius: 10,
+    background: theme.palette.type === "dark"
+      ? "linear-gradient(135deg, rgba(34,197,94,0.2) 0%, rgba(14,165,233,0.15) 100%)"
+      : "linear-gradient(135deg, rgba(34,197,94,0.12) 0%, rgba(14,165,233,0.08) 100%)",
+    border: `2px solid ${secondaryMain}55`,
+  },
+  sidebarClienteLabel: {
+    fontSize: "0.7rem",
+    fontWeight: 700,
+    textTransform: "uppercase",
+    letterSpacing: "0.08em",
+    color: theme.palette.text.secondary,
+    marginBottom: theme.spacing(0.25),
+  },
+  sidebarClienteName: {
+    fontWeight: 800,
+    fontSize: "1.15rem",
+    lineHeight: 1.3,
+    color: theme.palette.type === "dark" ? "#f8fafc" : theme.palette.text.primary,
+  },
+  searchHint: {
+    marginTop: theme.spacing(0.5),
     fontSize: "0.75rem",
     color: theme.palette.text.secondary,
   },
@@ -403,7 +459,7 @@ const Pdv = () => {
 
   const [mesas, setMesas] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchNumber, setSearchNumber] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedMesa, setSelectedMesa] = useState(null);
   const [resumo, setResumo] = useState(null);
   const [loadingResumo, setLoadingResumo] = useState(false);
@@ -483,25 +539,56 @@ const Pdv = () => {
     return () => socket.off(`company-${companyId}-formResponse`, onFormResponse);
   }, [user?.companyId, socketManager, fetchMesas, fetchOrdersCounts]);
 
-  const handleBuscarPorNumero = (e) => {
+  const searchNormalized = useMemo(
+    () => normalizeMesaSearch(searchQuery),
+    [searchQuery]
+  );
+
+  const filteredMesas = useMemo(() => {
+    if (!searchNormalized) return mesas;
+    return mesas.filter((mesa) => mesaMatchesSearch(mesa, searchNormalized));
+  }, [mesas, searchNormalized]);
+
+  const handleBuscar = (e) => {
     if (e?.key && e.key !== "Enter") return;
-    const num = searchNumber?.trim();
-    if (!num) return;
+    const raw = searchQuery?.trim();
+    if (!raw) return;
+
+    if (filteredMesas.length === 1) {
+      setSelectedMesa(filteredMesas[0]);
+      setSearchQuery("");
+      return;
+    }
+
+    if (filteredMesas.length > 1) {
+      toast.info(`${filteredMesas.length} contas encontradas. Refine a busca ou clique na conta desejada.`);
+      return;
+    }
+
+    const num = raw;
     setLoading(true);
     const tryType = (type) =>
       api.get("/mesas/by-identifier", { params: { number: num, type } });
     tryType("comanda")
       .then(({ data }) => {
+        if (data?.status !== "ocupada") {
+          toast.error("Mesa/comanda não está ocupada.");
+          return;
+        }
         setSelectedMesa(data);
-        setSearchNumber("");
+        setSearchQuery("");
       })
       .catch(() =>
         tryType("mesa")
           .then(({ data }) => {
+            if (data?.status !== "ocupada") {
+              toast.error("Mesa/comanda não está ocupada.");
+              return;
+            }
             setSelectedMesa(data);
-            setSearchNumber("");
+            setSearchQuery("");
           })
-          .catch(() => toast.error("Mesa/comanda não encontrada ou não está ocupada."))
+          .catch(() => toast.error("Nenhuma conta encontrada para essa busca."))
       )
       .finally(() => setLoading(false));
   };
@@ -679,6 +766,10 @@ const Pdv = () => {
 
   const tipoLabel = selectedMesa?.type === "comanda" ? "Comanda" : "Mesa";
   const numeroLabel = selectedMesa?.name || selectedMesa?.number || selectedMesa?.id;
+  const ocupanteSelecionado =
+    resumo?.cliente?.name?.trim() ||
+    getOcupanteNome(selectedMesa) ||
+    "";
 
   if (!hasLanchonetes && !modulesLoading) return null;
 
@@ -933,13 +1024,20 @@ const Pdv = () => {
                 fullWidth
                 size="small"
                 variant="outlined"
-                label="Número da mesa ou comanda"
-                value={searchNumber}
-                onChange={(e) => setSearchNumber(e.target.value)}
-                onKeyDown={handleBuscarPorNumero}
-                placeholder="Digite e pressione Enter"
+                label="Mesa, comanda ou cliente"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleBuscar}
+                placeholder="Número ou nome do ocupante"
                 inputProps={{ style: { fontSize: "1rem" } }}
               />
+              {searchNormalized && (
+                <Typography className={classes.searchHint}>
+                  {filteredMesas.length === 0
+                    ? "Nenhuma conta ocupada corresponde. Enter tenta buscar pelo número."
+                    : `${filteredMesas.length} conta(s) encontrada(s)`}
+                </Typography>
+              )}
               <div className={classes.gridScroll}>
                 {loading ? (
                   <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
@@ -953,8 +1051,14 @@ const Pdv = () => {
                           Nenhuma mesa ou comanda ocupada.
                         </Typography>
                       </Box>
+                    ) : filteredMesas.length === 0 ? (
+                      <Box gridColumn="1 / -1" textAlign="center" py={4}>
+                        <Typography color="textSecondary">
+                          Nenhum resultado para &quot;{searchQuery.trim()}&quot;.
+                        </Typography>
+                      </Box>
                     ) : (
-                      mesas.map((mesa) => {
+                      filteredMesas.map((mesa) => {
                         const isComanda = mesa.type === "comanda";
                         const selected = selectedMesa?.id === mesa.id;
                         return (
@@ -992,9 +1096,22 @@ const Pdv = () => {
                                 {mesa.name}
                               </Typography>
                             )}
-                            {mesa.contact?.name && (
-                              <Typography className={classes.mesaCardMeta} noWrap>
-                                {mesa.contact.name}
+                            {getOcupanteNome(mesa) ? (
+                              <Box className={classes.mesaCardOcupanteWrap}>
+                                <Typography className={classes.mesaCardOcupanteLabel}>
+                                  Cliente
+                                </Typography>
+                                <Typography
+                                  className={classes.mesaCardOcupante}
+                                  noWrap
+                                  title={getOcupanteNome(mesa)}
+                                >
+                                  {getOcupanteNome(mesa)}
+                                </Typography>
+                              </Box>
+                            ) : (
+                              <Typography className={classes.mesaCardMeta} style={{ marginTop: 4 }}>
+                                Sem cliente vinculado
                               </Typography>
                             )}
                           </Paper>
@@ -1082,16 +1199,28 @@ const Pdv = () => {
               Conta selecionada
             </Typography>
             {selectedMesa && (
-              <Typography variant="h6" style={{ marginTop: 4 }}>
-                <span
-                  className={`${classes.typeBadge} ${
-                    selectedMesa.type === "comanda" ? classes.badgeComanda : classes.badgeMesa
-                  }`}
-                >
-                  {tipoLabel}
-                </span>{" "}
-                #{numeroLabel}
-              </Typography>
+              <>
+                <Typography variant="h6" style={{ marginTop: 4 }}>
+                  <span
+                    className={`${classes.typeBadge} ${
+                      selectedMesa.type === "comanda" ? classes.badgeComanda : classes.badgeMesa
+                    }`}
+                  >
+                    {tipoLabel}
+                  </span>{" "}
+                  #{numeroLabel}
+                </Typography>
+                {ocupanteSelecionado && (
+                  <Box className={classes.sidebarClienteBox}>
+                    <Typography className={classes.sidebarClienteLabel}>
+                      Cliente na conta
+                    </Typography>
+                    <Typography className={classes.sidebarClienteName}>
+                      {ocupanteSelecionado}
+                    </Typography>
+                  </Box>
+                )}
+              </>
             )}
           </div>
           <div className={classes.sidebarContent}>
@@ -1222,6 +1351,16 @@ const Pdv = () => {
         <div className={classes.bottomBarTotalizer}>
           {selectedMesa && resumo ? (
             <>
+              {ocupanteSelecionado && (
+                <Typography
+                  variant="body2"
+                  style={{ fontWeight: 700, maxWidth: 180 }}
+                  noWrap
+                  title={ocupanteSelecionado}
+                >
+                  {ocupanteSelecionado}
+                </Typography>
+              )}
               <Typography className={classes.bottomBarTotalLabel}>Total</Typography>
               <Typography className={classes.bottomBarTotalValue}>
                 R$ {Number(resumo.total ?? 0).toFixed(2)}

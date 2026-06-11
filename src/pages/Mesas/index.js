@@ -47,6 +47,7 @@ import MesaCard from "../../components/MesaCard";
 import MesaModal from "../../components/MesaModal";
 import MesaOcuparModal from "../../components/MesaOcuparModal";
 import MesaBulkCreateModal from "../../components/MesaBulkCreateModal";
+import MesaRestoreQrModal from "../../components/MesaRestoreQrModal";
 import MesaPrintQRModal from "../../components/MesaPrintQRModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import LiberarMesaModal from "../../components/LiberarMesaModal";
@@ -179,6 +180,9 @@ const Mesas = ({ cardapioSlugFromHub }) => {
   const [mesaModalOpen, setMesaModalOpen] = useState(false);
   const [mesaModalInitialType, setMesaModalInitialType] = useState("mesa");
   const [mesaBulkModalOpen, setMesaBulkModalOpen] = useState(false);
+  const [mesaBulkInitialType, setMesaBulkInitialType] = useState("mesa");
+  const [mesaRestoreModalOpen, setMesaRestoreModalOpen] = useState(false);
+  const [mesaRestoreInitialType, setMesaRestoreInitialType] = useState("comanda");
   const [ocuparModalOpen, setOcuparModalOpen] = useState(false);
   const [confirmModalOpen, setConfirmModalOpen] = useState(false);
   const [selectedMesa, setSelectedMesa] = useState(null);
@@ -368,7 +372,13 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     const socket = user?.companyId ? socketManager?.getSocket?.(user.companyId) : null;
     if (!socket) return;
     socket.on(`company-${user.companyId}-mesa`, (data) => {
-      if (data.action === "create" || data.action === "update" || data.action === "ocupar" || data.action === "liberar") {
+      if (
+        data.action === "create" ||
+        data.action === "update" ||
+        data.action === "restore" ||
+        data.action === "ocupar" ||
+        data.action === "liberar"
+      ) {
         const mesa = data.mesa;
         setMesas((prev) => {
           const idx = prev.findIndex((m) => m.id === mesa.id);
@@ -1177,10 +1187,30 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     fetchMesas();
   };
 
-  const handleOpenBulkModal = () => setMesaBulkModalOpen(true);
+  const handleOpenBulkModal = (tipo = "mesa") => {
+    setMesaBulkInitialType(tipo === "comanda" ? "comanda" : "mesa");
+    setMesaBulkModalOpen(true);
+  };
   const handleCloseBulkModal = () => {
     setMesaBulkModalOpen(false);
     fetchMesas();
+  };
+
+  const handleOpenRestoreQrModal = (tipo = "comanda") => {
+    setMesaRestoreInitialType(tipo === "mesa" ? "mesa" : "comanda");
+    setMesaRestoreModalOpen(true);
+  };
+
+  const handleCloseRestoreQrModal = () => {
+    setMesaRestoreModalOpen(false);
+    fetchMesas();
+  };
+
+  const handleRestoreFromMesaModal = () => {
+    const tipo = mesaModalInitialType;
+    setMesaModalOpen(false);
+    setSelectedMesa(null);
+    handleOpenRestoreQrModal(tipo);
   };
 
   const handleOcupar = (mesa) => {
@@ -1360,9 +1390,22 @@ const Mesas = ({ cardapioSlugFromHub }) => {
             </Button>
             <Button
               variant="outlined"
-              onClick={handleOpenBulkModal}
+              onClick={() => handleOpenBulkModal("mesa")}
             >
-              Criar várias
+              Criar várias mesas
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => handleOpenBulkModal("comanda")}
+            >
+              Criar várias comandas
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<QrCodeIcon />}
+              onClick={() => handleOpenRestoreQrModal("comanda")}
+            >
+              Restaurar pelo QR
             </Button>
           </div>
         </MainHeaderButtonsWrapper>
@@ -1387,8 +1430,11 @@ const Mesas = ({ cardapioSlugFromHub }) => {
               <Button variant="outlined" onClick={() => handleOpenMesaModal(null, "comanda")}>
                 Nova comanda
               </Button>
-              <Button variant="outlined" onClick={handleOpenBulkModal}>
-                Criar várias
+              <Button variant="outlined" onClick={() => handleOpenBulkModal("mesa")}>
+                Criar várias mesas
+              </Button>
+              <Button variant="outlined" onClick={() => handleOpenBulkModal("comanda")}>
+                Criar várias comandas
               </Button>
             </Box>
           </Paper>
@@ -2019,6 +2065,13 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         mesa={selectedMesa}
         onSuccess={fetchMesas}
         initialType={mesaModalInitialType}
+        onRestoreQr={!selectedMesa ? handleRestoreFromMesaModal : undefined}
+      />
+      <MesaRestoreQrModal
+        open={mesaRestoreModalOpen}
+        onClose={handleCloseRestoreQrModal}
+        onSuccess={fetchMesas}
+        initialType={mesaRestoreInitialType}
       />
       <MesaOcuparModal
         open={ocuparModalOpen}
@@ -2033,6 +2086,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         open={mesaBulkModalOpen}
         onClose={handleCloseBulkModal}
         onSuccess={fetchMesas}
+        initialType={mesaBulkInitialType}
       />
       <MesaPrintQRModal
         open={printAllQRModalOpen}
