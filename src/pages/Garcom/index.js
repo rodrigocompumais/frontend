@@ -460,11 +460,21 @@ const Garcom = () => {
     return subsWithItems.length > 0 || rootItems.length > 0;
   };
 
+  /** Variação efetiva: estado explícito ou primeira opção (padrão do Select). */
+  const getProductVariationOptionId = (productOrId) => {
+    const product =
+      typeof productOrId === "object" && productOrId !== null
+        ? productOrId
+        : products.find((p) => p.id === productOrId);
+    if (!product?.variations?.length) return null;
+    const explicit = selectedVariationOption[product.id];
+    if (explicit != null) return explicit;
+    return product.variations[0]?.options?.[0]?.id ?? null;
+  };
+
   const getOrderLineCount = (productId) => {
     const product = products.find((p) => p.id === productId);
-    const selectedOptionId = product?.variations && product.variations.length > 0 
-      ? selectedVariationOption[productId] 
-      : null;
+    const selectedOptionId = getProductVariationOptionId(product);
     
     return orderLines
       .filter((l) => {
@@ -481,7 +491,7 @@ const Garcom = () => {
     
     // Se o produto tem variações, verificar se uma variação foi selecionada
     if (delta === 1 && p?.variations && p.variations.length > 0) {
-      const selectedOptionId = selectedVariationOption[productId];
+      const selectedOptionId = getProductVariationOptionId(p);
       if (!selectedOptionId) {
         toast.error("Selecione uma variação de preço primeiro");
         return;
@@ -506,7 +516,7 @@ const Garcom = () => {
     }
     
     // Obter optionId se houver variação selecionada
-    const optionId = p?.variations && p.variations.length > 0 ? selectedVariationOption[productId] : null;
+    const optionId = getProductVariationOptionId(p);
     
     setOrderLines((prev) => {
       if (delta === 1) {
@@ -602,7 +612,7 @@ const Garcom = () => {
     const addonsWithQty = (addOnModalSelectedAddons || []).filter((a) => (a.quantity ?? 1) > 0);
     if (addOnModalLineIndex === null) {
       if (!addOnModalProduct) return;
-      const optionId = addOnModalProduct.variations?.length > 0 ? selectedVariationOption[addOnModalProduct.id] : null;
+      const optionId = getProductVariationOptionId(addOnModalProduct);
       setOrderLines((prev) => [...prev, { productId: addOnModalProduct.id, quantity: addOnModalPendingQuantity, optionId, addons: addonsWithQty }]);
     } else {
       setOrderLines((prev) => {
@@ -676,7 +686,7 @@ const Garcom = () => {
     if (rule === "fixed") {
       // Para fixed, usar a variação selecionada do produto base se disponível
       if (base.variations && base.variations.length > 0) {
-        const baseOptionId = selectedVariationOption[base.id];
+        const baseOptionId = getProductVariationOptionId(base);
         if (baseOptionId) {
           const firstVariation = base.variations[0];
           const option = firstVariation?.options?.find((o) => o.id === baseOptionId);
@@ -698,7 +708,7 @@ const Garcom = () => {
     // Capturar a variação selecionada do produto base
     let baseVariationLabel = null;
     if (product.variations && product.variations.length > 0) {
-      const selectedOptionId = selectedVariationOption[product.id];
+      const selectedOptionId = getProductVariationOptionId(product);
       if (selectedOptionId) {
         const firstVariation = product.variations[0];
         const option = firstVariation?.options?.find((o) => o.id === selectedOptionId);
@@ -880,15 +890,24 @@ const Garcom = () => {
         setClienteDialogOpen(false);
         const mesasRes = await api.get("/mesas");
         setMesas(Array.isArray(mesasRes.data) ? mesasRes.data : []);
-        const mesaAtualizada = (mesasRes.data || []).find((m) => m.id === mesaParaOcupar.id) || {
-          ...mesaParaOcupar,
-          status: "ocupada",
-          contactId: semTelefone ? null : selectedContact.id,
-          contact: semTelefone ? { id: null, name: nomeSemTel, number: "" } : selectedContact,
-          ticketId: ticket?.id,
-        };
+        let mesaAtualizada = (mesasRes.data || []).find((m) => m.id === mesaParaOcupar.id);
+        if (!mesaAtualizada?.contact) {
+          const { data: mesaDetail } = await api.get(`/mesas/${mesaParaOcupar.id}`);
+          mesaAtualizada = mesaDetail;
+        }
+        if (!mesaAtualizada) {
+          mesaAtualizada = {
+            ...mesaParaOcupar,
+            status: "ocupada",
+            contactId: occupyResult?.contactId ?? (semTelefone ? null : selectedContact?.id),
+            ticketId: ticket?.id,
+          };
+        }
+        const contactForPedido =
+          mesaAtualizada.contact ||
+          (semTelefone ? { id: occupyResult?.contactId, name: nomeSemTel, number: "" } : selectedContact);
         setMesaParaPedido(mesaAtualizada);
-        setContactParaPedido(semTelefone ? { id: null, name: nomeSemTel, number: "" } : selectedContact);
+        setContactParaPedido(contactForPedido);
         setOrderLines([]);
         setHalfAndHalfItems([]);
         setOrderDialogTab(0);
@@ -1000,9 +1019,7 @@ const Garcom = () => {
       });
       const halfMenuItems = halfAndHalfItems.map((item) => {
         const baseProduct = products.find((p) => p.id === item.baseProductId);
-        const baseOptionId = baseProduct?.variations && baseProduct.variations.length > 0
-          ? (selectedVariationOption[item.baseProductId] ?? null)
-          : null;
+        const baseOptionId = getProductVariationOptionId(baseProduct);
         return {
           type: "halfAndHalf",
           productId: item.baseProductId,
@@ -1321,7 +1338,7 @@ const Garcom = () => {
                       const isHalfAndHalf = product.allowsHalfAndHalf === true;
                     const hasVariations = product.variations && product.variations.length > 0;
                     const firstVariation = hasVariations ? product.variations[0] : null;
-                    const selectedOptionId = hasVariations ? (selectedVariationOption[product.id] ?? firstVariation?.options?.[0]?.id) : null;
+                    const selectedOptionId = hasVariations ? getProductVariationOptionId(product) : null;
                     const displayPrice = hasVariations 
                       ? (() => {
                           const option = firstVariation?.options?.find((o) => o.id === selectedOptionId);
