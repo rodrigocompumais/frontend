@@ -528,6 +528,15 @@ const Pdv = () => {
   // Variações: produto aguardando seleção
   const [variationDialogProduct, setVariationDialogProduct] = useState(null);
   const [selectedVariationOptionId, setSelectedVariationOptionId] = useState(null);
+  // Adicionais
+  const [addOnModalOpen, setAddOnModalOpen] = useState(false);
+  const [addOnModalProduct, setAddOnModalProduct] = useState(null);
+  const [addOnModalCartKey, setAddOnModalCartKey] = useState(null);
+  const [addOnModalSelectedAddons, setAddOnModalSelectedAddons] = useState([]);
+  const [addOnModalPendingQuantity, setAddOnModalPendingQuantity] = useState(1);
+  const [addOnModalOptionId, setAddOnModalOptionId] = useState(null);
+  const [addOnModalProductValue, setAddOnModalProductValue] = useState(0);
+  const [addOnModalProductName, setAddOnModalProductName] = useState("");
   const [reciboPdvOpen, setReciboPdvOpen] = useState(false);
   const [reciboPdvData, setReciboPdvData] = useState(null);
   const [finalizando, setFinalizando] = useState(false);
@@ -680,7 +689,7 @@ const Pdv = () => {
     handleVoltar();
   };
 
-  // Venda direta: carregar todos os produtos de cardápio (todas as páginas)
+  // Venda direta: produtos do cardápio público (inclui addOnGroup)
   useEffect(() => {
     if (!modoVendaDireta || !hasLanchonetes) return;
 
@@ -689,19 +698,22 @@ const Pdv = () => {
     const fetchAllMenuProducts = async () => {
       setLoadingProducts(true);
       try {
-        const allProducts = [];
-        let pageNumber = 1;
-        let hasMore = true;
-
-        while (hasMore) {
-          const { data } = await api.get("/products", {
-            params: { pageNumber, isMenuProduct: true },
-          });
-          allProducts.push(...(data.products || []));
-          hasMore = data.hasMore || false;
-          pageNumber++;
+        const { data: formsData } = await api.get("/forms?formType=cardapio");
+        let publicId = formsData?.forms?.[0]?.publicId;
+        if (!publicId) {
+          try {
+            const { data: defaultData } = await api.get("/mesas/default-cardapio-form");
+            publicId = defaultData?.publicId;
+          } catch (_) {
+            /* sem cardápio padrão */
+          }
         }
-
+        if (!publicId) {
+          if (!cancelled) setProducts([]);
+          return;
+        }
+        const { data } = await api.get(`/public/forms/${publicId}/products`);
+        const allProducts = data.products || [];
         allProducts.sort((a, b) => {
           const grupoA = (a.grupo || "").trim() || "Outros";
           const grupoB = (b.grupo || "").trim() || "Outros";
@@ -709,7 +721,6 @@ const Pdv = () => {
           if (cmp !== 0) return cmp;
           return (a.name || "").localeCompare(b.name || "");
         });
-
         if (!cancelled) setProducts(allProducts);
       } catch (err) {
         if (!cancelled) {
@@ -727,9 +738,174 @@ const Pdv = () => {
     };
   }, [modoVendaDireta, hasLanchonetes]);
 
+  const hasAddonsToShow = (product) => {
+    const g = product?.addOnGroup;
+    if (!g) return false;
+    const subsWithItems = (g.subgroups || []).filter((sg) => (sg.items || []).length > 0);
+    const rootItems = g.items || [];
+    return subsWithItems.length > 0 || rootItems.length > 0;
+  };
+
+  const buildAddonsKey = (addons) =>
+    (addons || [])
+      .filter((a) => (a.quantity ?? 1) > 0)
+      .map((a) => `${a.addOnItemId}:${a.quantity ?? 1}`)
+      .sort()
+      .join("|");
+
+  const getCartKey = (productId, optionId, addons) => {
+    const addonKey = buildAddonsKey(addons);
+    const base = optionId ? `${productId}_${optionId}` : String(productId);
+    return addonKey ? `${base}_${addonKey}` : base;
+  };
+
+  const getCartLineUnitTotal = (item) => {
+    const base = Number(item.productValue) || 0;
+    const addonsTotal = (item.addons || []).reduce(
+      (s, a) => s + (Number(a.value) || 0) * (a.quantity ?? 1),
+      0
+    );
+    return base + addonsTotal;
+  };
+
+  const addCartLine = ({ productId, optionId, productName, productValue, addons, quantity }) => {
+    const cartKey = getCartKey(productId, optionId, addons);
+    setCart((prev) => {
+      const found = prev.find((c) => c.cartKey === cartKey);
+      if (found) {
+        return prev.map((c) =>
+          c.cartKey === cartKey ? { ...c, quantity: c.quantity + quantity } : c
+        );
+      }
+      return [
+        ...prev,
+        {
+          cartKey,
+          productId,
+          optionId: optionId || null,
+          productName,
+          productValue,
+          addons: addons || [],
+          quantity,
+        },
+      ];
+    });
+  };
+
+  const openAddOnModal = ({
+    product,
+    optionId = null,
+    productValue = 0,
+    productName = "",
+    cartKey = null,
+    addons = [],
+    quantity = 1,
+  }) => {
+    setAddOnModalProduct(product);
+    setAddOnModalCartKey(cartKey);
+    setAddOnModalOptionId(optionId);
+    setAddOnModalProductValue(productValue);
+    setAddOnModalProductName(productName);
+    setAddOnModalPendingQuantity(quantity);
+    setAddOnModalSelectedAddons(
+      Array.isArray(addons) ? addons.map((a) => ({ ...a, quantity: a.quantity ?? 1 })) : []
+    );
+    setAddOnModalOpen(true);
+  };
+
+  const closeAddOnModal = () => {
+    setAddOnModalOpen(false);
+    setAddOnModalProduct(null);
+    setAddOnModalCartKey(null);
+    setAddOnModalSelectedAddons([]);
+    setAddOnModalPendingQuantity(1);
+    setAddOnModalOptionId(null);
+    setAddOnModalProductValue(0);
+    setAddOnModalProductName("");
+  };
+
+  const getAddonQuantityInModal = (addOnItemId) =>
+    addOnModalSelectedAddons.find((a) => a.addOnItemId === addOnItemId)?.quantity ?? 0;
+
+  const setAddonQuantityInModal = (item, quantity) => {
+    const { addOnItemId, label, value } = item;
+    if (quantity <= 0) {
+      setAddOnModalSelectedAddons((prev) => prev.filter((a) => a.addOnItemId !== addOnItemId));
+      return;
+    }
+    setAddOnModalSelectedAddons((prev) => {
+      const idx = prev.findIndex((a) => a.addOnItemId === addOnItemId);
+      const entry = { addOnItemId, label, value: Number(value) || 0, quantity };
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = entry;
+        return next;
+      }
+      return [...prev, entry];
+    });
+  };
+
+  const toggleAddonInModal = (item) => {
+    const current = getAddonQuantityInModal(item.addOnItemId);
+    setAddonQuantityInModal(item, current + 1);
+  };
+
+  const confirmAddOnModal = () => {
+    if (!addOnModalProduct) return;
+    const addonsWithQty = (addOnModalSelectedAddons || []).filter((a) => (a.quantity ?? 1) > 0);
+    if (addOnModalCartKey) {
+      setCart((prev) => {
+        const existing = prev.find((c) => c.cartKey === addOnModalCartKey);
+        if (!existing) return prev;
+        const newKey = getCartKey(existing.productId, existing.optionId, addonsWithQty);
+        const withoutOld = prev.filter((c) => c.cartKey !== addOnModalCartKey);
+        const found = withoutOld.find((c) => c.cartKey === newKey);
+        if (found) {
+          return withoutOld.map((c) =>
+            c.cartKey === newKey
+              ? { ...c, quantity: c.quantity + addOnModalPendingQuantity, addons: addonsWithQty }
+              : c
+          );
+        }
+        return [
+          ...withoutOld,
+          {
+            ...existing,
+            cartKey: newKey,
+            addons: addonsWithQty,
+            quantity: addOnModalPendingQuantity,
+          },
+        ];
+      });
+    } else {
+      addCartLine({
+        productId: addOnModalProduct.id,
+        optionId: addOnModalOptionId,
+        productName: addOnModalProductName || addOnModalProduct.name || "Produto",
+        productValue: Number(addOnModalProductValue) || 0,
+        addons: addonsWithQty,
+        quantity: addOnModalPendingQuantity,
+      });
+    }
+    closeAddOnModal();
+  };
+
+  const openAddOnModalForCartItem = (cartItem) => {
+    const product = products.find((p) => p.id === cartItem.productId);
+    if (!product || !hasAddonsToShow(product)) return;
+    openAddOnModal({
+      product,
+      optionId: cartItem.optionId,
+      productValue: cartItem.productValue,
+      productName: cartItem.productName,
+      cartKey: cartItem.cartKey,
+      addons: cartItem.addons,
+      quantity: cartItem.quantity,
+    });
+  };
+
   const addToCart = (product, optionId = null) => {
     const hasVariations = product.variations && product.variations.length > 0;
-    // Se tem variações e nenhuma foi passada, abrir diálogo de seleção
     if (hasVariations && !optionId) {
       const firstOptionId = product.variations[0]?.options?.[0]?.id ?? null;
       setSelectedVariationOptionId(firstOptionId);
@@ -746,26 +922,22 @@ const Pdv = () => {
         displayName = `${product.name} - ${option.label}`;
       }
     }
-    // Chave única considera productId + optionId para variações
-    const cartKey = optionId ? `${product.id}_${optionId}` : String(product.id);
-    setCart((prev) => {
-      const found = prev.find((c) => c.cartKey === cartKey);
-      if (found) {
-        return prev.map((c) =>
-          c.cartKey === cartKey ? { ...c, quantity: c.quantity + 1 } : c
-        );
-      }
-      return [
-        ...prev,
-        {
-          cartKey,
-          productId: product.id,
-          optionId: optionId || null,
-          productName: displayName,
-          productValue: value,
-          quantity: 1,
-        },
-      ];
+    if (hasAddonsToShow(product)) {
+      openAddOnModal({
+        product,
+        optionId,
+        productValue: value,
+        productName: displayName,
+      });
+      return;
+    }
+    addCartLine({
+      productId: product.id,
+      optionId,
+      productName: displayName,
+      productValue: value,
+      addons: [],
+      quantity: 1,
     });
   };
 
@@ -792,7 +964,7 @@ const Pdv = () => {
   };
 
   const cartTotal = useMemo(
-    () => cart.reduce((sum, c) => sum + (Number(c.productValue) || 0) * (c.quantity || 0), 0),
+    () => cart.reduce((sum, c) => sum + getCartLineUnitTotal(c) * (c.quantity || 0), 0),
     [cart]
   );
 
@@ -831,11 +1003,21 @@ const Pdv = () => {
     }
     setFinalizando(true);
     try {
-      const itens = cart.map((c) => ({
-        productName: c.productName,
-        quantity: c.quantity,
-        productValue: Number(c.productValue) || 0,
-      }));
+      const itens = cart.map((c) => {
+        const unit = getCartLineUnitTotal(c);
+        let productName = c.productName || "Produto";
+        if ((c.addons || []).length > 0) {
+          const addonsLabel = c.addons
+            .map((a) => `${(a.quantity ?? 1) > 1 ? `${a.quantity}x ` : ""}${a.label}`)
+            .join(", ");
+          productName = `${productName} (+ ${addonsLabel})`;
+        }
+        return {
+          productName,
+          quantity: c.quantity,
+          productValue: unit,
+        };
+      });
       let meiosPagamento = null;
       if (pagamentoHibrido) {
         meiosPagamento = pagamentos.map((p) => ({ metodo: p.metodo, valor: Number(p.valor) }));
@@ -1096,15 +1278,34 @@ const Pdv = () => {
                   Adicione produtos ao carrinho.
                 </Typography>
               ) : (
-                cart.map((item) => (
+                cart.map((item) => {
+                  const unitTotal = getCartLineUnitTotal(item);
+                  const lineTotal = unitTotal * item.quantity;
+                  const product = products.find((p) => p.id === item.productId);
+                  return (
                   <div key={item.cartKey} className={classes.vendaDiretaCartRow}>
                     <Box flex={1} minWidth={0}>
                       <Typography variant="body2" noWrap>{item.productName}</Typography>
+                      {(item.addons || []).length > 0 && (
+                        <Typography variant="caption" color="textSecondary" display="block" noWrap>
+                          Adicionais: {(item.addons || []).map((a) => `${(a.quantity ?? 1) > 1 ? `${a.quantity}x ` : ""}${a.label}`).join(", ")}
+                        </Typography>
+                      )}
                       <Typography variant="caption" color="textSecondary">
-                        R$ {Number(item.productValue || 0).toFixed(2)} × {item.quantity}
+                        R$ {unitTotal.toFixed(2)} × {item.quantity}
                         {" = "}
-                        <strong>R$ {(Number(item.productValue || 0) * item.quantity).toFixed(2)}</strong>
+                        <strong>R$ {lineTotal.toFixed(2)}</strong>
                       </Typography>
+                      {product && hasAddonsToShow(product) && (
+                        <Button
+                          size="small"
+                          color="primary"
+                          onClick={() => openAddOnModalForCartItem(item)}
+                          style={{ marginTop: 2, padding: "0 4px", minWidth: 0, fontSize: "0.7rem" }}
+                        >
+                          {(item.addons || []).length > 0 ? "Alterar adicionais" : "Adicionais"}
+                        </Button>
+                      )}
                     </Box>
                     <Box display="flex" alignItems="center">
                       <Button
@@ -1133,7 +1334,8 @@ const Pdv = () => {
                       </Button>
                     </Box>
                   </div>
-                ))
+                  );
+                })
               )}
             </div>
             <div className={classes.vendaDiretaCartFooter}>
@@ -1641,6 +1843,73 @@ const Pdv = () => {
         data={reciboPdvData}
         mesa={null}
       />
+
+      <Dialog open={addOnModalOpen} onClose={closeAddOnModal} maxWidth="sm" fullWidth>
+        <DialogTitle>Adicionais — {addOnModalProduct?.name}</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+            {addOnModalCartKey ? "Altere os adicionais deste item." : "Selecione a quantidade e os adicionais."}
+            {!addOnModalCartKey && (
+              <Box component="span" display="inline-flex" alignItems="center" style={{ marginLeft: 8 }}>
+                <IconButton size="small" onClick={() => setAddOnModalPendingQuantity((q) => Math.max(1, q - 1))} aria-label="Menos">
+                  <RemoveIcon fontSize="small" />
+                </IconButton>
+                <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>{addOnModalPendingQuantity}</Typography>
+                <IconButton size="small" onClick={() => setAddOnModalPendingQuantity((q) => q + 1)} aria-label="Mais">
+                  <AddIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            )}
+          </Typography>
+          {addOnModalProduct?.addOnGroup && (
+            <>
+              {(addOnModalProduct.addOnGroup.subgroups || []).filter((sg) => (sg.items || []).length > 0).map((sg) => (
+                <Box key={sg.id} mb={2}>
+                  <Typography variant="subtitle2" style={{ fontWeight: 600, marginBottom: 8 }}>{sg.name}</Typography>
+                  {(sg.items || []).map((it) => {
+                    const qty = getAddonQuantityInModal(it.id);
+                    return (
+                      <Box key={it.id} display="flex" alignItems="center" justifyContent="space-between" style={{ marginBottom: 8 }}>
+                        <Typography variant="body2">{it.label} + R$ {Number(it.value || 0).toFixed(2).replace(".", ",")}</Typography>
+                        <Box display="flex" alignItems="center">
+                          <IconButton size="small" onClick={() => setAddonQuantityInModal({ addOnItemId: it.id, label: it.label, value: it.value }, qty - 1)} disabled={qty <= 0} aria-label="Menos">
+                            <RemoveIcon fontSize="small" />
+                          </IconButton>
+                          <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>{qty}</Typography>
+                          <IconButton size="small" onClick={() => toggleAddonInModal({ addOnItemId: it.id, label: it.label, value: it.value })} aria-label="Mais">
+                            <AddIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      </Box>
+                    );
+                  })}
+                </Box>
+              ))}
+              {(addOnModalProduct.addOnGroup.items || []).length > 0 && (addOnModalProduct.addOnGroup.items || []).map((it) => {
+                const qty = getAddonQuantityInModal(it.id);
+                return (
+                  <Box key={it.id} display="flex" alignItems="center" justifyContent="space-between" style={{ marginBottom: 8 }}>
+                    <Typography variant="body2">{it.label} + R$ {Number(it.value || 0).toFixed(2).replace(".", ",")}</Typography>
+                    <Box display="flex" alignItems="center">
+                      <IconButton size="small" onClick={() => setAddonQuantityInModal({ addOnItemId: it.id, label: it.label, value: it.value }, qty - 1)} disabled={qty <= 0} aria-label="Menos">
+                        <RemoveIcon fontSize="small" />
+                      </IconButton>
+                      <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>{qty}</Typography>
+                      <IconButton size="small" onClick={() => toggleAddonInModal({ addOnItemId: it.id, label: it.label, value: it.value })} aria-label="Mais">
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                );
+              })}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeAddOnModal} color="secondary">Cancelar</Button>
+          <Button onClick={confirmAddOnModal} color="primary" variant="contained">Confirmar</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Diálogo de seleção de variação */}
       <Dialog
