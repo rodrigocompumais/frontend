@@ -79,6 +79,7 @@ import RestaurantIcon from "@material-ui/icons/Restaurant";
 import QueueIcon from "@material-ui/icons/Queue";
 import HistoryIcon from "@material-ui/icons/History";
 import ViewModuleIcon from "@material-ui/icons/ViewModule";
+import RelatorioProdutosModal from "../../components/RelatorioProdutosModal";
 
 import { isEmpty } from "lodash";
 import moment from "moment";
@@ -631,6 +632,7 @@ const Dashboard = () => {
   const history = useHistory();
   const [ordersStats, setOrdersStats] = useState({ pedidosHoje: 0, pedidosEmAndamento: 0, pedidosConfirmados: 0, firstCardapioFormId: null });
   const [modulesWithDetails, setModulesWithDetails] = useState([]);
+  const [relatorioProdutosOpen, setRelatorioProdutosOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -1205,6 +1207,14 @@ const Dashboard = () => {
                     style={{ textTransform: "none", borderRadius: 8 }}
                   >
                     Formulários
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    startIcon={<BarChartIcon />}
+                    onClick={() => setRelatorioProdutosOpen(true)}
+                    style={{ textTransform: "none", borderRadius: 8 }}
+                  >
+                    Relatório de Produtos
                   </Button>
                 </Box>
               </Grid>
@@ -1995,6 +2005,11 @@ const Dashboard = () => {
             </Button>
           </DialogActions>
         </Dialog>
+
+        <RelatorioProdutosModal
+          open={relatorioProdutosOpen}
+          onClose={() => setRelatorioProdutosOpen(false)}
+        />
       </Container>
     </div>
   );
