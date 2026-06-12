@@ -55,7 +55,9 @@ import TrendingUpIcon from "@material-ui/icons/TrendingUp";
 import AttachMoneyIcon from "@material-ui/icons/AttachMoney";
 import AccountBalanceWalletIcon from "@material-ui/icons/AccountBalanceWallet";
 import AssessmentIcon from "@material-ui/icons/Assessment";
+import BarChartIcon from "@material-ui/icons/BarChart";
 import DespesasModal from "../../components/DespesasModal";
+import RelatorioProdutosModal from "../../components/RelatorioProdutosModal";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -171,6 +173,7 @@ const LanchonetesHub = () => {
   const [filtroFinal, setFiltroFinal] = useState("");
   const [quickScanOpen, setQuickScanOpen] = useState(false);
   const [despesasModalOpen, setDespesasModalOpen] = useState(false);
+  const [relatorioProdutosOpen, setRelatorioProdutosOpen] = useState(false);
   const [proximasDespesas, setProximasDespesas] = useState([]);
   const [loadingProximasDespesas, setLoadingProximasDespesas] = useState(false);
   const pendingOrderIdsRef = useRef(new Set());
@@ -583,6 +586,28 @@ const LanchonetesHub = () => {
                       </Typography>
                       <Button size="small" color="primary" style={{ marginTop: 8 }}>
                         Abrir PDV
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                  <Card
+                    className={classes.statCard}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setRelatorioProdutosOpen(true)}
+                  >
+                    <CardContent>
+                      <Box display="flex" alignItems="center" justifyContent="space-between">
+                        <Typography color="textSecondary" gutterBottom>
+                          Relatório de Produtos
+                        </Typography>
+                        <BarChartIcon style={{ color: "rgba(59,130,246,0.7)" }} />
+                      </Box>
+                      <Typography variant="body2">
+                        Produtos vendidos no período
+                      </Typography>
+                      <Button size="small" color="primary" style={{ marginTop: 8 }}>
+                        Ver relatório
                       </Button>
                     </CardContent>
                   </Card>
@@ -1124,6 +1149,10 @@ const LanchonetesHub = () => {
         }}
       />
       <QuickScanModal open={quickScanOpen} onClose={() => setQuickScanOpen(false)} />
+      <RelatorioProdutosModal
+        open={relatorioProdutosOpen}
+        onClose={() => setRelatorioProdutosOpen(false)}
+      />
     </MainContainer>
   );
 };
