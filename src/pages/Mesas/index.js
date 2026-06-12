@@ -656,7 +656,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
               {
                 productId: p.id,
                 quantity: 1,
-                productValue: selectedOption.value || Number(p.value) || 0,
+                productValue: Number(selectedOption.value) || Number(p.value) || 0,
                 variationOptionId: selectedOptionId,
               },
             ]);
@@ -751,7 +751,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       {
         productId: variationProduct.id,
         quantity: 1,
-        productValue: selectedOption.value || Number(variationProduct.value) || 0,
+        productValue: Number(selectedOption.value) || Number(variationProduct.value) || 0,
         variationOptionId: selectedVariationOptionId,
       },
     ]);
@@ -944,7 +944,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     setAddOnModalPendingQuantity(line.quantity);
     setAddOnModalSelectedAddons(Array.isArray(line.addons) ? line.addons.map((a) => ({ ...a, quantity: a.quantity ?? 1 })) : []);
     setAddOnModalVariationOptionId(line.variationOptionId ?? null);
-    setAddOnModalProductValue(line.productValue != null ? line.productValue : (Number(p?.value) || 0));
+    setAddOnModalProductValue(line.productValue != null ? Number(line.productValue) || 0 : (Number(p?.value) || 0));
     setAddOnModalOpen(true);
   };
 
@@ -980,7 +980,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         {
           productId: addOnModalProduct.id,
           quantity: addOnModalPendingQuantity,
-          productValue: addOnModalProductValue ?? (Number(addOnModalProduct?.value) || 0),
+          productValue: Number(addOnModalProductValue) || Number(addOnModalProduct?.value) || 0,
           variationOptionId: addOnModalVariationOptionId ?? null,
           addons: addonsWithQty,
         },
@@ -1017,7 +1017,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
   const calculateOrderTotal = () => {
     const linesTotal = orderLines.reduce((acc, line) => {
       const p = orderProducts.find((x) => x.id === line.productId);
-      const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+      const unit = line.productValue != null ? Number(line.productValue) || 0 : (Number(p?.value) || 0);
       const addonsTotal = (line.addons || []).reduce((s, a) => s + (Number(a.value) || 0) * (a.quantity ?? 1), 0);
       return acc + (unit + addonsTotal) * line.quantity;
     }, 0);
@@ -1043,7 +1043,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     const contact = mesaParaPedido.contact || {};
     for (const line of orderLines) {
       const p = orderProducts.find((x) => x.id === line.productId);
-      if (p?.variablePrice && (line.productValue == null || line.productValue < 0)) {
+      if (p?.variablePrice && (line.productValue == null || Number(line.productValue) < 0)) {
         toast.error(`Informe o valor para "${p.name}".`);
         return;
       }
@@ -1052,7 +1052,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     try {
       const menuItems = orderLines.map((line) => {
         const p = orderProducts.find((x) => x.id === line.productId);
-        const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+        const unit = line.productValue != null ? Number(line.productValue) || 0 : (Number(p?.value) || 0);
         let productName = p?.name || "Produto";
         if (line.variationOptionId && p?.variations && p.variations.length > 0) {
           const firstVariation = p.variations[0];
@@ -1682,7 +1682,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                   </Typography>
                   {orderLines.map((line, idx) => {
                     const p = orderProducts.find((x) => x.id === line.productId);
-                    const unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+                    const unit = line.productValue != null ? Number(line.productValue) || 0 : (Number(p?.value) || 0);
                     const addonsTotal = (line.addons || []).reduce((s, a) => s + (Number(a.value) || 0) * (a.quantity ?? 1), 0);
                     const subtotal = (unit + addonsTotal) * line.quantity;
                     let productDisplayName = p?.name || "Produto";

@@ -778,7 +778,7 @@ const Garcom = () => {
   const calculateTotal = () => {
     let total = orderLines.reduce((acc, line) => {
       const p = products.find((x) => x.id === line.productId);
-      let unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+      let unit = line.productValue != null ? Number(line.productValue) || 0 : (Number(p?.value) || 0);
       
       // Se há optionId, usar o valor da variação
       if (line.optionId && p?.variations && p.variations.length > 0) {
@@ -976,7 +976,7 @@ const Garcom = () => {
           toast.error(`Selecione uma variação para "${p.name}".`);
           return;
         }
-      } else if (p?.variablePrice && (line.productValue == null || line.productValue < 0)) {
+      } else if (p?.variablePrice && (line.productValue == null || Number(line.productValue) < 0)) {
         toast.error(`Informe o valor para "${p.name}".`);
         return;
       }
@@ -985,7 +985,7 @@ const Garcom = () => {
     try {
       const normalMenuItems = orderLines.map((line) => {
         const p = products.find((x) => x.id === line.productId);
-        let unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+        let unit = line.productValue != null ? Number(line.productValue) || 0 : (Number(p?.value) || 0);
         
         // Se há optionId, usar o valor da variação
         if (line.optionId && p?.variations && p.variations.length > 0) {
@@ -1415,7 +1415,7 @@ const Garcom = () => {
               </Typography>
               {orderLines.map((line, idx) => {
                 const p = products.find((x) => x.id === line.productId);
-                let unit = line.productValue != null ? line.productValue : (Number(p?.value) || 0);
+                let unit = line.productValue != null ? Number(line.productValue) || 0 : (Number(p?.value) || 0);
                 
                 // Se há optionId, usar o valor da variação
                 if (line.optionId && p?.variations && p.variations.length > 0) {
