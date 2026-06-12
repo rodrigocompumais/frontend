@@ -680,18 +680,51 @@ const Pdv = () => {
     handleVoltar();
   };
 
-  // Venda direta: carregar produtos ao entrar no modo
+  // Venda direta: carregar todos os produtos de cardápio (todas as páginas)
   useEffect(() => {
     if (!modoVendaDireta || !hasLanchonetes) return;
-    setLoadingProducts(true);
-    api
-      .get("/products", { params: { pageNumber: 1, isMenuProduct: true } })
-      .then(({ data }) => setProducts(data.products || []))
-      .catch((err) => {
-        toastError(err);
-        setProducts([]);
-      })
-      .finally(() => setLoadingProducts(false));
+
+    let cancelled = false;
+
+    const fetchAllMenuProducts = async () => {
+      setLoadingProducts(true);
+      try {
+        const allProducts = [];
+        let pageNumber = 1;
+        let hasMore = true;
+
+        while (hasMore) {
+          const { data } = await api.get("/products", {
+            params: { pageNumber, isMenuProduct: true },
+          });
+          allProducts.push(...(data.products || []));
+          hasMore = data.hasMore || false;
+          pageNumber++;
+        }
+
+        allProducts.sort((a, b) => {
+          const grupoA = (a.grupo || "").trim() || "Outros";
+          const grupoB = (b.grupo || "").trim() || "Outros";
+          const cmp = grupoA.localeCompare(grupoB);
+          if (cmp !== 0) return cmp;
+          return (a.name || "").localeCompare(b.name || "");
+        });
+
+        if (!cancelled) setProducts(allProducts);
+      } catch (err) {
+        if (!cancelled) {
+          toastError(err);
+          setProducts([]);
+        }
+      } finally {
+        if (!cancelled) setLoadingProducts(false);
+      }
+    };
+
+    fetchAllMenuProducts();
+    return () => {
+      cancelled = true;
+    };
   }, [modoVendaDireta, hasLanchonetes]);
 
   const addToCart = (product, optionId = null) => {
@@ -856,7 +889,7 @@ const Pdv = () => {
     if (!q) return products;
     return products.filter((p) => {
       const name = (p.name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-      const group = (p.grupo || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const group = (p.grupo || "").trim().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
       return name.includes(q) || group.includes(q);
     });
   }, [products, productSearch]);
@@ -865,7 +898,7 @@ const Pdv = () => {
   const groupedProducts = useMemo(() => {
     const groups = {};
     filteredProducts.forEach((p) => {
-      const g = p.grupo || "Outros";
+      const g = (p.grupo || "").trim() || "Outros";
       if (!groups[g]) groups[g] = [];
       groups[g].push(p);
     });
