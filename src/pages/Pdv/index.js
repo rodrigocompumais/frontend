@@ -19,6 +19,12 @@ import {
   Badge,
   Tabs,
   Tab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  IconButton,
+  InputAdornment,
 } from "@material-ui/core";
 import ArrowBackIcon from "@material-ui/icons/ArrowBack";
 import ReceiptIcon from "@material-ui/icons/Receipt";
@@ -31,6 +37,9 @@ import AddShoppingCartIcon from "@material-ui/icons/AddShoppingCart";
 import AddIcon from "@material-ui/icons/Add";
 import RemoveIcon from "@material-ui/icons/Remove";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
+import ViewListIcon from "@material-ui/icons/ViewList";
+import AppsIcon from "@material-ui/icons/Apps";
+import SearchIcon from "@material-ui/icons/Search";
 import { toast } from "react-toastify";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -417,6 +426,46 @@ const useStyles = makeStyles((theme) => {
       boxShadow: theme.shadows[2],
     },
   },
+  vendaDiretaProductListItem: {
+    cursor: "pointer",
+    borderRadius: 8,
+    border: `1px solid ${theme.palette.divider}`,
+    marginBottom: theme.spacing(0.5),
+    padding: theme.spacing(1, 1.5),
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    transition: "all 0.15s ease",
+    "&:hover": {
+      borderColor: primaryMain,
+      background: theme.palette.type === "dark" ? "rgba(255,255,255,0.04)" : `${primaryMain}08`,
+    },
+  },
+  productVariationBadge: {
+    fontSize: "0.68rem",
+    padding: "1px 5px",
+    borderRadius: 4,
+    background: theme.palette.type === "dark" ? "rgba(255,255,255,0.12)" : `${primaryMain}18`,
+    color: primaryMain,
+    fontWeight: 700,
+    marginLeft: theme.spacing(0.5),
+    whiteSpace: "nowrap",
+  },
+  productGroupHeader: {
+    fontWeight: 800,
+    fontSize: "0.7rem",
+    textTransform: "uppercase",
+    letterSpacing: "0.06em",
+    color: theme.palette.text.secondary,
+    padding: theme.spacing(1.5, 0, 0.5, 0),
+  },
+  vendaDiretaToolbar: {
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1),
+    marginBottom: theme.spacing(1.5),
+    flexWrap: "wrap",
+  },
   vendaDiretaCart: {
     width: SIDEBAR_WIDTH,
     minWidth: SIDEBAR_WIDTH,
@@ -472,6 +521,13 @@ const Pdv = () => {
   const [products, setProducts] = useState([]);
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [cart, setCart] = useState([]);
+  // Listagem de produtos: "grid" | "list"
+  const [productViewMode, setProductViewMode] = useState("list");
+  // Pesquisa de produtos
+  const [productSearch, setProductSearch] = useState("");
+  // Variações: produto aguardando seleção
+  const [variationDialogProduct, setVariationDialogProduct] = useState(null);
+  const [selectedVariationOptionId, setSelectedVariationOptionId] = useState(null);
   const [reciboPdvOpen, setReciboPdvOpen] = useState(false);
   const [reciboPdvData, setReciboPdvData] = useState(null);
   const [finalizando, setFinalizando] = useState(false);
@@ -638,20 +694,41 @@ const Pdv = () => {
       .finally(() => setLoadingProducts(false));
   }, [modoVendaDireta, hasLanchonetes]);
 
-  const addToCart = (product) => {
-    const value = Number(product.value) ?? 0;
+  const addToCart = (product, optionId = null) => {
+    const hasVariations = product.variations && product.variations.length > 0;
+    // Se tem variações e nenhuma foi passada, abrir diálogo de seleção
+    if (hasVariations && !optionId) {
+      const firstOptionId = product.variations[0]?.options?.[0]?.id ?? null;
+      setSelectedVariationOptionId(firstOptionId);
+      setVariationDialogProduct(product);
+      return;
+    }
+    let value = Number(product.value) || 0;
+    let displayName = product.name || "";
+    if (hasVariations && optionId) {
+      const variation = product.variations[0];
+      const option = variation?.options?.find((o) => o.id === optionId);
+      if (option) {
+        value = Number(option.value) || 0;
+        displayName = `${product.name} - ${option.label}`;
+      }
+    }
+    // Chave única considera productId + optionId para variações
+    const cartKey = optionId ? `${product.id}_${optionId}` : String(product.id);
     setCart((prev) => {
-      const found = prev.find((c) => c.productId === product.id);
+      const found = prev.find((c) => c.cartKey === cartKey);
       if (found) {
         return prev.map((c) =>
-          c.productId === product.id ? { ...c, quantity: c.quantity + 1 } : c
+          c.cartKey === cartKey ? { ...c, quantity: c.quantity + 1 } : c
         );
       }
       return [
         ...prev,
         {
+          cartKey,
           productId: product.id,
-          productName: product.name || "",
+          optionId: optionId || null,
+          productName: displayName,
           productValue: value,
           quantity: 1,
         },
@@ -659,23 +736,31 @@ const Pdv = () => {
     });
   };
 
-  const updateCartQty = (productId, delta) => {
+  const handleConfirmVariation = () => {
+    if (variationDialogProduct) {
+      addToCart(variationDialogProduct, selectedVariationOptionId);
+    }
+    setVariationDialogProduct(null);
+    setSelectedVariationOptionId(null);
+  };
+
+  const updateCartQty = (cartKey, delta) => {
     setCart((prev) =>
       prev
         .map((c) =>
-          c.productId === productId ? { ...c, quantity: c.quantity + delta } : c
+          c.cartKey === cartKey ? { ...c, quantity: c.quantity + delta } : c
         )
         .filter((c) => c.quantity > 0)
     );
   };
 
-  const removeFromCart = (productId) => {
-    setCart((prev) => prev.filter((c) => c.productId !== productId));
+  const removeFromCart = (cartKey) => {
+    setCart((prev) => prev.filter((c) => c.cartKey !== cartKey));
   };
 
-  const cartTotal = cart.reduce(
-    (sum, c) => sum + (Number(c.productValue) || 0) * (c.quantity || 0),
-    0
+  const cartTotal = useMemo(
+    () => cart.reduce((sum, c) => sum + (Number(c.productValue) || 0) * (c.quantity || 0), 0),
+    [cart]
   );
 
   const totalPagoPdv = (pagamentos || []).reduce((s, p) => s + Number(p.valor || 0), 0);
@@ -762,7 +847,30 @@ const Pdv = () => {
     setPagamentos([]);
     setValorAtual("");
     setMeioPagamento("dinheiro");
+    setProductSearch("");
   };
+
+  // Produtos filtrados pela pesquisa
+  const filteredProducts = useMemo(() => {
+    const q = (productSearch || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    if (!q) return products;
+    return products.filter((p) => {
+      const name = (p.name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const group = (p.grupo || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      return name.includes(q) || group.includes(q);
+    });
+  }, [products, productSearch]);
+
+  // Produtos agrupados por grupo
+  const groupedProducts = useMemo(() => {
+    const groups = {};
+    filteredProducts.forEach((p) => {
+      const g = p.grupo || "Outros";
+      if (!groups[g]) groups[g] = [];
+      groups[g].push(p);
+    });
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredProducts]);
 
   const tipoLabel = selectedMesa?.type === "comanda" ? "Comanda" : "Mesa";
   const numeroLabel = selectedMesa?.name || selectedMesa?.number || selectedMesa?.id;
@@ -815,38 +923,140 @@ const Pdv = () => {
       {modoVendaDireta ? (
         <div className={classes.vendaDiretaLayout}>
           <div className={classes.vendaDiretaProducts}>
-            <Typography variant="subtitle1" gutterBottom style={{ fontWeight: 700, marginBottom: 16 }}>
-              Produtos
-            </Typography>
+            {/* Toolbar: pesquisa + toggle de vista */}
+            <div className={classes.vendaDiretaToolbar}>
+              <TextField
+                size="small"
+                variant="outlined"
+                placeholder="Pesquisar produto ou grupo…"
+                value={productSearch}
+                onChange={(e) => setProductSearch(e.target.value)}
+                style={{ flex: 1, minWidth: 180 }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" color="disabled" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+              <IconButton
+                size="small"
+                title="Vista em lista"
+                onClick={() => setProductViewMode("list")}
+                color={productViewMode === "list" ? "primary" : "default"}
+              >
+                <ViewListIcon />
+              </IconButton>
+              <IconButton
+                size="small"
+                title="Vista em grade"
+                onClick={() => setProductViewMode("grid")}
+                color={productViewMode === "grid" ? "primary" : "default"}
+              >
+                <AppsIcon />
+              </IconButton>
+            </div>
+
             {loadingProducts ? (
               <Box display="flex" justifyContent="center" py={4}>
                 <CircularProgress />
               </Box>
-            ) : (
-              <div className={classes.vendaDiretaProductGrid}>
-                {(products || []).map((product) => (
-                  <Paper
-                    key={product.id}
-                    className={classes.vendaDiretaProductCard}
-                    elevation={0}
-                    onClick={() => addToCart(product)}
-                  >
-                    <Typography variant="subtitle2" style={{ fontWeight: 700 }} noWrap>
-                      {product.name || "Produto"}
-                    </Typography>
-                    <Typography variant="body2" color="textSecondary">
-                      R$ {Number(product.value ?? 0).toFixed(2)}
-                    </Typography>
-                  </Paper>
+            ) : filteredProducts.length === 0 ? (
+              <Typography color="textSecondary" style={{ padding: 16 }}>
+                {productSearch ? `Nenhum produto encontrado para "${productSearch}".` : "Nenhum produto no cardápio."}
+              </Typography>
+            ) : productViewMode === "grid" ? (
+              /* ── Vista grade ──────────────────────────────── */
+              <>
+                {groupedProducts.map(([group, items]) => (
+                  <div key={group}>
+                    <Typography className={classes.productGroupHeader}>{group}</Typography>
+                    <div className={classes.vendaDiretaProductGrid}>
+                      {items.map((product) => {
+                        const hasVariations = product.variations && product.variations.length > 0;
+                        const displayPrice = hasVariations
+                          ? (() => {
+                              const opts = product.variations[0]?.options || [];
+                              if (opts.length === 0) return null;
+                              const min = Math.min(...opts.map((o) => Number(o.value) || 0));
+                              const max = Math.max(...opts.map((o) => Number(o.value) || 0));
+                              return min === max
+                                ? `R$ ${min.toFixed(2)}`
+                                : `R$ ${min.toFixed(2)} – ${max.toFixed(2)}`;
+                            })()
+                          : `R$ ${Number(product.value ?? 0).toFixed(2)}`;
+                        return (
+                          <Paper
+                            key={product.id}
+                            className={classes.vendaDiretaProductCard}
+                            elevation={0}
+                            onClick={() => addToCart(product)}
+                          >
+                            <Typography variant="subtitle2" style={{ fontWeight: 700 }} noWrap>
+                              {product.name || "Produto"}
+                              {hasVariations && (
+                                <span className={classes.productVariationBadge}>var.</span>
+                              )}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                              {displayPrice}
+                            </Typography>
+                          </Paper>
+                        );
+                      })}
+                    </div>
+                  </div>
                 ))}
-                {(!products || products.length === 0) && !loadingProducts && (
-                  <Typography color="textSecondary">Nenhum produto no cardápio.</Typography>
-                )}
-              </div>
+              </>
+            ) : (
+              /* ── Vista lista (padrão) ─────────────────────── */
+              <>
+                {groupedProducts.map(([group, items]) => (
+                  <div key={group}>
+                    <Typography className={classes.productGroupHeader}>{group}</Typography>
+                    {items.map((product) => {
+                      const hasVariations = product.variations && product.variations.length > 0;
+                      const displayPrice = hasVariations
+                        ? (() => {
+                            const opts = product.variations[0]?.options || [];
+                            if (opts.length === 0) return "—";
+                            const min = Math.min(...opts.map((o) => Number(o.value) || 0));
+                            const max = Math.max(...opts.map((o) => Number(o.value) || 0));
+                            return min === max
+                              ? `R$ ${min.toFixed(2)}`
+                              : `R$ ${min.toFixed(2)} – ${max.toFixed(2)}`;
+                          })()
+                        : `R$ ${Number(product.value ?? 0).toFixed(2)}`;
+                      return (
+                        <div
+                          key={product.id}
+                          className={classes.vendaDiretaProductListItem}
+                          onClick={() => addToCart(product)}
+                        >
+                          <Box flex={1} minWidth={0} display="flex" alignItems="center">
+                            <Typography variant="body2" style={{ fontWeight: 600 }} noWrap>
+                              {product.name || "Produto"}
+                            </Typography>
+                            {hasVariations && (
+                              <span className={classes.productVariationBadge}>variações</span>
+                            )}
+                          </Box>
+                          <Typography variant="body2" color="primary" style={{ fontWeight: 700, whiteSpace: "nowrap", marginLeft: 12 }}>
+                            {displayPrice}
+                          </Typography>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </>
             )}
           </div>
           <aside className={classes.vendaDiretaCart}>
-            <Typography className={classes.vendaDiretaCartTitle}>Carrinho</Typography>
+            <Typography className={classes.vendaDiretaCartTitle}>
+              Carrinho {cart.length > 0 && `(${cart.reduce((s, c) => s + c.quantity, 0)} itens)`}
+            </Typography>
             <div className={classes.vendaDiretaCartList}>
               {cart.length === 0 ? (
                 <Typography variant="body2" color="textSecondary" style={{ padding: 16 }}>
@@ -854,17 +1064,19 @@ const Pdv = () => {
                 </Typography>
               ) : (
                 cart.map((item) => (
-                  <div key={item.productId} className={classes.vendaDiretaCartRow}>
+                  <div key={item.cartKey} className={classes.vendaDiretaCartRow}>
                     <Box flex={1} minWidth={0}>
                       <Typography variant="body2" noWrap>{item.productName}</Typography>
                       <Typography variant="caption" color="textSecondary">
                         R$ {Number(item.productValue || 0).toFixed(2)} × {item.quantity}
+                        {" = "}
+                        <strong>R$ {(Number(item.productValue || 0) * item.quantity).toFixed(2)}</strong>
                       </Typography>
                     </Box>
                     <Box display="flex" alignItems="center">
                       <Button
                         size="small"
-                        onClick={() => updateCartQty(item.productId, -1)}
+                        onClick={() => updateCartQty(item.cartKey, -1)}
                         style={{ minWidth: 32, padding: 4 }}
                       >
                         <RemoveIcon fontSize="small" />
@@ -874,14 +1086,14 @@ const Pdv = () => {
                       </Typography>
                       <Button
                         size="small"
-                        onClick={() => updateCartQty(item.productId, 1)}
+                        onClick={() => updateCartQty(item.cartKey, 1)}
                         style={{ minWidth: 32, padding: 4 }}
                       >
                         <AddIcon fontSize="small" />
                       </Button>
                       <Button
                         size="small"
-                        onClick={() => removeFromCart(item.productId)}
+                        onClick={() => removeFromCart(item.cartKey)}
                         style={{ minWidth: 32, padding: 4 }}
                       >
                         <DeleteOutlineIcon fontSize="small" />
@@ -1396,6 +1608,61 @@ const Pdv = () => {
         data={reciboPdvData}
         mesa={null}
       />
+
+      {/* Diálogo de seleção de variação */}
+      <Dialog
+        open={Boolean(variationDialogProduct)}
+        onClose={() => { setVariationDialogProduct(null); setSelectedVariationOptionId(null); }}
+        maxWidth="xs"
+        fullWidth
+      >
+        <DialogTitle>
+          {variationDialogProduct?.name} — Selecione a variação
+        </DialogTitle>
+        <DialogContent>
+          {variationDialogProduct?.variations?.[0]?.options?.map((opt) => {
+            const selected = selectedVariationOptionId === opt.id;
+            return (
+              <div
+                key={opt.id}
+                onClick={() => setSelectedVariationOptionId(opt.id)}
+                style={{
+                  cursor: "pointer",
+                  padding: "10px 14px",
+                  marginBottom: 6,
+                  borderRadius: 8,
+                  border: `2px solid ${selected ? "#0EA5E9" : "#e2e8f0"}`,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  background: selected ? "rgba(14,165,233,0.07)" : "transparent",
+                  transition: "all 0.15s",
+                }}
+              >
+                <Typography variant="body2" style={{ fontWeight: selected ? 700 : 400 }}>
+                  {opt.label}
+                </Typography>
+                <Typography variant="body2" style={{ fontWeight: 700, color: "#0EA5E9" }}>
+                  R$ {Number(opt.value || 0).toFixed(2)}
+                </Typography>
+              </div>
+            );
+          })}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => { setVariationDialogProduct(null); setSelectedVariationOptionId(null); }}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color="primary"
+            disabled={!selectedVariationOptionId}
+            onClick={handleConfirmVariation}
+          >
+            Adicionar ao carrinho
+          </Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 };
