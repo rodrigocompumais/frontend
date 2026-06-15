@@ -1,6 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+
+const EMPTY_ARRAY = Object.freeze([]);
+
+const stableArrayKey = (value) => JSON.stringify(value ?? EMPTY_ARRAY);
 
 const useTicketsHistory = (filters = {}) => {
   const [groups, setGroups] = useState([]);
@@ -9,17 +13,23 @@ const useTicketsHistory = (filters = {}) => {
   const [pageNumber, setPageNumber] = useState(1);
   const [count, setCount] = useState(0);
   const abortRef = useRef(null);
+  const loadingMoreRef = useRef(false);
 
   const {
     searchParam = "",
     dateFrom = "",
     dateTo = "",
-    queueIds = [],
-    whatsappIds = [],
-    userIds = [],
-    tags = [],
+    queueIds = EMPTY_ARRAY,
+    whatsappIds = EMPTY_ARRAY,
+    userIds = EMPTY_ARRAY,
+    tags = EMPTY_ARRAY,
     groupBy = "contact",
   } = filters;
+
+  const queueIdsKey = useMemo(() => stableArrayKey(queueIds), [queueIds]);
+  const whatsappIdsKey = useMemo(() => stableArrayKey(whatsappIds), [whatsappIds]);
+  const userIdsKey = useMemo(() => stableArrayKey(userIds), [userIds]);
+  const tagsKey = useMemo(() => stableArrayKey(tags), [tags]);
 
   const fetchGroups = useCallback(
     async (page = 1, reset = false) => {
@@ -38,10 +48,10 @@ const useTicketsHistory = (filters = {}) => {
             searchParam: searchParam || undefined,
             dateFrom: dateFrom || undefined,
             dateTo: dateTo || undefined,
-            queueIds: JSON.stringify(queueIds),
-            whatsappIds: JSON.stringify(whatsappIds),
-            users: JSON.stringify(userIds),
-            tags: JSON.stringify(tags),
+            queueIds: queueIdsKey,
+            whatsappIds: whatsappIdsKey,
+            users: userIdsKey,
+            tags: tagsKey,
           },
         });
 
@@ -56,9 +66,19 @@ const useTicketsHistory = (filters = {}) => {
         }
       } finally {
         setLoading(false);
+        loadingMoreRef.current = false;
       }
     },
-    [searchParam, dateFrom, dateTo, queueIds, whatsappIds, userIds, tags, groupBy]
+    [
+      searchParam,
+      dateFrom,
+      dateTo,
+      queueIdsKey,
+      whatsappIdsKey,
+      userIdsKey,
+      tagsKey,
+      groupBy,
+    ]
   );
 
   useEffect(() => {
@@ -68,11 +88,11 @@ const useTicketsHistory = (filters = {}) => {
     return () => clearTimeout(delay);
   }, [fetchGroups, searchParam]);
 
-  const loadMore = () => {
-    if (!loading && hasMore) {
-      fetchGroups(pageNumber + 1, false);
-    }
-  };
+  const loadMore = useCallback(() => {
+    if (loading || !hasMore || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
+    fetchGroups(pageNumber + 1, false);
+  }, [loading, hasMore, pageNumber, fetchGroups]);
 
   const searchGlobal = useCallback(
     async (query) => {
@@ -83,10 +103,10 @@ const useTicketsHistory = (filters = {}) => {
             query: query.trim(),
             dateFrom: dateFrom || undefined,
             dateTo: dateTo || undefined,
-            queueIds: JSON.stringify(queueIds),
-            whatsappIds: JSON.stringify(whatsappIds),
-            users: JSON.stringify(userIds),
-            tags: JSON.stringify(tags),
+            queueIds: queueIdsKey,
+            whatsappIds: whatsappIdsKey,
+            users: userIdsKey,
+            tags: tagsKey,
           },
         });
         return data.results || [];
@@ -95,7 +115,7 @@ const useTicketsHistory = (filters = {}) => {
         return [];
       }
     },
-    [dateFrom, dateTo, queueIds, whatsappIds, userIds, tags]
+    [dateFrom, dateTo, queueIdsKey, whatsappIdsKey, userIdsKey, tagsKey]
   );
 
   return {

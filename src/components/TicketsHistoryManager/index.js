@@ -327,6 +327,11 @@ const TicketsHistoryManager = ({ selectedContactId, onSelectContact, compactIntr
               >
                 <Avatar
                   src={contact?.profilePicUrl}
+                  imgProps={{
+                    onError: (e) => {
+                      e.currentTarget.style.display = "none";
+                    },
+                  }}
                   style={{ width: 52, height: 52, marginRight: 12 }}
                 >
                   {contact?.name?.charAt(0)}
