@@ -27,6 +27,7 @@ import { formatDistanceToNow } from "date-fns";
 import MesaQRModal from "../MesaQRModal";
 import { ptBR } from "date-fns/locale";
 import { formatMesaComandaTitle } from "../../helpers/mesaDisplayLabel";
+import { i18n } from "../../translate/i18n";
 
 const useStyles = makeStyles((theme) => ({
   card: {
@@ -242,7 +243,7 @@ const MesaCard = ({
                 variant="outlined"
                 onClick={() => { if (onLiberar) onLiberar(mesa); }}
               >
-                Liberar
+                {i18n.t("mesas.closeAccount")}
               </Button>
             </>
           ) : (

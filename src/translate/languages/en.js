@@ -2306,6 +2306,19 @@ const messages = {
         agendamentosHoje: "Appointments today",
         pendentesConfirmacao: "Pending confirmation",
       },
+      pdv: {
+        discount: {
+          title: "Discount",
+          type: "Type",
+          fixed: "R$",
+          percent: "%",
+          fixedLabel: "Amount",
+          percentLabel: "Percent",
+          subtotal: "Subtotal",
+          amount: "Discount",
+          totalDue: "Total due",
+        },
+      },
       mesas: {
         closeAccountTitle: "Close account - Table",
         numberOfPeople: "Number of people",
@@ -2327,6 +2340,18 @@ const messages = {
         total: "Total",
         tableLiberated: "Table released",
         configurePixKey: "Configure a PIX key in settings (PIX Billing) to generate the QR Code.",
+        closeAccount: "Close bill",
+        discount: {
+          title: "Discount",
+          type: "Type",
+          fixed: "R$",
+          percent: "%",
+          fixedLabel: "Amount R$",
+          percentLabel: "Percent",
+          subtotal: "Subtotal",
+          amount: "Discount",
+          totalDue: "Total due",
+        },
       },
       forms: {
         title: "Formulários",

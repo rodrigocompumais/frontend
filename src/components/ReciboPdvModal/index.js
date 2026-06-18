@@ -211,6 +211,22 @@ function buildReciboRows(data, modo) {
   }
 
   rows.push({ kind: "hr" });
+  const descontoVal = Number(data.desconto || 0);
+  const subtotalVal = data.subtotal != null ? Number(data.subtotal) : null;
+  if (descontoVal > 0.001) {
+    rows.push({
+      kind: "row",
+      left: "Subtotal",
+      right: formatMoney(subtotalVal != null ? subtotalVal : Number(data.total || 0) + descontoVal),
+      muted: true,
+    });
+    rows.push({
+      kind: "row",
+      left: "Desconto",
+      right: `- ${formatMoney(descontoVal)}`,
+      muted: true,
+    });
+  }
   rows.push({
     kind: "total",
     left: "TOTAL:",

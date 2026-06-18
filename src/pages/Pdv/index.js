@@ -8,10 +8,6 @@ import {
   Button,
   CircularProgress,
   TextField,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   List,
   ListItem,
   ListItemText,
@@ -53,6 +49,9 @@ import {
   getOcupanteNome,
   mesaMatchesSearch,
 } from "../../helpers/mesaSearch";
+import DescontoCheckoutFields, { useDescontoTotals } from "../../components/DescontoCheckoutFields";
+import MeioPagamentoSelector from "../../components/MeioPagamentoSelector";
+import { buildDescontoPayload } from "../../helpers/gourmetOrderTotals";
 
 const SIDEBAR_WIDTH = 320;
 const BOTTOM_BAR_HEIGHT = 72;
@@ -545,6 +544,8 @@ const Pdv = () => {
   const [valorAtual, setValorAtual] = useState("");
   const [meioPagamento, setMeioPagamento] = useState("dinheiro");
   const [divisaoPartes, setDivisaoPartes] = useState(2);
+  const [descontoTipo, setDescontoTipo] = useState("fixed");
+  const [descontoValorInput, setDescontoValorInput] = useState("");
 
   // Fullscreen ao abrir o PDV
   useEffect(() => {
@@ -963,9 +964,15 @@ const Pdv = () => {
     setCart((prev) => prev.filter((c) => c.cartKey !== cartKey));
   };
 
-  const cartTotal = useMemo(
+  const cartSubtotal = useMemo(
     () => cart.reduce((sum, c) => sum + getCartLineUnitTotal(c) * (c.quantity || 0), 0),
     [cart]
+  );
+
+  const { desconto: descontoEfetivo, total: cartTotal } = useDescontoTotals(
+    cartSubtotal,
+    descontoTipo,
+    descontoValorInput
   );
 
   const totalPagoPdv = (pagamentos || []).reduce((s, p) => s + Number(p.valor || 0), 0);
@@ -1024,7 +1031,8 @@ const Pdv = () => {
       } else {
         meiosPagamento = [{ metodo: meioPagamento, valor: cartTotal }];
       }
-      const { data } = await api.post("/pdv/venda", { itens, total: cartTotal, meiosPagamento });
+      const desconto = buildDescontoPayload(descontoTipo, descontoValorInput);
+      const { data } = await api.post("/pdv/venda", { itens, total: cartTotal, desconto, meiosPagamento });
       setReciboPdvData({
         mesa: null,
         cliente: null,
@@ -1036,6 +1044,8 @@ const Pdv = () => {
             total: data.total,
           },
         ],
+        subtotal: data.subtotal ?? cartSubtotal,
+        desconto: data.desconto ?? descontoEfetivo,
         total: data.total,
         meiosPagamento: data.meiosPagamento || meiosPagamento,
       });
@@ -1043,6 +1053,8 @@ const Pdv = () => {
       setCart([]);
       setPagamentos([]);
       setValorAtual("");
+      setDescontoTipo("fixed");
+      setDescontoValorInput("");
     } catch (err) {
       toastError(err);
     } finally {
@@ -1063,6 +1075,8 @@ const Pdv = () => {
     setValorAtual("");
     setMeioPagamento("dinheiro");
     setProductSearch("");
+    setDescontoTipo("fixed");
+    setDescontoValorInput("");
   };
 
   // Produtos filtrados pela pesquisa
@@ -1339,29 +1353,37 @@ const Pdv = () => {
               )}
             </div>
             <div className={classes.vendaDiretaCartFooter}>
-              <Typography variant="h6" style={{ marginBottom: 8 }}>
-                Total: R$ {cartTotal.toFixed(2)}
-              </Typography>
+              {cart.length > 0 ? (
+                <DescontoCheckoutFields
+                  subtotal={cartSubtotal}
+                  descontoTipo={descontoTipo}
+                  setDescontoTipo={setDescontoTipo}
+                  descontoValorInput={descontoValorInput}
+                  setDescontoValorInput={setDescontoValorInput}
+                />
+              ) : (
+                <Typography variant="h6" style={{ marginBottom: 8 }}>
+                  Total: R$ {cartTotal.toFixed(2)}
+                </Typography>
+              )}
               <Box mb={1}>
-                <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap">
-                  <FormControl variant="outlined" size="small" style={{ minWidth: 120 }} disabled={pagamentoHibrido && restantePdv <= 0}>
-                    <InputLabel>Meio</InputLabel>
-                    <Select value={meioPagamento} onChange={(e) => setMeioPagamento(e.target.value)} label="Meio" disabled={finalizando}>
-                      <MenuItem value="dinheiro">Dinheiro</MenuItem>
-                      <MenuItem value="cartao">Cartão</MenuItem>
-                      <MenuItem value="pix">Pix</MenuItem>
-                      <MenuItem value="outro">Outro</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <Button
-                    size="small"
-                    color="primary"
-                    variant={pagamentoHibrido ? "contained" : "outlined"}
-                    onClick={() => setPagamentoHibrido((v) => !v)}
-                    disabled={finalizando}
-                  >
-                    {pagamentoHibrido ? "Híbrido" : "Híbrido?"}
-                  </Button>
+                <Box display="flex" flexDirection="column" style={{ gap: 10 }}>
+                  <MeioPagamentoSelector
+                    value={meioPagamento}
+                    onChange={setMeioPagamento}
+                    disabled={(pagamentoHibrido && restantePdv <= 0) || finalizando}
+                  />
+                  <Box display="flex" justifyContent="flex-end">
+                    <Button
+                      size="small"
+                      color="primary"
+                      variant={pagamentoHibrido ? "contained" : "outlined"}
+                      onClick={() => setPagamentoHibrido((v) => !v)}
+                      disabled={finalizando}
+                    >
+                      {pagamentoHibrido ? "Híbrido" : "Híbrido?"}
+                    </Button>
+                  </Box>
                 </Box>
 
                 {pagamentoHibrido && cart.length > 0 && (

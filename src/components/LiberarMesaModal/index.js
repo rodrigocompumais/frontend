@@ -4,10 +4,6 @@ import {
   Typography,
   Paper,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -23,6 +19,9 @@ import toastError from "../../errors/toastError";
 import useSettings from "../../hooks/useSettings";
 import { i18n } from "../../translate/i18n";
 import ReciboPdvModal from "../ReciboPdvModal";
+import DescontoCheckoutFields, { useDescontoTotals } from "../DescontoCheckoutFields";
+import MeioPagamentoSelector from "../MeioPagamentoSelector";
+import { buildDescontoPayload } from "../../helpers/gourmetOrderTotals";
 
 export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
   const [resumoConta, setResumoConta] = useState(null);
@@ -35,6 +34,8 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
   const [pagamentoHibrido, setPagamentoHibrido] = useState(false);
   const [pagamentos, setPagamentos] = useState([]);
   const [valorAtual, setValorAtual] = useState("");
+  const [descontoTipo, setDescontoTipo] = useState("fixed");
+  const [descontoValorInput, setDescontoValorInput] = useState("");
   const [settingsPix, setSettingsPix] = useState({ pixKey: "", pixReceiverName: "", pixReceiverCity: "" });
 
   const { getAll: getAllSettings } = useSettings();
@@ -47,6 +48,8 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
     setPagamentoHibrido(false);
     setPagamentos([]);
     setValorAtual("");
+    setDescontoTipo("fixed");
+    setDescontoValorInput("");
     setLoadingResumo(true);
     api
       .get(`/mesas/${mesa.id}/resumo-conta`)
@@ -70,7 +73,12 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const totalConta = Number(resumoConta?.total || 0);
+  const subtotalConta = Number(resumoConta?.subtotal ?? resumoConta?.total ?? 0);
+  const { desconto: descontoEfetivo, total: totalConta } = useDescontoTotals(
+    subtotalConta,
+    descontoTipo,
+    descontoValorInput
+  );
   const totalPago = (pagamentos || []).reduce((s, p) => s + Number(p.valor || 0), 0);
   const restante = totalConta - totalPago;
 
@@ -94,7 +102,7 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
 
   const handleConfirmarLiberar = async () => {
     if (!mesa?.id) return;
-    const total = Number(resumoConta?.total || 0);
+    const desconto = buildDescontoPayload(descontoTipo, descontoValorInput);
     let meiosPagamento = null;
     if (pagamentoHibrido) {
       if (pagamentos.length === 0) {
@@ -107,14 +115,16 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
       }
       meiosPagamento = pagamentos.map((p) => ({ metodo: p.metodo, valor: Number(p.valor) }));
     } else {
-      meiosPagamento = [{ metodo: meioPagamento, valor: total }];
+      meiosPagamento = [{ metodo: meioPagamento, valor: totalConta }];
     }
 
     setLiberando(true);
     try {
-      await api.put(`/mesas/${mesa.id}/liberar`, { meiosPagamento });
+      await api.put(`/mesas/${mesa.id}/liberar`, { meiosPagamento, desconto });
       toast.success(i18n.t("mesas.tableLiberated"));
-      const reciboPayload = resumoConta ? { ...resumoConta, mesa: resumoConta.mesa || mesa } : { pedidos: [], total: 0, mesa, cliente: null };
+      const reciboPayload = resumoConta
+        ? { ...resumoConta, mesa: resumoConta.mesa || mesa, subtotal: subtotalConta, desconto: descontoEfetivo, total: totalConta }
+        : { pedidos: [], total: 0, subtotal: 0, desconto: 0, mesa, cliente: null };
       if (meiosPagamento) reciboPayload.meiosPagamento = meiosPagamento;
       setReciboData(reciboPayload);
       setShowRecibo(true);
@@ -144,7 +154,7 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
   return (
     <>
     {mesa ? (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth scroll="paper">
       <DialogTitle>
         {i18n.t("mesas.closeAccountTitle")} {mesa.number || mesa.name}
         {resumoConta?.cliente && (
@@ -160,38 +170,44 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
           </Box>
         ) : resumoConta ? (
           <Box>
-            {resumoConta.pedidos.length === 0 ? (
+            {resumoConta.pedidos.length === 0 && subtotalConta <= 0 ? (
               <Typography color="textSecondary">{i18n.t("mesas.noOrders")}</Typography>
             ) : (
               <>
-                <Typography variant="subtitle2" gutterBottom>
-                  {i18n.t("mesas.ordersTitle")}
-                </Typography>
-                {resumoConta.pedidos.map((p) => (
-                  <Paper key={p.id} variant="outlined" style={{ padding: 12, marginBottom: 8 }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="center">
-                      <Typography variant="body2">
-                        {p.protocol} - {new Date(p.submittedAt).toLocaleString("pt-BR")}
-                      </Typography>
-                      <Typography variant="body2" fontWeight={600}>
-                        R$ {Number(p.total).toFixed(2).replace(".", ",")}
-                      </Typography>
-                    </Box>
-                    {p.menuItems?.length > 0 && (
-                      <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 4 }}>
-                        {p.menuItems.map((i) => `${i.quantity}x ${i.productName || ""}`).join(", ")}
-                      </Typography>
-                    )}
-                  </Paper>
-                ))}
-                <Box mt={2} pt={2} borderTop={1} borderColor="divider">
-                  <Typography variant="h6" style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>{i18n.t("mesas.total")}</span>
-                    <span>R$ {Number(resumoConta.total).toFixed(2).replace(".", ",")}</span>
-                  </Typography>
-                </Box>
                 {resumoConta.pedidos.length > 0 && (
                   <>
+                    <Typography variant="subtitle2" gutterBottom>
+                      {i18n.t("mesas.ordersTitle")}
+                    </Typography>
+                    {resumoConta.pedidos.map((p) => (
+                      <Paper key={p.id} variant="outlined" style={{ padding: 12, marginBottom: 8 }}>
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Typography variant="body2">
+                            {p.protocol} - {new Date(p.submittedAt).toLocaleString("pt-BR")}
+                          </Typography>
+                          <Typography variant="body2" fontWeight={600}>
+                            R$ {Number(p.total).toFixed(2).replace(".", ",")}
+                          </Typography>
+                        </Box>
+                        {p.menuItems?.length > 0 && (
+                          <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 4 }}>
+                            {p.menuItems.map((i) => `${i.quantity}x ${i.productName || ""}`).join(", ")}
+                          </Typography>
+                        )}
+                      </Paper>
+                    ))}
+                  </>
+                )}
+                {subtotalConta > 0 && (
+                  <>
+                    <DescontoCheckoutFields
+                      subtotal={subtotalConta}
+                      descontoTipo={descontoTipo}
+                      setDescontoTipo={setDescontoTipo}
+                      descontoValorInput={descontoValorInput}
+                      setDescontoValorInput={setDescontoValorInput}
+                      translationPrefix="mesas.discount"
+                    />
                     <Box mt={2}>
                       <TextField
                         type="number"
@@ -205,33 +221,31 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
                       />
                       {numeroPessoas > 1 && (
                         <Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
-                          {i18n.t("mesas.valuePerPerson")}: R$ {(Number(resumoConta.total) / numeroPessoas).toFixed(2).replace(".", ",")}
+                          {i18n.t("mesas.valuePerPerson")}: R$ {(totalConta / numeroPessoas).toFixed(2).replace(".", ",")}
                         </Typography>
                       )}
                     </Box>
                     <Box mt={2}>
-                      <Box display="flex" alignItems="center" justifyContent="space-between" flexWrap="wrap">
-                        <FormControl variant="outlined" size="small" style={{ minWidth: 140 }} disabled={pagamentoHibrido && restante <= 0}>
-                          <InputLabel>{i18n.t("mesas.paymentMethod")}</InputLabel>
-                          <Select value={meioPagamento} onChange={(e) => setMeioPagamento(e.target.value)} label={i18n.t("mesas.paymentMethod")}>
-                            <MenuItem value="pix">{i18n.t("mesas.paymentMethods.pix")}</MenuItem>
-                            <MenuItem value="dinheiro">{i18n.t("mesas.paymentMethods.dinheiro")}</MenuItem>
-                            <MenuItem value="cartao">{i18n.t("mesas.paymentMethods.cartao")}</MenuItem>
-                            <MenuItem value="outro">{i18n.t("mesas.paymentMethods.outro")}</MenuItem>
-                          </Select>
-                        </FormControl>
-                        <Button
-                          size="small"
-                          color="primary"
-                          variant={pagamentoHibrido ? "contained" : "outlined"}
-                          onClick={() => setPagamentoHibrido((v) => !v)}
-                        >
-                          {pagamentoHibrido ? "Híbrido (ativo)" : "Pagamento híbrido"}
-                        </Button>
+                      <Box display="flex" flexDirection="column" style={{ gap: 12 }}>
+                        <MeioPagamentoSelector
+                          value={meioPagamento}
+                          onChange={setMeioPagamento}
+                          disabled={pagamentoHibrido && restante <= 0}
+                        />
+                        <Box display="flex" justifyContent="flex-end">
+                          <Button
+                            size="small"
+                            color="primary"
+                            variant={pagamentoHibrido ? "contained" : "outlined"}
+                            onClick={() => setPagamentoHibrido((v) => !v)}
+                          >
+                            {pagamentoHibrido ? "Híbrido (ativo)" : "Pagamento híbrido"}
+                          </Button>
+                        </Box>
                       </Box>
                     </Box>
 
-                    {pagamentoHibrido && resumoConta?.pedidos?.length > 0 && (
+                    {pagamentoHibrido && subtotalConta > 0 && (
                       <Box mt={2}>
                         <Typography variant="subtitle2" color="textSecondary">
                           Restante: R$ {restante.toFixed(2).replace(".", ",")}
@@ -281,7 +295,7 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
                     {!pagamentoHibrido && meioPagamento === "pix" && settingsPix.pixKey && (
                       <Box mt={2} display="flex" flexDirection="column" alignItems="center">
                         {(() => {
-                          const valorPix = numeroPessoas > 1 ? Number(resumoConta.total) / numeroPessoas : Number(resumoConta.total);
+                          const valorPix = numeroPessoas > 1 ? totalConta / numeroPessoas : totalConta;
                           const valorFormatado = Number(valorPix.toFixed(2));
                           const transactionId = `M${mesa.id || 0}${Date.now()}`.slice(0, 25);
                           try {
@@ -347,7 +361,7 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
           variant="contained"
           color="primary"
           onClick={handleConfirmarLiberar}
-          disabled={liberando || (pagamentoHibrido && resumoConta?.pedidos?.length > 0 && restante > 0.01)}
+          disabled={liberando || (pagamentoHibrido && subtotalConta > 0 && restante > 0.01)}
         >
           {liberando ? <CircularProgress size={24} /> : i18n.t("mesas.closeAndLiberate")}
         </Button>
