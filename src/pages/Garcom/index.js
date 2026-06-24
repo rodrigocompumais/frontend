@@ -52,6 +52,10 @@ import {
   getOcupanteNome,
   mesaMatchesSearch,
 } from "../../helpers/mesaSearch";
+import {
+  getMobileDialogProps,
+  restoreBodyScrollLock,
+} from "../../helpers/mobileDialogProps";
 
 const filter = createFilterOptions({ trim: true });
 
@@ -289,6 +293,23 @@ const Garcom = () => {
   const [addOnModalLineIndex, setAddOnModalLineIndex] = useState(null);
   const [addOnModalSelectedAddons, setAddOnModalSelectedAddons] = useState([]);
   const [addOnModalPendingQuantity, setAddOnModalPendingQuantity] = useState(1);
+
+  const anyGarcomModalOpen =
+    orderDialogOpen ||
+    clienteDialogOpen ||
+    variablePriceDialogOpen ||
+    addOnModalOpen ||
+    halfAndHalfModalOpen ||
+    keywordDialogOpen ||
+    liberarModalOpen ||
+    contactModalOpen ||
+    notificationOpen;
+
+  useEffect(() => {
+    if (!anyGarcomModalOpen) {
+      restoreBodyScrollLock();
+    }
+  }, [anyGarcomModalOpen]);
 
   useEffect(() => {
     if (!hasLanchonetes && !modulesLoading) {
@@ -906,16 +927,20 @@ const Garcom = () => {
         const contactForPedido =
           mesaAtualizada.contact ||
           (semTelefone ? { id: occupyResult?.contactId, name: nomeSemTel, number: "" } : selectedContact);
-        setMesaParaPedido(mesaAtualizada);
-        setContactParaPedido(contactForPedido);
-        setOrderLines([]);
-        setHalfAndHalfItems([]);
-        setOrderDialogTab(0);
-        setOrderDialogOpen(true);
         setMesaParaOcupar(null);
         setSelectedContact(null);
         setSemTelefone(false);
         setNomeSemTelefone("");
+        restoreBodyScrollLock();
+        // Aguarda o modal de cliente fechar antes de abrir o de pedido (evita travamento no Android)
+        requestAnimationFrame(() => {
+          setMesaParaPedido(mesaAtualizada);
+          setContactParaPedido(contactForPedido);
+          setOrderLines([]);
+          setHalfAndHalfItems([]);
+          setOrderDialogTab(0);
+          setOrderDialogOpen(true);
+        });
       }
     } catch (err) {
       toastError(err);
@@ -937,6 +962,10 @@ const Garcom = () => {
       });
       const mesaConfirmada = data?.mesa;
       toast.success("Ocupação confirmada");
+
+      const mesaIdConfirmada = pendingMesaConfirmation.mesaId;
+      const contactConfirmado = pendingMesaConfirmation.contact || null;
+
       setKeywordDialogOpen(false);
       setOccupationKeyword("");
       setPendingMesaConfirmation(null);
@@ -944,17 +973,19 @@ const Garcom = () => {
       const mesasRes = await api.get("/mesas");
       setMesas(Array.isArray(mesasRes.data) ? mesasRes.data : []);
 
-      if (mesaConfirmada) {
-        setMesaParaPedido(mesaConfirmada);
-      } else {
-        const refreshed = (mesasRes.data || []).find((m) => m.id === pendingMesaConfirmation.mesaId);
-        setMesaParaPedido(refreshed || null);
-      }
-      setContactParaPedido(pendingMesaConfirmation.contact || null);
-      setOrderLines([]);
-      setHalfAndHalfItems([]);
-      setOrderDialogTab(0);
-      setOrderDialogOpen(true);
+      const mesaConfirmadaFinal =
+        mesaConfirmada || (mesasRes.data || []).find((m) => m.id === mesaIdConfirmada) || null;
+
+      restoreBodyScrollLock();
+
+      requestAnimationFrame(() => {
+        setMesaParaPedido(mesaConfirmadaFinal);
+        setContactParaPedido(contactConfirmado);
+        setOrderLines([]);
+        setHalfAndHalfItems([]);
+        setOrderDialogTab(0);
+        setOrderDialogOpen(true);
+      });
     } catch (err) {
       toastError(err);
     } finally {
@@ -1079,6 +1110,7 @@ const Garcom = () => {
       setOrderDialogOpen(false);
       setMesaParaPedido(null);
       setContactParaPedido(null);
+      restoreBodyScrollLock();
       const mesasRes = await api.get("/mesas");
       setMesas(Array.isArray(mesasRes.data) ? mesasRes.data : []);
     } catch (err) {
@@ -1279,12 +1311,14 @@ const Garcom = () => {
             setOrderLines([]);
             setHalfAndHalfItems([]);
             setOrderProductSearch("");
+            restoreBodyScrollLock();
           }
         }}
         maxWidth="sm"
         fullWidth
         scroll="paper"
         fullScreen={isXs}
+        {...getMobileDialogProps(isXs)}
       >
         <DialogTitle>
           Pedido — {mesaParaPedido ? formatMesaComandaTitle(mesaParaPedido) : ""}
@@ -1508,6 +1542,7 @@ const Garcom = () => {
         maxWidth="xs"
         fullWidth
         fullScreen={isXs}
+        {...getMobileDialogProps(isXs)}
       >
         <DialogTitle>Valor unitário</DialogTitle>
         <DialogContent>
@@ -1550,7 +1585,7 @@ const Garcom = () => {
         </DialogActions>
       </Dialog>
 
-      <Dialog open={addOnModalOpen} onClose={closeAddOnModal} maxWidth="sm" fullWidth>
+      <Dialog open={addOnModalOpen} onClose={closeAddOnModal} maxWidth="sm" fullWidth {...getMobileDialogProps(isXs)}>
         <DialogTitle>Adicionais — {addOnModalProduct?.name}</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
@@ -1624,6 +1659,7 @@ const Garcom = () => {
         maxWidth="sm"
         fullWidth
         fullScreen={isXs}
+        {...getMobileDialogProps(isXs)}
       >
         <DialogTitle>Meio a meio - {halfAndHalfModalProduct?.name}</DialogTitle>
         <DialogContent>
@@ -1709,6 +1745,7 @@ const Garcom = () => {
         maxWidth="sm"
         fullWidth
         fullScreen={isXs}
+        {...getMobileDialogProps(isXs)}
       >
         <DialogTitle>Ocupar mesa {mesaParaOcupar?.number || mesaParaOcupar?.name} - Informe o cliente</DialogTitle>
         <DialogContent>
@@ -1813,6 +1850,7 @@ const Garcom = () => {
         maxWidth="xs"
         fullWidth
         fullScreen={isXs}
+        {...getMobileDialogProps(isXs)}
       >
         <DialogTitle>Confirmar ocupação por palavra-chave</DialogTitle>
         <DialogContent>

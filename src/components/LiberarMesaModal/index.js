@@ -154,7 +154,7 @@ export default function LiberarMesaModal({ open, mesa, onClose, onSuccess }) {
   return (
     <>
     {mesa ? (
-    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth scroll="paper">
+    <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth scroll="paper" disableScrollLock>
       <DialogTitle>
         {i18n.t("mesas.closeAccountTitle")} {mesa.number || mesa.name}
         {resumoConta?.cliente && (

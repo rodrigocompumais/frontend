@@ -75,7 +75,7 @@ const OrderNotificationPopup = ({ open, order, onView, onClose }) => {
   };
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth disableScrollLock>
       <DialogTitle>
         <Box display="flex" alignItems="center" gap={1}>
           <ShoppingCartIcon color="primary" />
