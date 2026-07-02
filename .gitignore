@@ -2,6 +2,9 @@
 /node_modules/**
 /dist
 /build
+/build-next
+/build-previous
+/build-broken
 /coverage
 /logs
 /temp
