@@ -10,11 +10,7 @@ npm run build:live
 
 echo ""
 echo "==> Deploy concluído."
-echo "    O processo de serve DEVE apontar para build-live, não build:"
-echo "      serve -s build-live -l 3001"
-echo ""
-echo "    Se o PM2 ainda usa 'serve -s build', atualize uma vez:"
-echo "      pm2 delete compumais-frontend 2>/dev/null || true"
-echo "      pm2 start \"npx serve -s build-live -l 3001\" --name compumais-frontend --cwd \"$ROOT\""
+echo "    Compila em build-staging; publica ao final em build e build-live."
+echo "    PM2 pode continuar com: serve -s build -l 3001"
 echo ""
 echo "    Rollback: npm run build:rollback"

@@ -1,15 +1,12 @@
 ﻿const path = require('path');
 
-module.exports = function override(config, env) {
-  // Adicionar suporte para processar node_modules do reactflow
+function override(config, env) {
   const oneOfRule = config.module.rules.find((rule) => rule.oneOf);
-  
+
   if (oneOfRule) {
-    // Encontrar os plugins
     const nullishPlugin = require.resolve('@babel/plugin-proposal-nullish-coalescing-operator');
     const optionalPlugin = require.resolve('@babel/plugin-proposal-optional-chaining');
 
-    // Criar uma regra especÃ­fica para reactflow
     const reactflowRule = {
       test: /\.(js|jsx|mjs)$/,
       include: [
@@ -33,9 +30,17 @@ module.exports = function override(config, env) {
       },
     };
 
-    // Inserir no inÃ­cio do array oneOf para ter prioridade
     oneOfRule.oneOf.unshift(reactflowRule);
   }
 
   return config;
+}
+
+override.paths = (paths) => {
+  if (process.env.BUILD_STAGING === '1') {
+    paths.appBuild = path.resolve(__dirname, 'build-staging');
+  }
+  return paths;
 };
+
+module.exports = override;

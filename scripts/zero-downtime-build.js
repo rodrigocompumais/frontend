@@ -1,18 +1,24 @@
 /**
  * Deploy sem derrubar o site.
  *
- * react-scripts 3.x ignora BUILD_PATH e sempre compila em ./build
- * (apagando essa pasta no início). Por isso o serve deve apontar para
- * ./build-live — pasta separada atualizada só ao final via rsync atômico.
+ * Com BUILD_STAGING=1 o CRA compila em ./build-staging (via config-overrides.paths).
+ * As pastas servidas (build e build-live) só são atualizadas no final via rsync.
+ * Funciona mesmo com PM2 em "serve -s build".
  */
 const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
 const root = path.join(__dirname, "..");
-const stagingDir = path.join(root, "build");
+const stagingDir = path.join(root, "build-staging");
 const liveDir = path.join(root, "build-live");
+const legacyDir = path.join(root, "build");
 const previousDir = path.join(root, "build-previous");
+
+const publishTargets = [
+  { name: "build-live", dir: liveDir },
+  { name: "build", dir: legacyDir }
+];
 
 const log = (msg) => console.log(`[build:live] ${msg}`);
 
@@ -28,41 +34,46 @@ const commandExists = (cmd) => {
   return result.status === 0;
 };
 
-const assertIndexHtml = (dir) => {
+const assertIndexHtml = (dir, label) => {
   const indexPath = path.join(dir, "index.html");
   if (!fs.existsSync(indexPath)) {
-    throw new Error(`index.html não encontrado em ${dir}`);
+    throw new Error(`index.html não encontrado em ${label} (${dir})`);
   }
 };
 
-const runBuild = () => {
+const runStagingBuild = () => {
   const isWin = process.platform === "win32";
   const npmCmd = isWin ? "npm.cmd" : "npm";
 
-  return spawnSync(npmCmd, ["run", "build:internal"], {
+  return spawnSync(npmCmd, ["run", "build:staging"], {
     cwd: root,
     stdio: "inherit",
     env: {
       ...process.env,
+      BUILD_STAGING: "1",
       GENERATE_SOURCEMAP: "false",
       NODE_OPTIONS: process.env.NODE_OPTIONS || "--openssl-legacy-provider"
     }
   });
 };
 
-const backupLiveBuild = () => {
-  if (!fs.existsSync(liveDir)) {
+const backupCurrentLive = () => {
+  const source =
+    publishTargets.find((target) => fs.existsSync(path.join(target.dir, "index.html")))
+      ?.dir || null;
+
+  if (!source) {
     return;
   }
 
   removeDir(previousDir);
 
   if (process.platform === "win32") {
-    fs.cpSync(liveDir, previousDir, { recursive: true });
+    fs.cpSync(source, previousDir, { recursive: true });
     return;
   }
 
-  const result = spawnSync("cp", ["-a", liveDir, previousDir], {
+  const result = spawnSync("cp", ["-a", source, previousDir], {
     cwd: root,
     stdio: "inherit"
   });
@@ -72,9 +83,9 @@ const backupLiveBuild = () => {
   }
 };
 
-const publishWithRsync = () => {
-  if (!fs.existsSync(liveDir)) {
-    fs.mkdirSync(liveDir, { recursive: true });
+const rsyncPublish = (source, target) => {
+  if (!fs.existsSync(target)) {
+    fs.mkdirSync(target, { recursive: true });
   }
 
   const result = spawnSync(
@@ -84,63 +95,93 @@ const publishWithRsync = () => {
       "--delete",
       "--delay-updates",
       "--partial-dir=.rsync-partial",
-      `${stagingDir}/`,
-      `${liveDir}/`
+      `${source}/`,
+      `${target}/`
     ],
     { cwd: root, stdio: "inherit" }
   );
 
   if (result.status !== 0) {
-    throw new Error("rsync falhou ao publicar em build-live");
+    throw new Error(`rsync falhou ao publicar em ${target}`);
   }
 };
 
-const publishWithCopy = () => {
-  const tempDir = path.join(root, "build-live-next");
+const copyPublish = (source, target) => {
+  const tempDir = `${target}-next`;
 
   removeDir(tempDir);
-  fs.cpSync(stagingDir, tempDir, { recursive: true });
-
-  removeDir(liveDir);
-  fs.renameSync(tempDir, liveDir);
+  fs.cpSync(source, tempDir, { recursive: true });
+  removeDir(target);
+  fs.renameSync(tempDir, target);
 };
 
-const publishStagingToLive = () => {
-  assertIndexHtml(stagingDir);
-
-  log("Gerando backup da versão ao vivo em build-previous...");
-  backupLiveBuild();
-
+const publishToTarget = (source, target) => {
   if (commandExists("rsync")) {
-    log("Publicando build → build-live com rsync (sem downtime)...");
-    publishWithRsync();
-  } else {
-    log("rsync não encontrado — publicando com cópia local...");
-    publishWithCopy();
+    rsyncPublish(source, target);
+    return;
   }
 
-  assertIndexHtml(liveDir);
+  copyPublish(source, target);
+};
+
+const ensureInitialTargets = () => {
+  const seed = publishTargets.find((target) =>
+    fs.existsSync(path.join(target.dir, "index.html"))
+  );
+
+  if (!seed) {
+    return;
+  }
+
+  publishTargets.forEach((target) => {
+    if (!fs.existsSync(path.join(target.dir, "index.html"))) {
+      log(`Inicializando ${target.name} a partir de ${seed.name}...`);
+      fs.cpSync(seed.dir, target.dir, { recursive: true });
+    }
+  });
+};
+
+const publishStaging = () => {
+  assertIndexHtml(stagingDir, "build-staging");
+
+  log("Gerando backup da versão ao vivo em build-previous...");
+  backupCurrentLive();
+
+  publishTargets.forEach((target) => {
+    log(`Publicando build-staging → ${target.name}...`);
+    publishToTarget(stagingDir, target.dir);
+    assertIndexHtml(target.dir, target.name);
+  });
+
+  removeDir(stagingDir);
 };
 
 const main = () => {
-  if (!fs.existsSync(liveDir) && fs.existsSync(stagingDir)) {
-    log("Primeira publicação: copiando build existente para build-live...");
-    fs.cpSync(stagingDir, liveDir, { recursive: true });
+  ensureInitialTargets();
+
+  const hasLiveSite = publishTargets.some((target) =>
+    fs.existsSync(path.join(target.dir, "index.html"))
+  );
+
+  if (!hasLiveSite) {
+    log("Nenhum build publicado ainda — a primeira publicação ocorrerá ao final.");
+  } else {
+    log("Compilando em ./build-staging (build e build-live não serão alterados agora)...");
   }
 
-  log("Compilando em ./build (build-live continua servindo o site)...");
-  const result = runBuild();
+  const result = runStagingBuild();
 
   if (result.status !== 0) {
-    log("Build falhou — build-live não foi alterado.");
+    log("Build falhou — site em produção não foi alterado.");
+    removeDir(stagingDir);
     process.exit(result.status || 1);
   }
 
-  log("Publicando nova versão em build-live...");
-  publishStagingToLive();
+  log("Publicando nova versão...");
+  publishStaging();
 
-  log("Concluído. O serve deve apontar para build-live (não build).");
-  log("Ex.: serve -s build-live -l 3001");
+  log("Concluído. Site atualizado sem downtime.");
+  log("PM2 pode continuar com: serve -s build -l 3001");
 };
 
 main();

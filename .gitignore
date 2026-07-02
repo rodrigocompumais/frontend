@@ -3,6 +3,7 @@
 /dist
 /build
 /build-live
+/build-staging
 /build-next
 /build-previous
 /build-broken

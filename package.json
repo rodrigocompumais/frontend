@@ -86,6 +86,7 @@
         "dev": "set NODE_OPTIONS=--openssl-legacy-provider && react-app-rewired start",
         "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider GENERATE_SOURCEMAP=false react-app-rewired build",
         "build:internal": "cross-env NODE_OPTIONS=--openssl-legacy-provider GENERATE_SOURCEMAP=false react-app-rewired build",
+        "build:staging": "cross-env BUILD_STAGING=1 NODE_OPTIONS=--openssl-legacy-provider GENERATE_SOURCEMAP=false react-app-rewired build",
         "build:live": "node scripts/zero-downtime-build.js",
         "build:rollback": "node scripts/rollback-build.js",
         "deploy": "node scripts/zero-downtime-build.js",

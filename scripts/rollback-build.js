@@ -1,13 +1,16 @@
 /**
- * Restaura build-previous em build-live.
+ * Restaura build-previous em build e build-live.
  */
 const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
 const root = path.join(__dirname, "..");
-const liveDir = path.join(root, "build-live");
 const previousDir = path.join(root, "build-previous");
+const targets = [
+  path.join(root, "build-live"),
+  path.join(root, "build")
+];
 
 const log = (msg) => console.log(`[build:rollback] ${msg}`);
 
@@ -23,15 +26,10 @@ const commandExists = (cmd) => {
   return result.status === 0;
 };
 
-const main = () => {
-  if (!fs.existsSync(previousDir)) {
-    log("Não há build-previous para reverter.");
-    process.exit(1);
-  }
-
+const publishToTarget = (source, target) => {
   if (commandExists("rsync")) {
-    if (!fs.existsSync(liveDir)) {
-      fs.mkdirSync(liveDir, { recursive: true });
+    if (!fs.existsSync(target)) {
+      fs.mkdirSync(target, { recursive: true });
     }
 
     const result = spawnSync(
@@ -41,8 +39,8 @@ const main = () => {
         "--delete",
         "--delay-updates",
         "--partial-dir=.rsync-partial",
-        `${previousDir}/`,
-        `${liveDir}/`
+        `${source}/`,
+        `${target}/`
       ],
       { cwd: root, stdio: "inherit" }
     );
@@ -50,12 +48,24 @@ const main = () => {
     if (result.status !== 0) {
       process.exit(result.status || 1);
     }
-  } else {
-    removeDir(liveDir);
-    fs.cpSync(previousDir, liveDir, { recursive: true });
+    return;
   }
 
-  log("Rollback concluído — build-live restaurado.");
+  removeDir(target);
+  fs.cpSync(source, target, { recursive: true });
+};
+
+const main = () => {
+  if (!fs.existsSync(previousDir)) {
+    log("Não há build-previous para reverter.");
+    process.exit(1);
+  }
+
+  targets.forEach((target) => {
+    publishToTarget(previousDir, target);
+  });
+
+  log("Rollback concluído — build e build-live restaurados.");
 };
 
 main();

@@ -8,7 +8,7 @@ npm run build:live
 
 Write-Host ""
 Write-Host "==> Deploy concluído."
-Write-Host "    O serve deve apontar para build-live:"
-Write-Host "      serve -s build-live -l 3001"
+Write-Host "    Compila em build-staging; publica ao final em build e build-live."
+Write-Host "    PM2 pode continuar com: serve -s build -l 3001"
 Write-Host ""
 Write-Host "    Rollback: npm run build:rollback"
