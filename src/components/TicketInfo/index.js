@@ -38,7 +38,7 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
 			titleTypographyProps={{ noWrap: true }}
 			subheaderTypographyProps={{ noWrap: true }}
 			avatar={
-				<ContactAvatar contact={contact} />
+				<ContactAvatar contact={contact} contactId={ticket.contactId} />
 			}
 			title={`${contactName} #${ticket.id}`}
 			subheader={ticket.user && `${userName}`}

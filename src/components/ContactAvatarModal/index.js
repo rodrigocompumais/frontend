@@ -120,6 +120,7 @@ const ContactAvatarModal = ({
   open,
   onClose,
   contact,
+  imageBroken = false,
   loading = false,
   onRequestRefresh,
 }) => {
@@ -134,9 +135,10 @@ const ContactAvatarModal = ({
 
   if (!contact) return null;
 
-  const imageUrl = hasRealContactAvatar(contact.profilePicUrl)
-    ? withAvatarCacheBust(contact.profilePicUrl, avatarVersion)
-    : null;
+  const imageUrl =
+    !imageBroken && hasRealContactAvatar(contact.profilePicUrl)
+      ? withAvatarCacheBust(contact.profilePicUrl, avatarVersion)
+      : null;
 
   return (
     <Dialog

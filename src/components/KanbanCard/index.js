@@ -246,6 +246,7 @@ const KanbanCard = ({
             >
               <ContactAvatar
                 contact={ticket.contact}
+                contactId={ticket.contactId}
                 className={classes.avatar}
               />
             </Badge>

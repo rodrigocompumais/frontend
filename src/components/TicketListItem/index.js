@@ -191,7 +191,7 @@ const TicketListItem = ({ ticket }) => {
           ></span>
         </Tooltip>
         <ListItemAvatar>
-          <ContactAvatar contact={ticket?.contact} />
+          <ContactAvatar contact={ticket?.contact} contactId={ticket?.contactId} />
         </ListItemAvatar>
         <ListItemText
           disableTypography

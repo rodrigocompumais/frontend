@@ -495,6 +495,7 @@ const TicketListItemCustom = ({ ticket }) => {
           >
             <ContactAvatar
               contact={ticket?.contact}
+              contactId={ticket?.contactId}
               className={classes.avatar}
             />
           </Badge>

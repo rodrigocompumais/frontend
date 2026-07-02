@@ -1,44 +1,28 @@
-import React, { useState, useEffect, useContext, useCallback } from "react";
+import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 import { Avatar, CircularProgress, makeStyles } from "@material-ui/core";
 import api from "../../services/api";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import ContactAvatarModal from "../ContactAvatarModal";
+import toastError from "../../errors/toastError";
 import {
   withAvatarCacheBust,
   handleContactAvatarError,
-  hasRealContactAvatar
+  hasRealContactAvatar,
 } from "../../helpers/contactAvatar";
 
-const useStyles = makeStyles((theme) => ({
+const NOPICTURE = "/nopicture.png";
+
+const useStyles = makeStyles(() => ({
   wrapper: {
     position: "relative",
     display: "inline-flex",
     lineHeight: 0,
   },
   avatar: {
-    transition: "opacity 0.25s ease, transform 0.25s ease",
+    transition: "opacity 0.2s ease",
   },
   avatarLoading: {
-    opacity: 0.72,
-    animation: "$avatarPulse 1.1s ease-in-out infinite",
-  },
-  "@keyframes avatarPulse": {
-    "0%": { transform: "scale(1)", opacity: 0.72 },
-    "50%": { transform: "scale(1.04)", opacity: 1 },
-    "100%": { transform: "scale(1)", opacity: 0.72 },
-  },
-  ring: {
-    position: "absolute",
-    inset: -3,
-    borderRadius: "50%",
-    border: `2px solid ${theme.palette.primary.main}`,
-    animation: "$ringPulse 1.1s ease-in-out infinite",
-    pointerEvents: "none",
-  },
-  "@keyframes ringPulse": {
-    "0%": { transform: "scale(0.96)", opacity: 0.35 },
-    "50%": { transform: "scale(1.06)", opacity: 0.95 },
-    "100%": { transform: "scale(0.96)", opacity: 0.35 },
+    opacity: 0.55,
   },
   overlay: {
     position: "absolute",
@@ -47,13 +31,14 @@ const useStyles = makeStyles((theme) => ({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: "50%",
-    backgroundColor: "rgba(0, 0, 0, 0.28)",
+    backgroundColor: "rgba(255, 255, 255, 0.45)",
     pointerEvents: "none",
   },
 }));
 
 const ContactAvatar = ({
   contact,
+  contactId,
   className,
   style,
   alt,
@@ -62,20 +47,28 @@ const ContactAvatar = ({
 }) => {
   const classes = useStyles();
   const socketManager = useContext(SocketContext);
+  const refreshInFlightRef = useRef(false);
   const [loading, setLoading] = useState(false);
   const [avatarVersion, setAvatarVersion] = useState(0);
+  const [imageBroken, setImageBroken] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [localContact, setLocalContact] = useState(contact || null);
 
+  const resolvedContactId = localContact?.id ?? contactId ?? contact?.id;
+
   useEffect(() => {
     setLocalContact(contact || null);
-    if (contact?.profilePicUrl) {
-      setAvatarVersion(Date.now());
-    }
   }, [contact]);
 
   useEffect(() => {
-    if (!localContact?.id) return undefined;
+    setImageBroken(false);
+    if (contact?.profilePicUrl) {
+      setAvatarVersion(Date.now());
+    }
+  }, [contact?.profilePicUrl]);
+
+  useEffect(() => {
+    if (!resolvedContactId) return undefined;
 
     const companyId = localStorage.getItem("companyId");
     const socket = socketManager.getSocket(companyId);
@@ -83,11 +76,13 @@ const ContactAvatar = ({
     const handleContactUpdate = (data) => {
       if (
         data?.action === "update" &&
-        Number(data.contact?.id) === Number(localContact.id)
+        Number(data.contact?.id) === Number(resolvedContactId)
       ) {
-        setLocalContact((prev) => ({ ...prev, ...data.contact }));
+        setLocalContact((prev) => ({ ...(prev || {}), ...data.contact }));
         setAvatarVersion(Date.now());
+        setImageBroken(false);
         setLoading(false);
+        refreshInFlightRef.current = false;
       }
     };
 
@@ -95,57 +90,64 @@ const ContactAvatar = ({
     return () => {
       socket.off(`company-${companyId}-contact`, handleContactUpdate);
     };
-  }, [localContact?.id, socketManager]);
+  }, [resolvedContactId, socketManager]);
 
   const refreshProfilePic = useCallback(async () => {
-    if (!localContact?.id || loading) {
+    if (!resolvedContactId) {
       return null;
     }
 
+    if (refreshInFlightRef.current) {
+      return null;
+    }
+
+    refreshInFlightRef.current = true;
     setLoading(true);
+
     try {
       const { data } = await api.post(
-        `/contacts/${localContact.id}/refresh-profile-pic`
+        `/contacts/${resolvedContactId}/refresh-profile-pic`
       );
       const updated = data.contact || {
-        ...localContact,
+        ...(localContact || {}),
         profilePicUrl: data.profilePicUrl,
       };
-      setLocalContact((prev) => ({ ...prev, ...updated }));
+      setLocalContact((prev) => ({ ...(prev || {}), ...updated }));
       setAvatarVersion(Date.now());
+      setImageBroken(false);
       return updated;
     } catch (err) {
-      console.error("Erro ao atualizar foto de perfil:", err);
+      toastError(err);
       return null;
     } finally {
+      refreshInFlightRef.current = false;
       setLoading(false);
     }
-  }, [localContact, loading]);
+  }, [resolvedContactId, localContact]);
+
+  const handleAvatarError = (event) => {
+    handleContactAvatarError(event);
+    setImageBroken(true);
+  };
 
   const handleClick = async (event) => {
-    if (onClick) {
-      onClick(event);
-    }
-
-    if (event?.defaultPrevented) {
-      return;
-    }
-
     if (event && typeof event.stopPropagation === "function") {
       event.stopPropagation();
     }
 
-    if (loading || !localContact) {
+    if (onClick) {
+      onClick(event);
+    }
+
+    if (event?.defaultPrevented || loading || !localContact) {
       return;
     }
 
-    const hasPhoto = hasRealContactAvatar(localContact.profilePicUrl);
+    const hasVisiblePhoto =
+      hasRealContactAvatar(localContact.profilePicUrl) && !imageBroken;
 
-    if (!hasPhoto) {
-      const updated = await refreshProfilePic();
-      if (updated && hasRealContactAvatar(updated.profilePicUrl) && !disableModal) {
-        setModalOpen(true);
-      }
+    if (!hasVisiblePhoto) {
+      await refreshProfilePic();
       return;
     }
 
@@ -158,26 +160,24 @@ const ContactAvatar = ({
     return null;
   }
 
-  const avatarSrc = withAvatarCacheBust(
-    localContact.profilePicUrl,
-    avatarVersion
-  );
+  const avatarSrc = imageBroken
+    ? NOPICTURE
+    : withAvatarCacheBust(localContact.profilePicUrl, avatarVersion);
 
   return (
     <>
       <span className={classes.wrapper} style={style}>
-        {loading && <span className={classes.ring} aria-hidden />}
         <Avatar
           className={`${classes.avatar} ${loading ? classes.avatarLoading : ""} ${className || ""}`}
           src={avatarSrc}
           alt={alt || localContact.name || "contact_image"}
           onClick={handleClick}
-          onError={handleContactAvatarError}
+          onError={handleAvatarError}
           style={{ cursor: loading ? "wait" : "pointer" }}
         />
         {loading && (
           <span className={classes.overlay}>
-            <CircularProgress size={22} thickness={4} style={{ color: "#fff" }} />
+            <CircularProgress size={18} thickness={5} />
           </span>
         )}
       </span>
@@ -187,6 +187,7 @@ const ContactAvatar = ({
           open={modalOpen}
           onClose={() => setModalOpen(false)}
           contact={localContact}
+          imageBroken={imageBroken}
           loading={loading}
           onRequestRefresh={refreshProfilePic}
         />
