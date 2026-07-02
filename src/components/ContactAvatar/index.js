@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
-import { Avatar, CircularProgress, makeStyles } from "@material-ui/core";
+import { Avatar, makeStyles } from "@material-ui/core";
 import api from "../../services/api";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import ContactAvatarModal from "../ContactAvatarModal";
@@ -12,27 +12,44 @@ import {
 
 const NOPICTURE = "/nopicture.png";
 
-const useStyles = makeStyles(() => ({
+const useStyles = makeStyles((theme) => ({
   wrapper: {
     position: "relative",
     display: "inline-flex",
     lineHeight: 0,
     cursor: "pointer",
+    borderRadius: "50%",
   },
   avatar: {
-    transition: "opacity 0.2s ease",
+    display: "block",
   },
-  avatarLoading: {
-    opacity: 0.7,
-  },
-  overlay: {
+  loadingBackdrop: {
     position: "absolute",
     inset: 0,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    borderRadius: "50%",
+    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    pointerEvents: "none",
+    zIndex: 1,
+  },
+  loadingRing: {
+    position: "absolute",
+    inset: -1,
     borderRadius: "50%",
     pointerEvents: "none",
+    zIndex: 2,
+    animation: "$avatarRingSpin 0.9s linear infinite",
+    "&::after": {
+      content: '""',
+      position: "absolute",
+      inset: 0,
+      borderRadius: "50%",
+      border: `1.5px solid ${theme.palette.primary.main}`,
+      borderBottomColor: "transparent",
+      borderLeftColor: "transparent",
+    },
+  },
+  "@keyframes avatarRingSpin": {
+    to: { transform: "rotate(360deg)" },
   },
 }));
 
@@ -199,6 +216,7 @@ const ContactAvatar = ({
         onClick={handleClick}
         role="button"
         tabIndex={0}
+        aria-busy={loading}
         onKeyDown={(event) => {
           if (event.key === "Enter" || event.key === " ") {
             event.preventDefault();
@@ -207,15 +225,16 @@ const ContactAvatar = ({
         }}
       >
         <Avatar
-          className={`${classes.avatar} ${loading ? classes.avatarLoading : ""} ${className || ""}`}
+          className={`${classes.avatar} ${className || ""}`}
           src={avatarSrc}
           alt={alt || displayContact.name || "contact_image"}
           onError={handleAvatarError}
         />
         {loading && (
-          <span className={classes.overlay}>
-            <CircularProgress size={16} thickness={5} color="inherit" />
-          </span>
+          <>
+            <span className={classes.loadingBackdrop} aria-hidden="true" />
+            <span className={classes.loadingRing} aria-hidden="true" />
+          </>
         )}
       </span>
 

@@ -7,7 +7,6 @@ import {
   Typography,
   Box,
   Button,
-  CircularProgress,
 } from "@material-ui/core";
 import CloseIcon from "@material-ui/icons/Close";
 import RefreshIcon from "@material-ui/icons/Refresh";
@@ -105,14 +104,66 @@ const useStyles = makeStyles((theme) => ({
     color: "#FFFFFF",
     textAlign: "center",
   },
-  loadingBox: {
+  loadingImageWrapper: {
+    position: "relative",
+    display: "inline-flex",
+    borderRadius: theme.spacing(2),
+    overflow: "hidden",
+  },
+  loadingImage: {
+    opacity: 0.55,
+  },
+  modalLoadingBackdrop: {
+    position: "absolute",
+    inset: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.25)",
+    pointerEvents: "none",
+    zIndex: 1,
+  },
+  modalLoadingRing: {
+    position: "absolute",
+    inset: 6,
+    borderRadius: theme.spacing(2),
+    pointerEvents: "none",
+    zIndex: 2,
+    animation: "$modalRingSpin 0.9s linear infinite",
+    "&::after": {
+      content: '""',
+      position: "absolute",
+      inset: 0,
+      borderRadius: theme.spacing(2),
+      border: "2px solid #FFFFFF",
+      borderBottomColor: "transparent",
+      borderLeftColor: "transparent",
+    },
+  },
+  loadingSkeleton: {
+    position: "relative",
     width: "300px",
     height: "300px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
     borderRadius: theme.spacing(2),
+    backgroundColor: "rgba(255, 255, 255, 0.06)",
+    overflow: "hidden",
+    [theme.breakpoints.down("sm")]: {
+      width: "250px",
+      height: "250px",
+    },
+  },
+  shimmer: {
+    position: "absolute",
+    inset: 0,
+    background:
+      "linear-gradient(110deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%)",
+    backgroundSize: "200% 100%",
+    animation: "$shimmer 1.5s ease-in-out infinite",
+    pointerEvents: "none",
+  },
+  "@keyframes modalRingSpin": {
+    to: { transform: "rotate(360deg)" },
+  },
+  "@keyframes shimmer": {
+    "0%": { backgroundPosition: "200% 0" },
+    "100%": { backgroundPosition: "-200% 0" },
   },
 }));
 
@@ -157,9 +208,34 @@ const ContactAvatarModal = ({
           <CloseIcon />
         </IconButton>
         {loading ? (
-          <Box className={classes.loadingBox}>
-            <CircularProgress style={{ color: "#fff" }} />
-          </Box>
+          imageUrl ? (
+            <Box className={classes.imageContainer}>
+              <Box className={classes.loadingImageWrapper}>
+                <img
+                  src={imageUrl}
+                  alt={contact.name || "Foto de perfil"}
+                  className={`${classes.image} ${classes.loadingImage}`}
+                  onError={handleContactAvatarError}
+                />
+                <span className={classes.modalLoadingBackdrop} aria-hidden="true" />
+                <span className={classes.modalLoadingRing} aria-hidden="true" />
+              </Box>
+              <Box className={classes.contactInfo}>
+                <Typography className={classes.contactName}>
+                  {contact.name || "Sem nome"}
+                </Typography>
+                {contact.number && (
+                  <Typography className={classes.contactNumber}>
+                    {contact.number}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+          ) : (
+            <Box className={classes.loadingSkeleton} aria-busy="true">
+              <span className={classes.shimmer} aria-hidden="true" />
+            </Box>
+          )
         ) : imageUrl ? (
           <Box className={classes.imageContainer}>
             <img
