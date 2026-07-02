@@ -20,3 +20,15 @@ export const handleContactAvatarError = (event) => {
   target.onerror = null;
   target.src = NOPICTURE;
 };
+
+export const hasRealContactAvatar = (profilePicUrl) =>
+  resolveContactAvatarSrc(profilePicUrl) !== NOPICTURE;
+
+export const withAvatarCacheBust = (profilePicUrl, version) => {
+  const src = resolveContactAvatarSrc(profilePicUrl);
+  if (src === NOPICTURE || !version) {
+    return src;
+  }
+  const separator = src.includes("?") ? "&" : "?";
+  return `${src}${separator}v=${version}`;
+};

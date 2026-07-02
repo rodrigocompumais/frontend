@@ -11,11 +11,7 @@ import {
   Tooltip,
   Badge,
 } from "@material-ui/core";
-import ContactAvatarModal from "../ContactAvatarModal";
-import {
-  resolveContactAvatarSrc,
-  handleContactAvatarError
-} from "../../helpers/contactAvatar";
+import ContactAvatar from "../ContactAvatar";
 import {
   Visibility as VisibilityIcon,
   SwapHoriz as TransferIcon,
@@ -199,7 +195,6 @@ const KanbanCard = ({
 }) => {
   const queueColor = ticket.queue?.color || "#6B7280";
   const classes = useStyles({ queueColor });
-  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
 
   const getInitials = (name) => {
     if (!name) return "?";
@@ -249,18 +244,10 @@ const KanbanCard = ({
               className={classes.unreadBadge}
               invisible={!ticket.unreadMessages}
             >
-              <Avatar
-                src={resolveContactAvatarSrc(ticket.contact?.profilePicUrl)}
-                onError={handleContactAvatarError}
+              <ContactAvatar
+                contact={ticket.contact}
                 className={classes.avatar}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setAvatarModalOpen(true);
-                }}
-                style={{ cursor: "pointer" }}
-              >
-                {getInitials(ticket.contact?.name)}
-              </Avatar>
+              />
             </Badge>
             <Box className={classes.contactDetails}>
               <Typography className={classes.contactName}>
@@ -335,11 +322,6 @@ const KanbanCard = ({
           </Tooltip>
         </Box>
       </CardContent>
-      <ContactAvatarModal
-        open={avatarModalOpen}
-        onClose={() => setAvatarModalOpen(false)}
-        contact={ticket?.contact}
-      />
     </Card>
   );
 };

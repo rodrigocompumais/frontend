@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -6,8 +6,16 @@ import {
   makeStyles,
   Typography,
   Box,
+  Button,
+  CircularProgress,
 } from "@material-ui/core";
 import CloseIcon from "@material-ui/icons/Close";
+import RefreshIcon from "@material-ui/icons/Refresh";
+import {
+  withAvatarCacheBust,
+  hasRealContactAvatar,
+  handleContactAvatarError,
+} from "../../helpers/contactAvatar";
 
 const useStyles = makeStyles((theme) => ({
   dialog: {
@@ -86,6 +94,8 @@ const useStyles = makeStyles((theme) => ({
     width: "300px",
     height: "300px",
     display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(2),
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(255, 255, 255, 0.1)",
@@ -93,15 +103,40 @@ const useStyles = makeStyles((theme) => ({
   },
   noImageText: {
     color: "#FFFFFF",
+    textAlign: "center",
+  },
+  loadingBox: {
+    width: "300px",
+    height: "300px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255, 255, 255, 0.08)",
+    borderRadius: theme.spacing(2),
   },
 }));
 
-const ContactAvatarModal = ({ open, onClose, contact }) => {
+const ContactAvatarModal = ({
+  open,
+  onClose,
+  contact,
+  loading = false,
+  onRequestRefresh,
+}) => {
   const classes = useStyles();
+  const [avatarVersion, setAvatarVersion] = useState(0);
+
+  useEffect(() => {
+    if (contact?.profilePicUrl) {
+      setAvatarVersion(Date.now());
+    }
+  }, [contact?.profilePicUrl]);
 
   if (!contact) return null;
 
-  const imageUrl = contact.profilePicUrl || null;
+  const imageUrl = hasRealContactAvatar(contact.profilePicUrl)
+    ? withAvatarCacheBust(contact.profilePicUrl, avatarVersion)
+    : null;
 
   return (
     <Dialog
@@ -119,36 +154,57 @@ const ContactAvatarModal = ({ open, onClose, contact }) => {
         >
           <CloseIcon />
         </IconButton>
-        {imageUrl ? (
-          <>
-            <Box className={classes.imageContainer}>
-              <img
-                src={imageUrl}
-                alt={contact.name || "Foto de perfil"}
-                className={classes.image}
-                onError={(e) => {
-                  e.target.style.display = "none";
-                }}
-              />
-              <Box className={classes.contactInfo}>
-                <Typography className={classes.contactName}>
-                  {contact.name || "Sem nome"}
+        {loading ? (
+          <Box className={classes.loadingBox}>
+            <CircularProgress style={{ color: "#fff" }} />
+          </Box>
+        ) : imageUrl ? (
+          <Box className={classes.imageContainer}>
+            <img
+              src={imageUrl}
+              alt={contact.name || "Foto de perfil"}
+              className={classes.image}
+              onError={handleContactAvatarError}
+            />
+            <Box className={classes.contactInfo}>
+              <Typography className={classes.contactName}>
+                {contact.name || "Sem nome"}
+              </Typography>
+              {contact.number && (
+                <Typography className={classes.contactNumber}>
+                  {contact.number}
                 </Typography>
-                {contact.number && (
-                  <Typography className={classes.contactNumber}>
-                    {contact.number}
-                  </Typography>
-                )}
-              </Box>
+              )}
             </Box>
-          </>
+            {onRequestRefresh && (
+              <Button
+                color="primary"
+                variant="contained"
+                startIcon={<RefreshIcon />}
+                onClick={async () => {
+                  await onRequestRefresh();
+                  setAvatarVersion(Date.now());
+                }}
+              >
+                Atualizar foto
+              </Button>
+            )}
+          </Box>
         ) : (
-          <Box
-            className={classes.noImageContainer}
-          >
+          <Box className={classes.noImageContainer}>
             <Typography className={classes.noImageText}>
               Sem foto de perfil
             </Typography>
+            {onRequestRefresh && (
+              <Button
+                color="primary"
+                variant="contained"
+                startIcon={<RefreshIcon />}
+                onClick={onRequestRefresh}
+              >
+                Buscar foto no WhatsApp
+              </Button>
+            )}
           </Box>
         )}
       </DialogContent>

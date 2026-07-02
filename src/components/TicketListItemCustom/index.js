@@ -11,7 +11,6 @@ import ListItemText from "@material-ui/core/ListItemText";
 import ListItemAvatar from "@material-ui/core/ListItemAvatar";
 import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
 import Typography from "@material-ui/core/Typography";
-import Avatar from "@material-ui/core/Avatar";
 import Divider from "@material-ui/core/Divider";
 import Badge from "@material-ui/core/Badge";
 import Box from "@material-ui/core/Box";
@@ -29,11 +28,7 @@ import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import ReplayIcon from "@material-ui/icons/Replay";
 import FolderIcon from "@material-ui/icons/Folder";
 import PhotoCameraIcon from "@material-ui/icons/PhotoCamera";
-import ContactAvatarModal from "../ContactAvatarModal";
-import {
-  resolveContactAvatarSrc,
-  handleContactAvatarError
-} from "../../helpers/contactAvatar";
+import ContactAvatar from "../ContactAvatar";
 
 import { i18n } from "../../translate/i18n";
 
@@ -313,7 +308,6 @@ const TicketListItemCustom = ({ ticket }) => {
   const [whatsAppName, setWhatsAppName] = useState(null);
   const [tag, setTag] = useState([]);
   const [anchorEl, setAnchorEl] = useState(null);
-  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [openTicketMessageDialog, setOpenTicketMessageDialog] = useState(false);
 
   const { ticketId } = useParams();
@@ -499,15 +493,9 @@ const TicketListItemCustom = ({ ticket }) => {
               horizontal: "right",
             }}
           >
-            <Avatar
+            <ContactAvatar
+              contact={ticket?.contact}
               className={classes.avatar}
-              src={resolveContactAvatarSrc(ticket?.contact?.profilePicUrl)}
-              onError={handleContactAvatarError}
-              onClick={(e) => {
-                e.stopPropagation();
-                setAvatarModalOpen(true);
-              }}
-              style={{ cursor: "pointer" }}
             />
           </Badge>
         </ListItemAvatar>
@@ -758,11 +746,6 @@ const TicketListItemCustom = ({ ticket }) => {
         </Menu>
       </ListItem>
       <Divider variant="inset" component="li" />
-      <ContactAvatarModal
-        open={avatarModalOpen}
-        onClose={() => setAvatarModalOpen(false)}
-        contact={ticket?.contact}
-      />
     </React.Fragment>
   );
 };

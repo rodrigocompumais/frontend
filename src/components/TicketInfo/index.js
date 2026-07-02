@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from "react";
 
-import { Avatar, CardHeader } from "@material-ui/core";
+import { CardHeader } from "@material-ui/core";
 
 import { i18n } from "../../translate/i18n";
-import ContactAvatarModal from "../ContactAvatarModal";
+import ContactAvatar from "../ContactAvatar";
 
 const TicketInfo = ({ contact, ticket, onClick }) => {
 	const { user } = ticket
 	const [userName, setUserName] = useState('')
 	const [contactName, setContactName] = useState('')
-	const [avatarModalOpen, setAvatarModalOpen] = useState(false)
 
 	useEffect(() => {
 		if (contact) {
@@ -30,35 +29,20 @@ const TicketInfo = ({ contact, ticket, onClick }) => {
 			}
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [])
+	}, [contact, user])
 
 	return (
-		<>
-			<CardHeader
-				onClick={onClick}
-				style={{ cursor: "pointer" }}
-				titleTypographyProps={{ noWrap: true }}
-				subheaderTypographyProps={{ noWrap: true }}
-				avatar={
-					<Avatar 
-						src={contact.profilePicUrl} 
-						alt="contact_image"
-						onClick={(e) => {
-							e.stopPropagation();
-							setAvatarModalOpen(true);
-						}}
-						style={{ cursor: "pointer" }}
-					/>
-				}
-				title={`${contactName} #${ticket.id}`}
-				subheader={ticket.user && `${userName}`}
-			/>
-			<ContactAvatarModal
-				open={avatarModalOpen}
-				onClose={() => setAvatarModalOpen(false)}
-				contact={contact}
-			/>
-		</>
+		<CardHeader
+			onClick={onClick}
+			style={{ cursor: "pointer" }}
+			titleTypographyProps={{ noWrap: true }}
+			subheaderTypographyProps={{ noWrap: true }}
+			avatar={
+				<ContactAvatar contact={contact} />
+			}
+			title={`${contactName} #${ticket.id}`}
+			subheader={ticket.user && `${userName}`}
+		/>
 	);
 };
 

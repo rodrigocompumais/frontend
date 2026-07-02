@@ -10,14 +10,9 @@ import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
 import ListItemAvatar from "@material-ui/core/ListItemAvatar";
 import Typography from "@material-ui/core/Typography";
-import Avatar from "@material-ui/core/Avatar";
 import Divider from "@material-ui/core/Divider";
 import Badge from "@material-ui/core/Badge";
-import ContactAvatarModal from "../ContactAvatarModal";
-import {
-  resolveContactAvatarSrc,
-  handleContactAvatarError
-} from "../../helpers/contactAvatar";
+import ContactAvatar from "../ContactAvatar";
 
 import { i18n } from "../../translate/i18n";
 
@@ -121,7 +116,6 @@ const TicketListItem = ({ ticket }) => {
   const classes = useStyles();
   const history = useHistory();
   const [loading, setLoading] = useState(false);
-  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const { ticketId } = useParams();
   const isMounted = useRef(true);
   const { user } = useContext(AuthContext);
@@ -197,15 +191,7 @@ const TicketListItem = ({ ticket }) => {
           ></span>
         </Tooltip>
         <ListItemAvatar>
-          <Avatar 
-            src={resolveContactAvatarSrc(ticket?.contact?.profilePicUrl)}
-            onError={handleContactAvatarError}
-            onClick={(e) => {
-              e.stopPropagation();
-              setAvatarModalOpen(true);
-            }}
-            style={{ cursor: "pointer" }}
-          />
+          <ContactAvatar contact={ticket?.contact} />
         </ListItemAvatar>
         <ListItemText
           disableTypography
@@ -297,11 +283,6 @@ const TicketListItem = ({ ticket }) => {
         )}
       </ListItem>
       <Divider variant="inset" component="li" />
-      <ContactAvatarModal
-        open={avatarModalOpen}
-        onClose={() => setAvatarModalOpen(false)}
-        contact={ticket?.contact}
-      />
     </React.Fragment>
   );
 };
