@@ -47,7 +47,7 @@ RUN chmod +x update_app_color.sh
 RUN ./update_app_color.sh
 
 # Build the application
-RUN yarn build
+RUN yarn build && cp -a build/. build-live/
 
 EXPOSE 3001
 
@@ -55,4 +55,4 @@ ENV HOST=0.0.0.0
 ENV PORT=3001
 
 # Serve the built application
-CMD ["serve", "-s", "build", "-l", "3001"] 
+CMD ["serve", "-s", "build-live", "-l", "3001"] 

@@ -1,14 +1,13 @@
 /**
- * Reverte para o build anterior (build-previous), se existir.
- * Útil se a nova versão tiver problema após deploy.
+ * Restaura build-previous em build-live.
  */
+const { spawnSync } = require("child_process");
 const fs = require("fs");
 const path = require("path");
 
 const root = path.join(__dirname, "..");
-const buildDir = path.join(root, "build");
+const liveDir = path.join(root, "build-live");
 const previousDir = path.join(root, "build-previous");
-const brokenDir = path.join(root, "build-broken");
 
 const log = (msg) => console.log(`[build:rollback] ${msg}`);
 
@@ -18,22 +17,45 @@ const removeDir = (dir) => {
   }
 };
 
+const commandExists = (cmd) => {
+  const checker = process.platform === "win32" ? "where" : "which";
+  const result = spawnSync(checker, [cmd], { stdio: "ignore" });
+  return result.status === 0;
+};
+
 const main = () => {
   if (!fs.existsSync(previousDir)) {
     log("Não há build-previous para reverter.");
     process.exit(1);
   }
 
-  removeDir(brokenDir);
+  if (commandExists("rsync")) {
+    if (!fs.existsSync(liveDir)) {
+      fs.mkdirSync(liveDir, { recursive: true });
+    }
 
-  if (fs.existsSync(buildDir)) {
-    fs.renameSync(buildDir, brokenDir);
+    const result = spawnSync(
+      "rsync",
+      [
+        "-a",
+        "--delete",
+        "--delay-updates",
+        "--partial-dir=.rsync-partial",
+        `${previousDir}/`,
+        `${liveDir}/`
+      ],
+      { cwd: root, stdio: "inherit" }
+    );
+
+    if (result.status !== 0) {
+      process.exit(result.status || 1);
+    }
+  } else {
+    removeDir(liveDir);
+    fs.cpSync(previousDir, liveDir, { recursive: true });
   }
 
-  fs.renameSync(previousDir, buildDir);
-  removeDir(brokenDir);
-
-  log("Rollback concluído — build anterior restaurado em /build.");
+  log("Rollback concluído — build-live restaurado.");
 };
 
 main();

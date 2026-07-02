@@ -89,6 +89,7 @@
         "build:live": "node scripts/zero-downtime-build.js",
         "build:rollback": "node scripts/rollback-build.js",
         "deploy": "node scripts/zero-downtime-build.js",
+        "serve:prod": "serve -s build-live -l 3001",
         "builddev": "react-app-rewired build",
         "test": "react-app-rewired test",
         "eject": "react-scripts eject"

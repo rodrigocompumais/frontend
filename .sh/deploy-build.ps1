@@ -6,5 +6,9 @@ Set-Location $Root
 Write-Host "==> Deploy frontend (zero downtime)"
 npm run build:live
 
+Write-Host ""
 Write-Host "==> Deploy concluído."
-Write-Host "    Se algo falhar: npm run build:rollback"
+Write-Host "    O serve deve apontar para build-live:"
+Write-Host "      serve -s build-live -l 3001"
+Write-Host ""
+Write-Host "    Rollback: npm run build:rollback"

@@ -2,6 +2,7 @@
 /node_modules/**
 /dist
 /build
+/build-live
 /build-next
 /build-previous
 /build-broken
