@@ -13,6 +13,10 @@ import {
 } from "@material-ui/core";
 import ContactAvatarModal from "../ContactAvatarModal";
 import {
+  resolveContactAvatarSrc,
+  handleContactAvatarError
+} from "../../helpers/contactAvatar";
+import {
   Visibility as VisibilityIcon,
   SwapHoriz as TransferIcon,
   MoreVert as MoreIcon,
@@ -246,7 +250,8 @@ const KanbanCard = ({
               invisible={!ticket.unreadMessages}
             >
               <Avatar
-                src={ticket.contact?.profilePicUrl}
+                src={resolveContactAvatarSrc(ticket.contact?.profilePicUrl)}
+                onError={handleContactAvatarError}
                 className={classes.avatar}
                 onClick={(e) => {
                   e.stopPropagation();

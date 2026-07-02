@@ -30,6 +30,10 @@ import ReplayIcon from "@material-ui/icons/Replay";
 import FolderIcon from "@material-ui/icons/Folder";
 import PhotoCameraIcon from "@material-ui/icons/PhotoCamera";
 import ContactAvatarModal from "../ContactAvatarModal";
+import {
+  resolveContactAvatarSrc,
+  handleContactAvatarError
+} from "../../helpers/contactAvatar";
 
 import { i18n } from "../../translate/i18n";
 
@@ -497,7 +501,8 @@ const TicketListItemCustom = ({ ticket }) => {
           >
             <Avatar
               className={classes.avatar}
-              src={ticket?.contact?.profilePicUrl}
+              src={resolveContactAvatarSrc(ticket?.contact?.profilePicUrl)}
+              onError={handleContactAvatarError}
               onClick={(e) => {
                 e.stopPropagation();
                 setAvatarModalOpen(true);

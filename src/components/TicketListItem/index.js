@@ -14,6 +14,10 @@ import Avatar from "@material-ui/core/Avatar";
 import Divider from "@material-ui/core/Divider";
 import Badge from "@material-ui/core/Badge";
 import ContactAvatarModal from "../ContactAvatarModal";
+import {
+  resolveContactAvatarSrc,
+  handleContactAvatarError
+} from "../../helpers/contactAvatar";
 
 import { i18n } from "../../translate/i18n";
 
@@ -194,7 +198,8 @@ const TicketListItem = ({ ticket }) => {
         </Tooltip>
         <ListItemAvatar>
           <Avatar 
-            src={ticket?.contact?.profilePicUrl}
+            src={resolveContactAvatarSrc(ticket?.contact?.profilePicUrl)}
+            onError={handleContactAvatarError}
             onClick={(e) => {
               e.stopPropagation();
               setAvatarModalOpen(true);
