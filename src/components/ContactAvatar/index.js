@@ -131,7 +131,9 @@ const ContactAvatar = ({
       return;
     }
 
-    event?.stopPropagation?.();
+    if (event && typeof event.stopPropagation === "function") {
+      event.stopPropagation();
+    }
 
     if (loading || !localContact) {
       return;
