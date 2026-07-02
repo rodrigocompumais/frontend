@@ -10,12 +10,26 @@ import toastError from "../../errors/toastError";
 import { saveRememberedCredential } from "../../helpers/loginRememberedCredentials";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import moment from "moment";
+const loadTranslationConfig = async (fallbackLanguage = "pt") => {
+  try {
+    const { data: langData } = await api.get("/translation/company-language");
+    return {
+      language: langData.language || fallbackLanguage,
+      enabled: Boolean(langData.enabled)
+    };
+  } catch (err) {
+    console.error("Erro ao buscar configuração de tradução:", err);
+    return { language: fallbackLanguage, enabled: false };
+  }
+};
+
 const useAuth = () => {
   const history = useHistory();
   const [isAuth, setIsAuth] = useState(false);
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState({});
   const [companyLanguage, setCompanyLanguage] = useState("pt");
+  const [messageTranslationEnabled, setMessageTranslationEnabled] = useState(false);
 
   api.interceptors.request.use(
     (config) => {
@@ -122,18 +136,17 @@ const useAuth = () => {
             localStorage.setItem("companyDueDate", v);
           }
 
-          // Carregar idioma da empresa
+          // Carregar idioma da empresa e flag de tradução
           if (data.user?.company?.language) {
             setCompanyLanguage(data.user.company.language);
-          } else {
-            // Buscar das configurações se não estiver no company
-            try {
-              const { data: langData } = await api.get("/translation/company-language");
-              setCompanyLanguage(langData.language || "pt");
-            } catch (err) {
-              console.error("Erro ao buscar idioma:", err);
-            }
           }
+          const translationConfig = await loadTranslationConfig(
+            data.user?.company?.language || "pt"
+          );
+          if (!data.user?.company?.language) {
+            setCompanyLanguage(translationConfig.language);
+          }
+          setMessageTranslationEnabled(translationConfig.enabled);
         } catch (err) {
           toastError(err);
         }
@@ -203,18 +216,17 @@ const useAuth = () => {
       setUser(data.user);
       setIsAuth(true);
       
-      // Carregar idioma da empresa no login
+      // Carregar idioma da empresa e flag de tradução
       if (data.user?.company?.language) {
         setCompanyLanguage(data.user.company.language);
-      } else {
-        // Buscar das configurações
-        try {
-          const { data: langData } = await api.get("/translation/company-language");
-          setCompanyLanguage(langData.language || "pt");
-        } catch (err) {
-          console.error("Erro ao buscar idioma:", err);
-        }
       }
+      const translationConfig = await loadTranslationConfig(
+        data.user?.company?.language || "pt"
+      );
+      if (!data.user?.company?.language) {
+        setCompanyLanguage(translationConfig.language);
+      }
+      setMessageTranslationEnabled(translationConfig.enabled);
       
       if (rememberMe && loginPayload.email && loginPayload.password != null) {
         try {
@@ -309,6 +321,7 @@ const useAuth = () => {
     user,
     loading,
     companyLanguage,
+    messageTranslationEnabled,
     handleLogin,
     handleLogout,
     getCurrentUserInfo,

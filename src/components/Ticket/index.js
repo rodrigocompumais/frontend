@@ -73,8 +73,7 @@ const Ticket = () => {
   const classes = useStyles();
   const theme = useTheme();
 
-  const { user } = useContext(AuthContext);
-
+  const { user, messageTranslationEnabled } = useContext(AuthContext);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [contact, setContact] = useState({});
@@ -88,6 +87,7 @@ const Ticket = () => {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [scrollToMessageId, setScrollToMessageId] = useState(null);
   const [realTimeTranslationEnabled, setRealTimeTranslationEnabled] = useLocalStorage("realTimeTranslationEnabled", false);
+  const translationActive = messageTranslationEnabled && realTimeTranslationEnabled;
   const messagesListRef = useRef(null);
 
   const socketManager = useContext(SocketContext);
@@ -277,7 +277,7 @@ const Ticket = () => {
           ticketId={ticket.id}
           isGroup={ticket.isGroup}
           onAiHandlersReady={setAiHandlers}
-          realTimeTranslationEnabled={realTimeTranslationEnabled}
+          realTimeTranslationEnabled={translationActive}
           scrollToMessageId={scrollToMessageId}
           onScrollToMessageDone={() => setScrollToMessageId(null)}
           onScrollToMessageRequest={(id) => setScrollToMessageId(id)}
@@ -311,7 +311,8 @@ const Ticket = () => {
         <TicketHeader loading={loading}>
           {renderTicketInfo()}
           <TicketActionButtons 
-            ticket={ticket} 
+            ticket={ticket}
+            messageTranslationEnabled={messageTranslationEnabled}
             realTimeTranslationEnabled={realTimeTranslationEnabled}
             onToggleTranslation={() => setRealTimeTranslationEnabled(!realTimeTranslationEnabled)}
             onSearchClick={() => setSearchModalOpen(true)}

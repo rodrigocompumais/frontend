@@ -132,7 +132,7 @@ const useStyles = makeStyles(theme => ({
 	},
 }));
 
-const TicketActionButtonsCustom = ({ ticket, realTimeTranslationEnabled = true, onToggleTranslation, onSearchClick, onMarkAsUnread }) => {
+const TicketActionButtonsCustom = ({ ticket, messageTranslationEnabled = false, realTimeTranslationEnabled = false, onToggleTranslation, onSearchClick, onMarkAsUnread }) => {
 	const classes = useStyles();
 	const history = useHistory();
 	const [anchorEl, setAnchorEl] = useState(null);
@@ -175,7 +175,7 @@ const TicketActionButtonsCustom = ({ ticket, realTimeTranslationEnabled = true, 
 
 	return (
 		<div className={classes.actionButtons}>
-			{/* Botão de tradução em tempo real */}
+			{messageTranslationEnabled && (
 			<Tooltip title={realTimeTranslationEnabled ? "Desativar Tradução em Tempo Real" : "Ativar Tradução em Tempo Real"}>
 				<IconButton
 					onClick={onToggleTranslation}
@@ -186,6 +186,7 @@ const TicketActionButtonsCustom = ({ ticket, realTimeTranslationEnabled = true, 
 					<TranslateIcon />
 				</IconButton>
 			</Tooltip>
+			)}
 			
 			{/* Não exibir botões de ação em grupos */}
 			{ticket.isGroup ? (
