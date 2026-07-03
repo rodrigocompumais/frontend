@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext, useCallback, useRef } from "react";
 import { Avatar, makeStyles } from "@material-ui/core";
+import { toast } from "react-toastify";
 import api from "../../services/api";
 import { SocketContext } from "../../context/Socket/SocketContext";
 import ContactAvatarModal from "../ContactAvatarModal";
@@ -19,13 +20,21 @@ const useStyles = makeStyles((theme) => ({
     lineHeight: 0,
     cursor: "pointer",
     borderRadius: "50%",
+    // Tamanho padrão do Avatar do MUI; classes externas podem sobrescrever
+    width: 40,
+    height: 40,
+    flexShrink: 0,
   },
   avatar: {
-    display: "block",
+    width: "100%",
+    height: "100%",
   },
   loadingBackdrop: {
     position: "absolute",
-    inset: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     borderRadius: "50%",
     backgroundColor: "rgba(0, 0, 0, 0.2)",
     pointerEvents: "none",
@@ -33,20 +42,14 @@ const useStyles = makeStyles((theme) => ({
   },
   loadingRing: {
     position: "absolute",
-    inset: -1,
-    borderRadius: "50%",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
     pointerEvents: "none",
     zIndex: 2,
+    color: theme.palette.primary.main,
     animation: "$avatarRingSpin 0.9s linear infinite",
-    "&::after": {
-      content: '""',
-      position: "absolute",
-      inset: 0,
-      borderRadius: "50%",
-      border: `1.5px solid ${theme.palette.primary.main}`,
-      borderBottomColor: "transparent",
-      borderLeftColor: "transparent",
-    },
   },
   "@keyframes avatarRingSpin": {
     to: { transform: "rotate(360deg)" },
@@ -150,14 +153,23 @@ const ContactAvatar = ({
       const { data } = await api.post(
         `/contacts/${id}/refresh-profile-pic`
       );
-      const updated = data.contact || {
+      const updatedContact = data.contact || {
         id,
         profilePicUrl: data.profilePicUrl,
       };
-      setLocalContact((prev) => ({ ...(prev || {}), ...updated, id }));
+      setLocalContact((prev) => ({ ...(prev || {}), ...updatedContact, id }));
       setAvatarVersion(Date.now());
       setImageBroken(false);
-      return updated;
+
+      if (data.updated) {
+        toast.success("Foto de perfil atualizada.");
+      } else {
+        toast.info(
+          "Este contato não possui foto de perfil disponível no WhatsApp."
+        );
+      }
+
+      return updatedContact;
     } catch (err) {
       toastError(err);
       return null;
@@ -211,7 +223,7 @@ const ContactAvatar = ({
   return (
     <>
       <span
-        className={classes.wrapper}
+        className={`${classes.wrapper} ${className || ""}`}
         style={style}
         onClick={handleClick}
         role="button"
@@ -225,7 +237,7 @@ const ContactAvatar = ({
         }}
       >
         <Avatar
-          className={`${classes.avatar} ${className || ""}`}
+          className={classes.avatar}
           src={avatarSrc}
           alt={alt || displayContact.name || "contact_image"}
           onError={handleAvatarError}
@@ -233,7 +245,22 @@ const ContactAvatar = ({
         {loading && (
           <>
             <span className={classes.loadingBackdrop} aria-hidden="true" />
-            <span className={classes.loadingRing} aria-hidden="true" />
+            <svg
+              className={classes.loadingRing}
+              viewBox="0 0 40 40"
+              aria-hidden="true"
+            >
+              <circle
+                cx="20"
+                cy="20"
+                r="18"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeDasharray="30 83"
+              />
+            </svg>
           </>
         )}
       </span>
