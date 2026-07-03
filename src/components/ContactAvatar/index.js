@@ -163,10 +163,16 @@ const ContactAvatar = ({
 
       if (data.updated) {
         toast.success("Foto de perfil atualizada.");
-      } else {
+      } else if (data.reason === "privacy") {
         toast.info(
-          "Este contato não possui foto de perfil disponível no WhatsApp."
+          "A foto deste contato é restrita pelas configurações de privacidade dele."
         );
+      } else if (data.reason === "timeout" || data.reason === "error") {
+        toast.warn(
+          "Não foi possível buscar a foto agora. Tente novamente."
+        );
+      } else {
+        toast.info("Este contato não possui foto de perfil.");
       }
 
       return updatedContact;
