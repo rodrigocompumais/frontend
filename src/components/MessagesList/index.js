@@ -369,6 +369,14 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
+const sortMessagesChronologically = (msgs) =>
+  [...msgs].sort((a, b) => {
+    const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    if (ta !== tb) return ta - tb;
+    return String(a.id || "").localeCompare(String(b.id || ""));
+  });
+
 const reducer = (state, action) => {
   if (action.type === "LOAD_MESSAGES") {
     const messages = Array.isArray(action.payload) ? action.payload : [];
@@ -387,9 +395,9 @@ const reducer = (state, action) => {
           return b.fromMe === true && bTicketId === oTicketId && bBody === oBody;
         });
       });
-      return [...messages, ...optimisticToKeep];
+      return sortMessagesChronologically([...messages, ...optimisticToKeep]);
     }
-    return [...messages, ...state];
+    return sortMessagesChronologically([...messages, ...state]);
   }
 
   if (action.type === "ADD_MESSAGE") {
@@ -434,7 +442,7 @@ const reducer = (state, action) => {
       if (replaceIndex !== -1) {
         const next = [...state];
         next[replaceIndex] = newMessage;
-        return next;
+        return sortMessagesChronologically(next);
       }
     }
 
@@ -442,9 +450,9 @@ const reducer = (state, action) => {
     if (messageIndex !== -1) {
       const next = [...state];
       next[messageIndex] = newMessage;
-      return next;
+      return sortMessagesChronologically(next);
     }
-    return [...state, newMessage];
+    return sortMessagesChronologically([...state, newMessage]);
   }
 
   if (action.type === "REMOVE_OPTIMISTIC") {
