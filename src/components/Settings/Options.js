@@ -99,6 +99,9 @@ export default function Options(props) {
   const [sendGreetingMessageOneQueues, setSendGreetingMessageOneQueues] = useState("disabled");
   const [loadingSendGreetingMessageOneQueues, setLoadingSendGreetingMessageOneQueues] = useState(false);
 
+  const [limitConnectionGreeting, setLimitConnectionGreeting] = useState("disabled");
+  const [loadingLimitConnectionGreeting, setLoadingLimitConnectionGreeting] = useState(false);
+
   const { update } = useSettings();
 
   useEffect(() => {
@@ -135,6 +138,11 @@ export default function Options(props) {
         setSendGreetingMessageOneQueues(sendGreetingMessageOneQueues.value)
       }
 
+      const limitConnectionGreetingSetting = settings.find((s) => s.key === "limitConnectionGreeting");
+      if (limitConnectionGreetingSetting) {
+        setLimitConnectionGreeting(limitConnectionGreetingSetting.value);
+      }
+
       const chatbotType = settings.find((s) => s.key === "chatBotType");
       if (chatbotType) {
         setChatbotType(chatbotType.value);
@@ -168,6 +176,17 @@ export default function Options(props) {
     });
     toast.success(i18n.t("settings.options.toasts.success"));
     setLoadingSendGreetingMessageOneQueues(false);
+  }
+
+  async function handleLimitConnectionGreeting(value) {
+    setLimitConnectionGreeting(value);
+    setLoadingLimitConnectionGreeting(true);
+    await update({
+      key: "limitConnectionGreeting",
+      value,
+    });
+    toast.success(i18n.t("settings.options.toasts.success"));
+    setLoadingLimitConnectionGreeting(false);
   }
 
   async function handleScheduleType(value) {
@@ -419,6 +438,29 @@ export default function Options(props) {
             </Select>
             <FormHelperText>
               {loadingSendGreetingMessageOneQueues && i18n.t("settings.options.updating")}
+            </FormHelperText>
+          </FormControl>
+        </Grid>
+
+        <Grid xs={12} sm={6} md={4} item>
+          <FormControl className={classes.selectContainer}>
+            <InputLabel id="limitConnectionGreeting-label">
+              {i18n.t("settings.options.fields.limitConnectionGreeting.title")}
+            </InputLabel>
+            <Select
+              labelId="limitConnectionGreeting-label"
+              value={limitConnectionGreeting}
+              onChange={async (e) => {
+                handleLimitConnectionGreeting(e.target.value);
+              }}
+            >
+              <MenuItem value={"disabled"}>{i18n.t("settings.options.disabled")}</MenuItem>
+              <MenuItem value={"enabled"}>{i18n.t("settings.options.enabled")}</MenuItem>
+            </Select>
+            <FormHelperText>
+              {loadingLimitConnectionGreeting
+                ? i18n.t("settings.options.updating")
+                : i18n.t("settings.options.fields.limitConnectionGreeting.description")}
             </FormHelperText>
           </FormControl>
         </Grid>

@@ -1825,6 +1825,11 @@ const messages = {
             sendGreetingMessageOneQueues: {
               title: "Enviar saudação quando houver somente 1 fila",
             },
+            limitConnectionGreeting: {
+              title: "Limit connection greeting",
+              description:
+                "Sends at most one greeting per interaction (24h window) or when a closed chat is reopened",
+            },
             lmStudioInfra: {
               title: "Local AI (LM Studio)",
               description:
