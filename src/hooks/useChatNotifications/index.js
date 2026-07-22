@@ -4,6 +4,7 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import { toast } from "react-toastify";
 
+import { getBackendUrl } from "../../config/backendUrl";
 const NO_NOTIFICATION_PATHS = ["/garcom", "/cozinha"];
 
 const useChatNotifications = () => {
@@ -107,7 +108,7 @@ const useChatNotifications = () => {
         const notification = new Notification(`Chat interno - ${senderName}`, {
           body: messagePreview || "Nova mensagem",
           icon: senderAvatar
-            ? `${process.env.REACT_APP_BACKEND_URL}/public/${senderAvatar}`
+            ? `${getBackendUrl()}/public/${senderAvatar}`
             : undefined,
           tag: `internal-chat-${chat.id}-msg-${newMessage.id}`,
           renotify: true,

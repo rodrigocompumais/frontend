@@ -24,8 +24,9 @@ import InputMask from "react-input-mask";
 import { toast } from "react-toastify";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
+import { getBackendUrl } from "../../config/backendUrl";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "";
+const BACKEND_URL = getBackendUrl() || "";
 
 const getAvatarUrl = (user) => {
   if (!user?.avatar) return null;
@@ -521,7 +522,7 @@ const PublicAgendamentoForm = ({ form, slug: publicId }) => {
 
   if (submitted) {
     const token = submitResponse?.appointmentToken;
-    const icalUrl = token ? `${process.env.REACT_APP_BACKEND_URL || ""}/public/forms/${publicId}/appointments/ical?token=${encodeURIComponent(token)}` : null;
+    const icalUrl = token ? `${getBackendUrl() || ""}/public/forms/${publicId}/appointments/ical?token=${encodeURIComponent(token)}` : null;
     const rescheduleUrl = token ? `${window.location.origin}/f/${publicId}/reagendar?token=${encodeURIComponent(token)}` : null;
     const cancelUrl = token ? `${window.location.origin}/f/${publicId}/cancelar?token=${encodeURIComponent(token)}` : null;
     const startDate = selectedSlot ? new Date(selectedSlot.start) : null;

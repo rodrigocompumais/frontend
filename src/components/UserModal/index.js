@@ -47,6 +47,7 @@ import {
 	getLanchoneteDefaultRouteOptions,
 	isDefaultRouteAvailableForModules,
 } from "../../constants/pagePermissions";
+import { getBackendUrl } from "../../config/backendUrl";
 
 const useStyles = makeStyles(theme => ({
 	root: {
@@ -164,7 +165,7 @@ const UserModal = ({ open, onClose, userId }) => {
 				setSelectedQueueIds(userQueueIds);
 				setWhatsappId(data.whatsappId ? data.whatsappId : '');
 				if (data.avatar) {
-					setAvatarPreview(`${process.env.REACT_APP_BACKEND_URL}/public/${data.avatar}`);
+					setAvatarPreview(`${getBackendUrl()}/public/${data.avatar}`);
 				} else {
 					setAvatarPreview(null);
 				}
@@ -244,7 +245,7 @@ const UserModal = ({ open, onClose, userId }) => {
 			setUser(prev => ({ ...prev, avatar: data.avatar }));
 			setAvatarFile(null);
 			if (data.avatar) {
-				setAvatarPreview(`${process.env.REACT_APP_BACKEND_URL}/public/${data.avatar}`);
+				setAvatarPreview(`${getBackendUrl()}/public/${data.avatar}`);
 			}
 			toast.success("Foto atualizada com sucesso!");
 		} catch (err) {

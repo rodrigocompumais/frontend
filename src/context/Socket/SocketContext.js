@@ -2,6 +2,7 @@ import { createContext } from "react";
 import openSocket from "socket.io-client";
 import jwt from "jsonwebtoken";
 
+import { getBackendUrl } from "../../config/backendUrl";
 class ManagedSocket {
   constructor(socketManager) {
     this.socketManager = socketManager;
@@ -129,7 +130,7 @@ const SocketManager = {
         return new DummySocket();
       }
       
-      const backendUrl = process.env.REACT_APP_BACKEND_URL;
+      const backendUrl = getBackendUrl();
       if (process.env.NODE_ENV !== 'production') {
         console.log("🔌 [Socket] Tentando conectar ao backend:", {
           backendUrl: backendUrl,

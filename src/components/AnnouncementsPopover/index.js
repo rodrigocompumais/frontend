@@ -42,6 +42,7 @@ import {
   filterUnseenAnnouncements,
   markAnnouncementsSeen,
 } from "../../utils/announcementPriority";
+import { getBackendUrl } from "../../config/backendUrl";
 
 const useStyles = makeStyles((theme) => ({
   mainPaper: {
@@ -146,7 +147,7 @@ const useStyles = makeStyles((theme) => ({
 }));
 
 const getMediaPath = (filename) =>
-  `${process.env.REACT_APP_BACKEND_URL}/public/${filename}`;
+  `${getBackendUrl()}/public/${filename}`;
 
 function AnnouncementDetailDialog({
   announcement,

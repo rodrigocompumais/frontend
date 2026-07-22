@@ -24,6 +24,7 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { Checkbox, Stack } from "@mui/material";
 
+import { getBackendUrl } from "../../config/backendUrl";
 const useStyles = makeStyles(theme => ({
   root: {
     display: "flex",
@@ -81,7 +82,7 @@ const FlowBuilderAddAudioModal = ({ open, onSave, onUpdate, data, close }) => {
         title: "Editar audio",
         btn: "Salvar"
       });
-      setPreview(process.env.REACT_APP_BACKEND_URL + '/public/' + data.data.url)
+      setPreview(getBackendUrl() + '/public/' + data.data.url)
       setRecord(data.data.record)
       setActiveModal(true);
     } else if (open === "create") {

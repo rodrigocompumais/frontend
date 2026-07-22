@@ -1,7 +1,8 @@
 import axios from "axios";
+import { getBackendUrl } from "../config/backendUrl";
 
 const api = axios.create({
-	baseURL: process.env.REACT_APP_BACKEND_URL,
+	baseURL: getBackendUrl(),
 	withCredentials: true,
 });
 
@@ -15,11 +16,18 @@ api.interceptors.request.use((config) => {
 			config.params = { ...(config.params || {}), _: Date.now() };
 		}
 	}
+	// Recalcula baseURL a cada request (hostname pode mudar em dev na rede)
+	config.baseURL = getBackendUrl();
 	return config;
 });
 
 export const openApi = axios.create({
-	baseURL: process.env.REACT_APP_BACKEND_URL
+	baseURL: getBackendUrl()
+});
+
+openApi.interceptors.request.use((config) => {
+	config.baseURL = getBackendUrl();
+	return config;
 });
 
 export default api;

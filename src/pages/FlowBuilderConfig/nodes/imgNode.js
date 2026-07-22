@@ -4,9 +4,10 @@ import React, { memo } from "react";
 import { Handle } from "reactflow";
 import { useNodeStorage } from "../../../stores/useNodeStorage";
 
+import { getBackendUrl } from "../../../config/backendUrl";
 export default memo(({ data, isConnectable, id }) => {
 
-  const link = process.env.REACT_APP_BACKEND_URL === 'http://localhost:8090' ? 'http://localhost:8090' : process.env.REACT_APP_BACKEND_URL
+  const link = getBackendUrl() === 'http://localhost:8090' ? 'http://localhost:8090' : getBackendUrl()
 
   const storageItems = useNodeStorage();
 

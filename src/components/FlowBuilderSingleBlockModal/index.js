@@ -43,6 +43,7 @@ import {
 } from "@mui/icons-material";
 import { capitalize } from "../../utils/capitalize";
 import { Box, Divider } from "@material-ui/core";
+import { getBackendUrl } from "../../config/backendUrl";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -576,7 +577,7 @@ const FlowBuilderSingleBlockModal = ({
           <img
             src={
               valueDefault.length > 0
-                ? process.env.REACT_APP_BACKEND_URL + "/public/" + valueDefault
+                ? getBackendUrl() + "/public/" + valueDefault
                 : ""
             }
             className={`img${number}`}
@@ -645,7 +646,7 @@ const FlowBuilderSingleBlockModal = ({
             <audio controls="controls">
               <source
                 src={
-                  process.env.REACT_APP_BACKEND_URL + "/public/" + valueDefault
+                  getBackendUrl() + "/public/" + valueDefault
                 }
                 type="audio/mp3"
               />
@@ -709,7 +710,7 @@ const FlowBuilderSingleBlockModal = ({
             <video controls="controls" style={{ width: "200px" }}>
               <source
                 src={
-                  process.env.REACT_APP_BACKEND_URL + "/public/" + valueDefault
+                  getBackendUrl() + "/public/" + valueDefault
                 }
                 type="video/mp4"
               />

@@ -16,6 +16,7 @@ import { AuthContext } from "../../context/Auth/AuthContext";
 import { useDate } from "../../hooks/useDate";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
+import { getBackendUrl } from "../../config/backendUrl";
 
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
@@ -461,7 +462,7 @@ export default function ChatMessages({
             messages.map((item, key) => {
               const isOwnMessage = item.senderId === user.id;
               const avatarUrl = item.sender?.avatar 
-                ? `${process.env.REACT_APP_BACKEND_URL}/public/${item.sender.avatar}`
+                ? `${getBackendUrl()}/public/${item.sender.avatar}`
                 : null;
               return (
                 <Box 
@@ -503,7 +504,7 @@ export default function ChatMessages({
                     {item.mediaPath &&
                       (isImageFileName(item.mediaName || item.mediaPath) ? (
                         <img
-                          src={`${process.env.REACT_APP_BACKEND_URL}/public/${item.mediaPath}`}
+                          src={`${getBackendUrl()}/public/${item.mediaPath}`}
                           alt=""
                           className={classes.messageImage}
                           onError={(e) => {
@@ -512,7 +513,7 @@ export default function ChatMessages({
                         />
                       ) : (
                         <a
-                          href={`${process.env.REACT_APP_BACKEND_URL}/public/${item.mediaPath}`}
+                          href={`${getBackendUrl()}/public/${item.mediaPath}`}
                           download={item.mediaName || true}
                           target="_blank"
                           rel="noopener noreferrer"

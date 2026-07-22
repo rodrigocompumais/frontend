@@ -21,6 +21,7 @@ import EditIcon from "@material-ui/icons/Edit";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
+import { getBackendUrl } from "../../config/backendUrl";
 
 const useStyles = makeStyles((theme) => ({
   mainContainer: {
@@ -191,7 +192,7 @@ export default function ChatList({
       const otherUser = chat.users.find((u) => u.userId !== user.id);
       if (otherUser && otherUser.user) {
         const avatarUrl = otherUser.user.avatar 
-          ? `${process.env.REACT_APP_BACKEND_URL}/public/${otherUser.user.avatar}`
+          ? `${getBackendUrl()}/public/${otherUser.user.avatar}`
           : null;
         return {
           src: avatarUrl,

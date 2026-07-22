@@ -29,6 +29,7 @@ import { i18n } from '../../translate/i18n';
 import NotificationsVolume from '../NotificationsVolume';
 import LanguageControl from '../LanguageControl';
 import ColorModeContext from '../../layout/themeContext';
+import { getBackendUrl } from "../../config/backendUrl";
 
 const useStyles = makeStyles((theme) => ({
   avatar: {
@@ -98,7 +99,7 @@ const UserProfileMenu = ({ volume, setVolume }) => {
   };
 
   const avatarUrl = user.avatar 
-    ? `${process.env.REACT_APP_BACKEND_URL}/public/${user.avatar}`
+    ? `${getBackendUrl()}/public/${user.avatar}`
     : null;
 
   return (
