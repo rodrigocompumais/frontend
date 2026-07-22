@@ -82,8 +82,8 @@
         "zustand": "^3.7.2"
     },
     "scripts": {
-        "start": "set NODE_OPTIONS=--openssl-legacy-provider && react-app-rewired start",
-        "dev": "set NODE_OPTIONS=--openssl-legacy-provider && react-app-rewired start",
+        "start": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-app-rewired start",
+        "dev": "cross-env NODE_OPTIONS=--openssl-legacy-provider react-app-rewired start",
         "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider GENERATE_SOURCEMAP=false react-app-rewired build",
         "build:internal": "cross-env NODE_OPTIONS=--openssl-legacy-provider GENERATE_SOURCEMAP=false react-app-rewired build",
         "build:staging": "cross-env BUILD_STAGING=1 NODE_OPTIONS=--openssl-legacy-provider GENERATE_SOURCEMAP=false react-app-rewired build",

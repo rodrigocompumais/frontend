@@ -3218,6 +3218,34 @@ const FormBuilder = () => {
                   />
                 </Grid>
               )}
+              {formData.settings?.formType === "cardapio" && (
+                <Grid item xs={12}>
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={!!formData.settings?.uniplus?.enabled}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            settings: {
+                              ...formData.settings,
+                              uniplus: {
+                                ...(formData.settings?.uniplus || {}),
+                                enabled: e.target.checked,
+                              },
+                            },
+                          })
+                        }
+                      />
+                    }
+                    label="Enviar delivery para UniPlus"
+                  />
+                  <Typography variant="caption" color="textSecondary" display="block">
+                    Requer integração UniPlus ativa em Configurações → API e código UniPlus
+                    nos produtos. O PrintAgent grava a comanda aberta no banco local.
+                  </Typography>
+                </Grid>
+              )}
               <Grid item xs={12}>
                 <TextField
                   label="Mensagem WhatsApp (pré-definida)"

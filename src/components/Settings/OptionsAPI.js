@@ -11,6 +11,7 @@ import {
 import FileCopyIcon from "@material-ui/icons/FileCopy";
 import GetAppIcon from "@material-ui/icons/GetApp";
 import PrintDevicesManager from "./PrintDevicesManager";
+import UniplusSettings from "./UniplusSettings";
 import { toast } from "react-toastify";
 import { i18n } from "../../translate/i18n";
 
@@ -123,12 +124,17 @@ export default function OptionsAPI() {
 
       <PrintDevicesManager />
 
+      <UniplusSettings />
+
       <Box style={{ marginTop: 32, paddingTop: 24, borderTop: "1px solid #e0e0e0" }}>
         <Typography variant="h6" gutterBottom>
           Agente de Impressão
         </Typography>
         <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
-          Baixe o agente de impressão para Windows. Este aplicativo permite que impressoras locais ou de rede recebam pedidos via WebSocket.
+          Use o agente Python em <code>agent_service_printer_compuchat</code>
+          (<code>python app.py</code> → http://localhost:5000). Configure a URL WebSocket
+          <code> ws://localhost:4000/ws/print</code> e, se necessário, UniPlus (Postgres local).
+          O .exe abaixo é o build Windows opcional.
         </Typography>
         <Button
           variant="contained"

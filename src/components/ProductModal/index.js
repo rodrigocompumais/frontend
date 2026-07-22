@@ -82,6 +82,7 @@ const ProductSchema = Yup.object().shape({
     halfAndHalfGrupo: Yup.string().nullable(),
     grupo: Yup.string().nullable(),
     addOnGroupId: Yup.number().nullable(),
+    idUniplus: Yup.string().max(20).nullable(),
     variations: Yup.array()
         .of(
             Yup.object().shape({
@@ -125,6 +126,7 @@ const ProductModal = ({ open, onClose, productId }) => {
         grupo: "",
         addOnGroupId: null,
         imageUrl: "",
+        idUniplus: "",
         variations: [],
     };
 
@@ -133,6 +135,7 @@ const ProductModal = ({ open, onClose, productId }) => {
     const [addOnGroups, setAddOnGroups] = useState([]);
     const [loadingGroups, setLoadingGroups] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
+    const [uniplusEnabled, setUniplusEnabled] = useState(false);
     const imageInputRef = React.useRef(null);
     
     // Adicionar grupos do produto aos grupos disponíveis quando o produto mudar
@@ -211,6 +214,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                     grupo: productGrupo,
                     addOnGroupId: data.addOnGroupId ?? null,
                     imageUrl: data.imageUrl || "",
+                    idUniplus: data.idUniplus || "",
                     variations,
                 });
             } catch (err) {
@@ -222,6 +226,11 @@ const ProductModal = ({ open, onClose, productId }) => {
             fetchProduct();
             fetchGroups();
             api.get("/addon-groups").then(({ data }) => setAddOnGroups(Array.isArray(data) ? data : [])).catch(() => setAddOnGroups([]));
+            api.get("/settings").then(({ data }) => {
+                const list = Array.isArray(data) ? data : [];
+                const row = list.find((s) => s.key === "uniplusEnabled");
+                setUniplusEnabled(row?.value === "enabled");
+            }).catch(() => setUniplusEnabled(false));
         }
     }, [productId, open]);
 
@@ -324,6 +333,7 @@ const ProductModal = ({ open, onClose, productId }) => {
             }
             if (payload.halfAndHalfGrupo === "") payload.halfAndHalfGrupo = null;
             if (payload.addOnGroupId === "" || payload.addOnGroupId == null) payload.addOnGroupId = null;
+            if (payload.idUniplus === "") payload.idUniplus = null;
             payload.variations = (payload.variations || []).filter((v) => v.name && v.options && v.options.length > 0).map((v) => ({
                 name: v.name.trim(),
                 options: v.options.map((o) => ({ label: String(o.label).trim(), value: Number(o.value) })),
@@ -513,6 +523,26 @@ const ProductModal = ({ open, onClose, productId }) => {
                                 </FormControl>
                                 <br />
                                 <br />
+                                {uniplusEnabled && (
+                                    <>
+                                        <Field
+                                            as={TextField}
+                                            label="Código UniPlus"
+                                            name="idUniplus"
+                                            error={touched.idUniplus && Boolean(errors.idUniplus)}
+                                            helperText={
+                                                (touched.idUniplus && errors.idUniplus) ||
+                                                "Código do produto no UniPlus (codigoproduto)"
+                                            }
+                                            variant="outlined"
+                                            margin="dense"
+                                            fullWidth
+                                            inputProps={{ maxLength: 20 }}
+                                        />
+                                        <br />
+                                        <br />
+                                    </>
+                                )}
                                 <div className={classes.multFieldLine}>
                                     <Field
                                         as={TextField}
