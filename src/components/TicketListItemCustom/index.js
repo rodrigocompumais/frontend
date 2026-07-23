@@ -9,18 +9,14 @@ import { green, grey, blue } from "@material-ui/core/colors";
 import ListItem from "@material-ui/core/ListItem";
 import ListItemText from "@material-ui/core/ListItemText";
 import ListItemAvatar from "@material-ui/core/ListItemAvatar";
-import ListItemSecondaryAction from "@material-ui/core/ListItemSecondaryAction";
 import Typography from "@material-ui/core/Typography";
 import Divider from "@material-ui/core/Divider";
 import Badge from "@material-ui/core/Badge";
 import Box from "@material-ui/core/Box";
 import IconButton from "@material-ui/core/IconButton";
-import Menu from "@material-ui/core/Menu";
-import MenuItem from "@material-ui/core/MenuItem";
 import Chip from "@material-ui/core/Chip";
 import CircularProgress from "@material-ui/core/CircularProgress";
 
-import MoreVertIcon from "@material-ui/icons/MoreVert";
 import VisibilityIcon from "@material-ui/icons/Visibility";
 import WhatsAppIcon from "@material-ui/icons/WhatsApp";
 import AndroidIcon from "@material-ui/icons/Android";
@@ -42,7 +38,6 @@ import toastError from "../../errors/toastError";
 import { toast } from "react-toastify";
 import { v4 as uuidv4 } from "uuid";
 import TicketMessagesDialog from "../TicketMessagesDialog";
-import ContactTag from "../ContactTag";
 
 const useStyles = makeStyles((theme) => ({
   ticket: {
@@ -205,50 +200,62 @@ const useStyles = makeStyles((theme) => ({
     },
   },
 
-  menuItem: {
-    padding: theme.spacing(1, 2),
-    minHeight: "auto",
-  },
-
-  menuSection: {
-    padding: theme.spacing(1, 2),
-    borderBottom: `1px solid ${theme.palette.divider}`,
-  },
-
-  menuSectionTitle: {
-    fontSize: "0.75rem",
-    fontWeight: 600,
-    color: theme.palette.text.secondary,
-    textTransform: "uppercase",
-    letterSpacing: "0.5px",
-    marginBottom: theme.spacing(0.5),
-  },
-
-  menuTags: {
+  metaRow: {
     display: "flex",
     flexWrap: "wrap",
-    gap: theme.spacing(0.5),
-    marginTop: theme.spacing(0.5),
-  },
-
-  menuWhatsApp: {
-    display: "flex",
     alignItems: "center",
     gap: theme.spacing(0.5),
     marginTop: theme.spacing(0.5),
+    maxWidth: "100%",
+    paddingRight: 28,
   },
 
-  menuQueue: {
-    display: "flex",
-    alignItems: "center",
-    gap: theme.spacing(0.5),
-    marginTop: theme.spacing(0.5),
+  metaChip: {
+    height: 20,
+    maxWidth: 120,
+    fontSize: "0.6875rem",
+    fontWeight: 500,
+    borderRadius: 4,
+    "& .MuiChip-label": {
+      paddingLeft: 6,
+      paddingRight: 6,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    },
+    "& .MuiChip-icon": {
+      marginLeft: 4,
+      marginRight: -2,
+      fontSize: "0.875rem",
+    },
   },
 
   queueChip: {
-    height: 24,
-    fontSize: "0.75rem",
+    height: 20,
+    maxWidth: 110,
+    fontSize: "0.6875rem",
+    fontWeight: 600,
+    color: "#fff",
+    borderRadius: 4,
+    "& .MuiChip-label": {
+      paddingLeft: 6,
+      paddingRight: 6,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    },
+  },
+
+  tagChip: {
+    height: 18,
+    maxWidth: 90,
+    fontSize: "0.625rem",
     fontWeight: 500,
+    borderRadius: 3,
+    "& .MuiChip-label": {
+      paddingLeft: 5,
+      paddingRight: 5,
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+    },
   },
 
   avatarBadge: {
@@ -263,16 +270,6 @@ const useStyles = makeStyles((theme) => ({
       borderRadius: "10px",
       border: `2px solid ${theme.palette.background.paper}`,
       boxShadow: theme.shadows[2],
-    },
-  },
-
-  moreButton: {
-    padding: theme.spacing(0.5),
-    color: theme.palette.text.secondary,
-    "&:hover": {
-      backgroundColor: theme.palette.type === "dark"
-        ? "rgba(255, 255, 255, 0.08)"
-        : "rgba(0, 0, 0, 0.04)",
     },
   },
 
@@ -305,9 +302,6 @@ const TicketListItemCustom = ({ ticket }) => {
   const history = useHistory();
   const [loading, setLoading] = useState(false);
   const [ticketUser, setTicketUser] = useState(null);
-  const [whatsAppName, setWhatsAppName] = useState(null);
-  const [tag, setTag] = useState([]);
-  const [anchorEl, setAnchorEl] = useState(null);
   const [openTicketMessageDialog, setOpenTicketMessageDialog] = useState(false);
 
   const { ticketId } = useParams();
@@ -316,22 +310,23 @@ const TicketListItemCustom = ({ ticket }) => {
   const { user } = useContext(AuthContext);
   const { profile } = user;
 
+  const whatsAppName = ticket.whatsapp?.name || null;
+  const tags = Array.isArray(ticket?.tags) ? ticket.tags : [];
+  const visibleTags = tags.slice(0, 3);
+  const extraTagsCount = Math.max(0, tags.length - visibleTags.length);
+
   useEffect(() => {
+    isMounted.current = true;
     if (ticket.userId && ticket.user) {
       setTicketUser(ticket.user?.name);
+    } else {
+      setTicketUser(null);
     }
-
-    if (ticket.whatsappId && ticket.whatsapp) {
-      setWhatsAppName(ticket.whatsapp.name);
-    }
-
-    setTag(ticket?.tags || []);
 
     return () => {
       isMounted.current = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [ticket.id, ticket.userId, ticket.user]);
 
   const handleCloseTicket = async (id) => {
     setLoading(true);
@@ -440,16 +435,8 @@ const TicketListItemCustom = ({ ticket }) => {
     setCurrentTicket({ id, uuid, code });
   };
 
-  const handleOpenMenu = (e) => {
-    e.stopPropagation();
-    setAnchorEl(e.currentTarget);
-  };
-
-  const handleCloseMenu = () => {
-    setAnchorEl(null);
-  };
-
-  const menuOpen = Boolean(anchorEl);
+  const connectionLabel =
+    ticket.whatsapp?.type === "instagram" ? "Instagram" : "WhatsApp";
 
   return (
     <React.Fragment key={ticket.id}>
@@ -569,6 +556,63 @@ const TicketListItemCustom = ({ ticket }) => {
                     Sem atendente
                   </Typography>
                 )}
+
+                <Box className={classes.metaRow}>
+                  <Tooltip title={ticket.queue?.name || i18n.t("ticketsListItem.noQueue")}>
+                    <Chip
+                      size="small"
+                      icon={<FolderIcon style={{ color: "#fff", fontSize: "0.875rem" }} />}
+                      label={ticket.queue?.name || i18n.t("ticketsListItem.noQueue")}
+                      className={classes.queueChip}
+                      style={{
+                        backgroundColor: ticket.queue?.color || "#7C7C7C",
+                      }}
+                    />
+                  </Tooltip>
+
+                  {whatsAppName && (
+                    <Tooltip title={`${connectionLabel}: ${whatsAppName}`}>
+                      <Chip
+                        size="small"
+                        icon={
+                          ticket.whatsapp?.type === "instagram" ? (
+                            <PhotoCameraIcon style={{ color: "#E4405F", fontSize: "0.875rem" }} />
+                          ) : (
+                            <WhatsAppIcon style={{ color: green[600], fontSize: "0.875rem" }} />
+                          )
+                        }
+                        label={whatsAppName}
+                        className={classes.metaChip}
+                        variant="outlined"
+                      />
+                    </Tooltip>
+                  )}
+
+                  {visibleTags.map((tagItem) => (
+                    <Tooltip title={tagItem.name} key={`ticket-tag-${ticket.id}-${tagItem.id}`}>
+                      <Chip
+                        size="small"
+                        label={tagItem.name}
+                        className={classes.tagChip}
+                        style={{
+                          backgroundColor: tagItem.color || "#9CA3AF",
+                          color: "#fff",
+                        }}
+                      />
+                    </Tooltip>
+                  ))}
+                  {extraTagsCount > 0 && (
+                    <Tooltip title={tags.slice(3).map((t) => t.name).join(", ")}>
+                      <Chip
+                        size="small"
+                        label={`+${extraTagsCount}`}
+                        className={classes.tagChip}
+                        variant="outlined"
+                      />
+                    </Tooltip>
+                  )}
+                </Box>
+
                 {ticket.fromMe === false && ticket.status !== "pending" && (
                   <Chip
                     size="small"
@@ -641,14 +685,6 @@ const TicketListItemCustom = ({ ticket }) => {
                     </Tooltip>
                   )}
                 </Box>
-                <IconButton
-                  size="small"
-                  className={classes.moreButton}
-                  onClick={handleOpenMenu}
-                  aria-label="mais opções"
-                >
-                  <MoreVertIcon fontSize="small" />
-                </IconButton>
               </Box>
             </Box>
           }
@@ -681,70 +717,6 @@ const TicketListItemCustom = ({ ticket }) => {
             )
           }
         />
-
-
-        <Menu
-          anchorEl={anchorEl}
-          open={menuOpen}
-          onClose={handleCloseMenu}
-          onClick={(e) => e.stopPropagation()}
-          PaperProps={{
-            style: {
-              minWidth: 200,
-              maxWidth: 300,
-            },
-          }}
-        >
-          {[
-            ticket.queue && (
-              <Box key="queue" className={classes.menuSection}>
-                <Typography className={classes.menuSectionTitle}>Fila</Typography>
-                <Box className={classes.menuQueue}>
-                  <FolderIcon fontSize="small" style={{ color: ticket.queue?.color || "#7C7C7C" }} />
-                  <Chip
-                    label={ticket.queue?.name || i18n.t("ticketsListItem.noQueue")}
-                    size="small"
-                    className={classes.queueChip}
-                    style={{
-                      backgroundColor: ticket.queue?.color || "#7C7C7C",
-                      color: "#FFFFFF",
-                    }}
-                  />
-                </Box>
-              </Box>
-            ),
-            whatsAppName && (
-              <Box key="whatsapp" className={classes.menuSection}>
-                <Typography className={classes.menuSectionTitle}>
-                  {ticket.whatsapp?.type === "instagram" ? "Conexão Instagram" : "Conexão WhatsApp"}
-                </Typography>
-                <Box className={classes.menuWhatsApp}>
-                  {ticket.whatsapp?.type === "instagram" ? (
-                    <PhotoCameraIcon fontSize="small" style={{ color: "#E4405F" }} />
-                  ) : (
-                    <WhatsAppIcon fontSize="small" style={{ color: green[600] }} />
-                  )}
-                  <Typography variant="body2">{whatsAppName}</Typography>
-                </Box>
-              </Box>
-            ),
-            tag && tag.length > 0 && (
-              <Box key="tags" className={classes.menuSection}>
-                <Typography className={classes.menuSectionTitle}>Tags</Typography>
-                <Box className={classes.menuTags}>
-                  {tag.map((tagItem) => (
-                    <ContactTag tag={tagItem} key={`ticket-tag-${ticket.id}-${tagItem.id}`} />
-                  ))}
-                </Box>
-              </Box>
-            ),
-            (!ticket.queue && !whatsAppName && (!tag || tag.length === 0)) && (
-              <MenuItem key="empty" className={classes.menuItem} disabled>
-                Nenhuma informação adicional
-              </MenuItem>
-            )
-          ].filter(Boolean)}
-        </Menu>
       </ListItem>
       <Divider variant="inset" component="li" />
     </React.Fragment>
