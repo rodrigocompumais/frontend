@@ -969,18 +969,37 @@ const FlowBuilderConfig = () => {
       }
 
       const flowNameToUse = flowData?.name || flowName || `Automação ${flowId || "Nova"}`;
+      const integrationPayload = {
+        type: "flowbuilder",
+        name: flowNameToUse,
+        projectName: flowNameToUse,
+        language: "pt-BR",
+        jsonContent: JSON.stringify({ flowId: Number(flowId) || flowId }),
+      };
 
       // Verificar se já existe integração para este fluxo
       let integrationExists = false;
       let existingIntegrationId = null;
 
       try {
-        const integrations = await api.get("/queueIntegration");
-        // Buscar por nome ou por projectName
-        const existingIntegration = integrations.data.find(
-          (int) => int.type === "flowbuilder" &&
-            (int.projectName === flowNameToUse || int.name === flowNameToUse)
-        );
+        const { data } = await api.get("/queueIntegration");
+        const list = Array.isArray(data?.queueIntegrations)
+          ? data.queueIntegrations
+          : Array.isArray(data)
+            ? data
+            : [];
+        const existingIntegration = list.find((int) => {
+          if (int.type !== "flowbuilder") return false;
+          if (int.projectName === flowNameToUse || int.name === flowNameToUse) {
+            return true;
+          }
+          try {
+            const parsed = JSON.parse(int.jsonContent || "{}");
+            return String(parsed.flowId) === String(flowId);
+          } catch {
+            return false;
+          }
+        });
         if (existingIntegration) {
           integrationExists = true;
           existingIntegrationId = existingIntegration.id;
@@ -992,20 +1011,10 @@ const FlowBuilderConfig = () => {
 
       // Criar ou atualizar integração automaticamente
       if (integrationExists && existingIntegrationId) {
-        // Atualizar integração existente
-        await api.put(`/queueIntegration/${existingIntegrationId}`, {
-          type: "flowbuilder",
-          name: flowNameToUse,
-          projectName: flowNameToUse,
-        });
+        await api.put(`/queueIntegration/${existingIntegrationId}`, integrationPayload);
         toast.success("Automação e integração atualizados com sucesso");
       } else {
-        // Criar nova integração
-        await api.post("/queueIntegration", {
-          type: "flowbuilder",
-          name: flowNameToUse,
-          projectName: flowNameToUse,
-        });
+        await api.post("/queueIntegration", integrationPayload);
         toast.success("Automação salva e integração criada automaticamente");
       }
     } catch (err) {
