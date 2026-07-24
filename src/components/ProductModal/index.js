@@ -532,7 +532,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                                             error={touched.idUniplus && Boolean(errors.idUniplus)}
                                             helperText={
                                                 (touched.idUniplus && errors.idUniplus) ||
-                                                "Código do produto no UniPlus (codigoproduto)"
+                                                "Campo «código» do cadastro UniPlus (visível na tela). Ex.: 1080 — não use o id interno (ex.: 177)."
                                             }
                                             variant="outlined"
                                             margin="dense"
