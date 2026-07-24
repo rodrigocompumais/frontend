@@ -188,7 +188,26 @@ const useStyles = makeStyles((theme) => ({
       opacity: 0.85,
     },
   },
+  uniplusBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    fontSize: "0.65rem",
+    fontWeight: 700,
+    padding: "2px 8px",
+    borderRadius: 8,
+    marginTop: 4,
+    marginRight: 4,
+    textTransform: "uppercase",
+    letterSpacing: "0.02em",
+  },
 }));
+
+const UNIPlus_STATUS_STYLE = {
+  synced: { bg: "rgba(16, 185, 129, 0.18)", color: "#047857", label: "UniPlus OK" },
+  pending: { bg: "rgba(245, 158, 11, 0.2)", color: "#B45309", label: "UniPlus pendente" },
+  skipped_preflight: { bg: "rgba(239, 68, 68, 0.15)", color: "#B91C1C", label: "UniPlus skip" },
+  error: { bg: "rgba(239, 68, 68, 0.15)", color: "#B91C1C", label: "UniPlus erro" },
+};
 
 const PedidoKanbanCard = ({
   order,
@@ -196,6 +215,7 @@ const PedidoKanbanCard = ({
   onViewDetails,
   onWhatsApp,
   onReprint,
+  onReprocessUniplus,
   showStageButtons = false,
   canBack = false,
   canAdvance = false,
@@ -204,6 +224,7 @@ const PedidoKanbanCard = ({
   isDragging = false,
   isUpdating = false,
   isReprinting = false,
+  isReprocessingUniplus = false,
   provided,
 }) => {
   const classes = useStyles();
@@ -253,6 +274,16 @@ const PedidoKanbanCard = ({
     }
   };
 
+  const isDelivery = order?.metadata?.orderType === "delivery";
+  const uniplusStatus = order?.metadata?.uniplusStatus;
+  const uniplusStyle = uniplusStatus ? UNIPlus_STATUS_STYLE[uniplusStatus] : null;
+  const uniplusError = order?.metadata?.uniplusLastError;
+  const showUniplusReprocess =
+    isDelivery &&
+    onReprocessUniplus &&
+    uniplusStatus &&
+    uniplusStatus !== "synced";
+
   return (
     <Card
       ref={provided?.innerRef}
@@ -292,6 +323,17 @@ const PedidoKanbanCard = ({
           <WhatsAppIcon className={classes.whatsappIcon} fontSize="inherit" />
           {order?.responderPhone || "Sem número"}
         </Typography>
+        {isDelivery && uniplusStyle && (
+          <Tooltip title={uniplusError || uniplusStyle.label}>
+            <Typography
+              component="span"
+              className={classes.uniplusBadge}
+              style={{ backgroundColor: uniplusStyle.bg, color: uniplusStyle.color }}
+            >
+              {uniplusStyle.label}
+            </Typography>
+          </Tooltip>
+        )}
         {(order?.metadata?.tableNumber || order?.metadata?.tableId) && (
           <Tooltip title="Ir para Mesas">
             <Typography
@@ -371,6 +413,25 @@ const PedidoKanbanCard = ({
                 >
                   {isReprinting ? <CircularProgress size={16} /> : <PrintIcon />}
                 </IconButton>
+              </span>
+            </Tooltip>
+          )}
+          {showUniplusReprocess && (
+            <Tooltip title={uniplusError ? `Reprocessar UniPlus: ${uniplusError}` : "Reprocessar UniPlus"}>
+              <span>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="secondary"
+                  disabled={isReprocessingUniplus || isUpdating}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onReprocessUniplus(order);
+                  }}
+                  style={{ textTransform: "none", fontSize: "0.7rem", marginLeft: 4 }}
+                >
+                  {isReprocessingUniplus ? "..." : "UniPlus"}
+                </Button>
               </span>
             </Tooltip>
           )}

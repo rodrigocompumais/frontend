@@ -204,6 +204,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [pendingStatusByOrderId, setPendingStatusByOrderId] = useState({});
   const [pendingReprintByOrderId, setPendingReprintByOrderId] = useState({});
+  const [pendingUniplusByOrderId, setPendingUniplusByOrderId] = useState({});
 
   const fetchOrders = useCallback(async (opts = {}) => {
     const silent = !!opts.silent;
@@ -552,6 +553,63 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
     }
   };
 
+  const handleReprocessUniplus = async (order) => {
+    const orderId = order?.id;
+    if (!orderId) {
+      toast.error("Não foi possível identificar o pedido para UniPlus.");
+      return;
+    }
+    if (pendingUniplusByOrderId[orderId]) return;
+
+    setPendingUniplusByOrderId((prev) => ({ ...prev, [orderId]: true }));
+    try {
+      const { data } = await api.post(`/form-responses/${orderId}/uniplus/reprocess`, {});
+      toast.success(data?.message || "UniPlus reprocessado.");
+      if (data?.ok) {
+        setOrders((prev) =>
+          prev.map((o) =>
+            o.id === orderId
+              ? {
+                  ...o,
+                  metadata: {
+                    ...(o.metadata || {}),
+                    uniplusStatus: data.uniplusContaId ? "synced" : "pending",
+                    uniplusLastError: data.uniplusContaId ? null : o.metadata?.uniplusLastError,
+                    uniplusContaId: data.uniplusContaId || o.metadata?.uniplusContaId,
+                    uniplusJobId: data.jobId || o.metadata?.uniplusJobId,
+                  },
+                }
+              : o
+          )
+        );
+        setSelectedOrder((prev) =>
+          prev && prev.id === orderId
+            ? {
+                ...prev,
+                metadata: {
+                  ...(prev.metadata || {}),
+                  uniplusStatus: data.uniplusContaId ? "synced" : "pending",
+                  uniplusLastError: data.uniplusContaId ? null : prev.metadata?.uniplusLastError,
+                  uniplusContaId: data.uniplusContaId || prev.metadata?.uniplusContaId,
+                  uniplusJobId: data.jobId || prev.metadata?.uniplusJobId,
+                },
+              }
+            : prev
+        );
+      }
+      fetchOrders({ silent: true });
+    } catch (err) {
+      toastError(err);
+      fetchOrders({ silent: true });
+    } finally {
+      setPendingUniplusByOrderId((prev) => {
+        const next = { ...prev };
+        delete next[orderId];
+        return next;
+      });
+    }
+  };
+
   if (!hasLanchonetes && !modulesLoading) return null;
 
   const wrap = (content) =>
@@ -647,6 +705,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                                   onViewDetails={handleViewDetails}
                                   onWhatsApp={handleWhatsApp}
                                   onReprint={handleReprintOrder}
+                                  onReprocessUniplus={handleReprocessUniplus}
                                   showStageButtons={minimal}
                                   canBack={!!prevStage}
                                   canAdvance={!!nextStage}
@@ -699,6 +758,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                                   isDragging={snapshot.isDragging}
                                   isUpdating={!!pendingStatusByOrderId[order.id]}
                                   isReprinting={!!pendingReprintByOrderId[order.id]}
+                                  isReprocessingUniplus={!!pendingUniplusByOrderId[order.id]}
                                   provided={provided}
                                 />
                               );
@@ -752,6 +812,22 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                       : formatOrderTableBadge(selectedOrder.metadata) || "—"}
                   </Typography>
                 </Box>
+                {selectedOrder.metadata?.orderType === "delivery" && (
+                  <Box mt={2}>
+                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>UniPlus</Typography>
+                    <Typography variant="body2" style={{ fontWeight: 600 }}>
+                      {selectedOrder.metadata?.uniplusStatus || "—"}
+                      {selectedOrder.metadata?.uniplusContaId
+                        ? ` · conta #${selectedOrder.metadata.uniplusContaId}`
+                        : ""}
+                    </Typography>
+                    {selectedOrder.metadata?.uniplusLastError && (
+                      <Typography variant="caption" color="error" display="block" style={{ marginTop: 4 }}>
+                        {selectedOrder.metadata.uniplusLastError}
+                      </Typography>
+                    )}
+                  </Box>
+                )}
                 <Box mt={2}>
                   <Typography variant="subtitle2" color="textSecondary" gutterBottom>Itens</Typography>
                   <List dense disablePadding>
@@ -822,6 +898,18 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                 disabled={!!pendingReprintByOrderId[selectedOrder.id] || updatingStatus}
               >
                 {pendingReprintByOrderId[selectedOrder.id] ? "Enviando..." : "Reimprimir pedido"}
+              </Button>
+            )}
+            {selectedOrder?.metadata?.orderType === "delivery" &&
+              selectedOrder?.metadata?.uniplusStatus &&
+              selectedOrder.metadata.uniplusStatus !== "synced" && (
+              <Button
+                variant="outlined"
+                color="secondary"
+                onClick={() => handleReprocessUniplus(selectedOrder)}
+                disabled={!!pendingUniplusByOrderId[selectedOrder.id] || updatingStatus}
+              >
+                {pendingUniplusByOrderId[selectedOrder.id] ? "Reprocessando..." : "Reprocessar UniPlus"}
               </Button>
             )}
             {selectedOrder && getNextStage(selectedOrder) && (
@@ -933,6 +1021,24 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                     : formatOrderTableBadge(selectedOrder.metadata) || "—"}
                 </Typography>
               </Box>
+              {selectedOrder.metadata?.orderType === "delivery" && (
+                <Box mt={2}>
+                  <Typography variant="subtitle2" color="textSecondary" gutterBottom>
+                    UniPlus
+                  </Typography>
+                  <Typography variant="body2" style={{ fontWeight: 600 }}>
+                    {selectedOrder.metadata?.uniplusStatus || "—"}
+                    {selectedOrder.metadata?.uniplusContaId
+                      ? ` · conta #${selectedOrder.metadata.uniplusContaId}`
+                      : ""}
+                  </Typography>
+                  {selectedOrder.metadata?.uniplusLastError && (
+                    <Typography variant="caption" color="error" display="block" style={{ marginTop: 4 }}>
+                      {selectedOrder.metadata.uniplusLastError}
+                    </Typography>
+                  )}
+                </Box>
+              )}
               <Box mt={2}>
                 <Typography variant="subtitle2" color="textSecondary" gutterBottom>
                   Itens
@@ -1060,6 +1166,18 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
               disabled={!!pendingReprintByOrderId[selectedOrder.id] || updatingStatus}
             >
               {pendingReprintByOrderId[selectedOrder.id] ? "Enviando..." : "Reimprimir pedido"}
+            </Button>
+          )}
+          {selectedOrder?.metadata?.orderType === "delivery" &&
+            selectedOrder?.metadata?.uniplusStatus &&
+            selectedOrder.metadata.uniplusStatus !== "synced" && (
+            <Button
+              variant="outlined"
+              color="secondary"
+              onClick={() => handleReprocessUniplus(selectedOrder)}
+              disabled={!!pendingUniplusByOrderId[selectedOrder.id] || updatingStatus}
+            >
+              {pendingUniplusByOrderId[selectedOrder.id] ? "Reprocessando..." : "Reprocessar UniPlus"}
             </Button>
           )}
           {selectedOrder && getNextStage(selectedOrder) && (
