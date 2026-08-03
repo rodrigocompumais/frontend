@@ -314,6 +314,12 @@ const messages = {
         title: "Conexões",
         toasts: {
           deleted: "Conexão com o WhatsApp excluída com sucesso!",
+          disconnected:
+            "Conexão {{name}} desconectada. Tentando reconectar…",
+          pending:
+            "Conexão {{name}} precisa de nova autenticação (QR Code).",
+          sessionEnded: "Conexão {{name}} foi desconectada.",
+          reconnected: "Conexão {{name}} reconectada.",
         },
         confirmationModal: {
           deleteTitle: "Deletar",
@@ -335,6 +341,11 @@ const messages = {
             title: "Falha ao iniciar sessão do WhatsApp",
             content:
               "Certifique-se de que seu celular esteja conectado à internet e tente novamente, ou solicite um novo QR Code",
+          },
+          pending: {
+            title: "Sessão encerrada — nova autenticação necessária",
+            content:
+              "A sessão foi invalidada (logout ou bloqueio). Clique em 'Tentar novamente' ou solicite um novo QR Code",
           },
           qrcode: {
             title: "Esperando leitura do QR Code",

@@ -273,7 +273,8 @@ const Connections = () => {
 						{i18n.t("connections.buttons.qrcode")}
 					</Button>
 				)}
-				{whatsApp.status === "DISCONNECTED" && (
+				{(whatsApp.status === "DISCONNECTED" ||
+					whatsApp.status === "PENDING") && (
 					<>
 						<Button
 							size="small"
@@ -323,10 +324,19 @@ const Connections = () => {
 	const renderStatusToolTips = whatsApp => {
 		return (
 			<div className={classes.customTableCell}>
-				{whatsApp.status === "DISCONNECTED" && (
+				{(whatsApp.status === "DISCONNECTED" ||
+					whatsApp.status === "PENDING") && (
 					<CustomToolTip
-						title={i18n.t("connections.toolTips.disconnected.title")}
-						content={i18n.t("connections.toolTips.disconnected.content")}
+						title={
+							whatsApp.status === "PENDING"
+								? i18n.t("connections.toolTips.pending.title")
+								: i18n.t("connections.toolTips.disconnected.title")
+						}
+						content={
+							whatsApp.status === "PENDING"
+								? i18n.t("connections.toolTips.pending.content")
+								: i18n.t("connections.toolTips.disconnected.content")
+						}
 					>
 						<SignalCellularConnectedNoInternet0Bar color="secondary" />
 					</CustomToolTip>

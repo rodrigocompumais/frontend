@@ -149,6 +149,7 @@ const NavigationMenus = () => {
             whats.status === "PAIRING" ||
             whats.status === "DISCONNECTED" ||
             whats.status === "TIMEOUT" ||
+            whats.status === "PENDING" ||
             whats.status === "OPENING"
           );
         });
