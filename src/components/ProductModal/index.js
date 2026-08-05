@@ -93,6 +93,7 @@ const ProductSchema = Yup.object().shape({
                         Yup.object().shape({
                             label: Yup.string().required("Rótulo é obrigatório"),
                             value: Yup.number().min(0, "Valor deve ser ≥ 0").required("Valor é obrigatório"),
+                            idUniplus: Yup.string().max(20).nullable(),
                         })
                     )
                     .required(),
@@ -173,7 +174,11 @@ const ProductModal = ({ open, onClose, productId }) => {
                 const { data } = await api.get(`/products/${productId}`);
                 const variations = (data.variations || []).map((v) => ({
                     name: v.name || "",
-                    options: (v.options || []).map((o) => ({ label: o.label || "", value: parseFloat(o.value) || 0 })),
+                    options: (v.options || []).map((o) => ({
+                        label: o.label || "",
+                        value: parseFloat(o.value) || 0,
+                        idUniplus: o.idUniplus || "",
+                    })),
                 }));
                 
                 const productGrupo = (data.grupo || "").trim();
@@ -336,7 +341,11 @@ const ProductModal = ({ open, onClose, productId }) => {
             if (payload.idUniplus === "") payload.idUniplus = null;
             payload.variations = (payload.variations || []).filter((v) => v.name && v.options && v.options.length > 0).map((v) => ({
                 name: v.name.trim(),
-                options: v.options.map((o) => ({ label: String(o.label).trim(), value: Number(o.value) })),
+                options: v.options.map((o) => ({
+                    label: String(o.label).trim(),
+                    value: Number(o.value),
+                    idUniplus: o.idUniplus ? String(o.idUniplus).trim() : null,
+                })),
             }));
             if (productId) {
                 await api.put(`/products/${productId}`, payload);
@@ -693,7 +702,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                                                 </IconButton>
                                             </Box>
                                             {(variation.options || []).map((opt, oIdx) => (
-                                                <Box key={oIdx} display="flex" alignItems="center" gap={8} mb={0.5} ml={1}>
+                                                <Box key={oIdx} display="flex" alignItems="center" gap={8} mb={0.5} ml={1} flexWrap="wrap">
                                                     <TextField
                                                         label="Opção"
                                                         placeholder="Ex: P, M, G"
@@ -725,6 +734,27 @@ const ProductModal = ({ open, onClose, productId }) => {
                                                         size="small"
                                                         style={{ width: 100 }}
                                                     />
+                                                    {uniplusEnabled && (
+                                                        <TextField
+                                                            label="Cód. UniPlus"
+                                                            placeholder="codigo"
+                                                            value={opt.idUniplus || ""}
+                                                            onChange={(e) => {
+                                                                const next = [...(values.variations || [])];
+                                                                next[vIdx].options = [...(next[vIdx].options || [])];
+                                                                next[vIdx].options[oIdx] = {
+                                                                    ...next[vIdx].options[oIdx],
+                                                                    idUniplus: e.target.value,
+                                                                };
+                                                                setFieldValue("variations", next);
+                                                            }}
+                                                            variant="outlined"
+                                                            margin="dense"
+                                                            size="small"
+                                                            inputProps={{ maxLength: 20 }}
+                                                            style={{ width: 120 }}
+                                                        />
+                                                    )}
                                                     <IconButton
                                                         size="small"
                                                         onClick={() => {
@@ -744,7 +774,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                                                 onClick={() => {
                                                     const next = [...(values.variations || [])];
                                                     if (!next[vIdx].options) next[vIdx].options = [];
-                                                    next[vIdx].options.push({ label: "", value: 0 });
+                                                    next[vIdx].options.push({ label: "", value: 0, idUniplus: "" });
                                                     setFieldValue("variations", next);
                                                 }}
                                                 style={{ marginLeft: 8, marginTop: 4 }}
@@ -757,7 +787,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                                         size="small"
                                         variant="outlined"
                                         startIcon={<AddIcon />}
-                                        onClick={() => setFieldValue("variations", [...(values.variations || []), { name: "", options: [{ label: "", value: 0 }] }])}
+                                        onClick={() => setFieldValue("variations", [...(values.variations || []), { name: "", options: [{ label: "", value: 0, idUniplus: "" }] }])}
                                     >
                                         Adicionar variação
                                     </Button>
