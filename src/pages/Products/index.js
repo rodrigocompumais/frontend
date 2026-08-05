@@ -66,6 +66,16 @@ const useStyles = makeStyles((theme) => ({
     menuChip: {
         fontWeight: 600,
     },
+    uniplusChipLinked: {
+        fontWeight: 600,
+        backgroundColor: "#e8f8ef",
+        color: "#027a48",
+    },
+    uniplusChipUnlinked: {
+        fontWeight: 600,
+        backgroundColor: "#eef2f5",
+        color: "#5b6b76",
+    },
     actionButtons: {
         display: "flex",
         gap: theme.spacing(0.5),
@@ -111,6 +121,7 @@ const Products = () => {
     const [filterGrupo, setFilterGrupo] = useState("");
     const [productGroups, setProductGroups] = useState([]);
     const [failedImages, setFailedImages] = useState(new Set());
+    const [uniplusEnabled, setUniplusEnabled] = useState(false);
 
     const fetchProducts = useCallback(async () => {
         setLoading(true);
@@ -135,6 +146,17 @@ const Products = () => {
     }, [searchParam, pageNumber, filterMenuOnly, filterGrupo]);
 
     const socketManager = useContext(SocketContext);
+
+    useEffect(() => {
+        api
+            .get("/settings")
+            .then(({ data }) => {
+                const list = Array.isArray(data) ? data : [];
+                const row = list.find((s) => s.key === "uniplusEnabled");
+                setUniplusEnabled(row?.value === "enabled");
+            })
+            .catch(() => setUniplusEnabled(false));
+    }, []);
 
     useEffect(() => {
         setPageNumber(1);
@@ -247,6 +269,22 @@ const Products = () => {
             currency: "BRL",
         }).format(value);
     };
+
+    const getUniplusLinkInfo = (product) => {
+        if (product.idUniplus) {
+            return { kind: "standalone", code: product.idUniplus };
+        }
+        const options = (product.variations || []).flatMap(
+            (v) => v.options || []
+        );
+        const linked = options.filter((o) => o.idUniplus).length;
+        if (linked > 0) {
+            return { kind: "variation", linked, total: options.length };
+        }
+        return { kind: "none" };
+    };
+
+    const columnCount = 9 + (uniplusEnabled ? 1 : 0);
 
     if (modulesLoading) {
         return (
@@ -394,13 +432,16 @@ const Products = () => {
                             <TableCell align="center">Quantidade</TableCell>
                             <TableCell align="center">Cardápio</TableCell>
                             <TableCell align="center">Preço var.</TableCell>
+                            {uniplusEnabled && (
+                                <TableCell align="center">UniPlus</TableCell>
+                            )}
                             <TableCell align="center">Ações</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {products.length === 0 && !loading && (
                             <TableRow>
-                                <TableCell colSpan={9} align="center">
+                                <TableCell colSpan={columnCount} align="center">
                                     Nenhum produto encontrado
                                 </TableCell>
                             </TableRow>
@@ -459,6 +500,40 @@ const Products = () => {
                                         <span>—</span>
                                     )}
                                 </TableCell>
+                                {uniplusEnabled && (
+                                    <TableCell align="center">
+                                        {(() => {
+                                            const link = getUniplusLinkInfo(product);
+                                            if (link.kind === "standalone") {
+                                                return (
+                                                    <Chip
+                                                        label={`Avulso: ${link.code}`}
+                                                        size="small"
+                                                        className={classes.uniplusChipLinked}
+                                                        title="Produto vinculado como avulso ao código UniPlus"
+                                                    />
+                                                );
+                                            }
+                                            if (link.kind === "variation") {
+                                                return (
+                                                    <Chip
+                                                        label={`${link.linked}/${link.total} variação(ões)`}
+                                                        size="small"
+                                                        className={classes.uniplusChipLinked}
+                                                        title="Opções de variação vinculadas a códigos UniPlus"
+                                                    />
+                                                );
+                                            }
+                                            return (
+                                                <Chip
+                                                    label="Não vinculado"
+                                                    size="small"
+                                                    className={classes.uniplusChipUnlinked}
+                                                />
+                                            );
+                                        })()}
+                                    </TableCell>
+                                )}
                                 <TableCell align="center">
                                     <div className={classes.actionButtons}>
                                         <IconButton
@@ -489,7 +564,7 @@ const Products = () => {
                                 </TableCell>
                             </TableRow>
                         ))}
-                        {loading && <TableRowSkeleton columns={9} />}
+                        {loading && <TableRowSkeleton columns={columnCount} />}
                     </TableBody>
                 </Table>
                 <TablePagination

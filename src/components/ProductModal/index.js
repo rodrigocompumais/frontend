@@ -23,6 +23,7 @@ import Select from "@material-ui/core/Select";
 import MenuItem from "@material-ui/core/MenuItem";
 import InputAdornment from "@material-ui/core/InputAdornment";
 import IconButton from "@material-ui/core/IconButton";
+import Chip from "@material-ui/core/Chip";
 import CloudUploadIcon from "@material-ui/icons/CloudUpload";
 import AddIcon from "@material-ui/icons/Add";
 import DeleteIcon from "@material-ui/icons/Delete";
@@ -673,6 +674,42 @@ const ProductModal = ({ open, onClose, productId }) => {
                                     <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 8 }}>
                                         Adicione variações com opções e valores diferentes (ex.: P R$ 10, M R$ 15, G R$ 20).
                                     </Typography>
+                                    {uniplusEnabled &&
+                                        (values.variations || []).some((v) => (v.options || []).length > 0) && (
+                                            <Box mb={1} display="flex" flexWrap="wrap" style={{ gap: 6 }}>
+                                                {(values.variations || []).map((variation, vIdx) => {
+                                                    const opts = variation.options || [];
+                                                    if (opts.length === 0) return null;
+                                                    const linked = opts.filter(
+                                                        (o) => o.idUniplus && String(o.idUniplus).trim()
+                                                    ).length;
+                                                    const allLinked = linked === opts.length;
+                                                    return (
+                                                        <Chip
+                                                            key={vIdx}
+                                                            size="small"
+                                                            label={`${variation.name || `Variação ${vIdx + 1}`}: ${linked}/${opts.length} c/ UniPlus`}
+                                                            title="Quantas opções desta variação já têm código UniPlus vinculado"
+                                                            style={{
+                                                                fontWeight: 600,
+                                                                backgroundColor:
+                                                                    linked === 0
+                                                                        ? "#eef2f5"
+                                                                        : allLinked
+                                                                        ? "#e8f8ef"
+                                                                        : "#fff4e5",
+                                                                color:
+                                                                    linked === 0
+                                                                        ? "#5b6b76"
+                                                                        : allLinked
+                                                                        ? "#027a48"
+                                                                        : "#b54708",
+                                                            }}
+                                                        />
+                                                    );
+                                                })}
+                                            </Box>
+                                        )}
                                     {(values.variations || []).map((variation, vIdx) => (
                                         <Box key={vIdx} mb={2} p={1.5} border={1} borderColor="divider" borderRadius={8}>
                                             <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
