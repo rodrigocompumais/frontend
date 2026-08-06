@@ -339,6 +339,84 @@ const useStyles = makeStyles((theme) => ({
     color: "#1a1a1a",
     marginTop: "auto",
   },
+  halfFixedCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 12,
+    border: "1px solid #e5e7eb",
+    backgroundColor: "#f8fafc",
+  },
+  halfFixedImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 10,
+    objectFit: "cover",
+    backgroundColor: "#e5e7eb",
+    flexShrink: 0,
+  },
+  halfFlavorList: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+    marginTop: 8,
+    maxHeight: 320,
+    overflowY: "auto",
+    paddingRight: 2,
+  },
+  halfFlavorCard: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    padding: 10,
+    borderRadius: 12,
+    border: "2px solid #e5e7eb",
+    backgroundColor: "#fff",
+    cursor: "pointer",
+    textAlign: "left",
+    width: "100%",
+    font: "inherit",
+    color: "inherit",
+    appearance: "none",
+    WebkitAppearance: "none",
+    transition: "border-color 0.15s, box-shadow 0.15s, background-color 0.15s",
+    "&:hover": {
+      borderColor: "#cbd5e1",
+      boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+    },
+  },
+  halfFlavorCardSelected: {
+    borderColor: "#2563eb",
+    backgroundColor: "#eff6ff",
+    boxShadow: "0 0 0 1px #2563eb",
+  },
+  halfFlavorImage: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    objectFit: "cover",
+    backgroundColor: "#e5e7eb",
+    flexShrink: 0,
+  },
+  halfFlavorName: {
+    fontWeight: 600,
+    fontSize: "0.95rem",
+    color: "#1a1a1a",
+    lineHeight: 1.25,
+  },
+  halfFlavorMeta: {
+    fontSize: "0.8rem",
+    color: "#64748b",
+    marginTop: 2,
+  },
+  halfFlavorPrice: {
+    fontWeight: 700,
+    fontSize: "0.95rem",
+    color: "#1a1a1a",
+    marginTop: 4,
+  },
 }));
 
 const PublicMenuForm = ({
@@ -1573,26 +1651,52 @@ const PublicMenuForm = ({
     groupPage * GROUP_ITEMS_PER_PAGE
   );
 
-  const getFlavorProductsForHalfAndHalf = (baseProduct, baseVariationLabel = null) => {
+  const normalizeVariationKey = (value) => String(value || "").trim().toLowerCase();
+
+  const findOptionByVariationLabel = (product, variationLabel) => {
+    if (!product?.variations?.length || !variationLabel) return null;
+    const needle = normalizeVariationKey(variationLabel);
+    for (const variation of product.variations) {
+      const option = (variation.options || []).find(
+        (opt) => normalizeVariationKey(opt.label) === needle
+      );
+      if (option) return option;
+    }
+    return null;
+  };
+
+  const productMatchesHalfAndHalfVariation = (product, baseVariationLabel, baseVariationName = null) => {
+    if (!baseVariationLabel) return true;
+    if (!product?.variations?.length) return false;
+    const needleLabel = normalizeVariationKey(baseVariationLabel);
+    const needleName = baseVariationName ? normalizeVariationKey(baseVariationName) : null;
+    return product.variations.some((variation) => {
+      if (needleName && normalizeVariationKey(variation.name) !== needleName) return false;
+      return (variation.options || []).some(
+        (opt) => normalizeVariationKey(opt.label) === needleLabel
+      );
+    });
+  };
+
+  const getFlavorProductsForHalfAndHalf = (
+    baseProduct,
+    baseVariationLabel = null,
+    { excludeProductId = null } = {}
+  ) => {
     if (!baseProduct) return [];
     const grupoFilter = baseProduct.halfAndHalfGrupo || baseProduct.grupo || null;
+    const baseVariationName = baseProduct.variations?.[0]?.name || null;
     let filtered = products.filter((p) => {
+      if (excludeProductId != null && p.id === excludeProductId) return false;
       if (grupoFilter) return (p.grupo || "") === grupoFilter;
       return true;
     });
 
-    // Se há uma variação base selecionada, filtrar apenas produtos com variação da mesma sigla
+    // Match string: mesma opção de variação (ex.: G) e, se houver, mesmo nome (ex.: Tamanho)
     if (baseVariationLabel && baseProduct.variations && baseProduct.variations.length > 0) {
-      filtered = filtered.filter((p) => {
-        // Se o produto não tem variações, não incluir
-        if (!p.variations || p.variations.length === 0) return false;
-        
-        // Verificar se alguma opção da variação tem a mesma sigla (label)
-        const firstVariation = p.variations[0];
-        if (!firstVariation || !firstVariation.options) return false;
-        
-        return firstVariation.options.some((opt) => opt.label === baseVariationLabel);
-      });
+      filtered = filtered.filter((p) =>
+        productMatchesHalfAndHalfVariation(p, baseVariationLabel, baseVariationName)
+      );
     }
 
     return filtered;
@@ -1642,88 +1746,61 @@ const PublicMenuForm = ({
     
     // Capturar a variação selecionada do produto base
     let baseVariationLabel = null;
-    let baseOptionId = null;
     if (product.variations && product.variations.length > 0) {
       const selectedOptionId = selectedVariationOption[product.id];
       if (selectedOptionId) {
-        baseOptionId = selectedOptionId;
         const firstVariation = product.variations[0];
         const option = firstVariation?.options?.find((o) => o.id === selectedOptionId);
         if (option) {
           baseVariationLabel = option.label;
         }
       } else {
-        // Se não há variação selecionada, usar a primeira variação disponível
+        // Se não há variação selecionada, usar a primeira opção disponível
         const firstVariation = product.variations[0];
         if (firstVariation?.options && firstVariation.options.length > 0) {
-          const firstOption = firstVariation.options[0];
-          baseOptionId = firstOption.id;
-          baseVariationLabel = firstOption.label;
+          baseVariationLabel = firstVariation.options[0].label;
         }
       }
     }
     setHalfAndHalfModalBaseVariation(baseVariationLabel);
-    
-    // Filtrar produtos disponíveis com a mesma variação
-    const availableProducts = getFlavorProductsForHalfAndHalf(product, baseVariationLabel);
-    
-    // Pré-selecionar o primeiro produto disponível (não o produto base) com a variação correta
-    if (availableProducts.length > 0) {
-      // Se há variação, encontrar o primeiro produto que tenha essa variação (excluindo o produto base)
-      let firstProductId = null;
-      if (baseVariationLabel) {
-        const productWithVariation = availableProducts.find((p) => {
-          if (p.id === product.id) return false; // Excluir o produto base
-          if (!p.variations || p.variations.length === 0) return false;
-          const firstVariation = p.variations[0];
-          return firstVariation?.options?.some((opt) => opt.label === baseVariationLabel);
-        });
-        if (productWithVariation) {
-          firstProductId = productWithVariation.id;
-        }
-      }
-      // Se não encontrou com variação ou não há variação, usar o primeiro disponível (excluindo o produto base)
-      if (!firstProductId && availableProducts.length > 0) {
-        const firstAvailable = availableProducts.find((p) => p.id !== product.id) || availableProducts[0];
-        firstProductId = firstAvailable.id;
-      }
-      setHalfAndHalfModalHalf1(String(firstProductId));
-    } else {
-      setHalfAndHalfModalHalf1("");
-    }
-    
+
+    // Metade 1 = produto atual (fixo); usuário só escolhe o segundo sabor
+    setHalfAndHalfModalHalf1(String(product.id));
     setHalfAndHalfModalHalf2("");
     setHalfAndHalfModalOpen(true);
   };
 
   const addHalfAndHalfToCart = () => {
-    if (!halfAndHalfModalProduct || !halfAndHalfModalHalf1 || !halfAndHalfModalHalf2 || halfAndHalfModalHalf1 === halfAndHalfModalHalf2) {
-      toast.error("Selecione dois sabores diferentes");
+    if (!halfAndHalfModalProduct || !halfAndHalfModalHalf2) {
+      toast.error("Selecione o segundo sabor");
       return;
     }
-    
-    const half1ProductId = parseInt(halfAndHalfModalHalf1, 10);
+
+    const half1ProductId = halfAndHalfModalProduct.id;
     const half2ProductId = parseInt(halfAndHalfModalHalf2, 10);
-    
-    // Encontrar os produtos selecionados
+
+    if (!half2ProductId || half1ProductId === half2ProductId) {
+      toast.error("Selecione um segundo sabor diferente");
+      return;
+    }
+
     const half1Product = products.find((p) => p.id === half1ProductId);
     const half2Product = products.find((p) => p.id === half2ProductId);
-    
-    // Obter os optionIds das variações selecionadas (se houver)
-    let half1OptionId = null;
-    let half2OptionId = null;
-    
-    if (half1Product?.variations && half1Product.variations.length > 0 && halfAndHalfModalBaseVariation) {
-      const firstVariation = half1Product.variations[0];
-      const option = firstVariation?.options?.find((o) => o.label === halfAndHalfModalBaseVariation);
-      if (option) half1OptionId = option.id;
+
+    if (
+      halfAndHalfModalBaseVariation &&
+      !productMatchesHalfAndHalfVariation(
+        half2Product,
+        halfAndHalfModalBaseVariation,
+        halfAndHalfModalProduct.variations?.[0]?.name || null
+      )
+    ) {
+      toast.error("O segundo sabor precisa ter a mesma variação (ex.: mesmo tamanho)");
+      return;
     }
-    
-    if (half2Product?.variations && half2Product.variations.length > 0 && halfAndHalfModalBaseVariation) {
-      const firstVariation = half2Product.variations[0];
-      const option = firstVariation?.options?.find((o) => o.label === halfAndHalfModalBaseVariation);
-      if (option) half2OptionId = option.id;
-    }
+
+    const half1Option = findOptionByVariationLabel(half1Product, halfAndHalfModalBaseVariation);
+    const half2Option = findOptionByVariationLabel(half2Product, halfAndHalfModalBaseVariation);
     
     const qty = Math.max(1, parseInt(halfAndHalfModalQty, 10) || 1);
     setHalfAndHalfItems((prev) => [
@@ -1732,8 +1809,8 @@ const PublicMenuForm = ({
         baseProductId: halfAndHalfModalProduct.id,
         half1ProductId,
         half2ProductId,
-        half1OptionId,
-        half2OptionId,
+        half1OptionId: half1Option?.id || null,
+        half2OptionId: half2Option?.id || null,
         quantity: qty,
       },
     ]);
@@ -2761,69 +2838,133 @@ const PublicMenuForm = ({
           <Dialog open={halfAndHalfModalOpen} onClose={() => setHalfAndHalfModalOpen(false)} maxWidth="sm" fullWidth>
             <DialogTitle>Meio a meio - {halfAndHalfModalProduct?.name}</DialogTitle>
             <DialogContent>
-              <FormControl fullWidth variant={fieldVariant} size="small" style={{ marginTop: 8 }}>
-                <InputLabel>Metade 1</InputLabel>
-                <Select
-                  value={halfAndHalfModalHalf1}
-                  onChange={(e) => setHalfAndHalfModalHalf1(e.target.value)}
-                  label="Metade 1"
-                >
-                  <MenuItem value=""><em>Selecione</em></MenuItem>
-                  {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct, halfAndHalfModalBaseVariation).map((p) => {
-                    // Obter o preço da variação se disponível, senão usar valor base
-                    let displayPrice = parseFloat(p.value || 0);
-                    if (halfAndHalfModalBaseVariation && p.variations && p.variations.length > 0) {
-                      const firstVariation = p.variations[0];
-                      const option = firstVariation?.options?.find((o) => o.label === halfAndHalfModalBaseVariation);
-                      if (option) displayPrice = parseFloat(option.value || 0);
-                    }
-                    return (
-                      <MenuItem key={p.id} value={String(p.id)}>
-                        {p.name} - R$ {displayPrice.toFixed(2).replace(".", ",")}
-                      </MenuItem>
-                    );
-                  })}
-                </Select>
-              </FormControl>
-              <FormControl fullWidth variant={fieldVariant} size="small" style={{ marginTop: 16 }}>
-                <InputLabel>Metade 2</InputLabel>
-                <Select
-                  value={halfAndHalfModalHalf2}
-                  onChange={(e) => setHalfAndHalfModalHalf2(e.target.value)}
-                  label="Metade 2"
-                >
-                  <MenuItem value=""><em>Selecione</em></MenuItem>
-                  {halfAndHalfModalProduct && getFlavorProductsForHalfAndHalf(halfAndHalfModalProduct, halfAndHalfModalBaseVariation).map((p) => {
-                    // Obter o preço da variação se disponível, senão usar valor base
-                    let displayPrice = parseFloat(p.value || 0);
-                    if (halfAndHalfModalBaseVariation && p.variations && p.variations.length > 0) {
-                      const firstVariation = p.variations[0];
-                      const option = firstVariation?.options?.find((o) => o.label === halfAndHalfModalBaseVariation);
-                      if (option) displayPrice = parseFloat(option.value || 0);
-                    }
-                    return (
-                      <MenuItem key={p.id} value={String(p.id)}>
-                        {p.name} - R$ {displayPrice.toFixed(2).replace(".", ",")}
-                      </MenuItem>
-                    );
-                  })}
-                </Select>
-              </FormControl>
-              <TextField
-                label="Quantidade"
-                type="number"
-                value={halfAndHalfModalQty}
-                onChange={(e) => setHalfAndHalfModalQty(e.target.value)}
-                inputProps={{ min: 1 }}
-                variant={fieldVariant}
-                size="small"
-                fullWidth
-                style={{ marginTop: 16 }}
-              />
+              {halfAndHalfModalProduct && (() => {
+                const half1Option = findOptionByVariationLabel(
+                  halfAndHalfModalProduct,
+                  halfAndHalfModalBaseVariation
+                );
+                const half1Price = half1Option
+                  ? parseFloat(half1Option.value || 0)
+                  : parseFloat(halfAndHalfModalProduct.value || 0);
+                const secondFlavors = getFlavorProductsForHalfAndHalf(
+                  halfAndHalfModalProduct,
+                  halfAndHalfModalBaseVariation,
+                  { excludeProductId: halfAndHalfModalProduct.id }
+                );
+                return (
+                  <>
+                    <Typography variant="subtitle2" style={{ fontWeight: 700, marginTop: 4 }}>
+                      Metade 1
+                    </Typography>
+                    <Box className={classes.halfFixedCard}>
+                      {halfAndHalfModalProduct.imageUrl ? (
+                        <img
+                          src={halfAndHalfModalProduct.imageUrl}
+                          alt={halfAndHalfModalProduct.name}
+                          className={classes.halfFixedImage}
+                          onError={(e) => { e.target.style.display = "none"; }}
+                        />
+                      ) : (
+                        <Box className={classes.halfFixedImage} />
+                      )}
+                      <Box flex={1} minWidth={0}>
+                        <Typography className={classes.halfFlavorName}>
+                          {halfAndHalfModalProduct.name}
+                        </Typography>
+                        {halfAndHalfModalBaseVariation && (
+                          <Typography className={classes.halfFlavorMeta}>
+                            Variação {halfAndHalfModalBaseVariation}
+                          </Typography>
+                        )}
+                        <Typography className={classes.halfFlavorPrice}>
+                          R$ {half1Price.toFixed(2).replace(".", ",")}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 6 }}>
+                      Sabor atual — escolha apenas o segundo sabor
+                    </Typography>
+
+                    <Typography variant="subtitle2" style={{ fontWeight: 700, marginTop: 16 }}>
+                      Metade 2 (segundo sabor)
+                    </Typography>
+                    {halfAndHalfModalBaseVariation && (
+                      <Typography variant="caption" color="textSecondary" display="block">
+                        Apenas sabores com variação “{halfAndHalfModalBaseVariation}”
+                      </Typography>
+                    )}
+                    {secondFlavors.length === 0 ? (
+                      <Typography color="error" variant="body2" style={{ marginTop: 12 }}>
+                        Nenhum outro sabor com a mesma variação neste grupo
+                      </Typography>
+                    ) : (
+                      <Box className={classes.halfFlavorList}>
+                        {secondFlavors.map((p) => {
+                          const option = findOptionByVariationLabel(p, halfAndHalfModalBaseVariation);
+                          const displayPrice = option
+                            ? parseFloat(option.value || 0)
+                            : parseFloat(p.value || 0);
+                          const selected = halfAndHalfModalHalf2 === String(p.id);
+                          return (
+                            <Box
+                              key={p.id}
+                              component="button"
+                              type="button"
+                              className={`${classes.halfFlavorCard}${selected ? ` ${classes.halfFlavorCardSelected}` : ""}`}
+                              onClick={() => setHalfAndHalfModalHalf2(String(p.id))}
+                            >
+                              {p.imageUrl ? (
+                                <img
+                                  src={p.imageUrl}
+                                  alt={p.name}
+                                  className={classes.halfFlavorImage}
+                                  onError={(e) => { e.target.style.display = "none"; }}
+                                />
+                              ) : (
+                                <Box className={classes.halfFlavorImage} />
+                              )}
+                              <Box flex={1} minWidth={0}>
+                                <Typography className={classes.halfFlavorName}>{p.name}</Typography>
+                                {p.description && (
+                                  <Typography className={classes.halfFlavorMeta} noWrap>
+                                    {p.description}
+                                  </Typography>
+                                )}
+                                <Typography className={classes.halfFlavorPrice}>
+                                  R$ {displayPrice.toFixed(2).replace(".", ",")}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    )}
+
+                    <TextField
+                      label="Quantidade"
+                      type="number"
+                      value={halfAndHalfModalQty}
+                      onChange={(e) => setHalfAndHalfModalQty(e.target.value)}
+                      inputProps={{ min: 1 }}
+                      variant={fieldVariant}
+                      size="small"
+                      fullWidth
+                      style={{ marginTop: 16 }}
+                    />
+                  </>
+                );
+              })()}
             </DialogContent>
             <DialogActions>
               <Button onClick={() => setHalfAndHalfModalOpen(false)} color="secondary">Cancelar</Button>
-              <Button onClick={addHalfAndHalfToCart} color="primary" variant="contained">Adicionar</Button>
+              <Button
+                onClick={addHalfAndHalfToCart}
+                color="primary"
+                variant="contained"
+                disabled={!halfAndHalfModalHalf2}
+              >
+                Adicionar
+              </Button>
             </DialogActions>
           </Dialog>
 
