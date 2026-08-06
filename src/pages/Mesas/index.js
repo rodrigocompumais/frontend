@@ -1016,7 +1016,8 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     const half2OptionId = half2Option?.id || null;
     
     const qty = Math.max(1, parseInt(halfAndHalfQty, 10) || 1);
-    const baseProduct = halfAndHalfProduct;
+    const baseProduct =
+      orderProducts.find((p) => p.id === halfAndHalfProduct.id) || halfAndHalfProduct;
     const newItem = {
       baseProductId: baseProduct.id,
       half1ProductId,
@@ -1027,26 +1028,32 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       addons: [],
     };
 
+    const addonSourceProduct =
+      [baseProduct, half1Product, half2Product].find((p) => hasAddonsToShow(p)) || null;
+
     setHalfAndHalfDialogOpen(false);
-    setHalfAndHalfProduct(null);
     setHalfAndHalfBaseVariation(null);
     setHalfAndHalfHalf1Variation(null);
     setHalfAndHalfHalf2Variation(null);
     setHalfAndHalfHalf2("");
 
-    if (hasAddonsToShow(baseProduct)) {
+    if (addonSourceProduct) {
       setAddOnModalHalfPending(newItem);
       setAddOnModalHalfIndex(-1);
-      setAddOnModalProduct(baseProduct);
+      setAddOnModalProduct(addonSourceProduct);
       setAddOnModalLineIndex(null);
       setAddOnModalPendingQuantity(qty);
       setAddOnModalSelectedAddons([]);
       setAddOnModalVariationOptionId(null);
       setAddOnModalProductValue(null);
-      setAddOnModalOpen(true);
+      window.setTimeout(() => {
+        setHalfAndHalfProduct(null);
+        setAddOnModalOpen(true);
+      }, 150);
       return;
     }
 
+    setHalfAndHalfProduct(null);
     setHalfAndHalfItems((prev) => [...prev, newItem]);
   };
 

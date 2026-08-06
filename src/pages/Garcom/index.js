@@ -929,7 +929,8 @@ const Garcom = () => {
     const half2Option = findOptionByVariationLabel(half2Product, halfAndHalfModalBaseVariation);
     
     const qty = Math.max(1, parseInt(halfAndHalfModalQty, 10) || 1);
-    const baseProduct = halfAndHalfModalProduct;
+    const baseProduct =
+      products.find((p) => p.id === halfAndHalfModalProduct.id) || halfAndHalfModalProduct;
     const newItem = {
       baseProductId: baseProduct.id,
       half1ProductId,
@@ -940,22 +941,28 @@ const Garcom = () => {
       addons: [],
     };
 
+    const addonSourceProduct =
+      [baseProduct, half1Product, half2Product].find((p) => hasAddonsToShow(p)) || null;
+
     setHalfAndHalfModalOpen(false);
-    setHalfAndHalfModalProduct(null);
     setHalfAndHalfModalBaseVariation(null);
     setHalfAndHalfModalHalf2("");
 
-    if (hasAddonsToShow(baseProduct)) {
+    if (addonSourceProduct) {
       setAddOnModalHalfPending(newItem);
       setAddOnModalHalfIndex(-1);
-      setAddOnModalProduct(baseProduct);
+      setAddOnModalProduct(addonSourceProduct);
       setAddOnModalLineIndex(null);
       setAddOnModalPendingQuantity(qty);
       setAddOnModalSelectedAddons([]);
-      setAddOnModalOpen(true);
+      window.setTimeout(() => {
+        setHalfAndHalfModalProduct(null);
+        setAddOnModalOpen(true);
+      }, 150);
       return;
     }
 
+    setHalfAndHalfModalProduct(null);
     setHalfAndHalfItems((prev) => [...prev, newItem]);
   };
 

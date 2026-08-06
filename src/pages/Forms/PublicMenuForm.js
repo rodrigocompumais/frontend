@@ -1845,13 +1845,16 @@ const PublicMenuForm = ({
 
     const half1Product = products.find((p) => p.id === half1ProductId);
     const half2Product = products.find((p) => p.id === half2ProductId);
+    // Preferir produto do catálogo (com addOnGroup resolvido), não só o snapshot do modal
+    const baseProduct =
+      products.find((p) => p.id === halfAndHalfModalProduct.id) || halfAndHalfModalProduct;
 
     if (
       halfAndHalfModalBaseVariation &&
       !productMatchesHalfAndHalfVariation(
         half2Product,
         halfAndHalfModalBaseVariation,
-        halfAndHalfModalProduct.variations?.[0]?.name || null
+        baseProduct.variations?.[0]?.name || null
       )
     ) {
       toast.error("O segundo sabor precisa ter a mesma variação (ex.: mesmo tamanho)");
@@ -1862,7 +1865,6 @@ const PublicMenuForm = ({
     const half2Option = findOptionByVariationLabel(half2Product, halfAndHalfModalBaseVariation);
     
     const qty = Math.max(1, parseInt(halfAndHalfModalQty, 10) || 1);
-    const baseProduct = halfAndHalfModalProduct;
     const newItem = {
       baseProductId: baseProduct.id,
       half1ProductId,
@@ -1873,22 +1875,29 @@ const PublicMenuForm = ({
       addons: [],
     };
 
+    const addonSourceProduct =
+      [baseProduct, half1Product, half2Product].find((p) => hasAddonsToShow(p)) || null;
+
     setHalfAndHalfModalOpen(false);
-    setHalfAndHalfModalProduct(null);
     setHalfAndHalfModalBaseVariation(null);
     setHalfAndHalfModalHalf2("");
 
-    if (hasAddonsToShow(baseProduct)) {
+    if (addonSourceProduct) {
       setAddOnModalHalfPending(newItem);
       setAddOnModalHalfIndex(-1);
-      setAddOnModalProduct(baseProduct);
+      setAddOnModalProduct(addonSourceProduct);
       setAddOnModalItemKey("");
       setAddOnModalPendingQuantity(qty);
       setAddOnModalSelectedAddons([]);
-      setAddOnModalOpen(true);
+      // Abrir depois do Dialog de meio a meio fechar (MUI Modal manager)
+      window.setTimeout(() => {
+        setHalfAndHalfModalProduct(null);
+        setAddOnModalOpen(true);
+      }, 150);
       return;
     }
 
+    setHalfAndHalfModalProduct(null);
     setHalfAndHalfItems((prev) => [...prev, newItem]);
   };
 
