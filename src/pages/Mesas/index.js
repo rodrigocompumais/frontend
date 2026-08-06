@@ -306,6 +306,9 @@ const Mesas = ({ cardapioSlugFromHub }) => {
   const [addOnModalPendingQuantity, setAddOnModalPendingQuantity] = useState(1);
   const [addOnModalVariationOptionId, setAddOnModalVariationOptionId] = useState(null);
   const [addOnModalProductValue, setAddOnModalProductValue] = useState(null);
+  /** null = linha normal; -1 = novo meio a meio; >=0 = editar halfAndHalfItems[index] */
+  const [addOnModalHalfIndex, setAddOnModalHalfIndex] = useState(null);
+  const [addOnModalHalfPending, setAddOnModalHalfPending] = useState(null);
   const [pendingOrders, setPendingOrders] = useState([]); // Pedidos pendentes (orderStatus: "novo")
   const [notificationOrder, setNotificationOrder] = useState(null); // Pedido para mostrar no popup
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -1013,22 +1016,38 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     const half2OptionId = half2Option?.id || null;
     
     const qty = Math.max(1, parseInt(halfAndHalfQty, 10) || 1);
-    setHalfAndHalfItems((prev) => [
-      ...prev,
-      {
-        baseProductId: halfAndHalfProduct.id,
-        half1ProductId,
-        half2ProductId,
-        half1OptionId,
-        half2OptionId,
-        quantity: qty,
-      },
-    ]);
+    const baseProduct = halfAndHalfProduct;
+    const newItem = {
+      baseProductId: baseProduct.id,
+      half1ProductId,
+      half2ProductId,
+      half1OptionId,
+      half2OptionId,
+      quantity: qty,
+      addons: [],
+    };
+
     setHalfAndHalfDialogOpen(false);
     setHalfAndHalfProduct(null);
     setHalfAndHalfBaseVariation(null);
     setHalfAndHalfHalf1Variation(null);
     setHalfAndHalfHalf2Variation(null);
+    setHalfAndHalfHalf2("");
+
+    if (hasAddonsToShow(baseProduct)) {
+      setAddOnModalHalfPending(newItem);
+      setAddOnModalHalfIndex(-1);
+      setAddOnModalProduct(baseProduct);
+      setAddOnModalLineIndex(null);
+      setAddOnModalPendingQuantity(qty);
+      setAddOnModalSelectedAddons([]);
+      setAddOnModalVariationOptionId(null);
+      setAddOnModalProductValue(null);
+      setAddOnModalOpen(true);
+      return;
+    }
+
+    setHalfAndHalfItems((prev) => [...prev, newItem]);
   };
 
   const handleRemoveHalfAndHalfItem = (index) => {
@@ -1045,10 +1064,28 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     if (!p || !hasAddonsToShow(p)) return;
     setAddOnModalProduct(p);
     setAddOnModalLineIndex(lineIndex);
+    setAddOnModalHalfIndex(null);
+    setAddOnModalHalfPending(null);
     setAddOnModalPendingQuantity(line.quantity);
     setAddOnModalSelectedAddons(Array.isArray(line.addons) ? line.addons.map((a) => ({ ...a, quantity: a.quantity ?? 1 })) : []);
     setAddOnModalVariationOptionId(line.variationOptionId ?? null);
     setAddOnModalProductValue(line.productValue != null ? Number(line.productValue) || 0 : (Number(p?.value) || 0));
+    setAddOnModalOpen(true);
+  };
+
+  const openAddOnModalForHalfEdit = (index) => {
+    const item = halfAndHalfItems[index];
+    if (!item) return;
+    const base = orderProducts.find((p) => p.id === item.baseProductId);
+    if (!base || !hasAddonsToShow(base)) return;
+    setAddOnModalProduct(base);
+    setAddOnModalLineIndex(null);
+    setAddOnModalHalfIndex(index);
+    setAddOnModalHalfPending(null);
+    setAddOnModalPendingQuantity(item.quantity || 1);
+    setAddOnModalSelectedAddons(Array.isArray(item.addons) ? item.addons.map((a) => ({ ...a, quantity: a.quantity ?? 1 })) : []);
+    setAddOnModalVariationOptionId(null);
+    setAddOnModalProductValue(null);
     setAddOnModalOpen(true);
   };
 
@@ -1077,7 +1114,29 @@ const Mesas = ({ cardapioSlugFromHub }) => {
 
   const confirmAddOnModal = () => {
     const addonsWithQty = (addOnModalSelectedAddons || []).filter((a) => (a.quantity ?? 1) > 0);
-    if (addOnModalLineIndex === null) {
+
+    if (addOnModalHalfIndex === -1 && addOnModalHalfPending) {
+      setHalfAndHalfItems((prev) => [
+        ...prev,
+        {
+          ...addOnModalHalfPending,
+          quantity: Math.max(1, parseInt(addOnModalPendingQuantity, 10) || 1),
+          addons: addonsWithQty,
+        },
+      ]);
+    } else if (addOnModalHalfIndex != null && addOnModalHalfIndex >= 0) {
+      setHalfAndHalfItems((prev) =>
+        prev.map((item, i) =>
+          i === addOnModalHalfIndex
+            ? {
+                ...item,
+                quantity: Math.max(1, parseInt(addOnModalPendingQuantity, 10) || item.quantity || 1),
+                addons: addonsWithQty,
+              }
+            : item
+        )
+      );
+    } else if (addOnModalLineIndex === null) {
       if (!addOnModalProduct) return;
       setOrderLines((prev) => [
         ...prev,
@@ -1103,6 +1162,8 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     setAddOnModalPendingQuantity(1);
     setAddOnModalVariationOptionId(null);
     setAddOnModalProductValue(null);
+    setAddOnModalHalfIndex(null);
+    setAddOnModalHalfPending(null);
   };
 
   const closeAddOnModal = () => {
@@ -1113,6 +1174,8 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     setAddOnModalPendingQuantity(1);
     setAddOnModalVariationOptionId(null);
     setAddOnModalProductValue(null);
+    setAddOnModalHalfIndex(null);
+    setAddOnModalHalfPending(null);
   };
 
   const getOrderTotalItems = () =>
@@ -1130,9 +1193,12 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       const base = orderProducts.find((p) => p.id === item.baseProductId);
       const half1 = orderProducts.find((p) => p.id === item.half1ProductId);
       const half2 = orderProducts.find((p) => p.id === item.half2ProductId);
-      // Usar as variações selecionadas diretamente
       const unitVal = computeHalfAndHalfUnitValue(base, half1, half2, item.half1OptionId, item.half2OptionId, null);
-      return acc + unitVal * item.quantity;
+      const addonsTotal = (item.addons || []).reduce(
+        (s, a) => s + (Number(a.value) || 0) * (a.quantity ?? 1),
+        0
+      );
+      return acc + (unitVal + addonsTotal) * item.quantity;
     }, 0);
     
     return linesTotal + halfAndHalfTotal;
@@ -1186,7 +1252,6 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         const half2 = orderProducts.find((p) => p.id === item.half2ProductId);
         // Usar as variações selecionadas diretamente
         const unitVal = computeHalfAndHalfUnitValue(base, half1, half2, item.half1OptionId, item.half2OptionId, null);
-        const baseName = base?.name || "Produto";
         let half1Name = half1?.name || "Sabor 1";
         let half2Name = half2?.name || "Sabor 2";
         // Adicionar nome da variação se houver
@@ -1200,7 +1265,15 @@ const Mesas = ({ cardapioSlugFromHub }) => {
           const option = firstVariation?.options?.find((o) => o.id === item.half2OptionId);
           if (option) half2Name = `${half2Name} (${option.label})`;
         }
-        const productName = `${baseName} - Metade ${half1Name} / Metade ${half2Name}`;
+        const productName = `Meio a meio: ${half1Name} / ${half2Name}`;
+        const addons = item.addons || [];
+        const addonsExpanded = addons.length > 0
+          ? addons.flatMap((a) =>
+              Array((a.quantity ?? 1) * (item.quantity || 1))
+                .fill(null)
+                .map(() => ({ addOnItemId: a.addOnItemId, label: a.label, value: a.value }))
+            )
+          : undefined;
         return {
           type: "halfAndHalf",
           productId: item.baseProductId,
@@ -1212,6 +1285,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
           productName: productName,
           productValue: unitVal,
           grupo: base?.grupo || "Outros",
+          ...(addonsExpanded && addonsExpanded.length > 0 && { addons: addonsExpanded }),
         };
       });
 
@@ -1824,13 +1898,14 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                     const base = orderProducts.find((p) => p.id === item.baseProductId);
                     const half1 = orderProducts.find((p) => p.id === item.half1ProductId);
                     const half2 = orderProducts.find((p) => p.id === item.half2ProductId);
-                    // Usar as variações selecionadas diretamente (não precisa de baseVariationLabel)
                     const unitVal = computeHalfAndHalfUnitValue(base, half1, half2, item.half1OptionId, item.half2OptionId, null);
-                    const subtotal = unitVal * item.quantity;
-                    const baseName = base?.name || "Produto";
+                    const addonsTotal = (item.addons || []).reduce(
+                      (s, a) => s + (Number(a.value) || 0) * (a.quantity ?? 1),
+                      0
+                    );
+                    const subtotal = (unitVal + addonsTotal) * item.quantity;
                     let half1Name = half1?.name || "Sabor 1";
                     let half2Name = half2?.name || "Sabor 2";
-                    // Adicionar nome da variação se houver
                     if (item.half1OptionId && half1?.variations && half1.variations.length > 0) {
                       const firstVariation = half1.variations[0];
                       const option = firstVariation?.options?.find((o) => o.id === item.half1OptionId);
@@ -1841,13 +1916,27 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                       const option = firstVariation?.options?.find((o) => o.id === item.half2OptionId);
                       if (option) half2Name = `${half2Name} (${option.label})`;
                     }
-                    const productDisplayName = `${baseName} - Metade ${half1Name} / Metade ${half2Name}`;
+                    const productDisplayName = `Meio a meio: ${half1Name} / ${half2Name}`;
+                    const addonLabels = (item.addons || [])
+                      .filter((a) => (a.quantity ?? 1) > 0)
+                      .map((a) => `${a.quantity > 1 ? `${a.quantity}x ` : ""}${a.label}`)
+                      .join(", ");
                     return (
                       <Box key={`half-${idx}`} className={classes.orderLineRow}>
                         <Box>
                           <Typography variant="body2">
-                            {productDisplayName} • {item.quantity}x R$ {unitVal.toFixed(2).replace(".", ",")} = R$ {subtotal.toFixed(2).replace(".", ",")}
+                            {productDisplayName} • {item.quantity}x R$ {(unitVal + addonsTotal).toFixed(2).replace(".", ",")} = R$ {subtotal.toFixed(2).replace(".", ",")}
                           </Typography>
+                          {addonLabels && (
+                            <Typography variant="caption" color="textSecondary" display="block">
+                              + {addonLabels}
+                            </Typography>
+                          )}
+                          {base && hasAddonsToShow(base) && (
+                            <Button size="small" color="primary" onClick={() => openAddOnModalForHalfEdit(idx)} style={{ marginTop: 4 }}>
+                              {addonLabels ? "Alterar adicionais" : "Adicionais"}
+                            </Button>
+                          )}
                         </Box>
                         <IconButton size="small" onClick={() => handleRemoveHalfAndHalfItem(idx)} aria-label="Remover item">
                           <RemoveIcon fontSize="small" />

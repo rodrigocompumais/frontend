@@ -368,6 +368,9 @@ const Garcom = () => {
   const [addOnModalLineIndex, setAddOnModalLineIndex] = useState(null);
   const [addOnModalSelectedAddons, setAddOnModalSelectedAddons] = useState([]);
   const [addOnModalPendingQuantity, setAddOnModalPendingQuantity] = useState(1);
+  /** null = linha normal; -1 = novo meio a meio; >=0 = editar halfAndHalfItems[index] */
+  const [addOnModalHalfIndex, setAddOnModalHalfIndex] = useState(null);
+  const [addOnModalHalfPending, setAddOnModalHalfPending] = useState(null);
 
   const anyGarcomModalOpen =
     orderDialogOpen ||
@@ -605,6 +608,8 @@ const Garcom = () => {
     if (delta === 1 && p && hasAddonsToShow(p)) {
       setAddOnModalProduct(p);
       setAddOnModalLineIndex(null);
+      setAddOnModalHalfIndex(null);
+      setAddOnModalHalfPending(null);
       setAddOnModalPendingQuantity(1);
       setAddOnModalSelectedAddons([]);
       setAddOnModalOpen(true);
@@ -676,8 +681,24 @@ const Garcom = () => {
     if (!p || !hasAddonsToShow(p)) return;
     setAddOnModalProduct(p);
     setAddOnModalLineIndex(lineIndex);
+    setAddOnModalHalfIndex(null);
+    setAddOnModalHalfPending(null);
     setAddOnModalPendingQuantity(line.quantity);
     setAddOnModalSelectedAddons(Array.isArray(line.addons) ? line.addons.map((a) => ({ ...a, quantity: a.quantity ?? 1 })) : []);
+    setAddOnModalOpen(true);
+  };
+
+  const openAddOnModalForHalfEdit = (index) => {
+    const item = halfAndHalfItems[index];
+    if (!item) return;
+    const base = products.find((p) => p.id === item.baseProductId);
+    if (!base || !hasAddonsToShow(base)) return;
+    setAddOnModalProduct(base);
+    setAddOnModalLineIndex(null);
+    setAddOnModalHalfIndex(index);
+    setAddOnModalHalfPending(null);
+    setAddOnModalPendingQuantity(item.quantity || 1);
+    setAddOnModalSelectedAddons(Array.isArray(item.addons) ? item.addons.map((a) => ({ ...a, quantity: a.quantity ?? 1 })) : []);
     setAddOnModalOpen(true);
   };
 
@@ -706,7 +727,29 @@ const Garcom = () => {
 
   const confirmAddOnModal = () => {
     const addonsWithQty = (addOnModalSelectedAddons || []).filter((a) => (a.quantity ?? 1) > 0);
-    if (addOnModalLineIndex === null) {
+
+    if (addOnModalHalfIndex === -1 && addOnModalHalfPending) {
+      setHalfAndHalfItems((prev) => [
+        ...prev,
+        {
+          ...addOnModalHalfPending,
+          quantity: Math.max(1, parseInt(addOnModalPendingQuantity, 10) || 1),
+          addons: addonsWithQty,
+        },
+      ]);
+    } else if (addOnModalHalfIndex != null && addOnModalHalfIndex >= 0) {
+      setHalfAndHalfItems((prev) =>
+        prev.map((item, i) =>
+          i === addOnModalHalfIndex
+            ? {
+                ...item,
+                quantity: Math.max(1, parseInt(addOnModalPendingQuantity, 10) || item.quantity || 1),
+                addons: addonsWithQty,
+              }
+            : item
+        )
+      );
+    } else if (addOnModalLineIndex === null) {
       if (!addOnModalProduct) return;
       const optionId = getProductVariationOptionId(addOnModalProduct);
       setOrderLines((prev) => [...prev, { productId: addOnModalProduct.id, quantity: addOnModalPendingQuantity, optionId, addons: addonsWithQty }]);
@@ -722,6 +765,8 @@ const Garcom = () => {
     setAddOnModalLineIndex(null);
     setAddOnModalSelectedAddons([]);
     setAddOnModalPendingQuantity(1);
+    setAddOnModalHalfIndex(null);
+    setAddOnModalHalfPending(null);
   };
 
   const closeAddOnModal = () => {
@@ -730,6 +775,8 @@ const Garcom = () => {
     setAddOnModalLineIndex(null);
     setAddOnModalSelectedAddons([]);
     setAddOnModalPendingQuantity(1);
+    setAddOnModalHalfIndex(null);
+    setAddOnModalHalfPending(null);
   };
 
   const normalizeVariationKey = (value) => String(value || "").trim().toLowerCase();
@@ -882,20 +929,34 @@ const Garcom = () => {
     const half2Option = findOptionByVariationLabel(half2Product, halfAndHalfModalBaseVariation);
     
     const qty = Math.max(1, parseInt(halfAndHalfModalQty, 10) || 1);
-    setHalfAndHalfItems((prev) => [
-      ...prev,
-      {
-        baseProductId: halfAndHalfModalProduct.id,
-        half1ProductId,
-        half2ProductId,
-        half1OptionId: half1Option?.id || null,
-        half2OptionId: half2Option?.id || null,
-        quantity: qty,
-      },
-    ]);
+    const baseProduct = halfAndHalfModalProduct;
+    const newItem = {
+      baseProductId: baseProduct.id,
+      half1ProductId,
+      half2ProductId,
+      half1OptionId: half1Option?.id || null,
+      half2OptionId: half2Option?.id || null,
+      quantity: qty,
+      addons: [],
+    };
+
     setHalfAndHalfModalOpen(false);
     setHalfAndHalfModalProduct(null);
     setHalfAndHalfModalBaseVariation(null);
+    setHalfAndHalfModalHalf2("");
+
+    if (hasAddonsToShow(baseProduct)) {
+      setAddOnModalHalfPending(newItem);
+      setAddOnModalHalfIndex(-1);
+      setAddOnModalProduct(baseProduct);
+      setAddOnModalLineIndex(null);
+      setAddOnModalPendingQuantity(qty);
+      setAddOnModalSelectedAddons([]);
+      setAddOnModalOpen(true);
+      return;
+    }
+
+    setHalfAndHalfItems((prev) => [...prev, newItem]);
   };
 
   const removeHalfAndHalfItem = (index) => {
@@ -925,7 +986,12 @@ const Garcom = () => {
       const base = products.find((p) => p.id === item.baseProductId);
       const half1 = products.find((p) => p.id === item.half1ProductId);
       const half2 = products.find((p) => p.id === item.half2ProductId);
-      total += computeHalfAndHalfUnitValue(base, half1, half2, item.half1OptionId, item.half2OptionId) * item.quantity;
+      const unit = computeHalfAndHalfUnitValue(base, half1, half2, item.half1OptionId, item.half2OptionId);
+      const addonsTotal = (item.addons || []).reduce(
+        (sum, a) => sum + (Number(a.value) || 0) * (a.quantity ?? 1),
+        0
+      );
+      total += (unit + addonsTotal) * item.quantity;
     });
     return total;
   };
@@ -1160,6 +1226,14 @@ const Garcom = () => {
       const halfMenuItems = halfAndHalfItems.map((item) => {
         const baseProduct = products.find((p) => p.id === item.baseProductId);
         const baseOptionId = getProductVariationOptionId(baseProduct);
+        const addons = item.addons || [];
+        const addonsExpanded = addons.length > 0
+          ? addons.flatMap((a) =>
+              Array((a.quantity ?? 1) * (item.quantity || 1))
+                .fill(null)
+                .map(() => ({ addOnItemId: a.addOnItemId, label: a.label, value: a.value }))
+            )
+          : undefined;
         return {
           type: "halfAndHalf",
           productId: item.baseProductId,
@@ -1170,6 +1244,7 @@ const Garcom = () => {
           half2OptionId: item.half2OptionId || null,
           baseOptionId: baseOptionId,
           grupo: baseProduct?.grupo || "Outros",
+          ...(addonsExpanded && addonsExpanded.length > 0 && { addons: addonsExpanded }),
         };
       });
       const menuItems = [...normalMenuItems, ...halfMenuItems];
@@ -1613,12 +1688,32 @@ const Garcom = () => {
                     const h1 = products.find((p) => p.id === item.half1ProductId);
                     const h2 = products.find((p) => p.id === item.half2ProductId);
                     const unitVal = computeHalfAndHalfUnitValue(base, h1, h2, item.half1OptionId, item.half2OptionId);
-                    const label = base && h1 && h2 ? `${base.name}: ${h1.name} / ${h2.name}` : "Meio a meio";
+                    const addonsTotal = (item.addons || []).reduce(
+                      (sum, a) => sum + (Number(a.value) || 0) * (a.quantity ?? 1),
+                      0
+                    );
+                    const label = h1 && h2 ? `Meio a meio: ${h1.name} / ${h2.name}` : "Meio a meio";
+                    const addonLabels = (item.addons || [])
+                      .filter((a) => (a.quantity ?? 1) > 0)
+                      .map((a) => `${a.quantity > 1 ? `${a.quantity}x ` : ""}${a.label}`)
+                      .join(", ");
                     return (
-                      <Box key={`h-${idx}`} className={classes.orderLineRow} display="flex" alignItems="center" justifyContent="space-between">
-                        <Typography variant="body2">
-                          {item.quantity}x {label} — R$ {(unitVal * item.quantity).toFixed(2).replace(".", ",")}
-                        </Typography>
+                      <Box key={`h-${idx}`} className={classes.orderLineRow} display="flex" alignItems="flex-start" justifyContent="space-between">
+                        <Box>
+                          <Typography variant="body2">
+                            {item.quantity}x {label} — R$ {((unitVal + addonsTotal) * item.quantity).toFixed(2).replace(".", ",")}
+                          </Typography>
+                          {addonLabels && (
+                            <Typography variant="caption" color="textSecondary" display="block">
+                              + {addonLabels}
+                            </Typography>
+                          )}
+                          {base && hasAddonsToShow(base) && (
+                            <Button size="small" color="primary" onClick={() => openAddOnModalForHalfEdit(idx)} style={{ marginTop: 4 }}>
+                              {addonLabels ? "Alterar adicionais" : "Adicionais"}
+                            </Button>
+                          )}
+                        </Box>
                         <IconButton size="small" onClick={() => removeHalfAndHalfItem(idx)} aria-label="Remover meio a meio">
                           <RemoveIcon fontSize="small" />
                         </IconButton>

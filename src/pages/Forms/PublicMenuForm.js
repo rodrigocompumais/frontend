@@ -465,6 +465,9 @@ const PublicMenuForm = ({
   const [addOnModalItemKey, setAddOnModalItemKey] = useState("");
   const [addOnModalPendingQuantity, setAddOnModalPendingQuantity] = useState(1);
   const [addOnModalSelectedAddons, setAddOnModalSelectedAddons] = useState([]);
+  /** null = fluxo normal; -1 = novo meio a meio pendente; >=0 = editar halfAndHalfItems[index] */
+  const [addOnModalHalfIndex, setAddOnModalHalfIndex] = useState(null);
+  const [addOnModalHalfPending, setAddOnModalHalfPending] = useState(null);
   /** Para produtos com variações: productId -> variationOptionId selecionado */
   const [selectedVariationOption, setSelectedVariationOption] = useState({});
   /** Variação selecionada do produto base quando abre o modal meio a meio */
@@ -1024,15 +1027,42 @@ const PublicMenuForm = ({
   };
 
   const confirmAddOnModal = () => {
-    if (!addOnModalItemKey) return;
-    setSelectedItems((prev) => ({ ...prev, [addOnModalItemKey]: addOnModalPendingQuantity }));
     const addonsWithQty = (addOnModalSelectedAddons || []).filter((a) => (a.quantity ?? 1) > 0);
-    setSelectedAddons((prev) => ({ ...prev, [addOnModalItemKey]: addonsWithQty }));
+
+    if (addOnModalHalfIndex === -1 && addOnModalHalfPending) {
+      setHalfAndHalfItems((prev) => [
+        ...prev,
+        {
+          ...addOnModalHalfPending,
+          quantity: Math.max(1, parseInt(addOnModalPendingQuantity, 10) || 1),
+          addons: addonsWithQty,
+        },
+      ]);
+    } else if (addOnModalHalfIndex != null && addOnModalHalfIndex >= 0) {
+      setHalfAndHalfItems((prev) =>
+        prev.map((item, i) =>
+          i === addOnModalHalfIndex
+            ? {
+                ...item,
+                quantity: Math.max(1, parseInt(addOnModalPendingQuantity, 10) || item.quantity || 1),
+                addons: addonsWithQty,
+              }
+            : item
+        )
+      );
+    } else {
+      if (!addOnModalItemKey) return;
+      setSelectedItems((prev) => ({ ...prev, [addOnModalItemKey]: addOnModalPendingQuantity }));
+      setSelectedAddons((prev) => ({ ...prev, [addOnModalItemKey]: addonsWithQty }));
+    }
+
     setAddOnModalOpen(false);
     setAddOnModalProduct(null);
     setAddOnModalItemKey("");
     setAddOnModalPendingQuantity(1);
     setAddOnModalSelectedAddons([]);
+    setAddOnModalHalfIndex(null);
+    setAddOnModalHalfPending(null);
   };
 
   const closeAddOnModal = () => {
@@ -1041,14 +1071,32 @@ const PublicMenuForm = ({
     setAddOnModalItemKey("");
     setAddOnModalPendingQuantity(1);
     setAddOnModalSelectedAddons([]);
+    setAddOnModalHalfIndex(null);
+    setAddOnModalHalfPending(null);
   };
 
   const openAddOnModalForEdit = (product, itemKey) => {
     if (!product || !hasAddonsToShow(product)) return;
     setAddOnModalProduct(product);
     setAddOnModalItemKey(itemKey);
+    setAddOnModalHalfIndex(null);
+    setAddOnModalHalfPending(null);
     setAddOnModalPendingQuantity(selectedItems[itemKey] || 1);
     setAddOnModalSelectedAddons(selectedAddons[itemKey] || []);
+    setAddOnModalOpen(true);
+  };
+
+  const openAddOnModalForHalfEdit = (index) => {
+    const item = halfAndHalfItems[index];
+    if (!item) return;
+    const base = products.find((p) => p.id === item.baseProductId);
+    if (!base || !hasAddonsToShow(base)) return;
+    setAddOnModalProduct(base);
+    setAddOnModalItemKey("");
+    setAddOnModalHalfIndex(index);
+    setAddOnModalHalfPending(null);
+    setAddOnModalPendingQuantity(item.quantity || 1);
+    setAddOnModalSelectedAddons(item.addons || []);
     setAddOnModalOpen(true);
   };
 
@@ -1243,6 +1291,14 @@ const PublicMenuForm = ({
         const baseOptionId = baseProduct?.variations && baseProduct.variations.length > 0
           ? (selectedVariationOption[item.baseProductId] ?? null)
           : null;
+        const addons = item.addons || [];
+        const addonsExpanded = addons.length > 0
+          ? addons.flatMap((a) =>
+              Array((a.quantity ?? 1) * (item.quantity || 1))
+                .fill(null)
+                .map(() => ({ addOnItemId: a.addOnItemId, label: a.label, value: a.value }))
+            )
+          : undefined;
         return {
           type: "halfAndHalf",
           productId: item.baseProductId,
@@ -1253,6 +1309,7 @@ const PublicMenuForm = ({
           half2OptionId: item.half2OptionId || null,
           baseOptionId: baseOptionId,
           grupo: baseProduct?.grupo || "Outros",
+          ...(addonsExpanded && addonsExpanded.length > 0 && { addons: addonsExpanded }),
         };
       });
       const menuItems = [...normalMenuItems, ...halfMenuItems];
@@ -1371,14 +1428,16 @@ const PublicMenuForm = ({
           const half1 = products.find((p) => p.id === item.half1ProductId);
           const half2 = products.find((p) => p.id === item.half2ProductId);
           const unitVal = computeHalfAndHalfUnitValue(base, half1, half2, item.half1OptionId, item.half2OptionId);
+          const addonsTotal = (item.addons || []).reduce((s, a) => s + (Number(a.value) || 0), 0);
           const productName = base && half1 && half2
-            ? `${base.name} - Metade ${half1.name} / Metade ${half2.name}`
+            ? `Meio a meio: ${half1.name} / ${half2.name}`
             : "Meio a meio";
           return {
             ...item,
             productName,
             productValue: unitVal,
-            total: unitVal * item.quantity,
+            addonsTotal,
+            total: (unitVal + addonsTotal) * item.quantity,
           };
         }
         const addonsTotal = (item.addons || []).reduce((s, a) => s + (Number(a.value) || 0), 0);
@@ -1803,20 +1862,34 @@ const PublicMenuForm = ({
     const half2Option = findOptionByVariationLabel(half2Product, halfAndHalfModalBaseVariation);
     
     const qty = Math.max(1, parseInt(halfAndHalfModalQty, 10) || 1);
-    setHalfAndHalfItems((prev) => [
-      ...prev,
-      {
-        baseProductId: halfAndHalfModalProduct.id,
-        half1ProductId,
-        half2ProductId,
-        half1OptionId: half1Option?.id || null,
-        half2OptionId: half2Option?.id || null,
-        quantity: qty,
-      },
-    ]);
+    const baseProduct = halfAndHalfModalProduct;
+    const newItem = {
+      baseProductId: baseProduct.id,
+      half1ProductId,
+      half2ProductId,
+      half1OptionId: half1Option?.id || null,
+      half2OptionId: half2Option?.id || null,
+      quantity: qty,
+      addons: [],
+    };
+
     setHalfAndHalfModalOpen(false);
     setHalfAndHalfModalProduct(null);
     setHalfAndHalfModalBaseVariation(null);
+    setHalfAndHalfModalHalf2("");
+
+    if (hasAddonsToShow(baseProduct)) {
+      setAddOnModalHalfPending(newItem);
+      setAddOnModalHalfIndex(-1);
+      setAddOnModalProduct(baseProduct);
+      setAddOnModalItemKey("");
+      setAddOnModalPendingQuantity(qty);
+      setAddOnModalSelectedAddons([]);
+      setAddOnModalOpen(true);
+      return;
+    }
+
+    setHalfAndHalfItems((prev) => [...prev, newItem]);
   };
 
   const removeHalfAndHalfItem = (index) => {
@@ -1833,7 +1906,12 @@ const PublicMenuForm = ({
       const base = products.find((p) => p.id === item.baseProductId);
       const half1 = products.find((p) => p.id === item.half1ProductId);
       const half2 = products.find((p) => p.id === item.half2ProductId);
-      total += computeHalfAndHalfUnitValue(base, half1, half2, item.half1OptionId, item.half2OptionId) * item.quantity;
+      const unit = computeHalfAndHalfUnitValue(base, half1, half2, item.half1OptionId, item.half2OptionId);
+      const addonsTotal = (item.addons || []).reduce(
+        (sum, a) => sum + (Number(a.value) || 0) * (a.quantity ?? 1),
+        0
+      );
+      total += (unit + addonsTotal) * item.quantity;
     });
     
     total += getDeliveryFeeAmount();
@@ -3070,14 +3148,39 @@ const PublicMenuForm = ({
                       const h1 = products.find((p) => p.id === item.half1ProductId);
                       const h2 = products.find((p) => p.id === item.half2ProductId);
                       const unitVal = computeHalfAndHalfUnitValue(base, h1, h2, item.half1OptionId, item.half2OptionId);
-                      const label = base && h1 && h2
-                        ? `${base.name}: ${h1.name} / ${h2.name}`
+                      const addonsTotal = (item.addons || []).reduce(
+                        (sum, a) => sum + (Number(a.value) || 0) * (a.quantity ?? 1),
+                        0
+                      );
+                      const label = h1 && h2
+                        ? `Meio a meio: ${h1.name} / ${h2.name}`
                         : "Meio a meio";
+                      const addonLabels = (item.addons || [])
+                        .filter((a) => (a.quantity ?? 1) > 0)
+                        .map((a) => `${a.quantity > 1 ? `${a.quantity}x ` : ""}${a.label}`)
+                        .join(", ");
                       return (
-                        <Box key={idx} display="flex" alignItems="center" justifyContent="space-between" style={{ marginTop: 4 }}>
-                          <Typography variant="body2">
-                            {item.quantity}x {label} — R$ {(unitVal * item.quantity).toFixed(2).replace(".", ",")}
-                          </Typography>
+                        <Box key={idx} display="flex" alignItems="flex-start" justifyContent="space-between" style={{ marginTop: 8 }}>
+                          <Box>
+                            <Typography variant="body2">
+                              {item.quantity}x {label} — R$ {((unitVal + addonsTotal) * item.quantity).toFixed(2).replace(".", ",")}
+                            </Typography>
+                            {addonLabels && (
+                              <Typography variant="caption" color="textSecondary" display="block">
+                                + {addonLabels}
+                              </Typography>
+                            )}
+                            {base && hasAddonsToShow(base) && (
+                              <Button
+                                size="small"
+                                color="primary"
+                                onClick={() => openAddOnModalForHalfEdit(idx)}
+                                style={{ marginTop: 4, paddingLeft: 0 }}
+                              >
+                                {addonLabels ? "Alterar adicionais" : "Adicionais"}
+                              </Button>
+                            )}
+                          </Box>
                           <IconButton size="small" onClick={() => removeHalfAndHalfItem(idx)} aria-label="Remover">
                             <RemoveIcon fontSize="small" />
                           </IconButton>
