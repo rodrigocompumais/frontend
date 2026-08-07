@@ -567,12 +567,6 @@ const PublicMenuForm = ({
   const [loadingMesa, setLoadingMesa] = useState(false);
   const [orderToken, setOrderToken] = useState(initialOrderToken ?? null);
   const [halfAndHalfItems, setHalfAndHalfItems] = useState([]);
-  const [halfAndHalfModalOpen, setHalfAndHalfModalOpen] = useState(false);
-  const [halfAndHalfModalProduct, setHalfAndHalfModalProduct] = useState(null);
-  const [halfAndHalfModalHalf1, setHalfAndHalfModalHalf1] = useState("");
-  const [halfAndHalfModalHalf2, setHalfAndHalfModalHalf2] = useState("");
-  const [halfAndHalfModalQty, setHalfAndHalfModalQty] = useState(1);
-  const [halfAndHalfModalObs, setHalfAndHalfModalObs] = useState("");
   /** Modal de adicionais: ao adicionar item com grupo de adicionais, abre para seleção */
   const [addOnModalOpen, setAddOnModalOpen] = useState(false);
   const [addOnModalProduct, setAddOnModalProduct] = useState(null);
@@ -591,6 +585,9 @@ const PublicMenuForm = ({
   const [detailAddons, setDetailAddons] = useState([]);
   const [detailObservation, setDetailObservation] = useState("");
   const [detailVariationOptionId, setDetailVariationOptionId] = useState(null);
+  /** Meio a meio dentro do sheet: modo "2 sabores" e id do segundo sabor */
+  const [detailHalfMode, setDetailHalfMode] = useState(false);
+  const [detailHalfFlavorId, setDetailHalfFlavorId] = useState(null);
   /** Observações por linha do carrinho: itemKey -> texto */
   const [selectedObservations, setSelectedObservations] = useState({});
   /** Cupom de desconto aplicado: { code, discount } */
@@ -601,8 +598,6 @@ const PublicMenuForm = ({
   const [pixData, setPixData] = useState(null);
   /** Para produtos com variações: productId -> variationOptionId selecionado */
   const [selectedVariationOption, setSelectedVariationOption] = useState({});
-  /** Variação selecionada do produto base quando abre o modal meio a meio */
-  const [halfAndHalfModalBaseVariation, setHalfAndHalfModalBaseVariation] = useState(null);
   /** IDs dos produtos mais pedidos (ordem de popularidade) */
   const [mostOrderedProductIds, setMostOrderedProductIds] = useState([]);
 
@@ -1157,11 +1152,6 @@ const PublicMenuForm = ({
       return [...prev, entry];
     });
   };
-  const toggleAddonInModal = (item) => {
-    const current = getAddonQuantityInModal(item.addOnItemId);
-    setAddonQuantityInModal(item, current + 1);
-  };
-
   const confirmAddOnModal = () => {
     const addonsWithQty = (addOnModalSelectedAddons || []).filter((a) => (a.quantity ?? 1) > 0);
     const obs = String(addOnModalObservation || "").trim();
@@ -1327,6 +1317,8 @@ const PublicMenuForm = ({
     setDetailQty(1);
     setDetailAddons([]);
     setDetailObservation("");
+    setDetailHalfMode(false);
+    setDetailHalfFlavorId(null);
     const hasVars = product.variations && product.variations.length > 0;
     setDetailVariationOptionId(
       hasVars
@@ -1341,9 +1333,27 @@ const PublicMenuForm = ({
     setDetailProduct(null);
     setDetailAddons([]);
     setDetailObservation("");
+    setDetailHalfMode(false);
+    setDetailHalfFlavorId(null);
   };
 
-  const getDetailUnitPrice = () => {
+  /** Abre o sheet já no modo "2 sabores" (botão Meio a meio do card) */
+  const openProductDetailHalf = (product) => {
+    openProductDetail(product);
+    setDetailHalfMode(true);
+  };
+
+  /** Rótulo da opção de variação selecionada no sheet (ex.: "G") */
+  const getDetailVariationLabel = () => {
+    if (!detailProduct || detailVariationOptionId == null) return null;
+    const option = detailProduct.variations?.[0]?.options?.find(
+      (o) => o.id === detailVariationOptionId
+    );
+    return option?.label || null;
+  };
+
+  /** Preço só do produto inteiro (sem meio a meio), usado como base do sheet */
+  const getDetailBasePrice = () => {
     if (!detailProduct) return 0;
     if (detailVariationOptionId != null && detailProduct.variations?.length > 0) {
       const option = detailProduct.variations[0]?.options?.find(
@@ -1352,6 +1362,26 @@ const PublicMenuForm = ({
       if (option) return parseFloat(option.value) || 0;
     }
     return parseFloat(detailProduct.value) || 0;
+  };
+
+  const getDetailUnitPrice = () => {
+    if (!detailProduct) return 0;
+    const basePrice = getDetailBasePrice();
+    if (!detailHalfMode || detailHalfFlavorId == null) return basePrice;
+
+    // Meio a meio: aplica a regra de preço do produto base (max | fixed | average)
+    const half2 = products.find((p) => p.id === detailHalfFlavorId);
+    if (!half2) return basePrice;
+    const baseLabel = getDetailVariationLabel();
+    const half2Option = findOptionByVariationLabel(half2, baseLabel);
+    const v2 = half2Option
+      ? parseFloat(half2Option.value) || 0
+      : parseFloat(half2.value) || 0;
+
+    const rule = detailProduct.halfAndHalfPriceRule || "max";
+    if (rule === "fixed") return basePrice;
+    if (rule === "average") return (basePrice + v2) / 2;
+    return Math.max(basePrice, v2);
   };
 
   const getDetailAddonQuantity = (addOnItemId) =>
@@ -1391,18 +1421,49 @@ const PublicMenuForm = ({
         [detailProduct.id]: detailVariationOptionId,
       }));
     }
+    const qty = Math.max(1, parseInt(detailQty, 10) || 1);
+    const addonsWithQty = detailAddons.filter((a) => (a.quantity ?? 1) > 0);
+    const obs = String(detailObservation || "").trim();
+
+    // Meio a meio escolhido dentro do sheet: vira item meio a meio direto
+    if (detailHalfMode) {
+      if (detailHalfFlavorId == null) {
+        toast.error("Escolha o segundo sabor");
+        return;
+      }
+      const half2 = products.find((p) => p.id === detailHalfFlavorId);
+      if (!half2) {
+        toast.error("Segundo sabor indisponível");
+        return;
+      }
+      const baseLabel = getDetailVariationLabel();
+      const half2Option = findOptionByVariationLabel(half2, baseLabel);
+      setHalfAndHalfItems((prev) => [
+        ...prev,
+        {
+          baseProductId: detailProduct.id,
+          half1ProductId: detailProduct.id,
+          half2ProductId: detailHalfFlavorId,
+          half1OptionId: detailVariationOptionId || null,
+          half2OptionId: half2Option?.id || null,
+          quantity: qty,
+          addons: addonsWithQty,
+          observation: obs,
+        },
+      ]);
+      closeProductDetail();
+      return;
+    }
+
     const baseKey =
       detailVariationOptionId != null
         ? `${detailProduct.id}_${detailVariationOptionId}`
         : String(detailProduct.id);
     const lineKey = `${baseKey}_L${nextLineIdRef.current++}`;
-    const qty = Math.max(1, parseInt(detailQty, 10) || 1);
     setSelectedItems((prev) => ({ ...prev, [lineKey]: qty }));
-    const addonsWithQty = detailAddons.filter((a) => (a.quantity ?? 1) > 0);
     if (addonsWithQty.length > 0) {
       setSelectedAddons((prev) => ({ ...prev, [lineKey]: addonsWithQty }));
     }
-    const obs = String(detailObservation || "").trim();
     if (obs) {
       setSelectedObservations((prev) => ({ ...prev, [lineKey]: obs }));
     }
@@ -2209,113 +2270,6 @@ const PublicMenuForm = ({
     return Math.max(v1, v2);
   };
 
-  const openHalfAndHalfModal = (product) => {
-    setHalfAndHalfModalProduct(product);
-    setHalfAndHalfModalQty(1);
-    setHalfAndHalfModalObs("");
-    
-    // Capturar a variação selecionada do produto base
-    let baseVariationLabel = null;
-    if (product.variations && product.variations.length > 0) {
-      const selectedOptionId = selectedVariationOption[product.id];
-      if (selectedOptionId) {
-        const firstVariation = product.variations[0];
-        const option = firstVariation?.options?.find((o) => o.id === selectedOptionId);
-        if (option) {
-          baseVariationLabel = option.label;
-        }
-      } else {
-        // Se não há variação selecionada, usar a primeira opção disponível
-        const firstVariation = product.variations[0];
-        if (firstVariation?.options && firstVariation.options.length > 0) {
-          baseVariationLabel = firstVariation.options[0].label;
-        }
-      }
-    }
-    setHalfAndHalfModalBaseVariation(baseVariationLabel);
-
-    // Metade 1 = produto atual (fixo); usuário só escolhe o segundo sabor
-    setHalfAndHalfModalHalf1(String(product.id));
-    setHalfAndHalfModalHalf2("");
-    setHalfAndHalfModalOpen(true);
-  };
-
-  const addHalfAndHalfToCart = () => {
-    if (!halfAndHalfModalProduct || !halfAndHalfModalHalf2) {
-      toast.error("Selecione o segundo sabor");
-      return;
-    }
-
-    const half1ProductId = halfAndHalfModalProduct.id;
-    const half2ProductId = parseInt(halfAndHalfModalHalf2, 10);
-
-    if (!half2ProductId || half1ProductId === half2ProductId) {
-      toast.error("Selecione um segundo sabor diferente");
-      return;
-    }
-
-    const half1Product = products.find((p) => p.id === half1ProductId);
-    const half2Product = products.find((p) => p.id === half2ProductId);
-    // Preferir produto do catálogo (com addOnGroup resolvido), não só o snapshot do modal
-    const baseProduct =
-      products.find((p) => p.id === halfAndHalfModalProduct.id) || halfAndHalfModalProduct;
-
-    if (
-      halfAndHalfModalBaseVariation &&
-      !productMatchesHalfAndHalfVariation(
-        half2Product,
-        halfAndHalfModalBaseVariation,
-        baseProduct.variations?.[0]?.name || null
-      )
-    ) {
-      toast.error("O segundo sabor precisa ter a mesma variação (ex.: mesmo tamanho)");
-      return;
-    }
-
-    const half1Option = findOptionByVariationLabel(half1Product, halfAndHalfModalBaseVariation);
-    const half2Option = findOptionByVariationLabel(half2Product, halfAndHalfModalBaseVariation);
-    
-    const qty = Math.max(1, parseInt(halfAndHalfModalQty, 10) || 1);
-    const halfObs = String(halfAndHalfModalObs || "").trim();
-    const newItem = {
-      baseProductId: baseProduct.id,
-      half1ProductId,
-      half2ProductId,
-      half1OptionId: half1Option?.id || null,
-      half2OptionId: half2Option?.id || null,
-      quantity: qty,
-      addons: [],
-      observation: halfObs,
-    };
-
-    const addonSourceProduct =
-      [baseProduct, half1Product, half2Product].find((p) => hasAddonsToShow(p)) || null;
-
-    setHalfAndHalfModalOpen(false);
-    setHalfAndHalfModalBaseVariation(null);
-    setHalfAndHalfModalHalf2("");
-    setHalfAndHalfModalObs("");
-
-    if (addonSourceProduct) {
-      setAddOnModalHalfPending(newItem);
-      setAddOnModalHalfIndex(-1);
-      setAddOnModalProduct(addonSourceProduct);
-      setAddOnModalItemKey("");
-      setAddOnModalPendingQuantity(qty);
-      setAddOnModalSelectedAddons([]);
-      setAddOnModalObservation(halfObs);
-      // Abrir depois do Dialog de meio a meio fechar (MUI Modal manager)
-      window.setTimeout(() => {
-        setHalfAndHalfModalProduct(null);
-        setAddOnModalOpen(true);
-      }, 150);
-      return;
-    }
-
-    setHalfAndHalfModalProduct(null);
-    setHalfAndHalfItems((prev) => [...prev, newItem]);
-  };
-
   const removeHalfAndHalfItem = (index) => {
     setHalfAndHalfItems((prev) => prev.filter((_, i) => i !== index));
   };
@@ -2463,7 +2417,7 @@ const PublicMenuForm = ({
 
   useEffect(() => {
     if (!autoAdvanceEnabled || submitted || groups.length === 0) return;
-    if (addOnModalOpen || halfAndHalfModalOpen || pieceAgainModalOpen) return;
+    if (addOnModalOpen || detailOpen || pieceAgainModalOpen) return;
 
     const ms = autoAdvanceIntervalSec * 1000;
     const timer = setInterval(() => {
@@ -2491,7 +2445,7 @@ const PublicMenuForm = ({
     groups.length,
     submitted,
     addOnModalOpen,
-    halfAndHalfModalOpen,
+    detailOpen,
     pieceAgainModalOpen,
   ]);
 
@@ -3370,10 +3324,9 @@ const PublicMenuForm = ({
                           {isHalfAndHalf && (
                             <Button
                               variant="outlined"
-                              color="primary"
                               size="small"
-                              onClick={() => openHalfAndHalfModal(product)}
-                              style={{ marginRight: 8 }}
+                              onClick={() => openProductDetailHalf(product)}
+                              style={{ marginRight: 8, borderColor: brandPrimary, color: brandPrimary, textTransform: "none" }}
                             >
                               Meio a meio
                             </Button>
@@ -3500,225 +3453,112 @@ const PublicMenuForm = ({
             </DialogActions>
           </Dialog>
 
-          <Dialog open={halfAndHalfModalOpen} onClose={() => setHalfAndHalfModalOpen(false)} maxWidth="sm" fullWidth>
-            <DialogTitle>Meio a meio - {halfAndHalfModalProduct?.name}</DialogTitle>
-            <DialogContent>
-              {halfAndHalfModalProduct && (() => {
-                const half1Option = findOptionByVariationLabel(
-                  halfAndHalfModalProduct,
-                  halfAndHalfModalBaseVariation
-                );
-                const half1Price = half1Option
-                  ? parseFloat(half1Option.value || 0)
-                  : parseFloat(halfAndHalfModalProduct.value || 0);
-                const secondFlavors = getFlavorProductsForHalfAndHalf(
-                  halfAndHalfModalProduct,
-                  halfAndHalfModalBaseVariation,
-                  { excludeProductId: halfAndHalfModalProduct.id }
-                );
-                return (
-                  <>
-                    <Typography variant="subtitle2" style={{ fontWeight: 700, marginTop: 4 }}>
-                      Metade 1
-                    </Typography>
-                    <Box className={classes.halfFixedCard}>
-                      {halfAndHalfModalProduct.imageUrl ? (
-                        <img
-                          src={halfAndHalfModalProduct.imageUrl}
-                          alt={halfAndHalfModalProduct.name}
-                          className={classes.halfFixedImage}
-                          onError={(e) => { e.target.style.display = "none"; }}
-                        />
-                      ) : (
-                        <Box className={classes.halfFixedImage} />
-                      )}
-                      <Box flex={1} minWidth={0}>
-                        <Typography className={classes.halfFlavorName}>
-                          {halfAndHalfModalProduct.name}
-                        </Typography>
-                        {halfAndHalfModalBaseVariation && (
-                          <Typography className={classes.halfFlavorMeta}>
-                            Variação {halfAndHalfModalBaseVariation}
-                          </Typography>
-                        )}
-                        <Typography className={classes.halfFlavorPrice}>
-                          R$ {half1Price.toFixed(2).replace(".", ",")}
-                        </Typography>
-                      </Box>
-                    </Box>
-                    <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 6 }}>
-                      Sabor atual — escolha apenas o segundo sabor
-                    </Typography>
-
-                    <Typography variant="subtitle2" style={{ fontWeight: 700, marginTop: 16 }}>
-                      Metade 2 (segundo sabor)
-                    </Typography>
-                    {halfAndHalfModalBaseVariation && (
-                      <Typography variant="caption" color="textSecondary" display="block">
-                        Apenas sabores com variação “{halfAndHalfModalBaseVariation}”
-                      </Typography>
-                    )}
-                    {secondFlavors.length === 0 ? (
-                      <Typography color="error" variant="body2" style={{ marginTop: 12 }}>
-                        Nenhum outro sabor com a mesma variação neste grupo
-                      </Typography>
-                    ) : (
-                      <Box className={classes.halfFlavorList}>
-                        {secondFlavors.map((p) => {
-                          const option = findOptionByVariationLabel(p, halfAndHalfModalBaseVariation);
-                          const displayPrice = option
-                            ? parseFloat(option.value || 0)
-                            : parseFloat(p.value || 0);
-                          const selected = halfAndHalfModalHalf2 === String(p.id);
-                          return (
-                            <Box
-                              key={p.id}
-                              component="button"
-                              type="button"
-                              className={classes.halfFlavorCard}
-                              style={
-                                selected
-                                  ? {
-                                      borderColor: brandPrimary,
-                                      backgroundColor: brandSoft,
-                                      boxShadow: `0 0 0 1px ${brandPrimary}`,
-                                    }
-                                  : undefined
-                              }
-                              onClick={() => setHalfAndHalfModalHalf2(String(p.id))}
-                            >
-                              {p.imageUrl ? (
-                                <img
-                                  src={p.imageUrl}
-                                  alt={p.name}
-                                  className={classes.halfFlavorImage}
-                                  onError={(e) => { e.target.style.display = "none"; }}
-                                />
-                              ) : (
-                                <Box className={classes.halfFlavorImage} />
-                              )}
-                              <Box flex={1} minWidth={0}>
-                                <Typography className={classes.halfFlavorName}>{p.name}</Typography>
-                                {p.description && (
-                                  <Typography className={classes.halfFlavorMeta} noWrap>
-                                    {p.description}
-                                  </Typography>
-                                )}
-                                <Typography className={classes.halfFlavorPrice}>
-                                  R$ {displayPrice.toFixed(2).replace(".", ",")}
-                                </Typography>
-                              </Box>
-                            </Box>
-                          );
-                        })}
-                      </Box>
-                    )}
-
-                    <TextField
-                      label="Quantidade"
-                      type="number"
-                      value={halfAndHalfModalQty}
-                      onChange={(e) => setHalfAndHalfModalQty(e.target.value)}
-                      inputProps={{ min: 1 }}
-                      variant={fieldVariant}
-                      size="small"
-                      fullWidth
-                      style={{ marginTop: 16 }}
-                    />
-                    <TextField
-                      label="Observação (opcional)"
-                      placeholder="Ex.: sem cebola, bem passado..."
-                      value={halfAndHalfModalObs}
-                      onChange={(e) => setHalfAndHalfModalObs(e.target.value)}
-                      inputProps={{ maxLength: 200 }}
-                      variant={fieldVariant}
-                      size="small"
-                      fullWidth
-                      multiline
-                      minRows={2}
-                      style={{ marginTop: 12 }}
-                    />
-                  </>
-                );
-              })()}
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={() => setHalfAndHalfModalOpen(false)} color="secondary">Cancelar</Button>
-              <Button
-                onClick={addHalfAndHalfToCart}
-                variant="contained"
-                disabled={!halfAndHalfModalHalf2}
-                style={
-                  halfAndHalfModalHalf2
-                    ? { backgroundColor: brandPrimary, color: "#fff" }
-                    : undefined
-                }
-              >
-                Adicionar
-              </Button>
-            </DialogActions>
-          </Dialog>
-
           <Dialog open={addOnModalOpen} onClose={closeAddOnModal} maxWidth="sm" fullWidth>
             <DialogTitle>Adicionais — {addOnModalProduct?.name}</DialogTitle>
             <DialogContent>
               <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
-                Selecione os adicionais e a quantidade (ex.: 2 ovos). Quantidade do item: {addOnModalPendingQuantity}
+                Escolha os adicionais do item. Quantidade do item: {addOnModalPendingQuantity}
               </Typography>
-              {addOnModalProduct?.addOnGroup && (
-                <>
-                  {(addOnModalProduct.addOnGroup.subgroups || []).filter((sg) => (sg.items || []).length > 0).map((sg) => (
-                    <Box key={sg.id} mb={2}>
-                      <Typography variant="subtitle2" style={{ fontWeight: 600, marginBottom: 8 }}>
-                        {sg.name}
-                        {(() => {
-                          const rule = getAddonRuleLabel(sg);
-                          if (!rule) return null;
-                          return (
-                            <span className={rule.required ? classes.requiredChip : classes.optionalChip}>
-                              {rule.required ? "Obrigatório" : ""}{rule.text ? `${rule.required ? " • " : ""}${rule.text}` : ""}
-                            </span>
-                          );
-                        })()}
-                      </Typography>
-                      {(sg.items || []).map((it) => {
-                        const qty = getAddonQuantityInModal(it.id);
-                        return (
-                          <Box key={it.id} display="flex" alignItems="center" justifyContent="space-between" style={{ marginBottom: 8 }}>
-                            <Typography variant="body2">{it.label} + R$ {Number(it.value || 0).toFixed(2).replace(".", ",")}</Typography>
-                            <Box display="flex" alignItems="center">
-                              <IconButton size="small" onClick={() => setAddonQuantityInModal({ addOnItemId: it.id, label: it.label, value: it.value }, qty - 1)} disabled={qty <= 0} aria-label="Menos">
-                                <RemoveIcon fontSize="small" />
-                              </IconButton>
-                              <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>{qty}</Typography>
-                              <IconButton size="small" onClick={() => toggleAddonInModal({ addOnItemId: it.id, label: it.label, value: it.value })} aria-label="Mais">
-                                <AddIcon fontSize="small" />
-                              </IconButton>
-                            </Box>
-                          </Box>
-                        );
-                      })}
-                    </Box>
-                  ))}
-                  {(addOnModalProduct.addOnGroup.items || []).length > 0 && (addOnModalProduct.addOnGroup.items || []).map((it) => {
-                    const qty = getAddonQuantityInModal(it.id);
-                    return (
-                      <Box key={it.id} display="flex" alignItems="center" justifyContent="space-between" style={{ marginBottom: 8 }}>
-                        <Typography variant="body2">{it.label} + R$ {Number(it.value || 0).toFixed(2).replace(".", ",")}</Typography>
-                        <Box display="flex" alignItems="center">
-                          <IconButton size="small" onClick={() => setAddonQuantityInModal({ addOnItemId: it.id, label: it.label, value: it.value }, qty - 1)} disabled={qty <= 0} aria-label="Menos">
+              {addOnModalProduct?.addOnGroup && (() => {
+                const renderModalAddonRow = (it, isLast) => {
+                  const qty = getAddonQuantityInModal(it.id);
+                  const addonRef = { addOnItemId: it.id, label: it.label, value: it.value };
+                  return (
+                    <Box
+                      key={it.id}
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      style={{ padding: "10px 0", borderBottom: isLast ? "none" : "1px solid #f0f0f0" }}
+                    >
+                      <Box flex={1} pr={1}>
+                        <Typography variant="body2" style={{ fontWeight: 500, lineHeight: 1.3 }}>
+                          {it.label}
+                        </Typography>
+                        {Number(it.value) > 0 && (
+                          <Typography variant="caption" style={{ color: brandPrimary, fontWeight: 700 }}>
+                            + R$ {Number(it.value || 0).toFixed(2).replace(".", ",")}
+                          </Typography>
+                        )}
+                      </Box>
+                      {qty === 0 ? (
+                        <IconButton
+                          size="small"
+                          onClick={() => setAddonQuantityInModal(addonRef, 1)}
+                          aria-label={`Adicionar ${it.label}`}
+                          style={{ border: `1.5px solid ${brandPrimary}`, color: brandPrimary, borderRadius: 8, padding: 5 }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      ) : (
+                        <Box
+                          display="flex"
+                          alignItems="center"
+                          style={{ border: `1.5px solid ${brandPrimary}`, borderRadius: 8, backgroundColor: brandSoft }}
+                        >
+                          <IconButton
+                            size="small"
+                            onClick={() => setAddonQuantityInModal(addonRef, qty - 1)}
+                            aria-label="Menos"
+                            style={{ color: brandPrimary, padding: 5 }}
+                          >
                             <RemoveIcon fontSize="small" />
                           </IconButton>
-                          <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>{qty}</Typography>
-                          <IconButton size="small" onClick={() => toggleAddonInModal({ addOnItemId: it.id, label: it.label, value: it.value })} aria-label="Mais">
+                          <Typography variant="body2" style={{ minWidth: 22, textAlign: "center", fontWeight: 700 }}>
+                            {qty}
+                          </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={() => setAddonQuantityInModal(addonRef, qty + 1)}
+                            aria-label="Mais"
+                            style={{ color: brandPrimary, padding: 5 }}
+                          >
                             <AddIcon fontSize="small" />
                           </IconButton>
                         </Box>
+                      )}
+                    </Box>
+                  );
+                };
+
+                const renderModalAddonSection = (title, rules, items, keyPrefix) => {
+                  if (!items || items.length === 0) return null;
+                  const rule = getAddonRuleLabel(rules);
+                  return (
+                    <Box key={keyPrefix} mb={1.5} style={{ border: "1px solid #ececec", borderRadius: 12, overflow: "hidden" }}>
+                      <Box
+                        display="flex"
+                        alignItems="center"
+                        justifyContent="space-between"
+                        style={{ backgroundColor: "#fafafa", padding: "10px 12px" }}
+                      >
+                        <Typography variant="body2" style={{ fontWeight: 700 }}>{title}</Typography>
+                        {rule ? (
+                          <span className={rule.required ? classes.requiredChip : classes.optionalChip} style={{ marginLeft: 8 }}>
+                            {rule.required ? "Obrigatório" : ""}
+                            {rule.text ? `${rule.required ? " • " : ""}${rule.text}` : ""}
+                          </span>
+                        ) : (
+                          <span className={classes.optionalChip} style={{ marginLeft: 8 }}>Opcional</span>
+                        )}
                       </Box>
-                    );
-                  })}
-                </>
-              )}
+                      <Box style={{ padding: "0 12px" }}>
+                        {items.map((it, idx) => renderModalAddonRow(it, idx === items.length - 1))}
+                      </Box>
+                    </Box>
+                  );
+                };
+
+                const modalGroup = addOnModalProduct.addOnGroup;
+                return (
+                  <>
+                    {(modalGroup.subgroups || [])
+                      .filter((sg) => (sg.items || []).length > 0)
+                      .map((sg) => renderModalAddonSection(sg.name, sg, sg.items, `msg-${sg.id}`))}
+                    {renderModalAddonSection("Adicionais", modalGroup, modalGroup.items || [], "mroot")}
+                  </>
+                );
+              })()}
               <TextField
                 label="Observação (opcional)"
                 placeholder="Ex.: sem cebola, ponto da carne..."
@@ -3764,41 +3604,128 @@ const PublicMenuForm = ({
               const qtyNum = Math.max(1, parseInt(detailQty, 10) || 1);
               const lineTotal = (unitPrice + getDetailAddonsTotal()) * qtyNum;
 
-              const renderDetailAddonRow = (it) => {
+              // Linha de adicional: nome + preço à esquerda; "+" que vira stepper à direita
+              const renderDetailAddonRow = (it, isLast) => {
                 const qty = getDetailAddonQuantity(it.id);
+                const addonRef = { addOnItemId: it.id, label: it.label, value: it.value };
                 return (
                   <Box
                     key={it.id}
                     display="flex"
                     alignItems="center"
                     justifyContent="space-between"
-                    style={{ marginBottom: 8 }}
+                    style={{
+                      padding: "10px 0",
+                      borderBottom: isLast ? "none" : "1px solid #f0f0f0",
+                    }}
                   >
-                    <Typography variant="body2">
-                      {it.label} + R$ {Number(it.value || 0).toFixed(2).replace(".", ",")}
-                    </Typography>
-                    <Box display="flex" alignItems="center">
+                    <Box flex={1} pr={1}>
+                      <Typography variant="body2" style={{ fontWeight: 500, lineHeight: 1.3 }}>
+                        {it.label}
+                      </Typography>
+                      {Number(it.value) > 0 && (
+                        <Typography variant="caption" style={{ color: brandPrimary, fontWeight: 700 }}>
+                          + R$ {Number(it.value || 0).toFixed(2).replace(".", ",")}
+                        </Typography>
+                      )}
+                    </Box>
+                    {qty === 0 ? (
                       <IconButton
                         size="small"
-                        onClick={() => setDetailAddonQuantity({ addOnItemId: it.id, label: it.label, value: it.value }, qty - 1)}
-                        disabled={qty <= 0}
-                        aria-label="Menos"
-                      >
-                        <RemoveIcon fontSize="small" />
-                      </IconButton>
-                      <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>{qty}</Typography>
-                      <IconButton
-                        size="small"
-                        onClick={() => setDetailAddonQuantity({ addOnItemId: it.id, label: it.label, value: it.value }, qty + 1)}
-                        aria-label="Mais"
-                        style={{ color: brandPrimary }}
+                        onClick={() => setDetailAddonQuantity(addonRef, 1)}
+                        aria-label={`Adicionar ${it.label}`}
+                        style={{
+                          border: `1.5px solid ${brandPrimary}`,
+                          color: brandPrimary,
+                          borderRadius: 8,
+                          padding: 5,
+                        }}
                       >
                         <AddIcon fontSize="small" />
                       </IconButton>
+                    ) : (
+                      <Box
+                        display="flex"
+                        alignItems="center"
+                        style={{
+                          border: `1.5px solid ${brandPrimary}`,
+                          borderRadius: 8,
+                          backgroundColor: brandSoft,
+                        }}
+                      >
+                        <IconButton
+                          size="small"
+                          onClick={() => setDetailAddonQuantity(addonRef, qty - 1)}
+                          aria-label="Menos"
+                          style={{ color: brandPrimary, padding: 5 }}
+                        >
+                          <RemoveIcon fontSize="small" />
+                        </IconButton>
+                        <Typography variant="body2" style={{ minWidth: 22, textAlign: "center", fontWeight: 700 }}>
+                          {qty}
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          onClick={() => setDetailAddonQuantity(addonRef, qty + 1)}
+                          aria-label="Mais"
+                          style={{ color: brandPrimary, padding: 5 }}
+                        >
+                          <AddIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    )}
+                  </Box>
+                );
+              };
+
+              // Seção de adicionais em card: cabeçalho com nome + regra e linhas com divisores
+              const renderAddonSection = (title, rules, items, keyPrefix) => {
+                if (!items || items.length === 0) return null;
+                const rule = getAddonRuleLabel(rules);
+                return (
+                  <Box
+                    key={keyPrefix}
+                    mb={1.5}
+                    style={{
+                      border: "1px solid #ececec",
+                      borderRadius: 12,
+                      overflow: "hidden",
+                    }}
+                  >
+                    <Box
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="space-between"
+                      style={{ backgroundColor: "#fafafa", padding: "10px 12px" }}
+                    >
+                      <Typography variant="body2" style={{ fontWeight: 700 }}>
+                        {title}
+                      </Typography>
+                      {rule ? (
+                        <span className={rule.required ? classes.requiredChip : classes.optionalChip} style={{ marginLeft: 8 }}>
+                          {rule.required ? "Obrigatório" : ""}
+                          {rule.text ? `${rule.required ? " • " : ""}${rule.text}` : ""}
+                        </span>
+                      ) : (
+                        <span className={classes.optionalChip} style={{ marginLeft: 8 }}>Opcional</span>
+                      )}
+                    </Box>
+                    <Box style={{ padding: "0 12px" }}>
+                      {items.map((it, idx) => renderDetailAddonRow(it, idx === items.length - 1))}
                     </Box>
                   </Box>
                 );
               };
+
+              // Meio a meio dentro do sheet
+              const halfFlavors = detailHalfMode
+                ? getFlavorProductsForHalfAndHalf(detailProduct, getDetailVariationLabel(), {
+                    excludeProductId: detailProduct.id,
+                  })
+                : [];
+              const selectedHalfFlavor = detailHalfFlavorId != null
+                ? products.find((p) => p.id === detailHalfFlavorId)
+                : null;
 
               return (
                 <>
@@ -3855,7 +3782,23 @@ const PublicMenuForm = ({
                                     }
                                   : {}),
                               }}
-                              onClick={() => setDetailVariationOptionId(opt.id)}
+                              onClick={() => {
+                                setDetailVariationOptionId(opt.id);
+                                // Tamanho mudou: segundo sabor pode não existir no novo tamanho
+                                if (detailHalfFlavorId != null) {
+                                  const flavor = products.find((p) => p.id === detailHalfFlavorId);
+                                  if (
+                                    !flavor ||
+                                    !productMatchesHalfAndHalfVariation(
+                                      flavor,
+                                      opt.label,
+                                      detailProduct.variations?.[0]?.name || null
+                                    )
+                                  ) {
+                                    setDetailHalfFlavorId(null);
+                                  }
+                                }
+                              }}
                             >
                               <Box flex={1} display="flex" justifyContent="space-between" alignItems="center">
                                 <Typography variant="body2" style={{ fontWeight: selected ? 700 : 500 }}>
@@ -3873,70 +3816,155 @@ const PublicMenuForm = ({
 
                     {detailProduct.allowsHalfAndHalf === true && (
                       <Box mt={2}>
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          fullWidth
-                          style={{ borderColor: brandPrimary, color: brandPrimary, textTransform: "none", fontWeight: 700 }}
-                          onClick={() => {
-                            if (detailVariationOptionId != null) {
-                              setSelectedVariationOption((prev) => ({
-                                ...prev,
-                                [detailProduct.id]: detailVariationOptionId,
-                              }));
-                            }
-                            const productForHalf = detailProduct;
-                            closeProductDetail();
-                            window.setTimeout(() => openHalfAndHalfModal(productForHalf), 150);
+                        {/* Toggle Inteira | 2 sabores */}
+                        <Box
+                          display="flex"
+                          style={{
+                            border: "1px solid #ececec",
+                            borderRadius: 10,
+                            overflow: "hidden",
                           }}
                         >
-                          Quero meio a meio (2 sabores)
-                        </Button>
+                          <Box
+                            component="button"
+                            type="button"
+                            flex={1}
+                            onClick={() => {
+                              setDetailHalfMode(false);
+                              setDetailHalfFlavorId(null);
+                            }}
+                            style={{
+                              border: "none",
+                              cursor: "pointer",
+                              padding: "10px 8px",
+                              fontWeight: 700,
+                              fontSize: "0.85rem",
+                              fontFamily: "inherit",
+                              backgroundColor: !detailHalfMode ? brandPrimary : "transparent",
+                              color: !detailHalfMode ? "#fff" : "#666",
+                            }}
+                          >
+                            Inteira
+                          </Box>
+                          <Box
+                            component="button"
+                            type="button"
+                            flex={1}
+                            onClick={() => setDetailHalfMode(true)}
+                            style={{
+                              border: "none",
+                              cursor: "pointer",
+                              padding: "10px 8px",
+                              fontWeight: 700,
+                              fontSize: "0.85rem",
+                              fontFamily: "inherit",
+                              backgroundColor: detailHalfMode ? brandPrimary : "transparent",
+                              color: detailHalfMode ? "#fff" : "#666",
+                            }}
+                          >
+                            2 sabores (meio a meio)
+                          </Box>
+                        </Box>
+
+                        {/* Escolha do segundo sabor, sem sair do sheet */}
+                        {detailHalfMode && (
+                          <Box mt={1.5}>
+                            <Typography className={classes.detailSectionTitle} gutterBottom>
+                              Escolha o segundo sabor
+                              <span className={classes.requiredChip}>Obrigatório</span>
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 8 }}>
+                              Metade 1: <strong>{detailProduct.name}</strong>
+                              {getDetailVariationLabel() ? ` (${getDetailVariationLabel()})` : ""}
+                            </Typography>
+                            {halfFlavors.length === 0 && (
+                              <Typography variant="body2" color="textSecondary">
+                                Nenhum outro sabor disponível
+                                {getDetailVariationLabel() ? ` no tamanho ${getDetailVariationLabel()}` : ""}.
+                              </Typography>
+                            )}
+                            <Box style={{ maxHeight: 260, overflowY: "auto" }}>
+                              {halfFlavors.map((flavor) => {
+                                const selected = detailHalfFlavorId === flavor.id;
+                                const flavorOption = findOptionByVariationLabel(flavor, getDetailVariationLabel());
+                                const flavorPrice = flavorOption
+                                  ? parseFloat(flavorOption.value) || 0
+                                  : parseFloat(flavor.value) || 0;
+                                return (
+                                  <Box
+                                    key={flavor.id}
+                                    component="button"
+                                    type="button"
+                                    className={classes.halfFlavorCard}
+                                    style={{
+                                      padding: "8px 10px",
+                                      marginBottom: 6,
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 10,
+                                      ...(selected
+                                        ? {
+                                            borderColor: brandPrimary,
+                                            backgroundColor: brandSoft,
+                                            boxShadow: `0 0 0 1px ${brandPrimary}`,
+                                          }
+                                        : {}),
+                                    }}
+                                    onClick={() => setDetailHalfFlavorId(selected ? null : flavor.id)}
+                                  >
+                                    {flavor.imageUrl && (
+                                      <img
+                                        src={flavor.imageUrl}
+                                        alt={flavor.name}
+                                        style={{ width: 44, height: 44, borderRadius: 8, objectFit: "cover", flexShrink: 0 }}
+                                        onError={(e) => { e.target.style.display = "none"; }}
+                                      />
+                                    )}
+                                    <Box flex={1} style={{ textAlign: "left", minWidth: 0 }}>
+                                      <Typography variant="body2" style={{ fontWeight: selected ? 700 : 500, lineHeight: 1.25 }}>
+                                        {flavor.name}
+                                      </Typography>
+                                      {flavor.description && (
+                                        <Typography
+                                          variant="caption"
+                                          color="textSecondary"
+                                          style={{
+                                            display: "-webkit-box",
+                                            WebkitLineClamp: 1,
+                                            WebkitBoxOrient: "vertical",
+                                            overflow: "hidden",
+                                          }}
+                                        >
+                                          {flavor.description}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                    <Typography variant="body2" style={{ fontWeight: 700, whiteSpace: "nowrap" }}>
+                                      R$ {flavorPrice.toFixed(2).replace(".", ",")}
+                                    </Typography>
+                                  </Box>
+                                );
+                              })}
+                            </Box>
+                            {selectedHalfFlavor && (
+                              <Typography variant="caption" style={{ display: "block", marginTop: 4, color: brandPrimary, fontWeight: 700 }}>
+                                Meio a meio: {detailProduct.name} / {selectedHalfFlavor.name} — R$ {getDetailUnitPrice().toFixed(2).replace(".", ",")}
+                              </Typography>
+                            )}
+                          </Box>
+                        )}
                       </Box>
                     )}
 
                     {hasAddonsToShow(detailProduct) && (
                       <Box mt={2}>
+                        <Typography className={classes.detailSectionTitle} style={{ marginBottom: 8 }}>
+                          Monte do seu jeito
+                        </Typography>
                         {(g.subgroups || [])
                           .filter((sg) => (sg.items || []).length > 0)
-                          .map((sg) => (
-                            <Box key={sg.id} mb={2}>
-                              <Typography className={classes.detailSectionTitle} gutterBottom>
-                                {sg.name}
-                                {(() => {
-                                  const rule = getAddonRuleLabel(sg);
-                                  if (!rule) {
-                                    return <span className={classes.optionalChip}>Opcional</span>;
-                                  }
-                                  return (
-                                    <span className={rule.required ? classes.requiredChip : classes.optionalChip}>
-                                      {rule.required ? "Obrigatório" : ""}{rule.text ? `${rule.required ? " • " : ""}${rule.text}` : ""}
-                                    </span>
-                                  );
-                                })()}
-                              </Typography>
-                              {(sg.items || []).map((it) => renderDetailAddonRow(it))}
-                            </Box>
-                          ))}
-                        {(g.items || []).length > 0 && (
-                          <Box mb={2}>
-                            <Typography className={classes.detailSectionTitle} gutterBottom>
-                              Adicionais
-                              {(() => {
-                                const rule = getAddonRuleLabel(g);
-                                if (!rule) {
-                                  return <span className={classes.optionalChip}>Opcional</span>;
-                                }
-                                return (
-                                  <span className={rule.required ? classes.requiredChip : classes.optionalChip}>
-                                    {rule.required ? "Obrigatório" : ""}{rule.text ? `${rule.required ? " • " : ""}${rule.text}` : ""}
-                                  </span>
-                                );
-                              })()}
-                            </Typography>
-                            {(g.items || []).map((it) => renderDetailAddonRow(it))}
-                          </Box>
-                        )}
+                          .map((sg) => renderAddonSection(sg.name, sg, sg.items, `sg-${sg.id}`))}
+                        {renderAddonSection("Adicionais", g, g.items || [], "root")}
                       </Box>
                     )}
 
@@ -3982,8 +4010,10 @@ const PublicMenuForm = ({
                       variant="contained"
                       fullWidth
                       onClick={confirmProductDetail}
+                      disabled={detailHalfMode && detailHalfFlavorId == null}
                       style={{
-                        backgroundColor: brandPrimary,
+                        backgroundColor:
+                          detailHalfMode && detailHalfFlavorId == null ? "#bdbdbd" : brandPrimary,
                         color: "#fff",
                         fontWeight: 700,
                         textTransform: "none",
@@ -3991,7 +4021,9 @@ const PublicMenuForm = ({
                         padding: "10px 16px",
                       }}
                     >
-                      Adicionar • R$ {lineTotal.toFixed(2).replace(".", ",")}
+                      {detailHalfMode && detailHalfFlavorId == null
+                        ? "Escolha o segundo sabor"
+                        : `Adicionar • R$ ${lineTotal.toFixed(2).replace(".", ",")}`}
                     </Button>
                   </Box>
                 </>
