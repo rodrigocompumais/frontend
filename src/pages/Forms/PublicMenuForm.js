@@ -4202,10 +4202,13 @@ const PublicMenuForm = ({
                         className={classes.addonsScrollHintBtn}
                         style={{ backgroundColor: brandPrimary }}
                         onClick={() => {
-                          detailAddonsSectionRef.current?.scrollIntoView({
-                            behavior: "smooth",
-                            block: "start",
-                          });
+                          const el = detailAddonsSectionRef.current;
+                          if (el) {
+                            el.scrollIntoView({
+                              behavior: "smooth",
+                              block: "start",
+                            });
+                          }
                         }}
                       >
                         Monte do seu jeito
