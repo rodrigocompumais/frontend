@@ -41,6 +41,7 @@ import SearchIcon from "@material-ui/icons/Search";
 import ShareIcon from "@material-ui/icons/Share";
 import CloseIcon from "@material-ui/icons/Close";
 import FileCopyIcon from "@material-ui/icons/FileCopy";
+import KeyboardArrowDownIcon from "@material-ui/icons/KeyboardArrowDown";
 
 import { QrCodePix } from "qrcode-pix";
 import InputMask from "react-input-mask";
@@ -482,6 +483,46 @@ const useStyles = makeStyles((theme) => ({
     fontSize: "0.95rem",
     color: "#1a1a1a",
   },
+  addonsSectionBanner: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "10px 12px",
+    borderRadius: 12,
+    marginBottom: 10,
+    border: "1.5px solid",
+    animation: "$attentionPulse 1.5s ease-in-out infinite",
+  },
+  addonsScrollHint: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 78,
+    display: "flex",
+    justifyContent: "center",
+    pointerEvents: "none",
+    zIndex: 6,
+  },
+  addonsScrollHintBtn: {
+    pointerEvents: "auto",
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 2,
+    padding: "9px 16px",
+    borderRadius: 999,
+    color: "#fff",
+    fontWeight: 700,
+    fontSize: "0.82rem",
+    cursor: "pointer",
+    border: "none",
+    fontFamily: "inherit",
+    boxShadow: "0 4px 16px rgba(0,0,0,0.28)",
+    animation: "$attentionPulse 1.25s ease-in-out infinite",
+  },
+  "@keyframes attentionPulse": {
+    "0%, 100%": { transform: "scale(1)", opacity: 1 },
+    "50%": { transform: "scale(1.06)", opacity: 0.88 },
+  },
   requiredChip: {
     fontSize: "0.68rem",
     fontWeight: 700,
@@ -588,6 +629,10 @@ const PublicMenuForm = ({
   /** Meio a meio dentro do sheet: modo "2 sabores" e id do segundo sabor */
   const [detailHalfMode, setDetailHalfMode] = useState(false);
   const [detailHalfFlavorId, setDetailHalfFlavorId] = useState(null);
+  /** Hint pulsante para rolar até "Monte do seu jeito" */
+  const [showAddonsScrollHint, setShowAddonsScrollHint] = useState(false);
+  const detailAddonsSectionRef = useRef(null);
+  const detailContentRef = useRef(null);
   /** Observações por linha do carrinho: itemKey -> texto */
   const [selectedObservations, setSelectedObservations] = useState({});
   /** Cupom de desconto aplicado: { code, discount } */
@@ -1335,6 +1380,7 @@ const PublicMenuForm = ({
     setDetailObservation("");
     setDetailHalfMode(false);
     setDetailHalfFlavorId(null);
+    setShowAddonsScrollHint(false);
   };
 
   /** Abre o sheet já no modo "2 sabores" (botão Meio a meio do card) */
@@ -1342,6 +1388,58 @@ const PublicMenuForm = ({
     openProductDetail(product);
     setDetailHalfMode(true);
   };
+
+  // Hint pulsante: aparece enquanto a seção de adicionais estiver fora da tela
+  useEffect(() => {
+    if (!detailOpen || !detailProduct || !hasAddonsToShow(detailProduct)) {
+      setShowAddonsScrollHint(false);
+      return undefined;
+    }
+
+    let observer;
+    let contentEl = null;
+
+    const updateHint = () => {
+      const el = detailAddonsSectionRef.current;
+      if (!el || !contentEl) {
+        setShowAddonsScrollHint(true);
+        return;
+      }
+      const c = contentEl.getBoundingClientRect();
+      const r = el.getBoundingClientRect();
+      setShowAddonsScrollHint(r.top > c.bottom - 36);
+    };
+
+    const timer = window.setTimeout(() => {
+      const el = detailAddonsSectionRef.current;
+      if (!el) {
+        setShowAddonsScrollHint(true);
+        return;
+      }
+      contentEl =
+        detailContentRef.current ||
+        el.closest(".MuiDialogContent-root") ||
+        null;
+      updateHint();
+      if (contentEl) {
+        contentEl.addEventListener("scroll", updateHint, { passive: true });
+      }
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          setShowAddonsScrollHint(!entry.isIntersecting);
+        },
+        { root: contentEl || null, threshold: 0.12 }
+      );
+      observer.observe(el);
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timer);
+      if (observer) observer.disconnect();
+      if (contentEl) contentEl.removeEventListener("scroll", updateHint);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detailOpen, detailProduct, detailHalfMode, detailVariationOptionId]);
 
   /** Rótulo da opção de variação selecionada no sheet (ex.: "G") */
   const getDetailVariationLabel = () => {
@@ -3628,7 +3726,11 @@ const PublicMenuForm = ({
             maxWidth="sm"
             fullWidth
             PaperProps={{
-              style: detailFullScreen ? undefined : { borderRadius: 16, overflow: "hidden" },
+              style: {
+                position: "relative",
+                overflow: "hidden",
+                ...(detailFullScreen ? {} : { borderRadius: 16 }),
+              },
             }}
           >
             {detailProduct && (() => {
@@ -3779,7 +3881,10 @@ const PublicMenuForm = ({
                       <CloseIcon />
                     </IconButton>
                   </Box>
-                  <DialogContent style={{ paddingBottom: 12 }}>
+                  <DialogContent
+                    ref={detailContentRef}
+                    style={{ paddingBottom: 12 }}
+                  >
                     <Typography variant="h6" style={{ fontWeight: 700, lineHeight: 1.25 }}>
                       {detailProduct.name}
                     </Typography>
@@ -3992,10 +4097,24 @@ const PublicMenuForm = ({
                     )}
 
                     {hasAddonsToShow(detailProduct) && (
-                      <Box mt={2}>
-                        <Typography className={classes.detailSectionTitle} style={{ marginBottom: 8 }}>
-                          Monte do seu jeito
-                        </Typography>
+                      <Box mt={2} ref={detailAddonsSectionRef}>
+                        <Box
+                          className={classes.addonsSectionBanner}
+                          style={{
+                            borderColor: brandPrimary,
+                            backgroundColor: brandSoft,
+                          }}
+                        >
+                          <Box>
+                            <Typography style={{ fontWeight: 800, fontSize: "0.95rem", color: brandPrimary }}>
+                              Monte do seu jeito
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary">
+                              Escolha bordas, extras e acompanhamentos
+                            </Typography>
+                          </Box>
+                          <KeyboardArrowDownIcon style={{ color: brandPrimary }} />
+                        </Box>
                         {(g.subgroups || [])
                           .filter((sg) => (sg.items || []).length > 0)
                           .map((sg) => renderAddonSection(sg.name, sg, sg.items, `sg-${sg.id}`))}
@@ -4019,6 +4138,26 @@ const PublicMenuForm = ({
                       />
                     </Box>
                   </DialogContent>
+
+                  {showAddonsScrollHint && hasAddonsToShow(detailProduct) && (
+                    <Box className={classes.addonsScrollHint}>
+                      <button
+                        type="button"
+                        className={classes.addonsScrollHintBtn}
+                        style={{ backgroundColor: brandPrimary }}
+                        onClick={() => {
+                          detailAddonsSectionRef.current?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          });
+                        }}
+                      >
+                        Monte do seu jeito
+                        <KeyboardArrowDownIcon fontSize="small" />
+                      </button>
+                    </Box>
+                  )}
+
                   <Box className={classes.detailFooter}>
                     <Box className={classes.detailStepper}>
                       <IconButton
