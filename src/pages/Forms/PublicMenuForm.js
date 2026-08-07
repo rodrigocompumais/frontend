@@ -1410,11 +1410,6 @@ const PublicMenuForm = ({
 
   const confirmProductDetail = () => {
     if (!detailProduct) return;
-    const violations = getAddonRuleViolations(detailProduct, detailAddons);
-    if (violations.length > 0) {
-      toast.error(violations[0]);
-      return;
-    }
     if (detailVariationOptionId != null) {
       setSelectedVariationOption((prev) => ({
         ...prev,
@@ -1424,8 +1419,11 @@ const PublicMenuForm = ({
     const qty = Math.max(1, parseInt(detailQty, 10) || 1);
     const addonsWithQty = detailAddons.filter((a) => (a.quantity ?? 1) > 0);
     const obs = String(detailObservation || "").trim();
+    const productForAddons =
+      products.find((p) => p.id === detailProduct.id) || detailProduct;
 
-    // Meio a meio escolhido dentro do sheet: vira item meio a meio direto
+    // Meio a meio: se tem adicionais e o cliente não escolheu nenhum, abre o popup
+    // (usuários costumam focar nos sabores e esquecer os adicionais)
     if (detailHalfMode) {
       if (detailHalfFlavorId == null) {
         toast.error("Escolha o segundo sabor");
@@ -1438,20 +1436,47 @@ const PublicMenuForm = ({
       }
       const baseLabel = getDetailVariationLabel();
       const half2Option = findOptionByVariationLabel(half2, baseLabel);
+      const newItem = {
+        baseProductId: detailProduct.id,
+        half1ProductId: detailProduct.id,
+        half2ProductId: detailHalfFlavorId,
+        half1OptionId: detailVariationOptionId || null,
+        half2OptionId: half2Option?.id || null,
+        quantity: qty,
+        addons: [],
+        observation: obs,
+      };
+
+      if (hasAddonsToShow(productForAddons) && addonsWithQty.length === 0) {
+        closeProductDetail();
+        setAddOnModalHalfPending(newItem);
+        setAddOnModalHalfIndex(-1);
+        setAddOnModalProduct(productForAddons);
+        setAddOnModalItemKey("");
+        setAddOnModalPendingQuantity(qty);
+        setAddOnModalSelectedAddons([]);
+        setAddOnModalObservation(obs);
+        window.setTimeout(() => setAddOnModalOpen(true), 150);
+        return;
+      }
+
+      const halfViolations = getAddonRuleViolations(productForAddons, addonsWithQty);
+      if (halfViolations.length > 0) {
+        toast.error(halfViolations[0]);
+        return;
+      }
+
       setHalfAndHalfItems((prev) => [
         ...prev,
-        {
-          baseProductId: detailProduct.id,
-          half1ProductId: detailProduct.id,
-          half2ProductId: detailHalfFlavorId,
-          half1OptionId: detailVariationOptionId || null,
-          half2OptionId: half2Option?.id || null,
-          quantity: qty,
-          addons: addonsWithQty,
-          observation: obs,
-        },
+        { ...newItem, addons: addonsWithQty },
       ]);
       closeProductDetail();
+      return;
+    }
+
+    const violations = getAddonRuleViolations(detailProduct, detailAddons);
+    if (violations.length > 0) {
+      toast.error(violations[0]);
       return;
     }
 
@@ -3454,10 +3479,18 @@ const PublicMenuForm = ({
           </Dialog>
 
           <Dialog open={addOnModalOpen} onClose={closeAddOnModal} maxWidth="sm" fullWidth>
-            <DialogTitle>Adicionais — {addOnModalProduct?.name}</DialogTitle>
+            <DialogTitle>
+              {addOnModalHalfIndex === -1 && addOnModalHalfPending
+                ? "Quer adicionar algo?"
+                : `Adicionais — ${addOnModalProduct?.name || ""}`}
+            </DialogTitle>
             <DialogContent>
               <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
-                Escolha os adicionais do item. Quantidade do item: {addOnModalPendingQuantity}
+                {addOnModalHalfIndex === -1 && addOnModalHalfPending
+                  ? (getAddonRuleViolations(addOnModalProduct, []).length > 0
+                      ? "Seu meio a meio está quase pronto. Escolha os adicionais obrigatórios para continuar."
+                      : "Seu meio a meio está quase pronto. Escolha os adicionais ou toque em Confirmar para seguir sem eles.")
+                  : `Escolha os adicionais do item. Quantidade do item: ${addOnModalPendingQuantity}`}
               </Typography>
               {addOnModalProduct?.addOnGroup && (() => {
                 const renderModalAddonRow = (it, isLast) => {
@@ -3580,7 +3613,9 @@ const PublicMenuForm = ({
                 variant="contained"
                 style={{ backgroundColor: brandPrimary, color: "#fff" }}
               >
-                Confirmar
+                {addOnModalHalfIndex === -1 && addOnModalHalfPending
+                  ? "Adicionar ao pedido"
+                  : "Confirmar"}
               </Button>
             </DialogActions>
           </Dialog>
