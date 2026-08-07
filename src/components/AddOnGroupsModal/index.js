@@ -22,6 +22,8 @@ import Typography from "@material-ui/core/Typography";
 import Box from "@material-ui/core/Box";
 import Tabs from "@material-ui/core/Tabs";
 import Tab from "@material-ui/core/Tab";
+import Checkbox from "@material-ui/core/Checkbox";
+import FormControlLabel from "@material-ui/core/FormControlLabel";
 
 import AddIcon from "@material-ui/icons/Add";
 import EditIcon from "@material-ui/icons/Edit";
@@ -38,7 +40,9 @@ const useStyles = makeStyles((theme) => ({
     assignmentRow: { marginBottom: theme.spacing(1) },
 }));
 
-const emptyForm = () => ({ name: "", subgroups: [{ name: "", order: 0, items: [{ label: "", value: 0, order: 0 }] }], items: [{ label: "", value: 0, order: 0 }] });
+const emptySubgroup = (order = 0) => ({ name: "", order, required: false, minItems: "", maxItems: "", items: [{ label: "", value: 0, order: 0 }] });
+
+const emptyForm = () => ({ name: "", required: false, minItems: "", maxItems: "", subgroups: [emptySubgroup()], items: [{ label: "", value: 0, order: 0 }] });
 
 const AddOnGroupsModal = ({ open, onClose }) => {
     const classes = useStyles();
@@ -79,10 +83,20 @@ const AddOnGroupsModal = ({ open, onClose }) => {
                 const subgroups = (data.subgroups || []).map((sg, i) => ({
                     name: sg.name || "",
                     order: sg.order ?? i,
+                    required: sg.required === true,
+                    minItems: sg.minItems != null && Number(sg.minItems) > 0 ? Number(sg.minItems) : "",
+                    maxItems: sg.maxItems != null ? Number(sg.maxItems) : "",
                     items: (sg.items || []).map((it, j) => ({ label: it.label || "", value: Number(it.value) || 0, order: it.order ?? j })),
                 }));
                 const items = (data.items || []).filter((it) => !it.addOnSubgroupId).map((it, j) => ({ label: it.label || "", value: Number(it.value) || 0, order: it.order ?? j }));
-                setFormData({ name: data.name || "", subgroups: subgroups.length ? subgroups : [{ name: "", order: 0, items: [{ label: "", value: 0, order: 0 }] }], items: items.length ? items : [{ label: "", value: 0, order: 0 }] });
+                setFormData({
+                    name: data.name || "",
+                    required: data.required === true,
+                    minItems: data.minItems != null && Number(data.minItems) > 0 ? Number(data.minItems) : "",
+                    maxItems: data.maxItems != null ? Number(data.maxItems) : "",
+                    subgroups: subgroups.length ? subgroups : [emptySubgroup()],
+                    items: items.length ? items : [{ label: "", value: 0, order: 0 }],
+                });
             }).catch(toastError);
         } else if (formOpen && !editId) {
             setFormData(emptyForm());
@@ -91,21 +105,29 @@ const AddOnGroupsModal = ({ open, onClose }) => {
 
     const handleCloseForm = () => { setFormOpen(false); setEditId(null); setFormData(emptyForm()); };
 
+    const parseRules = (src) => ({
+        required: src.required === true,
+        minItems: src.minItems === "" || src.minItems == null ? 0 : Math.max(0, parseInt(src.minItems, 10) || 0),
+        maxItems: src.maxItems === "" || src.maxItems == null ? null : Math.max(1, parseInt(src.maxItems, 10) || 1),
+    });
+
     const handleSaveGroup = async () => {
         if (!formData.name.trim()) { toast.error("Nome do grupo é obrigatório"); return; }
         const subgroups = formData.subgroups.filter((sg) => sg.name.trim()).map((sg, i) => ({
             name: sg.name.trim(),
             order: i,
+            ...parseRules(sg),
             items: (sg.items || []).filter((it) => it.label && String(it.label).trim()).map((it, j) => ({ label: String(it.label).trim(), value: Number(it.value) || 0, order: j })),
         })).filter((sg) => sg.items.length > 0);
         const items = (formData.items || []).filter((it) => it.label && String(it.label).trim()).map((it, j) => ({ label: String(it.label).trim(), value: Number(it.value) || 0, order: j }));
+        const groupRules = parseRules(formData);
         setSaving(true);
         try {
             if (editId) {
-                await api.put(`/addon-groups/${editId}`, { name: formData.name.trim(), subgroups, items });
+                await api.put(`/addon-groups/${editId}`, { name: formData.name.trim(), ...groupRules, subgroups, items });
                 toast.success("Grupo atualizado");
             } else {
-                await api.post("/addon-groups", { name: formData.name.trim(), subgroups, items });
+                await api.post("/addon-groups", { name: formData.name.trim(), ...groupRules, subgroups, items });
                 toast.success("Grupo criado");
             }
             loadGroups();
@@ -118,7 +140,7 @@ const AddOnGroupsModal = ({ open, onClose }) => {
         }
     };
 
-    const addSubgroup = () => setFormData((d) => ({ ...d, subgroups: [...d.subgroups, { name: "", order: d.subgroups.length, items: [{ label: "", value: 0, order: 0 }] }] }));
+    const addSubgroup = () => setFormData((d) => ({ ...d, subgroups: [...d.subgroups, emptySubgroup(d.subgroups.length)] }));
     const addRootItem = () => setFormData((d) => ({ ...d, items: [...d.items, { label: "", value: 0, order: d.items.length }] }));
     const addItemToSubgroup = (sgIdx) => setFormData((d) => {
         const subs = [...d.subgroups];
@@ -296,6 +318,22 @@ const AddOnGroupsModal = ({ open, onClose }) => {
                     {formData.subgroups.map((sg, sgIdx) => (
                         <Box key={sgIdx} mt={1} p={1} border={1} borderColor="divider" borderRadius={4}>
                             <TextField size="small" label="Nome do subgrupo" value={sg.name} onChange={(e) => updateSubgroup(sgIdx, "name", e.target.value)} fullWidth style={{ marginBottom: 8 }} />
+                            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+                                <FormControlLabel
+                                    control={(
+                                        <Checkbox
+                                            size="small"
+                                            checked={sg.required === true}
+                                            onChange={(e) => updateSubgroup(sgIdx, "required", e.target.checked)}
+                                            color="primary"
+                                        />
+                                    )}
+                                    label={<Typography variant="body2">Obrigatório</Typography>}
+                                    style={{ marginRight: 4 }}
+                                />
+                                <TextField size="small" type="number" label="Mín." value={sg.minItems} onChange={(e) => updateSubgroup(sgIdx, "minItems", e.target.value)} inputProps={{ min: 0, step: 1 }} style={{ width: 70 }} />
+                                <TextField size="small" type="number" label="Máx." value={sg.maxItems} onChange={(e) => updateSubgroup(sgIdx, "maxItems", e.target.value)} inputProps={{ min: 1, step: 1 }} style={{ width: 70 }} />
+                            </div>
                             {(sg.items || []).map((it, itIdx) => (
                                 <div key={itIdx} style={{ display: "flex", gap: 8, marginBottom: 4 }}>
                                     <TextField size="small" label="Item" value={it.label} onChange={(e) => updateSubgroupItem(sgIdx, itIdx, "label", e.target.value)} style={{ flex: 2 }} />
@@ -309,6 +347,22 @@ const AddOnGroupsModal = ({ open, onClose }) => {
                     ))}
                     <Button size="small" startIcon={<AddIcon />} onClick={addSubgroup} style={{ marginTop: 8 }}>Adicionar subgrupo</Button>
                     <Typography variant="subtitle2" style={{ marginTop: 16 }}>Itens sem subgrupo</Typography>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8, flexWrap: "wrap" }}>
+                        <FormControlLabel
+                            control={(
+                                <Checkbox
+                                    size="small"
+                                    checked={formData.required === true}
+                                    onChange={(e) => setFormData((d) => ({ ...d, required: e.target.checked }))}
+                                    color="primary"
+                                />
+                            )}
+                            label={<Typography variant="body2">Obrigatório</Typography>}
+                            style={{ marginRight: 4 }}
+                        />
+                        <TextField size="small" type="number" label="Mín." value={formData.minItems} onChange={(e) => setFormData((d) => ({ ...d, minItems: e.target.value }))} inputProps={{ min: 0, step: 1 }} style={{ width: 70 }} />
+                        <TextField size="small" type="number" label="Máx." value={formData.maxItems} onChange={(e) => setFormData((d) => ({ ...d, maxItems: e.target.value }))} inputProps={{ min: 1, step: 1 }} style={{ width: 70 }} />
+                    </div>
                     {formData.items.map((it, itIdx) => (
                         <div key={itIdx} style={{ display: "flex", gap: 8, marginBottom: 4 }}>
                             <TextField size="small" label="Item" value={it.label} onChange={(e) => updateRootItem(itIdx, "label", e.target.value)} style={{ flex: 2 }} />

@@ -54,6 +54,7 @@ import FormBuilder from "../pages/Forms/FormBuilder";
 import PublicForm from "../pages/Forms/PublicForm";
 import PublicAgendamentoCancelar from "../pages/Forms/PublicAgendamentoCancelar";
 import PublicAgendamentoReagendar from "../pages/Forms/PublicAgendamentoReagendar";
+import PublicOrderTracking from "../pages/Forms/PublicOrderTracking";
 import MesaRedirect from "../pages/MesaRedirect";
 import MesaCardapio from "../pages/MesaCardapio";
 import FormResponses from "../pages/Forms/FormResponses";
@@ -96,6 +97,7 @@ const Routes = () => {
             <Route exact path="/f/:publicId/cancelar" component={PublicAgendamentoCancelar} isPublic={true} />
             <Route exact path="/f/:publicId/reagendar" component={PublicAgendamentoReagendar} isPublic={true} />
             <Route exact path="/f/:publicId" component={PublicForm} isPublic={true} />
+            <Route exact path="/pedido/:token" component={PublicOrderTracking} isPublic={true} />
             <Route exact path="/mesa/:mesaId/cardapio" component={MesaCardapio} isPublic={true} />
             <Route exact path="/mesa/:mesaId" component={MesaRedirect} isPublic={true} />
             <Route exact path="/login" component={Login} />

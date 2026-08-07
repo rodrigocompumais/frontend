@@ -31,6 +31,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  useTheme,
+  useMediaQuery,
 } from "@material-ui/core";
 import AddIcon from "@material-ui/icons/Add";
 import RemoveIcon from "@material-ui/icons/Remove";
@@ -38,7 +40,9 @@ import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
 import SearchIcon from "@material-ui/icons/Search";
 import ShareIcon from "@material-ui/icons/Share";
 import CloseIcon from "@material-ui/icons/Close";
+import FileCopyIcon from "@material-ui/icons/FileCopy";
 
+import { QrCodePix } from "qrcode-pix";
 import InputMask from "react-input-mask";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -417,6 +421,115 @@ const useStyles = makeStyles((theme) => ({
     color: "#1a1a1a",
     marginTop: 4,
   },
+  storeInfoRow: {
+    backgroundColor: "#fff",
+    padding: theme.spacing(0.5, 2, 1.25),
+    display: "flex",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: theme.spacing(1),
+    borderBottom: "1px solid #eee",
+  },
+  storeInfoChip: {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: 6,
+    fontSize: "0.78rem",
+    fontWeight: 600,
+    color: "#475569",
+    backgroundColor: "#f1f5f9",
+    borderRadius: 999,
+    padding: "4px 10px",
+    lineHeight: 1.4,
+  },
+  stickyCartBar: {
+    position: "fixed",
+    left: 12,
+    right: 12,
+    bottom: 64,
+    zIndex: 1099,
+    borderRadius: 12,
+    padding: theme.spacing(1.25, 2),
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    color: "#fff",
+    fontWeight: 700,
+    cursor: "pointer",
+    boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
+    marginBottom: "env(safe-area-inset-bottom, 0)",
+  },
+  detailHero: {
+    width: "100%",
+    height: 240,
+    objectFit: "cover",
+    backgroundColor: "#eee",
+    display: "block",
+    [theme.breakpoints.down("xs")]: {
+      height: 220,
+    },
+  },
+  detailClose: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    "&:hover": { backgroundColor: "#fff" },
+    boxShadow: "0 1px 6px rgba(0,0,0,0.2)",
+  },
+  detailSectionTitle: {
+    fontWeight: 700,
+    fontSize: "0.95rem",
+    color: "#1a1a1a",
+  },
+  requiredChip: {
+    fontSize: "0.68rem",
+    fontWeight: 700,
+    borderRadius: 999,
+    padding: "2px 8px",
+    marginLeft: 8,
+    backgroundColor: "#fee2e2",
+    color: "#b91c1c",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+  },
+  optionalChip: {
+    fontSize: "0.68rem",
+    fontWeight: 600,
+    borderRadius: 999,
+    padding: "2px 8px",
+    marginLeft: 8,
+    backgroundColor: "#f1f5f9",
+    color: "#64748b",
+  },
+  detailFooter: {
+    position: "sticky",
+    bottom: 0,
+    backgroundColor: "#fff",
+    borderTop: "1px solid #eee",
+    padding: theme.spacing(1.5, 2),
+    display: "flex",
+    alignItems: "center",
+    gap: theme.spacing(1.5),
+    paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)",
+  },
+  detailStepper: {
+    display: "flex",
+    alignItems: "center",
+    border: "1px solid #e2e8f0",
+    borderRadius: 10,
+    padding: "2px 4px",
+  },
+  "@keyframes skeletonPulse": {
+    "0%": { opacity: 1 },
+    "50%": { opacity: 0.45 },
+    "100%": { opacity: 1 },
+  },
+  skeletonBlock: {
+    backgroundColor: "#e2e8f0",
+    borderRadius: 10,
+    animation: "$skeletonPulse 1.4s ease-in-out infinite",
+  },
 }));
 
 const PublicMenuForm = ({
@@ -459,6 +572,7 @@ const PublicMenuForm = ({
   const [halfAndHalfModalHalf1, setHalfAndHalfModalHalf1] = useState("");
   const [halfAndHalfModalHalf2, setHalfAndHalfModalHalf2] = useState("");
   const [halfAndHalfModalQty, setHalfAndHalfModalQty] = useState(1);
+  const [halfAndHalfModalObs, setHalfAndHalfModalObs] = useState("");
   /** Modal de adicionais: ao adicionar item com grupo de adicionais, abre para seleção */
   const [addOnModalOpen, setAddOnModalOpen] = useState(false);
   const [addOnModalProduct, setAddOnModalProduct] = useState(null);
@@ -468,6 +582,23 @@ const PublicMenuForm = ({
   /** null = fluxo normal; -1 = novo meio a meio pendente; >=0 = editar halfAndHalfItems[index] */
   const [addOnModalHalfIndex, setAddOnModalHalfIndex] = useState(null);
   const [addOnModalHalfPending, setAddOnModalHalfPending] = useState(null);
+  /** Observação digitada dentro do modal de adicionais (fluxos meio a meio/edição) */
+  const [addOnModalObservation, setAddOnModalObservation] = useState("");
+  /** Sheet de detalhe do item (padrão iFood) */
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailProduct, setDetailProduct] = useState(null);
+  const [detailQty, setDetailQty] = useState(1);
+  const [detailAddons, setDetailAddons] = useState([]);
+  const [detailObservation, setDetailObservation] = useState("");
+  const [detailVariationOptionId, setDetailVariationOptionId] = useState(null);
+  /** Observações por linha do carrinho: itemKey -> texto */
+  const [selectedObservations, setSelectedObservations] = useState({});
+  /** Cupom de desconto aplicado: { code, discount } */
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  /** PIX estático gerado na confirmação: { payload, base64 } */
+  const [pixData, setPixData] = useState(null);
   /** Para produtos com variações: productId -> variationOptionId selecionado */
   const [selectedVariationOption, setSelectedVariationOption] = useState({});
   /** Variação selecionada do produto base quando abre o modal meio a meio */
@@ -501,6 +632,12 @@ const PublicMenuForm = ({
 
   const appStyles = form ? getFormAppearanceStyles(form) : null;
   const fieldVariant = appStyles?.fieldVariant || "outlined";
+  /** Cor da marca: deriva botões, destaques e seleções (substitui cores fixas) */
+  const brandPrimary = form?.primaryColor || "#1a1a1a";
+  const brandSoft = `${brandPrimary}14`;
+  const muiTheme = useTheme();
+  const detailFullScreen = useMediaQuery(muiTheme.breakpoints.down("xs"));
+  const minOrderValue = Number(form?.settings?.minOrderValue) || 0;
 
   const PIECE_AGAIN_COOKIE_DAYS = 30;
   const getPieceAgainCookieKey = () => `compuchat_piece_again_${slug || "unknown"}`;
@@ -917,12 +1054,8 @@ const PublicMenuForm = ({
     const product = getItemDetailsByKey(baseKey).product;
 
     if (delta > 0 && product && hasAddonsToShow(product)) {
-      const newLineKey = `${baseKey}_L${nextLineIdRef.current++}`;
-      setAddOnModalProduct(product);
-      setAddOnModalItemKey(newLineKey);
-      setAddOnModalPendingQuantity(1);
-      setAddOnModalSelectedAddons([]);
-      setAddOnModalOpen(true);
+      // Centraliza no sheet de detalhe (variação, adicionais, observação)
+      openProductDetail(product);
       return;
     }
 
@@ -938,6 +1071,7 @@ const PublicMenuForm = ({
           return rest;
         });
         setSelectedAddons((a) => { const { [keyToDecrease]: rem, ...r } = a; return r; });
+        setSelectedObservations((o) => { const { [keyToDecrease]: rem, ...r } = o; return r; });
         return;
       }
       setSelectedItems((prev) => ({ ...prev, [keyToDecrease]: newQuantity }));
@@ -952,6 +1086,7 @@ const PublicMenuForm = ({
         return rest;
       });
       setSelectedAddons((a) => { const { [baseKey]: rem, ...r } = a; return r; });
+      setSelectedObservations((o) => { const { [baseKey]: rem, ...r } = o; return r; });
       return;
     }
     setSelectedItems((prev) => ({ ...prev, [baseKey]: newQuantity }));
@@ -965,6 +1100,7 @@ const PublicMenuForm = ({
         return rest;
       });
       setSelectedAddons((a) => { const { [key]: rem, ...r } = a; return r; });
+      setSelectedObservations((o) => { const { [key]: rem, ...r } = o; return r; });
     } else {
       setSelectedItems((prev) => ({ ...prev, [key]: quantity }));
     }
@@ -1028,6 +1164,16 @@ const PublicMenuForm = ({
 
   const confirmAddOnModal = () => {
     const addonsWithQty = (addOnModalSelectedAddons || []).filter((a) => (a.quantity ?? 1) > 0);
+    const obs = String(addOnModalObservation || "").trim();
+
+    // Regras de adicionais obrigatórios (min/max)
+    if (addOnModalProduct) {
+      const violations = getAddonRuleViolations(addOnModalProduct, addonsWithQty);
+      if (violations.length > 0) {
+        toast.error(violations[0]);
+        return;
+      }
+    }
 
     if (addOnModalHalfIndex === -1 && addOnModalHalfPending) {
       setHalfAndHalfItems((prev) => [
@@ -1036,6 +1182,7 @@ const PublicMenuForm = ({
           ...addOnModalHalfPending,
           quantity: Math.max(1, parseInt(addOnModalPendingQuantity, 10) || 1),
           addons: addonsWithQty,
+          observation: obs || addOnModalHalfPending.observation || "",
         },
       ]);
     } else if (addOnModalHalfIndex != null && addOnModalHalfIndex >= 0) {
@@ -1046,6 +1193,7 @@ const PublicMenuForm = ({
                 ...item,
                 quantity: Math.max(1, parseInt(addOnModalPendingQuantity, 10) || item.quantity || 1),
                 addons: addonsWithQty,
+                observation: obs,
               }
             : item
         )
@@ -1054,6 +1202,11 @@ const PublicMenuForm = ({
       if (!addOnModalItemKey) return;
       setSelectedItems((prev) => ({ ...prev, [addOnModalItemKey]: addOnModalPendingQuantity }));
       setSelectedAddons((prev) => ({ ...prev, [addOnModalItemKey]: addonsWithQty }));
+      setSelectedObservations((prev) => {
+        if (obs) return { ...prev, [addOnModalItemKey]: obs };
+        const { [addOnModalItemKey]: removed, ...rest } = prev;
+        return rest;
+      });
     }
 
     setAddOnModalOpen(false);
@@ -1063,6 +1216,7 @@ const PublicMenuForm = ({
     setAddOnModalSelectedAddons([]);
     setAddOnModalHalfIndex(null);
     setAddOnModalHalfPending(null);
+    setAddOnModalObservation("");
   };
 
   const closeAddOnModal = () => {
@@ -1073,6 +1227,7 @@ const PublicMenuForm = ({
     setAddOnModalSelectedAddons([]);
     setAddOnModalHalfIndex(null);
     setAddOnModalHalfPending(null);
+    setAddOnModalObservation("");
   };
 
   const openAddOnModalForEdit = (product, itemKey) => {
@@ -1083,6 +1238,7 @@ const PublicMenuForm = ({
     setAddOnModalHalfPending(null);
     setAddOnModalPendingQuantity(selectedItems[itemKey] || 1);
     setAddOnModalSelectedAddons(selectedAddons[itemKey] || []);
+    setAddOnModalObservation(selectedObservations[itemKey] || "");
     setAddOnModalOpen(true);
   };
 
@@ -1097,6 +1253,7 @@ const PublicMenuForm = ({
     setAddOnModalHalfPending(null);
     setAddOnModalPendingQuantity(item.quantity || 1);
     setAddOnModalSelectedAddons(item.addons || []);
+    setAddOnModalObservation(item.observation || "");
     setAddOnModalOpen(true);
   };
 
@@ -1110,6 +1267,198 @@ const PublicMenuForm = ({
     const subsWithItems = (g.subgroups || []).filter((sg) => (sg.items || []).length > 0);
     const rootItems = g.items || [];
     return subsWithItems.length > 0 || rootItems.length > 0;
+  };
+
+  /**
+   * Valida regras de adicionais obrigatórios (min/max) por subgrupo e no grupo raiz.
+   * `addons`: [{ addOnItemId, quantity }] — quantidades por unidade do item.
+   * Retorna lista de mensagens de violação (vazia = ok).
+   */
+  const getAddonRuleViolations = (product, addons) => {
+    const g = product?.addOnGroup;
+    if (!g) return [];
+    const violations = [];
+    const list = addons || [];
+    const countFor = (items) =>
+      (items || []).reduce(
+        (sum, it) => sum + (list.find((a) => a.addOnItemId === it.id)?.quantity ?? 0),
+        0
+      );
+    const check = (label, count, required, min, max) => {
+      const effMin = required ? Math.max(1, Number(min) || 0) : Number(min) || 0;
+      if (effMin > 0 && count < effMin) {
+        violations.push(`Escolha pelo menos ${effMin} em "${label}"`);
+      }
+      if (max != null && Number(max) > 0 && count > Number(max)) {
+        violations.push(`Escolha no máximo ${Number(max)} em "${label}"`);
+      }
+    };
+    (g.subgroups || []).forEach((sg) => {
+      if (!(sg.required || Number(sg.minItems) > 0 || sg.maxItems != null)) return;
+      check(sg.name, countFor(sg.items), sg.required === true, sg.minItems, sg.maxItems);
+    });
+    const rootItems = g.items || [];
+    if (rootItems.length > 0 && (g.required || Number(g.minItems) > 0 || g.maxItems != null)) {
+      check(g.name, countFor(rootItems), g.required === true, g.minItems, g.maxItems);
+    }
+    return violations;
+  };
+
+  /** Texto do chip de regra do subgrupo (ex.: "Obrigatório • escolha 1" / "até 3") */
+  const getAddonRuleLabel = (rules) => {
+    if (!rules) return null;
+    const required = rules.required === true;
+    const min = required ? Math.max(1, Number(rules.minItems) || 0) : Number(rules.minItems) || 0;
+    const max = rules.maxItems != null ? Number(rules.maxItems) : null;
+    if (!required && min <= 0 && max == null) return null;
+    const parts = [];
+    if (min > 0 && max != null && min === max) parts.push(`escolha ${min}`);
+    else {
+      if (min > 0) parts.push(`mín. ${min}`);
+      if (max != null) parts.push(`máx. ${max}`);
+    }
+    return { required: required || min > 0, text: parts.join(" • ") };
+  };
+
+  // ---------- Sheet de detalhe do item ----------
+  const openProductDetail = (product) => {
+    if (!product) return;
+    setDetailProduct(product);
+    setDetailQty(1);
+    setDetailAddons([]);
+    setDetailObservation("");
+    const hasVars = product.variations && product.variations.length > 0;
+    setDetailVariationOptionId(
+      hasVars
+        ? selectedVariationOption[product.id] ?? product.variations[0]?.options?.[0]?.id ?? null
+        : null
+    );
+    setDetailOpen(true);
+  };
+
+  const closeProductDetail = () => {
+    setDetailOpen(false);
+    setDetailProduct(null);
+    setDetailAddons([]);
+    setDetailObservation("");
+  };
+
+  const getDetailUnitPrice = () => {
+    if (!detailProduct) return 0;
+    if (detailVariationOptionId != null && detailProduct.variations?.length > 0) {
+      const option = detailProduct.variations[0]?.options?.find(
+        (o) => o.id === detailVariationOptionId
+      );
+      if (option) return parseFloat(option.value) || 0;
+    }
+    return parseFloat(detailProduct.value) || 0;
+  };
+
+  const getDetailAddonQuantity = (addOnItemId) =>
+    detailAddons.find((a) => a.addOnItemId === addOnItemId)?.quantity ?? 0;
+
+  const setDetailAddonQuantity = (item, quantity) => {
+    const { addOnItemId, label, value } = item;
+    if (quantity <= 0) {
+      setDetailAddons((prev) => prev.filter((a) => a.addOnItemId !== addOnItemId));
+      return;
+    }
+    setDetailAddons((prev) => {
+      const idx = prev.findIndex((a) => a.addOnItemId === addOnItemId);
+      const entry = { addOnItemId, label, value: Number(value) || 0, quantity };
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = entry;
+        return next;
+      }
+      return [...prev, entry];
+    });
+  };
+
+  const getDetailAddonsTotal = () =>
+    detailAddons.reduce((sum, a) => sum + (Number(a.value) || 0) * (a.quantity ?? 1), 0);
+
+  const confirmProductDetail = () => {
+    if (!detailProduct) return;
+    const violations = getAddonRuleViolations(detailProduct, detailAddons);
+    if (violations.length > 0) {
+      toast.error(violations[0]);
+      return;
+    }
+    if (detailVariationOptionId != null) {
+      setSelectedVariationOption((prev) => ({
+        ...prev,
+        [detailProduct.id]: detailVariationOptionId,
+      }));
+    }
+    const baseKey =
+      detailVariationOptionId != null
+        ? `${detailProduct.id}_${detailVariationOptionId}`
+        : String(detailProduct.id);
+    const lineKey = `${baseKey}_L${nextLineIdRef.current++}`;
+    const qty = Math.max(1, parseInt(detailQty, 10) || 1);
+    setSelectedItems((prev) => ({ ...prev, [lineKey]: qty }));
+    const addonsWithQty = detailAddons.filter((a) => (a.quantity ?? 1) > 0);
+    if (addonsWithQty.length > 0) {
+      setSelectedAddons((prev) => ({ ...prev, [lineKey]: addonsWithQty }));
+    }
+    const obs = String(detailObservation || "").trim();
+    if (obs) {
+      setSelectedObservations((prev) => ({ ...prev, [lineKey]: obs }));
+    }
+    closeProductDetail();
+  };
+
+  // ---------- Cupom de desconto ----------
+  const getCartSubtotal = () => Math.max(0, calculateTotal() - getDeliveryFeeAmount());
+
+  const getCouponDiscount = () => {
+    if (!appliedCoupon) return 0;
+    const subtotal = getCartSubtotal();
+    let discount = 0;
+    if (appliedCoupon.discountType === "percent") {
+      discount = (subtotal * (Number(appliedCoupon.discountValue) || 0)) / 100;
+    } else {
+      discount = Number(appliedCoupon.discountValue) || 0;
+    }
+    return Math.min(Math.round(discount * 100) / 100, subtotal);
+  };
+
+  const getFinalTotal = () => Math.max(0, calculateTotal() - getCouponDiscount());
+
+  const applyCoupon = async () => {
+    const code = String(couponInput || "").trim().toUpperCase();
+    if (!code) {
+      toast.error("Informe o código do cupom.");
+      return;
+    }
+    setCouponLoading(true);
+    try {
+      const { data } = await api.post(`/public/forms/${slug}/validate-coupon`, {
+        code,
+        subtotal: getCartSubtotal(),
+      });
+      if (!data?.valid) {
+        setAppliedCoupon(null);
+        toast.error(data?.reason || "Cupom inválido.");
+        return;
+      }
+      setAppliedCoupon({
+        code: data.code,
+        discountType: data.discountType,
+        discountValue: data.discountValue,
+      });
+      toast.success("Cupom aplicado!");
+    } catch (err) {
+      toastError(err);
+    } finally {
+      setCouponLoading(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponInput("");
   };
 
   /**
@@ -1171,6 +1520,18 @@ const PublicMenuForm = ({
     // Validar que pelo menos um produto foi selecionado (normal ou meio a meio)
     if (Object.keys(selectedItems).length === 0 && halfAndHalfItems.length === 0) {
       toast.error("Selecione pelo menos um produto");
+      isValid = false;
+    }
+
+    // Pedido mínimo (delivery)
+    if (
+      minOrderValue > 0 &&
+      getOrderMetadata()?.orderType === "delivery" &&
+      getCartSubtotal() < minOrderValue
+    ) {
+      toast.error(
+        `Pedido mínimo de R$ ${minOrderValue.toFixed(2).replace(".", ",")} para delivery.`
+      );
       isValid = false;
     }
 
@@ -1277,12 +1638,14 @@ const PublicMenuForm = ({
                 .map(() => ({ addOnItemId: a.addOnItemId, label: a.label, value: a.value }))
             )
           : undefined;
+        const observation = String(selectedObservations[key] || "").trim();
         return {
           productId,
           quantity: selectedItems[key],
           productName: productName || product?.name,
           productValue,
           grupo: product?.grupo || "Outros",
+          ...(observation && { observation }),
           ...(addonsExpanded && addonsExpanded.length > 0 && { addons: addonsExpanded }),
         };
       });
@@ -1299,6 +1662,7 @@ const PublicMenuForm = ({
                 .map(() => ({ addOnItemId: a.addOnItemId, label: a.label, value: a.value }))
             )
           : undefined;
+        const halfObservation = String(item.observation || "").trim();
         return {
           type: "halfAndHalf",
           productId: item.baseProductId,
@@ -1309,6 +1673,7 @@ const PublicMenuForm = ({
           half2OptionId: item.half2OptionId || null,
           baseOptionId: baseOptionId,
           grupo: baseProduct?.grupo || "Outros",
+          ...(halfObservation && { observation: halfObservation }),
           ...(addonsExpanded && addonsExpanded.length > 0 && { addons: addonsExpanded }),
         };
       });
@@ -1400,11 +1765,17 @@ const PublicMenuForm = ({
       
       const totalWithDelivery = calculateTotal();
       const deliveryFee = getDeliveryFeeAmount();
+      const couponDiscount = getCouponDiscount();
+      const finalTotal = getFinalTotal();
       const metadataWithTotal = {
         ...orderMetadata,
-        total: totalWithDelivery,
+        total: finalTotal,
         deliveryFee,
         subtotal: totalWithDelivery - deliveryFee,
+        ...(appliedCoupon && couponDiscount > 0 && {
+          couponCode: appliedCoupon.code,
+          couponDiscount,
+        }),
       };
 
       // Enviar formulário (orderToken garante que o pedido vá para a mesa do link assinado)
@@ -1448,12 +1819,14 @@ const PublicMenuForm = ({
       });
       const deliveryFeeForDisplay = getDeliveryFeeAmount();
       const subtotal = calculateTotal() - deliveryFeeForDisplay;
-      
+
       const orderInfo = {
         menuItems: displayMenuItems,
-        total: calculateTotal(),
+        total: finalTotal,
         subtotal: subtotal,
         deliveryFee: deliveryFeeForDisplay,
+        couponCode: appliedCoupon?.code || "",
+        couponDiscount,
         totalItems: getTotalItems(),
         customerName,
         customerPhone: answers[autoFields.find((f) => f.metadata?.autoFieldType === "phone")?.id] || "",
@@ -1468,8 +1841,38 @@ const PublicMenuForm = ({
         ],
         averageDeliveryTime: form.settings?.averageDeliveryTime || "",
         orderType: getOrderMetadata()?.orderType || "mesa",
+        protocol: response.data?.protocol || "",
+        trackingToken: response.data?.trackingToken || "",
       };
       setOrderData(orderInfo);
+
+      // PIX estático: gerar QR quando forma de pagamento contém "pix" e a loja tem chave configurada
+      let pixGenerated = false;
+      const pixKey = String(form.settings?.pixKey || "").trim();
+      if (pixKey) {
+        const paymentIsPix = answersArray.some((a) => {
+          const val = Array.isArray(a.answer) ? a.answer.join(", ") : String(a.answer || "");
+          return /\bpix\b/i.test(val);
+        });
+        if (paymentIsPix && finalTotal > 0) {
+          try {
+            const txId = String(response.data?.protocol || "").replace(/[^a-zA-Z0-9]/g, "").slice(0, 25) || "***";
+            const qrPix = QrCodePix({
+              version: "01",
+              key: pixKey,
+              name: String(form.settings?.pixName || form.name || "Loja").slice(0, 25),
+              city: String(form.settings?.pixCity || "BRASIL").slice(0, 15).toUpperCase(),
+              transactionId: txId,
+              value: Math.round(finalTotal * 100) / 100,
+            });
+            const base64 = await qrPix.base64();
+            setPixData({ payload: qrPix.payload(), base64 });
+            pixGenerated = true;
+          } catch (pixErr) {
+            console.warn("[PublicMenuForm] Falha ao gerar QR PIX:", pixErr);
+          }
+        }
+      }
 
       // Pedido salvo; envio WhatsApp é em segundo plano — não bloqueia a tela
       setSubmitted(true);
@@ -1477,6 +1880,13 @@ const PublicMenuForm = ({
         toast.info("Pedido enviado! A confirmação por WhatsApp será enviada em instantes.");
       } else if (response.data?.whatsappSent === false && response.data?.whatsappError) {
         toast.warn("Pedido salvo. " + (response.data.whatsappError || ""));
+      }
+
+      // Redirect pós-sucesso (paridade com PublicForm) — não redireciona quando há PIX a pagar
+      if (form.successRedirectUrl && !pixGenerated) {
+        setTimeout(() => {
+          window.location.href = form.successRedirectUrl;
+        }, 5000);
       }
     } catch (err) {
       toastError(err);
@@ -1802,6 +2212,7 @@ const PublicMenuForm = ({
   const openHalfAndHalfModal = (product) => {
     setHalfAndHalfModalProduct(product);
     setHalfAndHalfModalQty(1);
+    setHalfAndHalfModalObs("");
     
     // Capturar a variação selecionada do produto base
     let baseVariationLabel = null;
@@ -1865,6 +2276,7 @@ const PublicMenuForm = ({
     const half2Option = findOptionByVariationLabel(half2Product, halfAndHalfModalBaseVariation);
     
     const qty = Math.max(1, parseInt(halfAndHalfModalQty, 10) || 1);
+    const halfObs = String(halfAndHalfModalObs || "").trim();
     const newItem = {
       baseProductId: baseProduct.id,
       half1ProductId,
@@ -1873,6 +2285,7 @@ const PublicMenuForm = ({
       half2OptionId: half2Option?.id || null,
       quantity: qty,
       addons: [],
+      observation: halfObs,
     };
 
     const addonSourceProduct =
@@ -1881,6 +2294,7 @@ const PublicMenuForm = ({
     setHalfAndHalfModalOpen(false);
     setHalfAndHalfModalBaseVariation(null);
     setHalfAndHalfModalHalf2("");
+    setHalfAndHalfModalObs("");
 
     if (addonSourceProduct) {
       setAddOnModalHalfPending(newItem);
@@ -1889,6 +2303,7 @@ const PublicMenuForm = ({
       setAddOnModalItemKey("");
       setAddOnModalPendingQuantity(qty);
       setAddOnModalSelectedAddons([]);
+      setAddOnModalObservation(halfObs);
       // Abrir depois do Dialog de meio a meio fechar (MUI Modal manager)
       window.setTimeout(() => {
         setHalfAndHalfModalProduct(null);
@@ -2102,10 +2517,41 @@ const PublicMenuForm = ({
   }, []);
 
   if (loading) {
+    // Skeleton loading: estrutura do cardápio enquanto os produtos carregam
     return (
       <Box className={classes.root} style={appStyles?.rootStyle}>
-        <Box className={classes.loadingContainer}>
-          <CircularProgress />
+        <Box className={classes.skeletonBlock} style={{ width: "100%", height: 180, borderRadius: 0 }} />
+        <Box style={{ backgroundColor: "#fff", padding: 16, display: "flex", gap: 12 }}>
+          <Box className={classes.skeletonBlock} style={{ width: 140, height: 28 }} />
+          <Box flex={1} />
+          <Box className={classes.skeletonBlock} style={{ width: 64, height: 28 }} />
+        </Box>
+        <Box style={{ backgroundColor: "#fff", padding: "0 16px 12px", display: "flex", gap: 8 }}>
+          {[0, 1, 2, 3].map((i) => (
+            <Box key={i} className={classes.skeletonBlock} style={{ width: 80, height: 32, borderRadius: 999 }} />
+          ))}
+        </Box>
+        <Box style={{ padding: 16 }}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <Box
+              key={i}
+              style={{
+                display: "flex",
+                gap: 16,
+                backgroundColor: "#fff",
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 16,
+              }}
+            >
+              <Box className={classes.skeletonBlock} style={{ width: 88, height: 88, flexShrink: 0 }} />
+              <Box flex={1}>
+                <Box className={classes.skeletonBlock} style={{ width: "60%", height: 18, marginBottom: 10 }} />
+                <Box className={classes.skeletonBlock} style={{ width: "90%", height: 12, marginBottom: 8 }} />
+                <Box className={classes.skeletonBlock} style={{ width: "35%", height: 16 }} />
+              </Box>
+            </Box>
+          ))}
         </Box>
       </Box>
     );
@@ -2208,6 +2654,66 @@ const PublicMenuForm = ({
               </Typography>
             </Box>
 
+            {/* PIX estático: QR + copia e cola */}
+            {pixData && (
+              <Box
+                style={{
+                  padding: 24,
+                  borderRadius: 12,
+                  textAlign: "center",
+                  marginBottom: 32,
+                  border: `2px solid ${brandPrimary}40`,
+                  backgroundColor: brandSoft,
+                }}
+              >
+                <Typography variant="h6" style={{ color: brandPrimary, fontWeight: 700, marginBottom: 8 }}>
+                  Pague com PIX
+                </Typography>
+                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                  Escaneie o QR Code ou use o copia e cola. Valor: R$ {orderData.total.toFixed(2).replace(".", ",")}
+                </Typography>
+                <img
+                  src={pixData.base64}
+                  alt="QR Code PIX"
+                  style={{ width: 220, maxWidth: "100%", borderRadius: 8, backgroundColor: "#fff" }}
+                />
+                <Box style={{ marginTop: 12 }}>
+                  <Button
+                    variant="contained"
+                    size="small"
+                    startIcon={<FileCopyIcon />}
+                    style={{ backgroundColor: brandPrimary, color: "#fff", textTransform: "none" }}
+                    onClick={() => {
+                      if (navigator.clipboard) {
+                        navigator.clipboard
+                          .writeText(pixData.payload)
+                          .then(() => toast.success("Código PIX copiado!"))
+                          .catch(() => {});
+                      }
+                    }}
+                  >
+                    Copiar código PIX
+                  </Button>
+                </Box>
+                <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 12 }}>
+                  Após o pagamento, o estabelecimento confirmará o recebimento.
+                </Typography>
+              </Box>
+            )}
+
+            {/* Acompanhamento do pedido */}
+            {orderData.trackingToken && (
+              <Box style={{ textAlign: "center", marginBottom: 32 }}>
+                <Button
+                  variant="outlined"
+                  style={{ borderColor: brandPrimary, color: brandPrimary, textTransform: "none", fontWeight: 700 }}
+                  href={`/pedido/${orderData.trackingToken}`}
+                >
+                  Acompanhar pedido{orderData.protocol ? ` • ${orderData.protocol}` : ""}
+                </Button>
+              </Box>
+            )}
+
             {/* Tempo Médio de Entrega - só em pedidos delivery */}
             {orderData.orderType === "delivery" && orderData.averageDeliveryTime && (
               <Box 
@@ -2277,6 +2783,11 @@ const PublicMenuForm = ({
                             Adicionais: {item.addons.map((a) => `${a.label} (+ R$ ${Number(a.value || 0).toFixed(2).replace(".", ",")})`).join(", ")}
                           </Typography>
                         )}
+                        {item.observation && (
+                          <Typography variant="caption" color="textSecondary" display="block" style={{ fontStyle: "italic" }}>
+                            Obs: {item.observation}
+                          </Typography>
+                        )}
                       </Box>
                       <Typography variant="body1" style={{ fontWeight: 600, color: form.primaryColor, marginLeft: 16 }}>
                         R$ {item.total.toFixed(2).replace(".", ",")}
@@ -2321,7 +2832,18 @@ const PublicMenuForm = ({
                   </Typography>
                 </Box>
               )}
-              
+
+              {orderData.couponDiscount > 0 && (
+                <Box display="flex" justifyContent="space-between" alignItems="center" style={{ marginBottom: 12 }}>
+                  <Typography variant="body1">
+                    <strong>Cupom{orderData.couponCode ? ` (${orderData.couponCode})` : ""}:</strong>
+                  </Typography>
+                  <Typography variant="body1" style={{ fontWeight: 600, color: "#2e7d32" }}>
+                    - R$ {orderData.couponDiscount.toFixed(2).replace(".", ",")}
+                  </Typography>
+                </Box>
+              )}
+
               <Divider style={{ marginBottom: 12 }} />
               
               <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -2534,6 +3056,51 @@ const PublicMenuForm = ({
         </Box>
       </Box>
 
+      {/* Header de loja: status, tempo de entrega e pedido mínimo visíveis durante a navegação */}
+      {(() => {
+        const chips = [];
+        if (form?.settings?.orderHoursEnabled) {
+          const ohState = evaluateCardapioOrderHours(form.settings);
+          chips.push(
+            <span
+              key="status"
+              className={classes.storeInfoChip}
+              style={
+                ohState.allowed
+                  ? { backgroundColor: "#e8f5e9", color: "#1b5e20" }
+                  : { backgroundColor: "#fee2e2", color: "#b91c1c" }
+              }
+            >
+              ● {ohState.allowed ? "Aberto" : "Fechado"}
+            </span>
+          );
+        }
+        if (form?.settings?.averageDeliveryTime) {
+          chips.push(
+            <span key="time" className={classes.storeInfoChip}>
+              ⏱ {form.settings.averageDeliveryTime}
+            </span>
+          );
+        }
+        if (minOrderValue > 0) {
+          chips.push(
+            <span key="min" className={classes.storeInfoChip}>
+              Pedido mín. R$ {minOrderValue.toFixed(2).replace(".", ",")}
+            </span>
+          );
+        }
+        const feeVal = parseFloat(form?.settings?.deliveryFee) || 0;
+        if (feeVal > 0) {
+          chips.push(
+            <span key="fee" className={classes.storeInfoChip}>
+              🛵 Entrega R$ {feeVal.toFixed(2).replace(".", ",")}
+            </span>
+          );
+        }
+        if (chips.length === 0) return null;
+        return <Box className={classes.storeInfoRow}>{chips}</Box>;
+      })()}
+
       {view === "menu" && (
         <Box className={classes.searchBar}>
           <TextField
@@ -2598,9 +3165,7 @@ const PublicMenuForm = ({
             variant="scrollable"
             scrollButtons="auto"
             className={classes.tabsContainer}
-            indicatorColor="primary"
-            textColor="primary"
-            TabIndicatorProps={{ style: { height: 3 } }}
+            TabIndicatorProps={{ style: { height: 3, backgroundColor: brandPrimary } }}
           >
             {groups.map((grupo) => (
               <Tab key={grupo} label={grupo} className={classes.tab} />
@@ -2663,13 +3228,19 @@ const PublicMenuForm = ({
                         src={product.imageUrl}
                         alt={product.name}
                         className={classes.mostOrderedImage}
+                        onClick={() => openProductDetail(product)}
                         onError={(e) => { e.target.style.display = "none"; }}
                       />
                     ) : (
-                      <Box className={classes.mostOrderedImage} />
+                      <Box className={classes.mostOrderedImage} onClick={() => openProductDetail(product)} />
                     )}
                     <Box className={classes.mostOrderedCardBody}>
-                      <Typography className={classes.mostOrderedName}>{product.name}</Typography>
+                      <Typography
+                        className={classes.mostOrderedName}
+                        onClick={() => openProductDetail(product)}
+                      >
+                        {product.name}
+                      </Typography>
                       <Typography className={classes.mostOrderedPrice}>
                         R$ {displayPrice.toFixed(2).replace(".", ",")}
                       </Typography>
@@ -2756,15 +3327,22 @@ const PublicMenuForm = ({
                             src={product.imageUrl}
                             alt={product.name}
                             className={classes.productImage}
+                            onClick={() => openProductDetail(product)}
                             onError={(e) => { e.target.style.display = "none"; }}
                           />
                         )}
                         <Box flex={1}>
-                      <Typography className={classes.productName}>
+                      <Typography
+                        className={classes.productName}
+                        onClick={() => openProductDetail(product)}
+                      >
                         {product.name}
                       </Typography>
                       {product.description && (
-                        <Typography className={classes.productDescription}>
+                        <Typography
+                          className={classes.productDescription}
+                          onClick={() => openProductDetail(product)}
+                        >
                           {product.description}
                         </Typography>
                       )}
@@ -2997,7 +3575,16 @@ const PublicMenuForm = ({
                               key={p.id}
                               component="button"
                               type="button"
-                              className={`${classes.halfFlavorCard}${selected ? ` ${classes.halfFlavorCardSelected}` : ""}`}
+                              className={classes.halfFlavorCard}
+                              style={
+                                selected
+                                  ? {
+                                      borderColor: brandPrimary,
+                                      backgroundColor: brandSoft,
+                                      boxShadow: `0 0 0 1px ${brandPrimary}`,
+                                    }
+                                  : undefined
+                              }
                               onClick={() => setHalfAndHalfModalHalf2(String(p.id))}
                             >
                               {p.imageUrl ? (
@@ -3038,6 +3625,19 @@ const PublicMenuForm = ({
                       fullWidth
                       style={{ marginTop: 16 }}
                     />
+                    <TextField
+                      label="Observação (opcional)"
+                      placeholder="Ex.: sem cebola, bem passado..."
+                      value={halfAndHalfModalObs}
+                      onChange={(e) => setHalfAndHalfModalObs(e.target.value)}
+                      inputProps={{ maxLength: 200 }}
+                      variant={fieldVariant}
+                      size="small"
+                      fullWidth
+                      multiline
+                      minRows={2}
+                      style={{ marginTop: 12 }}
+                    />
                   </>
                 );
               })()}
@@ -3046,9 +3646,13 @@ const PublicMenuForm = ({
               <Button onClick={() => setHalfAndHalfModalOpen(false)} color="secondary">Cancelar</Button>
               <Button
                 onClick={addHalfAndHalfToCart}
-                color="primary"
                 variant="contained"
                 disabled={!halfAndHalfModalHalf2}
+                style={
+                  halfAndHalfModalHalf2
+                    ? { backgroundColor: brandPrimary, color: "#fff" }
+                    : undefined
+                }
               >
                 Adicionar
               </Button>
@@ -3065,7 +3669,18 @@ const PublicMenuForm = ({
                 <>
                   {(addOnModalProduct.addOnGroup.subgroups || []).filter((sg) => (sg.items || []).length > 0).map((sg) => (
                     <Box key={sg.id} mb={2}>
-                      <Typography variant="subtitle2" style={{ fontWeight: 600, marginBottom: 8 }}>{sg.name}</Typography>
+                      <Typography variant="subtitle2" style={{ fontWeight: 600, marginBottom: 8 }}>
+                        {sg.name}
+                        {(() => {
+                          const rule = getAddonRuleLabel(sg);
+                          if (!rule) return null;
+                          return (
+                            <span className={rule.required ? classes.requiredChip : classes.optionalChip}>
+                              {rule.required ? "Obrigatório" : ""}{rule.text ? `${rule.required ? " • " : ""}${rule.text}` : ""}
+                            </span>
+                          );
+                        })()}
+                      </Typography>
                       {(sg.items || []).map((it) => {
                         const qty = getAddonQuantityInModal(it.id);
                         return (
@@ -3104,11 +3719,284 @@ const PublicMenuForm = ({
                   })}
                 </>
               )}
+              <TextField
+                label="Observação (opcional)"
+                placeholder="Ex.: sem cebola, ponto da carne..."
+                value={addOnModalObservation}
+                onChange={(e) => setAddOnModalObservation(e.target.value)}
+                inputProps={{ maxLength: 200 }}
+                variant={fieldVariant}
+                size="small"
+                fullWidth
+                multiline
+                minRows={2}
+                style={{ marginTop: 8 }}
+              />
             </DialogContent>
             <DialogActions>
               <Button onClick={closeAddOnModal} color="secondary">Cancelar</Button>
-              <Button onClick={confirmAddOnModal} color="primary" variant="contained">Confirmar</Button>
+              <Button
+                onClick={confirmAddOnModal}
+                variant="contained"
+                style={{ backgroundColor: brandPrimary, color: "#fff" }}
+              >
+                Confirmar
+              </Button>
             </DialogActions>
+          </Dialog>
+
+          {/* Sheet de detalhe do item (padrão iFood): foto, variação, adicionais, observação */}
+          <Dialog
+            open={detailOpen}
+            onClose={closeProductDetail}
+            fullScreen={detailFullScreen}
+            maxWidth="sm"
+            fullWidth
+            PaperProps={{
+              style: detailFullScreen ? undefined : { borderRadius: 16, overflow: "hidden" },
+            }}
+          >
+            {detailProduct && (() => {
+              const g = detailProduct.addOnGroup;
+              const hasVars = detailProduct.variations && detailProduct.variations.length > 0;
+              const firstVariation = hasVars ? detailProduct.variations[0] : null;
+              const unitPrice = getDetailUnitPrice();
+              const qtyNum = Math.max(1, parseInt(detailQty, 10) || 1);
+              const lineTotal = (unitPrice + getDetailAddonsTotal()) * qtyNum;
+
+              const renderDetailAddonRow = (it) => {
+                const qty = getDetailAddonQuantity(it.id);
+                return (
+                  <Box
+                    key={it.id}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    style={{ marginBottom: 8 }}
+                  >
+                    <Typography variant="body2">
+                      {it.label} + R$ {Number(it.value || 0).toFixed(2).replace(".", ",")}
+                    </Typography>
+                    <Box display="flex" alignItems="center">
+                      <IconButton
+                        size="small"
+                        onClick={() => setDetailAddonQuantity({ addOnItemId: it.id, label: it.label, value: it.value }, qty - 1)}
+                        disabled={qty <= 0}
+                        aria-label="Menos"
+                      >
+                        <RemoveIcon fontSize="small" />
+                      </IconButton>
+                      <Typography variant="body2" style={{ minWidth: 24, textAlign: "center" }}>{qty}</Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => setDetailAddonQuantity({ addOnItemId: it.id, label: it.label, value: it.value }, qty + 1)}
+                        aria-label="Mais"
+                        style={{ color: brandPrimary }}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                );
+              };
+
+              return (
+                <>
+                  <Box style={{ position: "relative" }}>
+                    {detailProduct.imageUrl ? (
+                      <img
+                        src={detailProduct.imageUrl}
+                        alt={detailProduct.name}
+                        className={classes.detailHero}
+                        onError={(e) => { e.target.style.display = "none"; }}
+                      />
+                    ) : (
+                      <Box style={{ height: 12 }} />
+                    )}
+                    <IconButton className={classes.detailClose} size="small" onClick={closeProductDetail} aria-label="Fechar">
+                      <CloseIcon />
+                    </IconButton>
+                  </Box>
+                  <DialogContent style={{ paddingBottom: 12 }}>
+                    <Typography variant="h6" style={{ fontWeight: 700, lineHeight: 1.25 }}>
+                      {detailProduct.name}
+                    </Typography>
+                    {detailProduct.description && (
+                      <Typography variant="body2" color="textSecondary" style={{ marginTop: 6 }}>
+                        {detailProduct.description}
+                      </Typography>
+                    )}
+                    <Typography style={{ fontWeight: 700, marginTop: 8, color: brandPrimary }}>
+                      R$ {unitPrice.toFixed(2).replace(".", ",")}
+                    </Typography>
+
+                    {hasVars && firstVariation && (
+                      <Box mt={2}>
+                        <Typography className={classes.detailSectionTitle} gutterBottom>
+                          {firstVariation.name}
+                          <span className={classes.requiredChip}>Obrigatório</span>
+                        </Typography>
+                        {firstVariation.options.map((opt) => {
+                          const selected = detailVariationOptionId === opt.id;
+                          return (
+                            <Box
+                              key={opt.id}
+                              component="button"
+                              type="button"
+                              className={classes.halfFlavorCard}
+                              style={{
+                                padding: "8px 12px",
+                                marginBottom: 6,
+                                ...(selected
+                                  ? {
+                                      borderColor: brandPrimary,
+                                      backgroundColor: brandSoft,
+                                      boxShadow: `0 0 0 1px ${brandPrimary}`,
+                                    }
+                                  : {}),
+                              }}
+                              onClick={() => setDetailVariationOptionId(opt.id)}
+                            >
+                              <Box flex={1} display="flex" justifyContent="space-between" alignItems="center">
+                                <Typography variant="body2" style={{ fontWeight: selected ? 700 : 500 }}>
+                                  {opt.label}
+                                </Typography>
+                                <Typography variant="body2" style={{ fontWeight: 700 }}>
+                                  R$ {parseFloat(opt.value || 0).toFixed(2).replace(".", ",")}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          );
+                        })}
+                      </Box>
+                    )}
+
+                    {detailProduct.allowsHalfAndHalf === true && (
+                      <Box mt={2}>
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          fullWidth
+                          style={{ borderColor: brandPrimary, color: brandPrimary, textTransform: "none", fontWeight: 700 }}
+                          onClick={() => {
+                            if (detailVariationOptionId != null) {
+                              setSelectedVariationOption((prev) => ({
+                                ...prev,
+                                [detailProduct.id]: detailVariationOptionId,
+                              }));
+                            }
+                            const productForHalf = detailProduct;
+                            closeProductDetail();
+                            window.setTimeout(() => openHalfAndHalfModal(productForHalf), 150);
+                          }}
+                        >
+                          Quero meio a meio (2 sabores)
+                        </Button>
+                      </Box>
+                    )}
+
+                    {hasAddonsToShow(detailProduct) && (
+                      <Box mt={2}>
+                        {(g.subgroups || [])
+                          .filter((sg) => (sg.items || []).length > 0)
+                          .map((sg) => (
+                            <Box key={sg.id} mb={2}>
+                              <Typography className={classes.detailSectionTitle} gutterBottom>
+                                {sg.name}
+                                {(() => {
+                                  const rule = getAddonRuleLabel(sg);
+                                  if (!rule) {
+                                    return <span className={classes.optionalChip}>Opcional</span>;
+                                  }
+                                  return (
+                                    <span className={rule.required ? classes.requiredChip : classes.optionalChip}>
+                                      {rule.required ? "Obrigatório" : ""}{rule.text ? `${rule.required ? " • " : ""}${rule.text}` : ""}
+                                    </span>
+                                  );
+                                })()}
+                              </Typography>
+                              {(sg.items || []).map((it) => renderDetailAddonRow(it))}
+                            </Box>
+                          ))}
+                        {(g.items || []).length > 0 && (
+                          <Box mb={2}>
+                            <Typography className={classes.detailSectionTitle} gutterBottom>
+                              Adicionais
+                              {(() => {
+                                const rule = getAddonRuleLabel(g);
+                                if (!rule) {
+                                  return <span className={classes.optionalChip}>Opcional</span>;
+                                }
+                                return (
+                                  <span className={rule.required ? classes.requiredChip : classes.optionalChip}>
+                                    {rule.required ? "Obrigatório" : ""}{rule.text ? `${rule.required ? " • " : ""}${rule.text}` : ""}
+                                  </span>
+                                );
+                              })()}
+                            </Typography>
+                            {(g.items || []).map((it) => renderDetailAddonRow(it))}
+                          </Box>
+                        )}
+                      </Box>
+                    )}
+
+                    <Box mt={2}>
+                      <TextField
+                        label="Alguma observação?"
+                        placeholder="Ex.: sem cebola, molho à parte..."
+                        value={detailObservation}
+                        onChange={(e) => setDetailObservation(e.target.value)}
+                        inputProps={{ maxLength: 200 }}
+                        variant={fieldVariant}
+                        size="small"
+                        fullWidth
+                        multiline
+                        minRows={2}
+                        helperText={`${detailObservation.length}/200`}
+                      />
+                    </Box>
+                  </DialogContent>
+                  <Box className={classes.detailFooter}>
+                    <Box className={classes.detailStepper}>
+                      <IconButton
+                        size="small"
+                        onClick={() => setDetailQty((q) => Math.max(1, (parseInt(q, 10) || 1) - 1))}
+                        disabled={qtyNum <= 1}
+                        aria-label="Menos"
+                      >
+                        <RemoveIcon fontSize="small" />
+                      </IconButton>
+                      <Typography style={{ minWidth: 28, textAlign: "center", fontWeight: 700 }}>
+                        {qtyNum}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        onClick={() => setDetailQty((q) => (parseInt(q, 10) || 1) + 1)}
+                        aria-label="Mais"
+                        style={{ color: brandPrimary }}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                    <Button
+                      variant="contained"
+                      fullWidth
+                      onClick={confirmProductDetail}
+                      style={{
+                        backgroundColor: brandPrimary,
+                        color: "#fff",
+                        fontWeight: 700,
+                        textTransform: "none",
+                        borderRadius: 10,
+                        padding: "10px 16px",
+                      }}
+                    >
+                      Adicionar • R$ {lineTotal.toFixed(2).replace(".", ",")}
+                    </Button>
+                  </Box>
+                </>
+              );
+            })()}
           </Dialog>
 
           {view === "checkout" && (
@@ -3123,6 +4011,7 @@ const PublicMenuForm = ({
                       const quantity = selectedItems[key];
                       const lineTotal = (productValue + (addonsTotal || 0)) * quantity;
                       const addonsList = selectedAddons[key] || [];
+                      const lineObservation = selectedObservations[key] || "";
                       return (
                         <Box key={key} display="flex" alignItems="flex-start" justifyContent="space-between" style={{ marginTop: 4 }}>
                           <Box flex={1}>
@@ -3132,6 +4021,11 @@ const PublicMenuForm = ({
                             {addonsList.length > 0 && (
                               <Typography variant="caption" color="textSecondary" display="block">
                                 {addonsList.map((a) => ((a.quantity ?? 1) > 1 ? `${a.quantity}x ` : "") + `${a.label} (+ R$ ${Number(a.value).toFixed(2).replace(".", ",")})`).join(", ")}
+                              </Typography>
+                            )}
+                            {lineObservation && (
+                              <Typography variant="caption" color="textSecondary" display="block" style={{ fontStyle: "italic" }}>
+                                Obs: {lineObservation}
                               </Typography>
                             )}
                           </Box>
@@ -3177,6 +4071,11 @@ const PublicMenuForm = ({
                             {addonLabels && (
                               <Typography variant="caption" color="textSecondary" display="block">
                                 + {addonLabels}
+                              </Typography>
+                            )}
+                            {item.observation && (
+                              <Typography variant="caption" color="textSecondary" display="block" style={{ fontStyle: "italic" }}>
+                                Obs: {item.observation}
                               </Typography>
                             )}
                             {base && hasAddonsToShow(base) && (
@@ -3268,6 +4167,51 @@ const PublicMenuForm = ({
                   );
                 })}
 
+                {/* Cupom de desconto */}
+                {getTotalItems() > 0 && (
+                  <Paper className={classes.summaryCard} style={{ marginBottom: 12 }}>
+                    <Typography variant="subtitle2" style={{ fontWeight: 700, marginBottom: 8 }}>
+                      Cupom de desconto
+                    </Typography>
+                    {appliedCoupon ? (
+                      <Box display="flex" alignItems="center" justifyContent="space-between">
+                        <Box>
+                          <Typography variant="body2" style={{ fontWeight: 700, color: "#2e7d32" }}>
+                            {appliedCoupon.code} aplicado
+                          </Typography>
+                          <Typography variant="caption" color="textSecondary">
+                            Desconto de R$ {getCouponDiscount().toFixed(2).replace(".", ",")}
+                          </Typography>
+                        </Box>
+                        <Button size="small" color="secondary" onClick={removeCoupon} style={{ textTransform: "none" }}>
+                          Remover
+                        </Button>
+                      </Box>
+                    ) : (
+                      <Box display="flex" style={{ gap: 8 }}>
+                        <TextField
+                          placeholder="Digite o código"
+                          value={couponInput}
+                          onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                          variant={fieldVariant}
+                          size="small"
+                          fullWidth
+                          inputProps={{ maxLength: 30, style: { textTransform: "uppercase" } }}
+                        />
+                        <Button
+                          variant="outlined"
+                          size="small"
+                          onClick={applyCoupon}
+                          disabled={couponLoading || !couponInput.trim()}
+                          style={{ borderColor: brandPrimary, color: brandPrimary, textTransform: "none", whiteSpace: "nowrap" }}
+                        >
+                          {couponLoading ? "..." : "Aplicar"}
+                        </Button>
+                      </Box>
+                    )}
+                  </Paper>
+                )}
+
                 {/* Resumo do pedido */}
                 {getTotalItems() > 0 && (
                   <Paper className={classes.summaryCard}>
@@ -3276,36 +4220,66 @@ const PublicMenuForm = ({
                     </Typography>
                     {(() => {
                       const fee = getDeliveryFeeAmount();
-                      const total = calculateTotal();
-                      const subtotal = Math.max(0, total - fee);
+                      const subtotal = getCartSubtotal();
+                      const discount = getCouponDiscount();
+                      const total = getFinalTotal();
                       return (
                         <>
                     <Box className={classes.summaryRow}>
                       <Typography>Total de itens:</Typography>
                       <Typography fontWeight={600}>{getTotalItems()}</Typography>
                     </Box>
+                    {(fee > 0 || discount > 0) && (
+                      <Box className={classes.summaryRow}>
+                        <Typography>Subtotal:</Typography>
+                        <Typography fontWeight={600}>
+                          R$ {subtotal.toFixed(2).replace(".", ",")}
+                        </Typography>
+                      </Box>
+                    )}
                     {fee > 0 && (
-                      <>
-                        <Box className={classes.summaryRow}>
-                          <Typography>Subtotal:</Typography>
-                          <Typography fontWeight={600}>
-                            R$ {subtotal.toFixed(2).replace(".", ",")}
-                          </Typography>
-                        </Box>
-                        <Box className={classes.summaryRow}>
-                          <Typography>Taxa de entrega:</Typography>
-                          <Typography fontWeight={600}>
-                            R$ {fee.toFixed(2).replace(".", ",")}
-                          </Typography>
-                        </Box>
-                      </>
+                      <Box className={classes.summaryRow}>
+                        <Typography>Taxa de entrega:</Typography>
+                        <Typography fontWeight={600}>
+                          R$ {fee.toFixed(2).replace(".", ",")}
+                        </Typography>
+                      </Box>
+                    )}
+                    {discount > 0 && (
+                      <Box className={classes.summaryRow}>
+                        <Typography style={{ color: "#2e7d32" }}>
+                          Cupom ({appliedCoupon?.code}):
+                        </Typography>
+                        <Typography style={{ color: "#2e7d32", fontWeight: 600 }}>
+                          - R$ {discount.toFixed(2).replace(".", ",")}
+                        </Typography>
+                      </Box>
                     )}
                     <Box className={classes.summaryRow}>
                       <Typography variant="h6">Total:</Typography>
-                      <Typography variant="h6" style={{ color: form.primaryColor }}>
+                      <Typography variant="h6" style={{ color: brandPrimary }}>
                         R$ {total.toFixed(2).replace(".", ",")}
                       </Typography>
                     </Box>
+                    {(() => {
+                      const meta = getOrderMetadata();
+                      if (
+                        minOrderValue > 0 &&
+                        meta?.orderType === "delivery" &&
+                        subtotal < minOrderValue
+                      ) {
+                        return (
+                          <Typography
+                            variant="caption"
+                            style={{ color: "#c62828", display: "block", marginTop: 8 }}
+                          >
+                            Pedido mínimo para entrega: R$ {minOrderValue.toFixed(2).replace(".", ",")} —
+                            faltam R$ {(minOrderValue - subtotal).toFixed(2).replace(".", ",")}
+                          </Typography>
+                        );
+                      }
+                      return null;
+                    })()}
                         </>
                       );
                     })()}
@@ -3364,11 +4338,30 @@ const PublicMenuForm = ({
         </Box>
       </Box>
 
+      {/* Barra de sacola sticky: "Ver sacola • N itens • R$ X" (some quando vazia ou no checkout) */}
+      {!submitted && form && groups.length > 0 && view === "menu" && getTotalItems() > 0 && (
+        <Box
+          className={classes.stickyCartBar}
+          style={{ backgroundColor: brandPrimary }}
+          onClick={() => setView("checkout")}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => e.key === "Enter" && setView("checkout")}
+        >
+          <span>Ver sacola</span>
+          <span style={{ opacity: 0.9, fontWeight: 600 }}>
+            {getTotalItems()} {getTotalItems() === 1 ? "item" : "itens"}
+          </span>
+          <span>R$ {getFinalTotal().toFixed(2).replace(".", ",")}</span>
+        </Box>
+      )}
+
       {/* Barra inferior estilo Anota Aí: Início | Carrinho */}
       {!submitted && form && groups.length > 0 && (
         <nav className={classes.bottomNav}>
           <div
             className={`${classes.bottomNavItem} ${view === "menu" ? "active" : ""}`}
+            style={view === "menu" ? { color: brandPrimary } : undefined}
             onClick={() => setView("menu")}
             role="button"
             tabIndex={0}
@@ -3378,6 +4371,7 @@ const PublicMenuForm = ({
           </div>
           <div
             className={`${classes.bottomNavItem} ${view === "checkout" ? "active" : ""}`}
+            style={view === "checkout" ? { color: brandPrimary } : undefined}
             onClick={() => setView("checkout")}
             role="button"
             tabIndex={0}

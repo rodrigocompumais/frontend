@@ -1659,6 +1659,48 @@ const FormBuilder = () => {
                           disabled={formData.settings?.delivery === false}
                         />
                       </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          fullWidth
+                          variant="outlined"
+                          type="number"
+                          inputProps={{ min: 0, step: 0.01 }}
+                          label="Pedido Mínimo para Entrega (R$)"
+                          placeholder="0.00"
+                          value={formData.settings?.minOrderValue || ""}
+                          onChange={(e) => {
+                            const val = e.target.value === "" ? "" : parseFloat(e.target.value) || 0;
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                minOrderValue: val,
+                              },
+                            });
+                          }}
+                          helperText="Valor mínimo do pedido (sem taxa) para aceitar delivery. 0 ou vazio = sem mínimo"
+                          disabled={formData.settings?.delivery === false}
+                        />
+                      </Grid>
+                      <Grid item xs={12} md={6}>
+                        <TextField
+                          fullWidth
+                          variant="outlined"
+                          label="Chave PIX (opcional)"
+                          placeholder="CPF/CNPJ, telefone, e-mail ou chave aleatória"
+                          value={formData.settings?.pixKey || ""}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                pixKey: e.target.value,
+                              },
+                            })
+                          }
+                          helperText="Quando preenchida, exibe QR Code PIX na confirmação para pedidos com pagamento PIX"
+                        />
+                      </Grid>
 
                       <Grid item xs={12}>
                         <Typography variant="subtitle2" style={{ fontWeight: 600, marginTop: 8 }}>

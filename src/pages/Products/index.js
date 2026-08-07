@@ -45,6 +45,7 @@ import TableRowSkeleton from "../../components/TableRowSkeleton";
 import ProductModal from "../../components/ProductModal";
 import ProductGroupsModal from "../../components/ProductGroupsModal";
 import AddOnGroupsModal from "../../components/AddOnGroupsModal";
+import CouponsModal from "../../components/CouponsModal";
 import ImportMenuModal from "../../components/ImportMenuModal";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import toastError from "../../errors/toastError";
@@ -116,6 +117,7 @@ const Products = () => {
     const [productModalOpen, setProductModalOpen] = useState(false);
     const [groupsModalOpen, setGroupsModalOpen] = useState(false);
     const [addOnGroupsModalOpen, setAddOnGroupsModalOpen] = useState(false);
+    const [couponsModalOpen, setCouponsModalOpen] = useState(false);
     const [importMenuModalOpen, setImportMenuModalOpen] = useState(false);
     const [filterMenuOnly, setFilterMenuOnly] = useState(false);
     const [filterGrupo, setFilterGrupo] = useState("");
@@ -334,6 +336,10 @@ const Products = () => {
                 open={addOnGroupsModalOpen}
                 onClose={() => setAddOnGroupsModalOpen(false)}
             />
+            <CouponsModal
+                open={couponsModalOpen}
+                onClose={() => setCouponsModalOpen(false)}
+            />
             <ImportMenuModal
                 open={importMenuModalOpen}
                 onClose={() => setImportMenuModalOpen(false)}
@@ -397,6 +403,14 @@ const Products = () => {
                         style={{ marginRight: 8 }}
                     >
                         Grupos de adicionais
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        color="primary"
+                        onClick={() => setCouponsModalOpen(true)}
+                        style={{ marginRight: 8 }}
+                    >
+                        Cupons
                     </Button>
                     <Button
                         variant="outlined"
