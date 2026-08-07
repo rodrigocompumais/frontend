@@ -838,11 +838,22 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                       const unitValue = (Number(item.productValue) || 0) + addonsTotal;
                       const lineTotal = (Number(item.quantity) || 0) * unitValue;
                       return (
-                        <ListItem key={idx} disableGutters style={{ paddingTop: 0, paddingBottom: (observations || addons.length) ? 8 : 4 }}>
+                        <ListItem key={idx} disableGutters style={{ paddingTop: 0, paddingBottom: (observations || addons.length || item.type === "combo") ? 8 : 4 }}>
                           <ListItemText
-                            primary={`${item.quantity}x ${item.productName || "Item"}`}
+                            primary={`${item.quantity}x ${item.productName || "Item"}${item.type === "combo" ? " (Combo)" : ""}`}
                             secondary={
                               <>
+                                {item.type === "combo" && Array.isArray(item.comboItems) && item.comboItems.length > 0 && (
+                                  <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 2 }}>
+                                    {item.comboItems
+                                      .map((ci) => {
+                                        const q = Number(ci.quantity) || 1;
+                                        const name = ci.productName || "Item";
+                                        return q > 1 ? `${q}x ${name}` : name;
+                                      })
+                                      .join(" · ")}
+                                  </Typography>
+                                )}
                                 {addons.length > 0 && (
                                   <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 2 }}>
                                     Adicionais: {addons.map((a) => `${a.label || "Item"}${a.value != null && a.value !== 0 ? ` (+ R$ ${Number(a.value).toFixed(2).replace(".", ",")})` : ""}`).join(", ")}
@@ -1051,11 +1062,22 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                     const unitValue = (Number(item.productValue) || 0) + addonsTotal;
                     const lineTotal = (Number(item.quantity) || 0) * unitValue;
                     return (
-                      <ListItem key={idx} disableGutters style={{ paddingTop: 0, paddingBottom: (observations || addons.length) ? 8 : 4 }}>
+                      <ListItem key={idx} disableGutters style={{ paddingTop: 0, paddingBottom: (observations || addons.length || item.type === "combo") ? 8 : 4 }}>
                         <ListItemText
-                          primary={`${item.quantity}x ${item.productName || "Item"}`}
+                          primary={`${item.quantity}x ${item.productName || "Item"}${item.type === "combo" ? " (Combo)" : ""}`}
                           secondary={
                             <>
+                              {item.type === "combo" && Array.isArray(item.comboItems) && item.comboItems.length > 0 && (
+                                <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 2 }}>
+                                  {item.comboItems
+                                    .map((ci) => {
+                                      const q = Number(ci.quantity) || 1;
+                                      const name = ci.productName || "Item";
+                                      return q > 1 ? `${q}x ${name}` : name;
+                                    })
+                                    .join(" · ")}
+                                </Typography>
+                              )}
                               {addons.length > 0 && (
                                 <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 2 }}>
                                   Adicionais: {addons.map((a) => `${a.label || "Item"}${a.value != null && a.value !== 0 ? ` (+ R$ ${Number(a.value).toFixed(2).replace(".", ",")})` : ""}`).join(", ")}

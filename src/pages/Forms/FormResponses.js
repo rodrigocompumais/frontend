@@ -630,11 +630,23 @@ const FormResponses = () => {
                           <Box display="flex" justifyContent="space-between" alignItems="center">
                             <Typography variant="body2">
                               {item.quantity}x {item.productName || `Produto #${item.productId}`}
+                              {item.type === "combo" ? " (Combo)" : ""}
                             </Typography>
                             <Typography variant="body2" fontWeight={600}>
                               R$ {lineTotal.toFixed(2).replace(".", ",")}
                             </Typography>
                           </Box>
+                          {item.type === "combo" && Array.isArray(item.comboItems) && item.comboItems.length > 0 && (
+                            <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 2 }}>
+                              {item.comboItems
+                                .map((ci) => {
+                                  const q = Number(ci.quantity) || 1;
+                                  const name = ci.productName || "Item";
+                                  return q > 1 ? `${q}x ${name}` : name;
+                                })
+                                .join(" · ")}
+                            </Typography>
+                          )}
                           {addons.length > 0 && (
                             <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 2, marginLeft: 0 }}>
                               Adicionais: {addons.map((a) => `${a.label || "Item"}${a.value != null && a.value !== 0 ? ` (+ R$ ${Number(a.value).toFixed(2).replace(".", ",")})` : ""}`).join(", ")}

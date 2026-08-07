@@ -1297,6 +1297,7 @@ const PublicMenuForm = ({
    * Só exibimos adicionais quando o produto tem um grupo vinculado (no produto ou na categoria).
    */
   const hasAddonsToShow = (product) => {
+    if (product?.isCombo) return false;
     const g = product?.addOnGroup;
     if (!g) return false;
     const subsWithItems = (g.subgroups || []).filter((sg) => (sg.items || []).length > 0);
@@ -1824,13 +1825,14 @@ const PublicMenuForm = ({
           : undefined;
         const observation = String(selectedObservations[key] || "").trim();
         return {
+          ...(product?.isCombo ? { type: "combo" } : {}),
           productId,
           quantity: selectedItems[key],
           productName: productName || product?.name,
           productValue,
           grupo: product?.grupo || "Outros",
           ...(observation && { observation }),
-          ...(addonsExpanded && addonsExpanded.length > 0 && { addons: addonsExpanded }),
+          ...(!product?.isCombo && addonsExpanded && addonsExpanded.length > 0 && { addons: addonsExpanded }),
         };
       });
       const halfMenuItems = halfAndHalfItems.map((item) => {
@@ -2851,10 +2853,22 @@ const PublicMenuForm = ({
                       <Box flex={1}>
                         <Typography variant="body1" style={{ fontWeight: 600, marginBottom: 4 }}>
                           {item.productName}
+                          {item.type === "combo" ? " (Combo)" : ""}
                         </Typography>
                         <Typography variant="body2" color="textSecondary">
                           Quantidade: {item.quantity} {item.quantity === 1 ? "unidade" : "unidades"}
                         </Typography>
+                        {item.type === "combo" && Array.isArray(item.comboItems) && item.comboItems.length > 0 && (
+                          <Typography variant="caption" color="textSecondary" display="block">
+                            {item.comboItems
+                              .map((ci) => {
+                                const q = Number(ci.quantity) || 1;
+                                const name = ci.productName || "Item";
+                                return q > 1 ? `${q}x ${name}` : name;
+                              })
+                              .join(" · ")}
+                          </Typography>
+                        )}
                         {item.addons && item.addons.length > 0 && (
                           <Typography variant="caption" color="textSecondary" display="block">
                             Adicionais: {item.addons.map((a) => `${a.label} (+ R$ ${Number(a.value || 0).toFixed(2).replace(".", ",")})`).join(", ")}
@@ -3390,11 +3404,14 @@ const PublicMenuForm = ({
                 const keysForProduct = getKeysForProduct(product);
                 const quantity = getTotalQuantityForProduct(product);
                 const singleLineKey = keysForProduct.length === 1 ? keysForProduct[0] : null;
-                const isHalfAndHalf = product.allowsHalfAndHalf === true;
-                const hasVariations = product.variations && product.variations.length > 0;
+                const isHalfAndHalf = !product.isCombo && product.allowsHalfAndHalf === true;
+                const hasVariations = !product.isCombo && product.variations && product.variations.length > 0;
                 const firstVariation = hasVariations ? product.variations[0] : null;
                 const selectedOptionId = hasVariations ? (selectedVariationOption[product.id] ?? firstVariation?.options?.[0]?.id) : null;
                 const displayPrice = hasVariations ? getItemDetailsByKey(itemKey).productValue : parseFloat(product.value || 0);
+                const comboItemsList = product.isCombo
+                  ? (product.comboItems || []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                  : [];
                 return (
                   <Card key={product.id} className={classes.productCard}>
                     <CardContent>
@@ -3414,6 +3431,7 @@ const PublicMenuForm = ({
                         onClick={() => openProductDetail(product)}
                       >
                         {product.name}
+                        {product.isCombo ? " (Combo)" : ""}
                       </Typography>
                       {product.description && (
                         <Typography
@@ -3421,6 +3439,23 @@ const PublicMenuForm = ({
                           onClick={() => openProductDetail(product)}
                         >
                           {product.description}
+                        </Typography>
+                      )}
+                      {comboItemsList.length > 0 && (
+                        <Typography
+                          variant="caption"
+                          color="textSecondary"
+                          display="block"
+                          style={{ marginTop: 4 }}
+                          onClick={() => openProductDetail(product)}
+                        >
+                          {comboItemsList
+                            .map((ci) => {
+                              const q = Number(ci.quantity) || 1;
+                              const name = ci.product?.name || `Produto #${ci.productId}`;
+                              return q > 1 ? `${q}x ${name}` : name;
+                            })
+                            .join(" · ")}
                         </Typography>
                       )}
                       {hasVariations && firstVariation && (
@@ -3734,12 +3769,16 @@ const PublicMenuForm = ({
             }}
           >
             {detailProduct && (() => {
-              const g = detailProduct.addOnGroup;
-              const hasVars = detailProduct.variations && detailProduct.variations.length > 0;
+              const isComboDetail = detailProduct.isCombo === true;
+              const g = isComboDetail ? null : detailProduct.addOnGroup;
+              const hasVars = !isComboDetail && detailProduct.variations && detailProduct.variations.length > 0;
               const firstVariation = hasVars ? detailProduct.variations[0] : null;
               const unitPrice = getDetailUnitPrice();
               const qtyNum = Math.max(1, parseInt(detailQty, 10) || 1);
-              const lineTotal = (unitPrice + getDetailAddonsTotal()) * qtyNum;
+              const lineTotal = (unitPrice + (isComboDetail ? 0 : getDetailAddonsTotal())) * qtyNum;
+              const detailComboItems = isComboDetail
+                ? (detailProduct.comboItems || []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                : [];
 
               // Linha de adicional: nome + preço à esquerda; "+" que vira stepper à direita
               const renderDetailAddonRow = (it, isLast) => {
@@ -3887,11 +3926,28 @@ const PublicMenuForm = ({
                   >
                     <Typography variant="h6" style={{ fontWeight: 700, lineHeight: 1.25 }}>
                       {detailProduct.name}
+                      {isComboDetail ? " (Combo)" : ""}
                     </Typography>
                     {detailProduct.description && (
                       <Typography variant="body2" color="textSecondary" style={{ marginTop: 6 }}>
                         {detailProduct.description}
                       </Typography>
+                    )}
+                    {detailComboItems.length > 0 && (
+                      <Box mt={1.5}>
+                        <Typography className={classes.detailSectionTitle} gutterBottom>
+                          Inclui
+                        </Typography>
+                        {detailComboItems.map((ci) => {
+                          const q = Number(ci.quantity) || 1;
+                          const name = ci.product?.name || `Produto #${ci.productId}`;
+                          return (
+                            <Typography key={ci.id || ci.productId} variant="body2" color="textSecondary" style={{ marginBottom: 2 }}>
+                              {q > 1 ? `${q}x ` : ""}{name}
+                            </Typography>
+                          );
+                        })}
+                      </Box>
                     )}
                     <Typography style={{ fontWeight: 700, marginTop: 8, color: brandPrimary }}>
                       R$ {unitPrice.toFixed(2).replace(".", ",")}
@@ -3954,7 +4010,7 @@ const PublicMenuForm = ({
                       </Box>
                     )}
 
-                    {detailProduct.allowsHalfAndHalf === true && (
+                    {!isComboDetail && detailProduct.allowsHalfAndHalf === true && (
                       <Box mt={2}>
                         {/* Toggle Inteira | 2 sabores */}
                         <Box
@@ -4213,17 +4269,32 @@ const PublicMenuForm = ({
                   <Box marginBottom={2} padding={2} bgcolor="action.hover" borderRadius={8}>
                     <Typography variant="subtitle2" gutterBottom>Itens do pedido</Typography>
                     {Object.keys(selectedItems).map((key) => {
-                      const { productValue, productName, addonsTotal } = getItemDetailsByKey(key);
+                      const { product, productValue, productName, addonsTotal } = getItemDetailsByKey(key);
                       const quantity = selectedItems[key];
                       const lineTotal = (productValue + (addonsTotal || 0)) * quantity;
                       const addonsList = selectedAddons[key] || [];
                       const lineObservation = selectedObservations[key] || "";
+                      const checkoutComboItems = product?.isCombo
+                        ? (product.comboItems || []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                        : [];
                       return (
                         <Box key={key} display="flex" alignItems="flex-start" justifyContent="space-between" style={{ marginTop: 4 }}>
                           <Box flex={1}>
                             <Typography variant="body2">
-                              {quantity}x {productName} — R$ {lineTotal.toFixed(2).replace(".", ",")}
+                              {quantity}x {productName}
+                              {product?.isCombo ? " (Combo)" : ""} — R$ {lineTotal.toFixed(2).replace(".", ",")}
                             </Typography>
+                            {checkoutComboItems.length > 0 && (
+                              <Typography variant="caption" color="textSecondary" display="block">
+                                {checkoutComboItems
+                                  .map((ci) => {
+                                    const q = Number(ci.quantity) || 1;
+                                    const name = ci.product?.name || `Produto #${ci.productId}`;
+                                    return q > 1 ? `${q}x ${name}` : name;
+                                  })
+                                  .join(" · ")}
+                              </Typography>
+                            )}
                             {addonsList.length > 0 && (
                               <Typography variant="caption" color="textSecondary" display="block">
                                 {addonsList.map((a) => ((a.quantity ?? 1) > 1 ? `${a.quantity}x ` : "") + `${a.label} (+ R$ ${Number(a.value).toFixed(2).replace(".", ",")})`).join(", ")}
@@ -4544,7 +4615,7 @@ const PublicMenuForm = ({
         </Box>
       </Box>
 
-      {/* Barra de sacola sticky: "Ver sacola • N itens • R$ X" (some quando vazia ou no checkout) */}
+      {/* Barra de sacola sticky: "Finalizar • N itens • R$ X" (some quando vazia ou no checkout) */}
       {!submitted && form && groups.length > 0 && view === "menu" && getTotalItems() > 0 && (
         <Box
           className={classes.stickyCartBar}
@@ -4554,7 +4625,7 @@ const PublicMenuForm = ({
           tabIndex={0}
           onKeyDown={(e) => e.key === "Enter" && setView("checkout")}
         >
-          <span>Ver sacola</span>
+          <span>Finalizar</span>
           <span style={{ opacity: 0.9, fontWeight: 600 }}>
             {getTotalItems()} {getTotalItems() === 1 ? "item" : "itens"}
           </span>

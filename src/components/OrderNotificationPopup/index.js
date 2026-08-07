@@ -115,9 +115,23 @@ const OrderNotificationPopup = ({ open, order, onView, onClose }) => {
             <Box className={classes.itemsList}>
               {menuItems.map((item, index) => (
                 <Box key={index} className={classes.itemRow}>
-                  <Typography variant="body2">
-                    {item.quantity}x {item.productName || "Produto"}
-                  </Typography>
+                  <Box>
+                    <Typography variant="body2">
+                      {item.quantity}x {item.productName || "Produto"}
+                      {item.type === "combo" ? " (Combo)" : ""}
+                    </Typography>
+                    {item.type === "combo" && Array.isArray(item.comboItems) && item.comboItems.length > 0 && (
+                      <Typography variant="caption" color="textSecondary" display="block">
+                        {item.comboItems
+                          .map((ci) => {
+                            const q = Number(ci.quantity) || 1;
+                            const name = ci.productName || "Item";
+                            return q > 1 ? `${q}x ${name}` : name;
+                          })
+                          .join(" · ")}
+                      </Typography>
+                    )}
+                  </Box>
                   <Typography variant="body2">
                     R$ {((Number(item.quantity) || 0) * (Number(item.productValue) || 0))
                       .toFixed(2)

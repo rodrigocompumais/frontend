@@ -70,14 +70,15 @@ const ProductSchema = Yup.object().shape({
     description: Yup.string().nullable(),
     imageUrl: Yup.string().nullable(),
     value: Yup.number()
-        .required("Valor é obrigatório")
-        .min(0, "Valor deve ser maior ou igual a zero"),
+        .min(0, "Valor deve ser maior ou igual a zero")
+        .nullable(),
     quantity: Yup.number()
         .integer("Quantidade deve ser um número inteiro")
         .min(0, "Quantidade deve ser maior ou igual a zero")
         .nullable(),
     isMenuProduct: Yup.boolean().nullable(),
     variablePrice: Yup.boolean().nullable(),
+    isCombo: Yup.boolean().nullable(),
     allowsHalfAndHalf: Yup.boolean().nullable(),
     halfAndHalfPriceRule: Yup.string().oneOf(["max", "fixed", "average"]).nullable(),
     halfAndHalfGrupo: Yup.string().nullable(),
@@ -101,13 +102,32 @@ const ProductSchema = Yup.object().shape({
             })
         )
         .nullable(),
+    comboItems: Yup.array()
+        .of(
+            Yup.object().shape({
+                productId: Yup.number().required(),
+                value: Yup.number().min(0).required(),
+                quantity: Yup.number().integer().min(1).required(),
+            })
+        )
+        .nullable(),
 }).test(
     "halfAndHalfRule",
     "Regra de cobrança é obrigatória quando 'Permitir meio a meio' está ativo",
     (obj) => {
+        if (obj?.isCombo === true) return true;
         if (obj?.allowsHalfAndHalf === true)
             return obj?.halfAndHalfPriceRule != null && ["max", "fixed", "average"].includes(obj.halfAndHalfPriceRule);
         return true;
+    }
+).test(
+    "comboOrValue",
+    "Combo precisa de pelo menos um produto integrante",
+    (obj) => {
+        if (obj?.isCombo === true) {
+            return Array.isArray(obj?.comboItems) && obj.comboItems.length > 0;
+        }
+        return obj?.value != null && Number(obj.value) >= 0;
     }
 );
 
@@ -122,6 +142,7 @@ const ProductModal = ({ open, onClose, productId }) => {
         quantity: 0,
         isMenuProduct: false,
         variablePrice: false,
+        isCombo: false,
         allowsHalfAndHalf: false,
         halfAndHalfPriceRule: "",
         halfAndHalfGrupo: "",
@@ -130,6 +151,7 @@ const ProductModal = ({ open, onClose, productId }) => {
         imageUrl: "",
         idUniplus: "",
         variations: [],
+        comboItems: [],
     };
 
     const [product, setProduct] = useState(initialState);
@@ -138,7 +160,12 @@ const ProductModal = ({ open, onClose, productId }) => {
     const [loadingGroups, setLoadingGroups] = useState(false);
     const [uploadingImage, setUploadingImage] = useState(false);
     const [uniplusEnabled, setUniplusEnabled] = useState(false);
+    const [menuProductsForCombo, setMenuProductsForCombo] = useState([]);
+    const [comboProductToAdd, setComboProductToAdd] = useState("");
     const imageInputRef = React.useRef(null);
+
+    const calcComboTotal = (items) =>
+        (items || []).reduce((sum, it) => sum + (Number(it.value) || 0) * (Number(it.quantity) || 1), 0);
     
     // Adicionar grupos do produto aos grupos disponíveis quando o produto mudar
     useEffect(() => {
@@ -207,6 +234,16 @@ const ProductModal = ({ open, onClose, productId }) => {
                 // Aguardar um tick para garantir que availableGroups foi atualizado
                 await new Promise(resolve => setTimeout(resolve, 0));
                 
+                const comboItems = (data.comboItems || [])
+                    .slice()
+                    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+                    .map((ci) => ({
+                        productId: ci.productId,
+                        productName: ci.product?.name || `Produto #${ci.productId}`,
+                        value: parseFloat(ci.value) || 0,
+                        quantity: Number(ci.quantity) || 1,
+                    }));
+
                 setProduct({
                     name: data.name || "",
                     description: data.description || "",
@@ -214,6 +251,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                     quantity: data.quantity || 0,
                     isMenuProduct: data.isMenuProduct || false,
                     variablePrice: data.variablePrice || false,
+                    isCombo: data.isCombo || false,
                     allowsHalfAndHalf: data.allowsHalfAndHalf || false,
                     halfAndHalfPriceRule: data.halfAndHalfPriceRule || "",
                     halfAndHalfGrupo: productHalfAndHalfGrupo,
@@ -222,15 +260,39 @@ const ProductModal = ({ open, onClose, productId }) => {
                     imageUrl: data.imageUrl || "",
                     idUniplus: data.idUniplus || "",
                     variations,
+                    comboItems,
                 });
             } catch (err) {
                 toastError(err);
             }
         };
 
+        const fetchMenuProductsForCombo = async () => {
+            try {
+                const all = [];
+                let page = 1;
+                let hasMore = true;
+                while (hasMore && page <= 50) {
+                    const { data } = await api.get("/products", {
+                        params: { isMenuProduct: true, pageNumber: page },
+                    });
+                    all.push(...(data.products || []));
+                    hasMore = Boolean(data.hasMore);
+                    page += 1;
+                }
+                setMenuProductsForCombo(
+                    all.filter((p) => !p.isCombo && (!productId || p.id !== productId))
+                );
+            } catch {
+                setMenuProductsForCombo([]);
+            }
+        };
+
         if (open) {
             fetchProduct();
             fetchGroups();
+            fetchMenuProductsForCombo();
+            setComboProductToAdd("");
             api.get("/addon-groups").then(({ data }) => setAddOnGroups(Array.isArray(data) ? data : [])).catch(() => setAddOnGroups([]));
             api.get("/settings").then(({ data }) => {
                 const list = Array.isArray(data) ? data : [];
@@ -340,14 +402,32 @@ const ProductModal = ({ open, onClose, productId }) => {
             if (payload.halfAndHalfGrupo === "") payload.halfAndHalfGrupo = null;
             if (payload.addOnGroupId === "" || payload.addOnGroupId == null) payload.addOnGroupId = null;
             if (payload.idUniplus === "") payload.idUniplus = null;
-            payload.variations = (payload.variations || []).filter((v) => v.name && v.options && v.options.length > 0).map((v) => ({
-                name: v.name.trim(),
-                options: v.options.map((o) => ({
-                    label: String(o.label).trim(),
-                    value: Number(o.value),
-                    idUniplus: o.idUniplus ? String(o.idUniplus).trim() : null,
-                })),
-            }));
+            payload.isCombo = Boolean(payload.isCombo);
+            if (payload.isCombo) {
+                payload.variablePrice = false;
+                payload.allowsHalfAndHalf = false;
+                payload.halfAndHalfPriceRule = null;
+                payload.halfAndHalfGrupo = null;
+                payload.addOnGroupId = null;
+                payload.variations = [];
+                payload.comboItems = (payload.comboItems || []).map((ci, idx) => ({
+                    productId: Number(ci.productId),
+                    value: Number(ci.value) || 0,
+                    quantity: Math.max(1, Number(ci.quantity) || 1),
+                    order: idx,
+                }));
+                payload.value = calcComboTotal(payload.comboItems);
+            } else {
+                payload.comboItems = [];
+                payload.variations = (payload.variations || []).filter((v) => v.name && v.options && v.options.length > 0).map((v) => ({
+                    name: v.name.trim(),
+                    options: v.options.map((o) => ({
+                        label: String(o.label).trim(),
+                        value: Number(o.value),
+                        idUniplus: o.idUniplus ? String(o.idUniplus).trim() : null,
+                    })),
+                }));
+            }
             if (productId) {
                 await api.put(`/products/${productId}`, payload);
                 toast.success("Produto atualizado com sucesso");
@@ -512,6 +592,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                                 </FormControl>
                                 <br />
                                 <br />
+                                {!values.isCombo && (
                                 <FormControl variant="outlined" margin="dense" fullWidth>
                                     <InputLabel id="addon-group-label">Grupo de adicionais</InputLabel>
                                     <Field
@@ -531,8 +612,8 @@ const ProductModal = ({ open, onClose, productId }) => {
                                         ))}
                                     </Field>
                                 </FormControl>
-                                <br />
-                                <br />
+                                )}
+                                {!values.isCombo && <><br /><br /></>}
                                 {uniplusEnabled && (
                                     <>
                                         <Field
@@ -556,16 +637,24 @@ const ProductModal = ({ open, onClose, productId }) => {
                                 <div className={classes.multFieldLine}>
                                     <Field
                                         as={TextField}
-                                        label="Valor"
+                                        label={values.isCombo ? "Valor do combo (soma)" : "Valor"}
                                         name="value"
                                         type="number"
                                         inputProps={{ step: "0.01", min: "0" }}
                                         error={touched.value && Boolean(errors.value)}
-                                        helperText={touched.value && errors.value}
+                                        helperText={
+                                            values.isCombo
+                                                ? "Calculado automaticamente pelos itens do combo"
+                                                : touched.value && errors.value
+                                        }
                                         variant="outlined"
                                         margin="dense"
                                         fullWidth
-                                        required
+                                        required={!values.isCombo}
+                                        disabled={Boolean(values.isCombo)}
+                                        {...(values.isCombo
+                                            ? { value: calcComboTotal(values.comboItems).toFixed(2) }
+                                            : {})}
                                         InputProps={{
                                             startAdornment: "R$ ",
                                         }}
@@ -599,6 +688,174 @@ const ProductModal = ({ open, onClose, productId }) => {
                                 <FormControlLabel
                                     control={
                                         <Switch
+                                            checked={values.isCombo || false}
+                                            onChange={(e) => {
+                                                const checked = e.target.checked;
+                                                setFieldValue("isCombo", checked);
+                                                if (checked) {
+                                                    setFieldValue("variablePrice", false);
+                                                    setFieldValue("allowsHalfAndHalf", false);
+                                                    setFieldValue("halfAndHalfPriceRule", "");
+                                                    setFieldValue("halfAndHalfGrupo", "");
+                                                    setFieldValue("addOnGroupId", null);
+                                                    setFieldValue("variations", []);
+                                                    setFieldValue("isMenuProduct", true);
+                                                    if (!values.comboItems?.length) {
+                                                        setFieldValue("comboItems", []);
+                                                    }
+                                                    setFieldValue("value", calcComboTotal(values.comboItems || []));
+                                                } else {
+                                                    setFieldValue("comboItems", []);
+                                                }
+                                            }}
+                                            color="primary"
+                                        />
+                                    }
+                                    label="É combo"
+                                />
+                                {values.isCombo && (
+                                    <Box mt={1} mb={2} p={1.5} border={1} borderColor="divider" borderRadius={8}>
+                                        <Typography variant="subtitle2" gutterBottom>
+                                            Itens do combo
+                                        </Typography>
+                                        <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 8 }}>
+                                            Selecione os produtos e defina o valor de cada um dentro do combo. A soma será o preço cobrado.
+                                        </Typography>
+                                        <Box display="flex" alignItems="center" style={{ gap: 8, marginBottom: 12 }}>
+                                            <FormControl variant="outlined" margin="dense" size="small" style={{ flex: 1 }}>
+                                                <InputLabel>Adicionar produto</InputLabel>
+                                                <Select
+                                                    label="Adicionar produto"
+                                                    value={comboProductToAdd}
+                                                    onChange={(e) => setComboProductToAdd(e.target.value)}
+                                                >
+                                                    <MenuItem value="">
+                                                        <em>Selecione</em>
+                                                    </MenuItem>
+                                                    {menuProductsForCombo
+                                                        .filter(
+                                                            (p) =>
+                                                                !(values.comboItems || []).some(
+                                                                    (ci) => Number(ci.productId) === Number(p.id)
+                                                                )
+                                                        )
+                                                        .map((p) => (
+                                                            <MenuItem key={p.id} value={p.id}>
+                                                                {p.name}
+                                                                {p.grupo ? ` (${p.grupo})` : ""} — R${" "}
+                                                                {Number(p.value || 0).toFixed(2).replace(".", ",")}
+                                                            </MenuItem>
+                                                        ))}
+                                                </Select>
+                                            </FormControl>
+                                            <Button
+                                                size="small"
+                                                variant="outlined"
+                                                startIcon={<AddIcon />}
+                                                disabled={!comboProductToAdd}
+                                                onClick={() => {
+                                                    const p = menuProductsForCombo.find(
+                                                        (x) => Number(x.id) === Number(comboProductToAdd)
+                                                    );
+                                                    if (!p) return;
+                                                    const next = [
+                                                        ...(values.comboItems || []),
+                                                        {
+                                                            productId: p.id,
+                                                            productName: p.name,
+                                                            value: Number(p.value) || 0,
+                                                            quantity: 1,
+                                                        },
+                                                    ];
+                                                    setFieldValue("comboItems", next);
+                                                    setFieldValue("value", calcComboTotal(next));
+                                                    setComboProductToAdd("");
+                                                }}
+                                            >
+                                                Adicionar
+                                            </Button>
+                                        </Box>
+                                        {(values.comboItems || []).length === 0 && (
+                                            <Typography variant="body2" color="error">
+                                                Adicione pelo menos um produto ao combo.
+                                            </Typography>
+                                        )}
+                                        {(values.comboItems || []).map((ci, idx) => (
+                                            <Box
+                                                key={`${ci.productId}-${idx}`}
+                                                display="flex"
+                                                alignItems="center"
+                                                flexWrap="wrap"
+                                                mb={1}
+                                                style={{ gap: 8 }}
+                                            >
+                                                <Typography variant="body2" style={{ flex: 1, minWidth: 120 }}>
+                                                    {ci.productName || `Produto #${ci.productId}`}
+                                                </Typography>
+                                                <TextField
+                                                    label="Qtd"
+                                                    type="number"
+                                                    size="small"
+                                                    variant="outlined"
+                                                    margin="dense"
+                                                    inputProps={{ min: 1, step: 1 }}
+                                                    style={{ width: 80 }}
+                                                    value={ci.quantity ?? 1}
+                                                    onChange={(e) => {
+                                                        const next = [...(values.comboItems || [])];
+                                                        next[idx] = {
+                                                            ...next[idx],
+                                                            quantity: Math.max(1, parseInt(e.target.value, 10) || 1),
+                                                        };
+                                                        setFieldValue("comboItems", next);
+                                                        setFieldValue("value", calcComboTotal(next));
+                                                    }}
+                                                />
+                                                <TextField
+                                                    label="Valor no combo"
+                                                    type="number"
+                                                    size="small"
+                                                    variant="outlined"
+                                                    margin="dense"
+                                                    inputProps={{ min: 0, step: "0.01" }}
+                                                    style={{ width: 130 }}
+                                                    value={ci.value ?? 0}
+                                                    InputProps={{ startAdornment: "R$ " }}
+                                                    onChange={(e) => {
+                                                        const next = [...(values.comboItems || [])];
+                                                        next[idx] = {
+                                                            ...next[idx],
+                                                            value: parseFloat(e.target.value) || 0,
+                                                        };
+                                                        setFieldValue("comboItems", next);
+                                                        setFieldValue("value", calcComboTotal(next));
+                                                    }}
+                                                />
+                                                <IconButton
+                                                    size="small"
+                                                    title="Remover"
+                                                    onClick={() => {
+                                                        const next = (values.comboItems || []).filter((_, i) => i !== idx);
+                                                        setFieldValue("comboItems", next);
+                                                        setFieldValue("value", calcComboTotal(next));
+                                                    }}
+                                                >
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </Box>
+                                        ))}
+                                        {(values.comboItems || []).length > 0 && (
+                                            <Typography variant="subtitle2" style={{ marginTop: 8 }}>
+                                                Total do combo: R${" "}
+                                                {calcComboTotal(values.comboItems).toFixed(2).replace(".", ",")}
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                )}
+                                {!values.isCombo && (
+                                <FormControlLabel
+                                    control={
+                                        <Switch
                                             checked={values.variablePrice || false}
                                             onChange={(e) =>
                                                 setFieldValue("variablePrice", e.target.checked)
@@ -608,7 +865,8 @@ const ProductModal = ({ open, onClose, productId }) => {
                                     }
                                     label="Preço variável"
                                 />
-                                {values.variablePrice && (
+                                )}
+                                {!values.isCombo && values.variablePrice && (
                                     <Box mt={0.5} mb={1}>
                                         <Typography variant="caption" color="textSecondary" display="block">
                                             Ao adicionar em pedidos (Mesas/Garçom), o valor será solicitado (ex.: refeição por kg). O valor acima serve como sugestão.
@@ -616,6 +874,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                                     </Box>
                                 )}
                                 <br />
+                                {!values.isCombo && (
                                 <FormControlLabel
                                     control={
                                         <Switch
@@ -631,7 +890,8 @@ const ProductModal = ({ open, onClose, productId }) => {
                                     }
                                     label="Permitir meio a meio (ex.: pizza dois sabores)"
                                 />
-                                {values.allowsHalfAndHalf && (
+                                )}
+                                {!values.isCombo && values.allowsHalfAndHalf && (
                                     <Box mt={1} mb={1}>
                                         <FormControl variant="outlined" margin="dense" fullWidth size="small">
                                             <InputLabel>Regra de cobrança</InputLabel>
@@ -669,6 +929,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                                         </Typography>
                                     </Box>
                                 )}
+                                {!values.isCombo && (
                                 <Box mt={2}>
                                     <Typography variant="subtitle2" gutterBottom>Variações (ex.: Tamanho, Cor)</Typography>
                                     <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 8 }}>
@@ -829,6 +1090,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                                         Adicionar variação
                                     </Button>
                                 </Box>
+                                )}
                             </DialogContent>
                             <DialogActions>
                                 <Button

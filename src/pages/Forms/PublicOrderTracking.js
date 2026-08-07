@@ -243,7 +243,19 @@ const PublicOrderTracking = () => {
               <Box key={idx} className={classes.itemRow}>
                 <Typography variant="body2">
                   {item.quantity}x {item.productName}
+                  {item.type === "combo" ? " (Combo)" : ""}
                 </Typography>
+                {item.type === "combo" && Array.isArray(item.comboItems) && item.comboItems.length > 0 && (
+                  <Typography variant="caption" color="textSecondary" display="block">
+                    {item.comboItems
+                      .map((ci) => {
+                        const q = Number(ci.quantity) || 1;
+                        const name = ci.productName || "Item";
+                        return q > 1 ? `${q}x ${name}` : name;
+                      })
+                      .join(" · ")}
+                  </Typography>
+                )}
                 {Array.isArray(item.addons) && item.addons.length > 0 && (
                   <Typography variant="caption" color="textSecondary" display="block">
                     + {item.addons.map((a) => `${a.label} (${formatMoney(a.value)})`).join(", ")}
