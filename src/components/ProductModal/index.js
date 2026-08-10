@@ -108,6 +108,7 @@ const ProductSchema = Yup.object().shape({
                 productId: Yup.number().required(),
                 value: Yup.number().min(0).required(),
                 quantity: Yup.number().integer().min(1).required(),
+                variationOptionId: Yup.number().nullable(),
             })
         )
         .nullable(),
@@ -166,6 +167,37 @@ const ProductModal = ({ open, onClose, productId }) => {
 
     const calcComboTotal = (items) =>
         (items || []).reduce((sum, it) => sum + (Number(it.value) || 0) * (Number(it.quantity) || 1), 0);
+
+    /** Expande produtos do cardápio em opções selecionáveis (inclui variações/tamanhos). */
+    const buildComboSelectableOptions = (products) => {
+        const options = [];
+        (products || []).forEach((p) => {
+            const firstVar = p.variations?.[0];
+            const opts = firstVar?.options || [];
+            if (opts.length > 0) {
+                opts.forEach((opt) => {
+                    options.push({
+                        key: `${p.id}_${opt.id}`,
+                        productId: p.id,
+                        variationOptionId: opt.id,
+                        productName: `${p.name} - ${opt.label}`,
+                        value: Number(opt.value) || 0,
+                        grupo: p.grupo,
+                    });
+                });
+            } else {
+                options.push({
+                    key: String(p.id),
+                    productId: p.id,
+                    variationOptionId: null,
+                    productName: p.name,
+                    value: Number(p.value) || 0,
+                    grupo: p.grupo,
+                });
+            }
+        });
+        return options;
+    };
     
     // Adicionar grupos do produto aos grupos disponíveis quando o produto mudar
     useEffect(() => {
@@ -237,12 +269,17 @@ const ProductModal = ({ open, onClose, productId }) => {
                 const comboItems = (data.comboItems || [])
                     .slice()
                     .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-                    .map((ci) => ({
-                        productId: ci.productId,
-                        productName: ci.product?.name || `Produto #${ci.productId}`,
-                        value: parseFloat(ci.value) || 0,
-                        quantity: Number(ci.quantity) || 1,
-                    }));
+                    .map((ci) => {
+                        const baseName = ci.product?.name || `Produto #${ci.productId}`;
+                        const optLabel = ci.variationOption?.label;
+                        return {
+                            productId: ci.productId,
+                            variationOptionId: ci.variationOptionId || null,
+                            productName: optLabel ? `${baseName} - ${optLabel}` : baseName,
+                            value: parseFloat(ci.value) || 0,
+                            quantity: Number(ci.quantity) || 1,
+                        };
+                    });
 
                 setProduct({
                     name: data.name || "",
@@ -410,11 +447,16 @@ const ProductModal = ({ open, onClose, productId }) => {
                 payload.halfAndHalfGrupo = null;
                 payload.addOnGroupId = null;
                 payload.variations = [];
+                payload.isMenuProduct = true;
                 payload.comboItems = (payload.comboItems || []).map((ci, idx) => ({
                     productId: Number(ci.productId),
                     value: Number(ci.value) || 0,
                     quantity: Math.max(1, Number(ci.quantity) || 1),
                     order: idx,
+                    variationOptionId:
+                        ci.variationOptionId != null && ci.variationOptionId !== ""
+                            ? Number(ci.variationOptionId)
+                            : null,
                 }));
                 payload.value = calcComboTotal(payload.comboItems);
             } else {
@@ -455,7 +497,7 @@ const ProductModal = ({ open, onClose, productId }) => {
             <Dialog
                 open={open}
                 onClose={handleClose}
-                maxWidth="sm"
+                maxWidth="md"
                 fullWidth
                 scroll="paper"
             >
@@ -713,39 +755,41 @@ const ProductModal = ({ open, onClose, productId }) => {
                                     }
                                     label="É combo"
                                 />
-                                {values.isCombo && (
+                                {values.isCombo && (() => {
+                                    const selectable = buildComboSelectableOptions(menuProductsForCombo);
+                                    const selectedKeys = new Set(
+                                        (values.comboItems || []).map(
+                                            (ci) =>
+                                                `${ci.productId}_${ci.variationOptionId || 0}`
+                                        )
+                                    );
+                                    const available = selectable.filter((o) => !selectedKeys.has(`${o.productId}_${o.variationOptionId || 0}`));
+                                    return (
                                     <Box mt={1} mb={2} p={1.5} border={1} borderColor="divider" borderRadius={8}>
                                         <Typography variant="subtitle2" gutterBottom>
                                             Itens do combo
                                         </Typography>
                                         <Typography variant="caption" color="textSecondary" display="block" style={{ marginBottom: 8 }}>
-                                            Selecione os produtos e defina o valor de cada um dentro do combo. A soma será o preço cobrado.
+                                            Selecione produtos (e tamanhos/variações) e defina o valor de cada um no combo. A soma será o preço cobrado.
                                         </Typography>
                                         <Box display="flex" alignItems="center" style={{ gap: 8, marginBottom: 12 }}>
                                             <FormControl variant="outlined" margin="dense" size="small" style={{ flex: 1 }}>
-                                                <InputLabel>Adicionar produto</InputLabel>
+                                                <InputLabel>Adicionar produto / variação</InputLabel>
                                                 <Select
-                                                    label="Adicionar produto"
+                                                    label="Adicionar produto / variação"
                                                     value={comboProductToAdd}
                                                     onChange={(e) => setComboProductToAdd(e.target.value)}
                                                 >
                                                     <MenuItem value="">
                                                         <em>Selecione</em>
                                                     </MenuItem>
-                                                    {menuProductsForCombo
-                                                        .filter(
-                                                            (p) =>
-                                                                !(values.comboItems || []).some(
-                                                                    (ci) => Number(ci.productId) === Number(p.id)
-                                                                )
-                                                        )
-                                                        .map((p) => (
-                                                            <MenuItem key={p.id} value={p.id}>
-                                                                {p.name}
-                                                                {p.grupo ? ` (${p.grupo})` : ""} — R${" "}
-                                                                {Number(p.value || 0).toFixed(2).replace(".", ",")}
-                                                            </MenuItem>
-                                                        ))}
+                                                    {available.map((o) => (
+                                                        <MenuItem key={o.key} value={o.key}>
+                                                            {o.productName}
+                                                            {o.grupo ? ` (${o.grupo})` : ""} — R${" "}
+                                                            {Number(o.value || 0).toFixed(2).replace(".", ",")}
+                                                        </MenuItem>
+                                                    ))}
                                                 </Select>
                                             </FormControl>
                                             <Button
@@ -754,16 +798,15 @@ const ProductModal = ({ open, onClose, productId }) => {
                                                 startIcon={<AddIcon />}
                                                 disabled={!comboProductToAdd}
                                                 onClick={() => {
-                                                    const p = menuProductsForCombo.find(
-                                                        (x) => Number(x.id) === Number(comboProductToAdd)
-                                                    );
-                                                    if (!p) return;
+                                                    const opt = selectable.find((o) => o.key === comboProductToAdd);
+                                                    if (!opt) return;
                                                     const next = [
                                                         ...(values.comboItems || []),
                                                         {
-                                                            productId: p.id,
-                                                            productName: p.name,
-                                                            value: Number(p.value) || 0,
+                                                            productId: opt.productId,
+                                                            variationOptionId: opt.variationOptionId,
+                                                            productName: opt.productName,
+                                                            value: Number(opt.value) || 0,
                                                             quantity: 1,
                                                         },
                                                     ];
@@ -775,6 +818,11 @@ const ProductModal = ({ open, onClose, productId }) => {
                                                 Adicionar
                                             </Button>
                                         </Box>
+                                        {menuProductsForCombo.length === 0 && (
+                                            <Typography variant="body2" color="textSecondary" style={{ marginBottom: 8 }}>
+                                                Nenhum produto de cardápio disponível. Cadastre produtos (não-combo) antes.
+                                            </Typography>
+                                        )}
                                         {(values.comboItems || []).length === 0 && (
                                             <Typography variant="body2" color="error">
                                                 Adicione pelo menos um produto ao combo.
@@ -782,7 +830,7 @@ const ProductModal = ({ open, onClose, productId }) => {
                                         )}
                                         {(values.comboItems || []).map((ci, idx) => (
                                             <Box
-                                                key={`${ci.productId}-${idx}`}
+                                                key={`${ci.productId}_${ci.variationOptionId || 0}_${idx}`}
                                                 display="flex"
                                                 alignItems="center"
                                                 flexWrap="wrap"
@@ -851,7 +899,8 @@ const ProductModal = ({ open, onClose, productId }) => {
                                             </Typography>
                                         )}
                                     </Box>
-                                )}
+                                    );
+                                })()}
                                 {!values.isCombo && (
                                 <FormControlLabel
                                     control={

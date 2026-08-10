@@ -3412,6 +3412,13 @@ const PublicMenuForm = ({
                 const comboItemsList = product.isCombo
                   ? (product.comboItems || []).slice().sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
                   : [];
+                const formatComboItemName = (ci) => {
+                  const q = Number(ci.quantity) || 1;
+                  const base = ci.product?.name || `Produto #${ci.productId}`;
+                  const label = ci.variationOption?.label;
+                  const name = label ? `${base} - ${label}` : base;
+                  return q > 1 ? `${q}x ${name}` : name;
+                };
                 return (
                   <Card key={product.id} className={classes.productCard}>
                     <CardContent>
@@ -3449,13 +3456,7 @@ const PublicMenuForm = ({
                           style={{ marginTop: 4 }}
                           onClick={() => openProductDetail(product)}
                         >
-                          {comboItemsList
-                            .map((ci) => {
-                              const q = Number(ci.quantity) || 1;
-                              const name = ci.product?.name || `Produto #${ci.productId}`;
-                              return q > 1 ? `${q}x ${name}` : name;
-                            })
-                            .join(" · ")}
+                          {comboItemsList.map(formatComboItemName).join(" · ")}
                         </Typography>
                       )}
                       {hasVariations && firstVariation && (
@@ -3940,9 +3941,11 @@ const PublicMenuForm = ({
                         </Typography>
                         {detailComboItems.map((ci) => {
                           const q = Number(ci.quantity) || 1;
-                          const name = ci.product?.name || `Produto #${ci.productId}`;
+                          const base = ci.product?.name || `Produto #${ci.productId}`;
+                          const label = ci.variationOption?.label;
+                          const name = label ? `${base} - ${label}` : base;
                           return (
-                            <Typography key={ci.id || ci.productId} variant="body2" color="textSecondary" style={{ marginBottom: 2 }}>
+                            <Typography key={ci.id || `${ci.productId}_${ci.variationOptionId || 0}`} variant="body2" color="textSecondary" style={{ marginBottom: 2 }}>
                               {q > 1 ? `${q}x ` : ""}{name}
                             </Typography>
                           );
@@ -4292,7 +4295,9 @@ const PublicMenuForm = ({
                                 {checkoutComboItems
                                   .map((ci) => {
                                     const q = Number(ci.quantity) || 1;
-                                    const name = ci.product?.name || `Produto #${ci.productId}`;
+                                    const base = ci.product?.name || `Produto #${ci.productId}`;
+                                    const label = ci.variationOption?.label;
+                                    const name = label ? `${base} - ${label}` : base;
                                     return q > 1 ? `${q}x ${name}` : name;
                                   })
                                   .join(" · ")}
