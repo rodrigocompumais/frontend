@@ -1318,18 +1318,21 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       if (tipoPedidoField && !answers.some((a) => a.fieldId === tipoPedidoField.id)) {
         answers = [...answers, { fieldId: tipoPedidoField.id, answer: "Mesa" }];
       }
+      const customerName = contact?.name || "Cliente";
       const metadata = {
         tableId: mesaParaPedido.id,
         tableNumber: mesaParaPedido.number || mesaParaPedido.name,
         mesaType: mesaParaPedido.type || "mesa",
         orderType: "mesa",
         garcomName: user?.name || "",
+        placedByGarcom: true,
+        customerName,
       };
       await api.post(`/public/forms/${orderForm.publicId}/submit`, {
         answers,
         menuItems: allMenuItems,
         metadata,
-        responderName: contact?.name || "Cliente",
+        responderName: customerName,
         responderPhone: contact?.number || "",
       });
       toast.success("Pedido enviado!");

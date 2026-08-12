@@ -60,6 +60,7 @@ export default function UniplusSettings() {
   const [enabled, setEnabled] = useState(false);
   const [idFilial, setIdFilial] = useState("1");
   const [idUsuario, setIdUsuario] = useState("1");
+  const [cnpjFilial, setCnpjFilial] = useState("");
   const [printDeviceId, setPrintDeviceId] = useState("");
   const [paymentMap, setPaymentMap] = useState(DEFAULT_PAYMENT_MAP);
   const [devices, setDevices] = useState([]);
@@ -74,6 +75,7 @@ export default function UniplusSettings() {
         setEnabled(get("uniplusEnabled") === "enabled");
         setIdFilial(get("uniplusIdFilial") || "1");
         setIdUsuario(get("uniplusIdUsuario") || "1");
+        setCnpjFilial(get("uniplusCnpjFilial") || "");
         setPrintDeviceId(get("uniplusPrintDeviceId") || "");
         setPaymentMap(parsePaymentMap(get("uniplusPaymentMap")));
       } catch (err) {
@@ -116,8 +118,10 @@ export default function UniplusSettings() {
         Integração UniPlus Gourmet
       </Typography>
       <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
-        Envia pedidos de delivery para o PrintAgent gravar em CONTAMESA/CONTAMESAITEM
-        no banco local do UniPlus (conta aberta para faturar depois).
+        Envia pedidos de delivery e de mesa (garçom / Mesas / QR) para o PrintAgent
+        gravar em CONTAMESA/CONTAMESAITEM no banco local do UniPlus (conta aberta
+        para faturar depois). Em mesa, o nome do cliente e o número da mesa vão no
+        pedido.
       </Typography>
 
       <FormControlLabel
@@ -156,6 +160,20 @@ export default function UniplusSettings() {
               value={idUsuario}
               onChange={(e) => setIdUsuario(e.target.value)}
               onBlur={() => saveKey("uniplusIdUsuario", idUsuario)}
+              helperText="Use o mesmo idusuario do operador no UniPlus (ex.: 5)"
+            />
+          </Grid>
+          <Grid item xs={12} sm={4}>
+            <TextField
+              className={classes.field}
+              label="CNPJ Filial UniPlus"
+              fullWidth
+              variant="outlined"
+              size="small"
+              value={cnpjFilial}
+              onChange={(e) => setCnpjFilial(e.target.value)}
+              onBlur={() => saveKey("uniplusCnpjFilial", cnpjFilial)}
+              helperText="Ex.: 66.517.704/0001-44 (igual ao cnpjfilial do UniPlus)"
             />
           </Grid>
           <Grid item xs={12} sm={4}>

@@ -1281,18 +1281,21 @@ const Garcom = () => {
       if (tipoPedidoField && !answers.some((a) => a.fieldId === tipoPedidoField.id)) {
         answers.push({ fieldId: tipoPedidoField.id, answer: "Mesa" });
       }
+      const customerName = contactParaPedido?.name || "Cliente";
       const metadata = {
         tableId: mesaParaPedido.id,
         tableNumber: mesaParaPedido.number || mesaParaPedido.name,
         mesaType: mesaParaPedido.type || "mesa",
         orderType: "mesa",
         garcomName: user?.name || "",
+        placedByGarcom: true,
+        customerName,
       };
       await api.post(`/public/forms/${form.publicId}/submit`, {
         answers,
         menuItems,
         metadata,
-        responderName: contactParaPedido?.name || "Cliente",
+        responderName: customerName,
         responderPhone: contactParaPedido?.number || "",
       });
       toast.success("Pedido enviado!");
