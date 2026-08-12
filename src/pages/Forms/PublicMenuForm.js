@@ -2473,7 +2473,6 @@ const PublicMenuForm = ({
     let orderMetadata = {};
     const mesasEnabled = form.settings?.mesas !== false;
     const deliveryEnabled = form.settings?.delivery !== false;
-    const feeCond = form.settings?.deliveryFeeCondition;
 
     if (mesaFromQR && mesaValue) {
       orderMetadata.tableId = mesaFromQR.id;
@@ -2490,15 +2489,39 @@ const PublicMenuForm = ({
       orderMetadata.orderType = "mesa";
       if (mesa) orderMetadata.mesaType = mesa.type || "mesa";
     }
-    if (!orderMetadata.tableId && deliveryEnabled) {
-      // Se existir condição vinculada a campo, só marcar como delivery quando a condição for verdadeira
-      if (feeCond?.fieldId) {
-        orderMetadata.orderType = isDeliveryFeeConditionMet(feeCond) ? "delivery" : (mesasEnabled ? "mesa" : "delivery");
+
+    // orderType NÃO depende da condição da taxa (deliveryFeeCondition).
+    // Essa condição só controla se a taxa é cobrada; misturar os dois zerava a taxa
+    // quando o campo da condição falhava/estava desatualizado.
+    if (!orderMetadata.orderType) {
+      const tipoField = (form.fields || []).find((f) => {
+        const label = String(f.label || "").toLowerCase();
+        return label.includes("tipo") && (label.includes("pedido") || label.includes("entrega"));
+      });
+      if (tipoField) {
+        const ans = String(getAnswerValue(tipoField.id) || "").toLowerCase();
+        if (
+          ans.includes("mesa") ||
+          ans.includes("retirada") ||
+          ans.includes("balcão") ||
+          ans.includes("balcao") ||
+          ans.includes("local")
+        ) {
+          orderMetadata.orderType = "mesa";
+        } else if (ans.includes("delivery") || ans.includes("entrega")) {
+          orderMetadata.orderType = "delivery";
+        }
+      }
+    }
+
+    if (!orderMetadata.orderType) {
+      if (!orderMetadata.tableId && deliveryEnabled) {
+        orderMetadata.orderType = "delivery";
+      } else if (orderMetadata.tableId || mesasEnabled) {
+        orderMetadata.orderType = "mesa";
       } else {
         orderMetadata.orderType = "delivery";
       }
-    } else if (!orderMetadata.tableId) {
-      orderMetadata.orderType = mesasEnabled ? "mesa" : "delivery";
     }
     return orderMetadata;
   };
@@ -2511,7 +2534,11 @@ const PublicMenuForm = ({
     if (feeVal <= 0) return 0;
     const feeCond = form?.settings?.deliveryFeeCondition;
     if (feeCond?.fieldId != null && feeCond.fieldId !== "") {
-      if (!isDeliveryFeeConditionMet(feeCond)) return 0;
+      // Campo da condição sumiu (remap): não zerar a taxa silenciosamente
+      const fieldExists = (form.fields || []).some(
+        (f) => Number(f.id) === Number(feeCond.fieldId)
+      );
+      if (fieldExists && !isDeliveryFeeConditionMet(feeCond)) return 0;
     }
     return feeVal;
   };
