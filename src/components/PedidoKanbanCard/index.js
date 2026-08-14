@@ -19,6 +19,7 @@ import {
   ArrowBack as ArrowBackIcon,
   ArrowForward as ArrowForwardIcon,
   Print as PrintIcon,
+  Edit as EditIcon,
 } from "@material-ui/icons";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -215,6 +216,7 @@ const PedidoKanbanCard = ({
   onViewDetails,
   onWhatsApp,
   onReprint,
+  onEdit,
   onReprocessUniplus,
   showStageButtons = false,
   canBack = false,
@@ -396,6 +398,21 @@ const PedidoKanbanCard = ({
                 }}
               >
                 <WhatsAppIcon style={{ color: "#25D366" }} />
+              </IconButton>
+            </Tooltip>
+          )}
+          {isDelivery && onEdit && (
+            <Tooltip title="Editar pedido">
+              <IconButton
+                size="small"
+                className={classes.actionButton}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(order);
+                }}
+                disabled={isUpdating}
+              >
+                <EditIcon />
               </IconButton>
             </Tooltip>
           )}

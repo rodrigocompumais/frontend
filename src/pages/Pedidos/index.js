@@ -44,6 +44,7 @@ import toastError from "../../errors/toastError";
 import useCompanyModules from "../../hooks/useCompanyModules";
 import { i18n } from "../../translate/i18n";
 import PedidoKanbanCard from "../../components/PedidoKanbanCard";
+import EditDeliveryOrderModal from "../../components/EditDeliveryOrderModal";
 import { formatMesaComandaTitle, formatOrderTableBadge } from "../../helpers/mesaDisplayLabel";
 
 // Pedidos mesa: Novo, Confirmado, Em preparo, Pronto, Entregue, Cancelado
@@ -205,6 +206,8 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
   const [pendingStatusByOrderId, setPendingStatusByOrderId] = useState({});
   const [pendingReprintByOrderId, setPendingReprintByOrderId] = useState({});
   const [pendingUniplusByOrderId, setPendingUniplusByOrderId] = useState({});
+  const [editOrderModalOpen, setEditOrderModalOpen] = useState(false);
+  const [orderToEdit, setOrderToEdit] = useState(null);
 
   const fetchOrders = useCallback(async (opts = {}) => {
     const silent = !!opts.silent;
@@ -529,6 +532,49 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
     }
   };
 
+  const isOrderEditable = (order) => {
+    const status = order?.orderStatus || order?.metadata?.orderStatus || "novo";
+    return status !== "entregue" && status !== "cancelado";
+  };
+
+  const handleEditOrder = (order) => {
+    if (!isOrderEditable(order)) {
+      toast.error("Pedidos entregues ou cancelados não podem ser editados.");
+      return;
+    }
+    setOrderToEdit(order);
+    setEditOrderModalOpen(true);
+  };
+
+  const handleEditOrderSaved = (updatedResponse) => {
+    if (!updatedResponse?.id) {
+      fetchOrders({ silent: true });
+      return;
+    }
+    setOrders((prev) =>
+      prev.map((o) =>
+        o.id === updatedResponse.id
+          ? {
+              ...o,
+              ...updatedResponse,
+              metadata: { ...(o.metadata || {}), ...(updatedResponse.metadata || {}) },
+            }
+          : o
+      )
+    );
+    if (selectedOrder?.id === updatedResponse.id) {
+      setSelectedOrder((prev) =>
+        prev
+          ? {
+              ...prev,
+              ...updatedResponse,
+              metadata: { ...(prev.metadata || {}), ...(updatedResponse.metadata || {}) },
+            }
+          : prev
+      );
+    }
+  };
+
   const handleReprintOrder = async (order) => {
     const orderId = order?.id;
     const orderFormId = order?.formId || order?.form?.id;
@@ -705,6 +751,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                                   onViewDetails={handleViewDetails}
                                   onWhatsApp={handleWhatsApp}
                                   onReprint={handleReprintOrder}
+                                  onEdit={isOrderEditable(order) ? handleEditOrder : undefined}
                                   onReprocessUniplus={handleReprocessUniplus}
                                   showStageButtons={minimal}
                                   canBack={!!prevStage}
@@ -1214,6 +1261,15 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
           )}
         </DialogActions>
       </Dialog>
+      <EditDeliveryOrderModal
+        open={editOrderModalOpen}
+        order={orderToEdit}
+        onClose={() => {
+          setEditOrderModalOpen(false);
+          setOrderToEdit(null);
+        }}
+        onSaved={handleEditOrderSaved}
+      />
     </MainContainer>
   );
 };
