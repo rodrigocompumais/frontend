@@ -1248,6 +1248,10 @@ const Mesas = ({ cardapioSlugFromHub }) => {
           productValue: unit,
           grupo: p?.grupo || "Outros",
           variationOptionId: line.variationOptionId || null,
+          ...(line.variationOptionId ? { optionId: line.variationOptionId } : {}),
+          ...(line.variationOptionId && p?.variations?.[0]?.options?.find((o) => o.id === line.variationOptionId)?.idUniplus
+            ? { idUniplus: p.variations[0].options.find((o) => o.id === line.variationOptionId).idUniplus }
+            : p?.idUniplus ? { idUniplus: p.idUniplus } : {}),
           ...(addons && addons.length > 0 && { addons }),
         };
       });
@@ -1291,6 +1295,9 @@ const Mesas = ({ cardapioSlugFromHub }) => {
           quantity: item.quantity,
           productName: productName,
           productValue: unitVal,
+          ...(item.half1OptionId && half1?.variations?.[0]?.options?.find((o) => o.id === item.half1OptionId)?.idUniplus
+            ? { idUniplus: half1.variations[0].options.find((o) => o.id === item.half1OptionId).idUniplus }
+            : base?.idUniplus ? { idUniplus: base.idUniplus } : {}),
           grupo: base?.grupo || "Outros",
           ...(addonsExpanded && addonsExpanded.length > 0 && { addons: addonsExpanded }),
         };
@@ -1319,6 +1326,9 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         answers = [...answers, { fieldId: tipoPedidoField.id, answer: "Mesa" }];
       }
       const customerName = contact?.name || "Cliente";
+      const clientOrderId = (typeof crypto !== "undefined" && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `ped-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const metadata = {
         tableId: mesaParaPedido.id,
         tableNumber: mesaParaPedido.number || mesaParaPedido.name,
@@ -1327,10 +1337,12 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         garcomName: user?.name || "",
         placedByGarcom: true,
         customerName,
+        clientOrderId,
       };
       await api.post(`/public/forms/${orderForm.publicId}/submit`, {
         answers,
         menuItems: allMenuItems,
+        clientOrderId,
         metadata,
         responderName: customerName,
         responderPhone: contact?.number || "",

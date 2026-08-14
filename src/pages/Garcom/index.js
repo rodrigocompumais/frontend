@@ -1226,6 +1226,10 @@ const Garcom = () => {
           productName: productName || p?.name,
           productValue: unit,
           optionId: line.optionId || null,
+          ...(line.optionId ? { variationOptionId: line.optionId } : {}),
+          ...(line.optionId && p?.variations?.[0]?.options?.find((o) => o.id === line.optionId)?.idUniplus
+            ? { idUniplus: p.variations[0].options.find((o) => o.id === line.optionId).idUniplus }
+            : p?.idUniplus ? { idUniplus: p.idUniplus } : {}),
           grupo: p?.grupo || "Outros",
           ...(addons && addons.length > 0 && { addons }),
         };
@@ -1250,6 +1254,9 @@ const Garcom = () => {
           half1OptionId: item.half1OptionId || null,
           half2OptionId: item.half2OptionId || null,
           baseOptionId: baseOptionId,
+          ...(baseOptionId && baseProduct?.variations?.[0]?.options?.find((o) => o.id === baseOptionId)?.idUniplus
+            ? { idUniplus: baseProduct.variations[0].options.find((o) => o.id === baseOptionId).idUniplus }
+            : baseProduct?.idUniplus ? { idUniplus: baseProduct.idUniplus } : {}),
           grupo: baseProduct?.grupo || "Outros",
           ...(addonsExpanded && addonsExpanded.length > 0 && { addons: addonsExpanded }),
         };
@@ -1282,6 +1289,9 @@ const Garcom = () => {
         answers.push({ fieldId: tipoPedidoField.id, answer: "Mesa" });
       }
       const customerName = contactParaPedido?.name || "Cliente";
+      const clientOrderId = (typeof crypto !== "undefined" && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `ped-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const metadata = {
         tableId: mesaParaPedido.id,
         tableNumber: mesaParaPedido.number || mesaParaPedido.name,
@@ -1290,10 +1300,12 @@ const Garcom = () => {
         garcomName: user?.name || "",
         placedByGarcom: true,
         customerName,
+        clientOrderId,
       };
       await api.post(`/public/forms/${form.publicId}/submit`, {
         answers,
         menuItems,
+        clientOrderId,
         metadata,
         responderName: customerName,
         responderPhone: contactParaPedido?.number || "",

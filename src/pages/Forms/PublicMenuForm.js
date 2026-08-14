@@ -1072,6 +1072,8 @@ const PublicMenuForm = ({
     let productValue = 0;
     let productName = "";
     let optionLabel = "";
+    let variationOptionId = null;
+    let idUniplus = product?.idUniplus || null;
     if (baseKey.includes("_") && !baseKey.match(/_L\d+$/)) {
       const [, optionIdStr] = baseKey.split("_");
       const optionId = parseInt(optionIdStr, 10);
@@ -1080,13 +1082,15 @@ const PublicMenuForm = ({
       productValue = option ? parseFloat(option.value) : parseFloat(product.value) || 0;
       productName = option ? `${product.name} - ${option.label}` : product.name;
       optionLabel = option?.label || "";
+      variationOptionId = optionId;
+      idUniplus = option?.idUniplus || product?.idUniplus || null;
     } else {
       productValue = parseFloat(product.value) || 0;
       productName = product.name || "";
     }
     const addonsList = selectedAddons[key] || [];
     const addonsTotal = addonsList.reduce((sum, a) => sum + (Number(a.value) || 0) * (a.quantity ?? 1), 0);
-    return { product, productValue, productName, optionLabel, addonsTotal };
+    return { product, productValue, productName, optionLabel, addonsTotal, variationOptionId, idUniplus };
   };
 
   const handleQuantityChange = (key, delta) => {
@@ -1814,13 +1818,13 @@ const PublicMenuForm = ({
       // Preparar menuItems (normais + com variação + meio a meio)
       const normalMenuItems = Object.keys(selectedItems).map((key) => {
         const productId = key.includes("_") ? parseInt(key.split("_")[0], 10) : parseInt(key, 10);
-        const { product, productValue, productName } = getItemDetailsByKey(key);
+        const { product, productValue, productName, variationOptionId, idUniplus } = getItemDetailsByKey(key);
         const addons = selectedAddons[key] || [];
         const addonsExpanded = addons.length > 0
           ? addons.flatMap((a) =>
               Array((a.quantity ?? 1) * (selectedItems[key] || 1))
                 .fill(null)
-                .map(() => ({ addOnItemId: a.addOnItemId, label: a.label, value: a.value }))
+                .map(() => ({ addOnItemId: a.addOnItemId, label: a.label, value: a.value, ...(a.idUniplus ? { idUniplus: a.idUniplus } : {}) }))
             )
           : undefined;
         const observation = String(selectedObservations[key] || "").trim();
@@ -1831,6 +1835,8 @@ const PublicMenuForm = ({
           productName: productName || product?.name,
           productValue,
           grupo: product?.grupo || "Outros",
+          ...(variationOptionId ? { variationOptionId, optionId: variationOptionId } : {}),
+          ...(idUniplus ? { idUniplus } : {}),
           ...(observation && { observation }),
           ...(!product?.isCombo && addonsExpanded && addonsExpanded.length > 0 && { addons: addonsExpanded }),
         };
@@ -1840,6 +1846,10 @@ const PublicMenuForm = ({
         const baseOptionId = baseProduct?.variations && baseProduct.variations.length > 0
           ? (selectedVariationOption[item.baseProductId] ?? null)
           : null;
+        const baseOption = baseOptionId && baseProduct?.variations?.[0]?.options
+          ? baseProduct.variations[0].options.find((o) => o.id === baseOptionId)
+          : null;
+        const halfIdUniplus = baseOption?.idUniplus || baseProduct?.idUniplus || null;
         const addons = item.addons || [];
         const addonsExpanded = addons.length > 0
           ? addons.flatMap((a) =>
@@ -1858,6 +1868,7 @@ const PublicMenuForm = ({
           half1OptionId: item.half1OptionId || null,
           half2OptionId: item.half2OptionId || null,
           baseOptionId: baseOptionId,
+          ...(halfIdUniplus ? { idUniplus: halfIdUniplus } : {}),
           grupo: baseProduct?.grupo || "Outros",
           ...(halfObservation && { observation: halfObservation }),
           ...(addonsExpanded && addonsExpanded.length > 0 && { addons: addonsExpanded }),
@@ -1953,8 +1964,12 @@ const PublicMenuForm = ({
       const deliveryFee = getDeliveryFeeAmount();
       const couponDiscount = getCouponDiscount();
       const finalTotal = getFinalTotal();
+      const clientOrderId = (typeof crypto !== "undefined" && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : `ped-${Date.now()}-${Math.random().toString(36).slice(2)}`;
       const metadataWithTotal = {
         ...orderMetadata,
+        clientOrderId,
         total: finalTotal,
         deliveryFee,
         subtotal: totalWithDelivery - deliveryFee,
@@ -1968,6 +1983,7 @@ const PublicMenuForm = ({
       const response = await api.post(`/public/forms/${slug}/submit`, {
         answers: answersArray,
         menuItems,
+        clientOrderId,
         ...(Object.keys(metadataWithTotal).length > 0 && { metadata: metadataWithTotal }),
         ...(orderToken && { orderToken }),
       });
