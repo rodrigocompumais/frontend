@@ -2444,6 +2444,12 @@ const messages = {
           customerFieldsHint:
             "Escolha quais campos da aba Finalizar saem no cupom junto com nome/telefone. Nome e telefone já vão na seção CLIENTE. Formulários antigos sem seleção imprimem todos os campos elegíveis.",
           customerFieldsEmpty: "Adicione campos na aba Finalizar para configurar a impressão.",
+          fontSizeTitle: "Tamanho da fonte (cupom térmico)",
+          fontSizeHint: "Afeta pedidos impressos pelo agente (delivery e mesa). Extra grande reduz caracteres por linha.",
+          fontSizeLabel: "Tamanho da letra",
+          fontSizeNormal: "Normal",
+          fontSizeLarge: "Grande (altura dupla)",
+          fontSizeXLarge: "Extra grande (largura e altura duplas)",
           deliveryQrTitle: "Tamanho do QR do entregador (cupom)",
           deliveryQrHint: "QR impresso no pedido delivery para o entregador escanear. Valor de 4 (menor) a 16 (maior).",
           mesaQrTitle: "Tamanho do QR das mesas (impressão)",

@@ -22,6 +22,12 @@ export const clampPrintQrModuleSize = (value) => {
   return Math.min(16, Math.max(4, Math.round(raw)));
 };
 
+export const clampPrintFontScale = (value) => {
+  const raw = Number(value ?? 1);
+  if (!Number.isFinite(raw)) return 1;
+  return Math.min(3, Math.max(1, Math.round(raw)));
+};
+
 export const clampMesaQrPrintSize = (value) => {
   const raw = Number(value ?? 120);
   if (!Number.isFinite(raw)) return 120;

@@ -53,6 +53,7 @@ import {
 } from "../../utils/pieceAgainUtils";
 import {
   clampMesaQrPrintSize,
+  clampPrintFontScale,
   clampPrintQrModuleSize,
   listPrintStorableFields,
 } from "../../utils/printFieldUtils";
@@ -246,6 +247,7 @@ const FormBuilder = () => {
       deliveryPrintDeviceIds: [], // IDs das impressoras para pedidos delivery
       printStoredFieldIds: [], // Campos customizados impressos junto ao cliente
       printQrModuleSize: 10, // Módulo ESC/POS do QR entregador (4-16)
+      printFontScale: 1, // 1=normal, 2=grande, 3=extra grande (cupom térmico)
       mesaQrPrintSize: 120, // Pixels do QR de mesa na impressão em lote
       orderTriggerMessages: [], // [{ fieldId, optionValue, message }]
       autoConfirmMinutes: 0, // Avançar novo->confirmado após X minutos (0=desativado)
@@ -2650,6 +2652,35 @@ const FormBuilder = () => {
                         })}
                       </FormGroup>
                     )}
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 8 }}>
+                      {i18n.t("formBuilder.printConfig.fontSizeTitle")}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 12 }}>
+                      {i18n.t("formBuilder.printConfig.fontSizeHint")}
+                    </Typography>
+                    <FormControl variant="outlined" size="small" fullWidth>
+                      <InputLabel>{i18n.t("formBuilder.printConfig.fontSizeLabel")}</InputLabel>
+                      <Select
+                        value={clampPrintFontScale(formData.settings?.printFontScale ?? 1)}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            settings: {
+                              ...formData.settings,
+                              printFontScale: clampPrintFontScale(e.target.value),
+                            },
+                          })
+                        }
+                        label={i18n.t("formBuilder.printConfig.fontSizeLabel")}
+                      >
+                        <MenuItem value={1}>{i18n.t("formBuilder.printConfig.fontSizeNormal")}</MenuItem>
+                        <MenuItem value={2}>{i18n.t("formBuilder.printConfig.fontSizeLarge")}</MenuItem>
+                        <MenuItem value={3}>{i18n.t("formBuilder.printConfig.fontSizeXLarge")}</MenuItem>
+                      </Select>
+                    </FormControl>
                   </Grid>
 
                   <Grid item xs={12} md={6}>
