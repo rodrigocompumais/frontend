@@ -45,7 +45,6 @@ const useStyles = makeStyles((theme) => ({
     "& canvas": {
       width: "100% !important",
       height: "auto !important",
-      maxWidth: 120,
     },
   },
   label: {
@@ -61,11 +60,12 @@ const useStyles = makeStyles((theme) => ({
   },
 }));
 
-const MesaPrintQRModal = ({ open, onClose }) => {
+const MesaPrintQRModal = ({ open, onClose, qrSize = 120 }) => {
   const classes = useStyles();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const printRef = useRef(null);
+  const size = Math.min(280, Math.max(80, Number(qrSize) || 120));
 
   useEffect(() => {
     if (!open) {
@@ -132,8 +132,8 @@ const MesaPrintQRModal = ({ open, onClose }) => {
             <div className={classes.grid}>
               {items.map((item) => (
                 <div key={item.mesaId} className={classes.card}>
-                  <div className={classes.qrWrap}>
-                    <QRCode value={item.url} size={120} level="M" renderAs="canvas" />
+                  <div className={classes.qrWrap} style={{ maxWidth: size }}>
+                    <QRCode value={item.url} size={size} level="M" renderAs="canvas" />
                   </div>
                   <Typography className={classes.label}>Mesa {item.label}</Typography>
                 </div>

@@ -45,6 +45,7 @@ import { SocketContext } from "../../context/Socket/SocketContext";
 import { AuthContext } from "../../context/Auth/AuthContext";
 import ContactModal from "../../components/ContactModal";
 import LiberarMesaModal from "../../components/LiberarMesaModal";
+import TrocarNomeMesaDialog from "../../components/TrocarNomeMesaDialog";
 import OrderNotificationPopup from "../../components/OrderNotificationPopup";
 import { formatMesaComandaTitle } from "../../helpers/mesaDisplayLabel";
 import {
@@ -335,6 +336,8 @@ const Garcom = () => {
   const [mesaParaOcupar, setMesaParaOcupar] = useState(null);
   const [liberarModalOpen, setLiberarModalOpen] = useState(false);
   const [mesaParaLiberar, setMesaParaLiberar] = useState(null);
+  const [trocarNomeOpen, setTrocarNomeOpen] = useState(false);
+  const [mesaTrocarNome, setMesaTrocarNome] = useState(null);
   const [contacts, setContacts] = useState([]);
   const [searchContact, setSearchContact] = useState("");
   const [loadingContacts, setLoadingContacts] = useState(false);
@@ -380,6 +383,7 @@ const Garcom = () => {
     halfAndHalfModalOpen ||
     keywordDialogOpen ||
     liberarModalOpen ||
+    trocarNomeOpen ||
     contactModalOpen ||
     notificationOpen;
 
@@ -1014,6 +1018,28 @@ const Garcom = () => {
     setLiberarModalOpen(true);
   };
 
+  const abrirTrocarNome = (mesa) => {
+    if (mesa?.status !== "ocupada" || !mesa?.contactId) {
+      toast.error("Só é possível trocar o nome em mesa ocupada.");
+      return;
+    }
+    setMesaTrocarNome(mesa);
+    setTrocarNomeOpen(true);
+  };
+
+  const handleTrocarNomeSuccess = (mesaAtualizada) => {
+    if (!mesaAtualizada?.id) return;
+    setMesas((prev) =>
+      prev.map((m) => (m.id === mesaAtualizada.id ? { ...m, ...mesaAtualizada } : m))
+    );
+    if (mesaParaPedido?.id === mesaAtualizada.id) {
+      setMesaParaPedido((prev) => (prev ? { ...prev, ...mesaAtualizada } : prev));
+      if (mesaAtualizada.contact) {
+        setContactParaPedido(mesaAtualizada.contact);
+      }
+    }
+  };
+
   const fetchMesasForLiberar = async () => {
     try {
       const mesasRes = await api.get("/mesas");
@@ -1489,6 +1515,17 @@ const Garcom = () => {
                       {mesa.status === "ocupada" && (
                         <Button
                           variant="outlined"
+                          color="primary"
+                          fullWidth
+                          onClick={(e) => { e.stopPropagation(); abrirTrocarNome(mesa); }}
+                          style={{ marginTop: 8 }}
+                        >
+                          Trocar nome
+                        </Button>
+                      )}
+                      {mesa.status === "ocupada" && (
+                        <Button
+                          variant="outlined"
                           color="secondary"
                           fullWidth
                           onClick={(e) => { e.stopPropagation(); handleLiberar(mesa); }}
@@ -1528,10 +1565,20 @@ const Garcom = () => {
       >
         <DialogTitle>
           Pedido — {mesaParaPedido ? formatMesaComandaTitle(mesaParaPedido) : ""}
-          {contactParaPedido?.name && (
-            <Typography variant="body2" color="textSecondary">
-              Cliente: {contactParaPedido.name}
-            </Typography>
+          {(contactParaPedido || mesaParaPedido?.contact) && (
+            <Box display="flex" alignItems="center" flexWrap="wrap" style={{ gap: 8 }}>
+              <Typography variant="body2" color="textSecondary">
+                Cliente: {contactParaPedido?.name || mesaParaPedido?.contact?.name || "Cliente"}
+              </Typography>
+              <Button
+                size="small"
+                color="primary"
+                onClick={() => abrirTrocarNome(mesaParaPedido)}
+                style={{ textTransform: "none", padding: "2px 8px", minWidth: 0 }}
+              >
+                Trocar nome
+              </Button>
+            </Box>
           )}
         </DialogTitle>
         <DialogContent className={classes.orderDialogContent}>
@@ -2190,6 +2237,16 @@ const Garcom = () => {
           setMesaParaLiberar(null);
         }}
         onSuccess={fetchMesasForLiberar}
+      />
+
+      <TrocarNomeMesaDialog
+        open={trocarNomeOpen}
+        mesa={mesaTrocarNome}
+        onClose={() => {
+          setTrocarNomeOpen(false);
+          setMesaTrocarNome(null);
+        }}
+        onSuccess={handleTrocarNomeSuccess}
       />
 
       <OrderNotificationPopup

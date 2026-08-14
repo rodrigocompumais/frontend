@@ -48,9 +48,10 @@ import MesaModal from "../../components/MesaModal";
 import MesaOcuparModal from "../../components/MesaOcuparModal";
 import MesaBulkCreateModal from "../../components/MesaBulkCreateModal";
 import MesaRestoreQrModal from "../../components/MesaRestoreQrModal";
-import MesaPrintQRModal from "../../components/MesaPrintQRModal";
+import { clampMesaQrPrintSize } from "../../utils/printFieldUtils";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import LiberarMesaModal from "../../components/LiberarMesaModal";
+import TrocarNomeMesaDialog from "../../components/TrocarNomeMesaDialog";
 import OrderNotificationPopup from "../../components/OrderNotificationPopup";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -267,7 +268,10 @@ const Mesas = ({ cardapioSlugFromHub }) => {
   const cardapioQRRef = useRef(null);
   const [liberarModalOpen, setLiberarModalOpen] = useState(false);
   const [mesaParaLiberar, setMesaParaLiberar] = useState(null);
+  const [trocarNomeOpen, setTrocarNomeOpen] = useState(false);
+  const [mesaTrocarNome, setMesaTrocarNome] = useState(null);
   const [cardapioSlugFetched, setCardapioSlugFetched] = useState(null); // agora armazena publicId
+  const [mesaQrPrintSize, setMesaQrPrintSize] = useState(120);
   const [selectedMesas, setSelectedMesas] = useState(new Set());
   const [bulkDeleteModalOpen, setBulkDeleteModalOpen] = useState(false);
   const [bulkLiberarModalOpen, setBulkLiberarModalOpen] = useState(false);
@@ -373,11 +377,23 @@ const Mesas = ({ cardapioSlugFromHub }) => {
   const cardapioSlug = cardapioSlugFromHub ?? cardapioSlugFetched; // publicId do cardápio padrão
 
   useEffect(() => {
-    if (cardapioSlugFromHub) return;
+    if (cardapioSlugFromHub) {
+      api.get("/forms?formType=cardapio").then(({ data }) => {
+        const forms = data.forms || [];
+        const form = forms.find((f) => f.publicId === cardapioSlugFromHub) || forms[0];
+        if (form?.settings?.mesaQrPrintSize != null) {
+          setMesaQrPrintSize(clampMesaQrPrintSize(form.settings.mesaQrPrintSize));
+        }
+      }).catch(() => {});
+      return;
+    }
     api.get("/forms?formType=cardapio").then(({ data }) => {
       const forms = data.forms || [];
-      const publicId = forms.length ? (forms.sort((a, b) => (a.id || 0) - (b.id || 0))[0]?.publicId) : null;
+      const sorted = forms.length ? forms.sort((a, b) => (a.id || 0) - (b.id || 0)) : [];
+      const publicId = sorted[0]?.publicId || null;
       if (publicId) setCardapioSlugFetched(publicId);
+      const size = sorted[0]?.settings?.mesaQrPrintSize;
+      if (size != null) setMesaQrPrintSize(clampMesaQrPrintSize(size));
     }).catch(() => {});
   }, [cardapioSlugFromHub]);
 
@@ -1423,6 +1439,25 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     setLiberarModalOpen(true);
   };
 
+  const abrirTrocarNome = (mesa) => {
+    if (mesa?.status !== "ocupada" || !mesa?.contactId) {
+      toast.error("Só é possível trocar o nome em mesa ocupada.");
+      return;
+    }
+    setMesaTrocarNome(mesa);
+    setTrocarNomeOpen(true);
+  };
+
+  const handleTrocarNomeSuccess = (mesaAtualizada) => {
+    if (!mesaAtualizada?.id) return;
+    setMesas((prev) =>
+      prev.map((m) => (m.id === mesaAtualizada.id ? { ...m, ...mesaAtualizada } : m))
+    );
+    if (mesaParaPedido?.id === mesaAtualizada.id) {
+      setMesaParaPedido((prev) => (prev ? { ...prev, ...mesaAtualizada } : prev));
+    }
+  };
+
   const handleVerTicket = (mesa) => {
     if (mesa?.ticketId) {
       history.push(`/tickets/${mesa.ticketId}`);
@@ -1731,8 +1766,10 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                       onDelete={handleDeleteClick}
                       onVerTicket={handleVerTicket}
                       onAdicionarPedido={handleOpenOrderDialog}
+                      onTrocarNome={abrirTrocarNome}
                       onCopyLink={(url) => toast.success("Link copiado!")}
                       cardapioSlug={cardapioSlug}
+                      mesaQrPrintSize={mesaQrPrintSize}
                       pendingOrdersCount={getPendingOrdersCountForMesa(mesa.id)}
                       onVerPedido={getPendingOrdersCountForMesa(mesa.id) > 0 ? () => {
                         const firstOrder = getFirstPendingOrderForMesa(mesa.id);
@@ -1760,9 +1797,19 @@ const Mesas = ({ cardapioSlugFromHub }) => {
         <DialogTitle>
           Adicionar pedido — {mesaParaPedido ? formatMesaComandaTitle(mesaParaPedido) : ""}
           {mesaParaPedido?.contact && (
-            <Typography variant="body2" color="textSecondary" display="block">
-              Cliente: {mesaParaPedido.contact.name || mesaParaPedido.contact.number || "—"}
-            </Typography>
+            <Box display="flex" alignItems="center" flexWrap="wrap" style={{ gap: 8 }}>
+              <Typography variant="body2" color="textSecondary" display="block">
+                Cliente: {mesaParaPedido.contact.name || mesaParaPedido.contact.number || "—"}
+              </Typography>
+              <Button
+                size="small"
+                color="primary"
+                onClick={() => abrirTrocarNome(mesaParaPedido)}
+                style={{ textTransform: "none", padding: "2px 8px", minWidth: 0 }}
+              >
+                Trocar nome
+              </Button>
+            </Box>
           )}
         </DialogTitle>
         <DialogContent className={classes.orderDialogContent}>
@@ -2321,6 +2368,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
       <MesaPrintQRModal
         open={printAllQRModalOpen}
         onClose={() => setPrintAllQRModalOpen(false)}
+        qrSize={mesaQrPrintSize}
       />
       <ConfirmationModal
         title="Excluir mesa"
@@ -2342,6 +2390,16 @@ const Mesas = ({ cardapioSlugFromHub }) => {
           setMesaParaLiberar(null);
         }}
         onSuccess={fetchMesas}
+      />
+
+      <TrocarNomeMesaDialog
+        open={trocarNomeOpen}
+        mesa={mesaTrocarNome}
+        onClose={() => {
+          setTrocarNomeOpen(false);
+          setMesaTrocarNome(null);
+        }}
+        onSuccess={handleTrocarNomeSuccess}
       />
 
       <ConfirmationModal
@@ -2371,7 +2429,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
             <DialogTitle>QR Code - Cardápio</DialogTitle>
             <DialogContent>
               <Box ref={cardapioQRRef} display="flex" flexDirection="column" alignItems="center">
-                <QRCode value={cardapioUrl} size={220} level="M" renderAs="canvas" />
+                <QRCode value={cardapioUrl} size={mesaQrPrintSize} level="M" renderAs="canvas" />
                 <Typography variant="body2" color="textSecondary" style={{ marginTop: 16, wordBreak: "break-all", textAlign: "center" }}>
                   {cardapioUrl}
                 </Typography>

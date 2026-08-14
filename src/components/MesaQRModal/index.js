@@ -14,7 +14,7 @@ import { toast } from "react-toastify";
 import api from "../../services/api";
 import { formatMesaComandaTitle } from "../../helpers/mesaDisplayLabel";
 
-const MesaQRModal = ({ open, onClose, mesa, cardapioSlug }) => {
+const MesaQRModal = ({ open, onClose, mesa, cardapioSlug, qrSize = 120 }) => {
   const qrRef = useRef(null);
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,6 +40,7 @@ const MesaQRModal = ({ open, onClose, mesa, cardapioSlug }) => {
   if (!mesa?.id) return null;
 
   const mesaLabel = formatMesaComandaTitle(mesa);
+  const size = Math.min(280, Math.max(80, Number(qrSize) || 120));
 
   const handleCopyLink = () => {
     if (navigator.clipboard) {
@@ -68,7 +69,7 @@ const MesaQRModal = ({ open, onClose, mesa, cardapioSlug }) => {
             <Box py={3}><CircularProgress /></Box>
           ) : url ? (
             <Box ref={qrRef}>
-              <QRCode value={url} size={220} level="M" renderAs="canvas" />
+              <QRCode value={url} size={size} level="M" renderAs="canvas" />
             </Box>
           ) : null}
           {url && (

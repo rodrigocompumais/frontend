@@ -125,7 +125,9 @@ const MesaCard = ({
   onVerTicket,
   onCopyLink,
   onAdicionarPedido,
+  onTrocarNome,
   cardapioSlug,
+  mesaQrPrintSize = 120,
   pendingOrdersCount = 0,
   onVerPedido,
 }) => {
@@ -226,6 +228,16 @@ const MesaCard = ({
                   Adicionar pedido
                 </Button>
               )}
+              {onTrocarNome && (
+                <Button
+                  size="small"
+                  color="default"
+                  variant="outlined"
+                  onClick={() => onTrocarNome(mesa)}
+                >
+                  Trocar nome
+                </Button>
+              )}
               {mesa.ticketId && (
                 <Tooltip title="Ver ticket">
                   <IconButton
@@ -305,6 +317,7 @@ const MesaCard = ({
         onClose={() => setQrModalOpen(false)}
         mesa={mesa}
         cardapioSlug={cardapioSlug}
+        qrSize={mesaQrPrintSize}
       />
     </Card>
   );

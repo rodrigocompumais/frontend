@@ -51,11 +51,17 @@ import useCompanyModules from "../../hooks/useCompanyModules";
 import {
   listPieceAgainStorableFields,
 } from "../../utils/pieceAgainUtils";
+import {
+  clampMesaQrPrintSize,
+  clampPrintQrModuleSize,
+  listPrintStorableFields,
+} from "../../utils/printFieldUtils";
 
 import SaveIcon from "@material-ui/icons/Save";
 import ArrowBackIcon from "@material-ui/icons/ArrowBack";
 import AddIcon from "@material-ui/icons/Add";
 import DeleteIcon from "@material-ui/icons/Delete";
+import RemoveIcon from "@material-ui/icons/Remove";
 import EditIcon from "@material-ui/icons/Edit";
 import DragIndicatorIcon from "@material-ui/icons/DragIndicator";
 import CloseIcon from "@material-ui/icons/Close";
@@ -238,6 +244,9 @@ const FormBuilder = () => {
       printDeviceId: null, // ID do dispositivo de impressão para impressão de pedidos
       mesaPrintConfig: [], // [{ printDeviceId, groupNames }] para pedidos mesa/garçom
       deliveryPrintDeviceIds: [], // IDs das impressoras para pedidos delivery
+      printStoredFieldIds: [], // Campos customizados impressos junto ao cliente
+      printQrModuleSize: 10, // Módulo ESC/POS do QR entregador (4-16)
+      mesaQrPrintSize: 120, // Pixels do QR de mesa na impressão em lote
       orderTriggerMessages: [], // [{ fieldId, optionValue, message }]
       autoConfirmMinutes: 0, // Avançar novo->confirmado após X minutos (0=desativado)
       averageDeliveryTime: "", // Tempo médio de entrega (ex: "30-45 minutos")
@@ -671,6 +680,12 @@ const FormBuilder = () => {
     ["select", "radio", "checkbox"].includes(f.fieldType)
   );
   const pieceAgainFieldOptions = listPieceAgainStorableFields(
+    (formData.settings?.finalizeFields || []).map((field, index) => ({
+      ...field,
+      order: field.order ?? 2 + index,
+    }))
+  );
+  const printFieldOptions = listPrintStorableFields(
     (formData.settings?.finalizeFields || []).map((field, index) => ({
       ...field,
       order: field.order ?? 2 + index,
@@ -2583,6 +2598,150 @@ const FormBuilder = () => {
                         </Typography>
                       )}
                     </FormGroup>
+                  </Grid>
+
+                  <Grid item xs={12}>
+                    <Divider style={{ margin: "16px 0" }} />
+                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 8 }}>
+                      {i18n.t("formBuilder.printConfig.customerFieldsTitle")}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 12 }}>
+                      {i18n.t("formBuilder.printConfig.customerFieldsHint")}
+                    </Typography>
+                    {printFieldOptions.length === 0 ? (
+                      <Typography variant="body2" color="textSecondary">
+                        {i18n.t("formBuilder.printConfig.customerFieldsEmpty")}
+                      </Typography>
+                    ) : (
+                      <FormGroup>
+                        {printFieldOptions.map((field) => {
+                          const fieldId = Number(field.id);
+                          const configured = formData.settings?.printStoredFieldIds;
+                          const effectiveIds = Array.isArray(configured)
+                            ? configured
+                            : printFieldOptions.map((f) => Number(f.id));
+                          const checked = effectiveIds.includes(fieldId);
+                          return (
+                            <FormControlLabel
+                              key={`print-field-${field.id}`}
+                              control={
+                                <Checkbox
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    const baseIds = Array.isArray(configured)
+                                      ? configured.map(Number)
+                                      : printFieldOptions.map((f) => Number(f.id));
+                                    const ids = new Set(baseIds);
+                                    if (e.target.checked) ids.add(fieldId);
+                                    else ids.delete(fieldId);
+                                    setFormData({
+                                      ...formData,
+                                      settings: {
+                                        ...formData.settings,
+                                        printStoredFieldIds: Array.from(ids),
+                                      },
+                                    });
+                                  }}
+                                />
+                              }
+                              label={`${field.label || "Campo"} (${field.fieldType})`}
+                            />
+                          );
+                        })}
+                      </FormGroup>
+                    )}
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 8 }}>
+                      {i18n.t("formBuilder.printConfig.deliveryQrTitle")}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 12 }}>
+                      {i18n.t("formBuilder.printConfig.deliveryQrHint")}
+                    </Typography>
+                    <Box display="flex" alignItems="center" style={{ gap: 8 }}>
+                      <IconButton
+                        size="small"
+                        aria-label={i18n.t("formBuilder.printConfig.qrDecrease")}
+                        onClick={() => {
+                          const next = clampPrintQrModuleSize(
+                            (formData.settings?.printQrModuleSize ?? 10) - 1
+                          );
+                          setFormData({
+                            ...formData,
+                            settings: { ...formData.settings, printQrModuleSize: next },
+                          });
+                        }}
+                        disabled={(formData.settings?.printQrModuleSize ?? 10) <= 4}
+                      >
+                        <RemoveIcon fontSize="small" />
+                      </IconButton>
+                      <Typography variant="body1" style={{ minWidth: 32, textAlign: "center" }}>
+                        {formData.settings?.printQrModuleSize ?? 10}
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        aria-label={i18n.t("formBuilder.printConfig.qrIncrease")}
+                        onClick={() => {
+                          const next = clampPrintQrModuleSize(
+                            (formData.settings?.printQrModuleSize ?? 10) + 1
+                          );
+                          setFormData({
+                            ...formData,
+                            settings: { ...formData.settings, printQrModuleSize: next },
+                          });
+                        }}
+                        disabled={(formData.settings?.printQrModuleSize ?? 10) >= 16}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                  </Grid>
+
+                  <Grid item xs={12} md={6}>
+                    <Typography variant="subtitle1" style={{ fontWeight: 600, marginBottom: 8 }}>
+                      {i18n.t("formBuilder.printConfig.mesaQrTitle")}
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 12 }}>
+                      {i18n.t("formBuilder.printConfig.mesaQrHint")}
+                    </Typography>
+                    <Box display="flex" alignItems="center" style={{ gap: 8 }}>
+                      <IconButton
+                        size="small"
+                        aria-label={i18n.t("formBuilder.printConfig.qrDecrease")}
+                        onClick={() => {
+                          const next = clampMesaQrPrintSize(
+                            (formData.settings?.mesaQrPrintSize ?? 120) - 20
+                          );
+                          setFormData({
+                            ...formData,
+                            settings: { ...formData.settings, mesaQrPrintSize: next },
+                          });
+                        }}
+                        disabled={(formData.settings?.mesaQrPrintSize ?? 120) <= 80}
+                      >
+                        <RemoveIcon fontSize="small" />
+                      </IconButton>
+                      <Typography variant="body1" style={{ minWidth: 48, textAlign: "center" }}>
+                        {formData.settings?.mesaQrPrintSize ?? 120}px
+                      </Typography>
+                      <IconButton
+                        size="small"
+                        aria-label={i18n.t("formBuilder.printConfig.qrIncrease")}
+                        onClick={() => {
+                          const next = clampMesaQrPrintSize(
+                            (formData.settings?.mesaQrPrintSize ?? 120) + 20
+                          );
+                          setFormData({
+                            ...formData,
+                            settings: { ...formData.settings, mesaQrPrintSize: next },
+                          });
+                        }}
+                        disabled={(formData.settings?.mesaQrPrintSize ?? 120) >= 280}
+                      >
+                        <AddIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
                   </Grid>
                 </Grid>
           </Box>
