@@ -41,7 +41,7 @@ const TrocarNomeMesaDialog = ({ open, onClose, mesa, onSuccess }) => {
         contactName: trimmed,
       });
       toast.success("Nome do cliente atualizado.");
-      onSuccess?.(data);
+      if (onSuccess) onSuccess(data);
       onClose();
     } catch (err) {
       toastError(err);
