@@ -48,6 +48,7 @@ import MesaModal from "../../components/MesaModal";
 import MesaOcuparModal from "../../components/MesaOcuparModal";
 import MesaBulkCreateModal from "../../components/MesaBulkCreateModal";
 import MesaRestoreQrModal from "../../components/MesaRestoreQrModal";
+import MesaPrintQRModal from "../../components/MesaPrintQRModal";
 import { clampMesaQrPrintSize } from "../../utils/printFieldUtils";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import LiberarMesaModal from "../../components/LiberarMesaModal";
