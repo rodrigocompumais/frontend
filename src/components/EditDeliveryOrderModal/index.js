@@ -12,7 +12,8 @@ import {
   TextField,
   Typography,
 } from "@material-ui/core";
-import Autocomplete from "@material-ui/lab/Autocomplete";
+import MenuProductPicker from "../MenuProductPicker";
+import { filterMenuProducts, formatMoney } from "../../utils/menuProductHelpers";
 import { Add as AddIcon, Delete as DeleteIcon, Remove as RemoveIcon } from "@material-ui/icons";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -29,7 +30,7 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [products, setProducts] = useState([]);
-  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [menuItems, setMenuItems] = useState([]);
   const [responderName, setResponderName] = useState("");
   const [address, setAddress] = useState({
@@ -68,7 +69,7 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
         const publicId = formData.publicId;
         if (publicId) {
           const { data: prodData } = await api.get(`/public/forms/${publicId}/products`);
-          setProducts((prodData.products || []).filter((p) => p.isMenuProduct !== false));
+          setProducts(filterMenuProducts(prodData.products || []));
         } else {
           setProducts([]);
         }
@@ -114,34 +115,10 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
     setMenuItems((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const addProduct = (product) => {
-    if (!product?.id) return;
-    setMenuItems((prev) => {
-      const idx = prev.findIndex(
-        (it) =>
-          Number(it.productId) === Number(product.id) &&
-          !it.type &&
-          !(it.addons || []).length
-      );
-      if (idx >= 0) {
-        return prev.map((it, i) =>
-          i === idx ? { ...it, quantity: (Number(it.quantity) || 1) + 1 } : it
-        );
-      }
-      return [
-        ...prev,
-        {
-          productId: product.id,
-          productName: product.name,
-          productValue: Number(product.value) || 0,
-          grupo: product.grupo || "Outros",
-          quantity: 1,
-          addons: [],
-          addonsTotal: 0,
-        },
-      ];
-    });
-    setSelectedProduct(null);
+  const appendMenuItem = (item) => {
+    if (!item) return;
+    setMenuItems((prev) => [...prev, item]);
+    toast.success("Produto adicionado ao pedido.");
   };
 
   const handleSave = async () => {
@@ -293,12 +270,17 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
                       {it.productName || `Produto #${it.productId}`}
                     </Typography>
                     {(it.addons || []).length > 0 && (
-                      <Typography variant="caption" color="textSecondary">
+                      <Typography variant="caption" color="textSecondary" display="block">
                         + {(it.addons || []).map((a) => a.label).join(", ")}
                       </Typography>
                     )}
+                    {it.observation && (
+                      <Typography variant="caption" color="textSecondary" display="block">
+                        Obs: {it.observation}
+                      </Typography>
+                    )}
                     <Typography variant="caption" color="textSecondary">
-                      R$ {line.toFixed(2).replace(".", ",")}
+                      {formatMoney(line)}
                     </Typography>
                   </Box>
                   <Box display="flex" alignItems="center">
@@ -320,28 +302,15 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
             })}
 
             <Box mt={2}>
-              <Autocomplete
-                options={products}
-                getOptionLabel={(p) =>
-                  `${p.name}${p.grupo ? ` (${p.grupo})` : ""} — R$ ${Number(p.value || 0)
-                    .toFixed(2)
-                    .replace(".", ",")}`
-                }
-                value={selectedProduct}
-                onChange={(_, val) => {
-                  if (val) addProduct(val);
-                  setSelectedProduct(null);
-                }}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Adicionar produto"
-                    variant="outlined"
-                    margin="dense"
-                    fullWidth
-                  />
-                )}
-              />
+              <Button
+                variant="outlined"
+                color="primary"
+                fullWidth
+                onClick={() => setPickerOpen(true)}
+                disabled={!products.length}
+              >
+                Adicionar produto do cardápio
+              </Button>
             </Box>
 
             <Box mt={2} display="flex" justifyContent="space-between">
@@ -371,6 +340,13 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
           {saving ? "Salvando..." : "Salvar e reimprimir"}
         </Button>
       </DialogActions>
+      <MenuProductPicker
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        products={products}
+        onAddItem={appendMenuItem}
+        title="Cardápio — adicionar ao pedido"
+      />
     </Dialog>
   );
 };
