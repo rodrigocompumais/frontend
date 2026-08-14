@@ -11,8 +11,8 @@ import {
   IconButton,
   TextField,
   Typography,
-  Autocomplete,
 } from "@material-ui/core";
+import Autocomplete from "@material-ui/lab/Autocomplete";
 import { Add as AddIcon, Delete as DeleteIcon, Remove as RemoveIcon } from "@material-ui/icons";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
