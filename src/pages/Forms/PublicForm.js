@@ -32,7 +32,7 @@ import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import PublicMenuForm from "./PublicMenuForm";
 import PublicAgendamentoForm from "./PublicAgendamentoForm";
-import { isFieldVisible } from "../../utils/formUtils";
+import { isFieldVisible, pruneHiddenConditionalFields } from "../../utils/formUtils";
 import { getFormAppearanceStyles, FONT_IMPORTS } from "../../utils/formAppearanceStyles";
 
 const useStyles = makeStyles((theme) => ({
@@ -193,18 +193,20 @@ const PublicForm = () => {
   };
 
   const handleFieldChange = (fieldId, value) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [fieldId]: value,
-    }));
-    // Clear error when user starts typing
-    if (errors[fieldId]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[fieldId];
-        return newErrors;
+    const sortedFields = (form.fields || []).sort((a, b) => a.order - b.order);
+    const nextAnswers = { ...answers, [fieldId]: value };
+    const pruned = pruneHiddenConditionalFields(sortedFields, nextAnswers, {});
+    setAnswers(pruned.answers);
+    setErrors((prevErrors) => {
+      const next = { ...prevErrors };
+      delete next[fieldId];
+      sortedFields.forEach((field) => {
+        if (field.hasConditional && !isFieldVisible(field, nextAnswers, sortedFields)) {
+          delete next[field.id];
+        }
       });
-    }
+      return next;
+    });
   };
 
   // Função para normalizar telefone (remove o 5º dígito quando há 14 ou 13 dígitos com 9 duplicado)

@@ -48,6 +48,9 @@ import api from "../../services/api";
 import { i18n } from "../../translate/i18n";
 import useWhatsApps from "../../hooks/useWhatsApps";
 import useCompanyModules from "../../hooks/useCompanyModules";
+import {
+  listPieceAgainStorableFields,
+} from "../../utils/pieceAgainUtils";
 
 import SaveIcon from "@material-ui/icons/Save";
 import ArrowBackIcon from "@material-ui/icons/ArrowBack";
@@ -241,6 +244,7 @@ const FormBuilder = () => {
       enablePieceAgain: false, // Habilita "Peça de novo" por telefone + auto-preenchimento
       pieceAgainMaxOrders: 5, // Últimos N pedidos para agregação
       pieceAgainMaxItems: 6, // Máx. itens exibidos na seção
+      pieceAgainStoredFieldIds: [], // IDs dos campos customizados a persistir no histórico
       showMesaField: false, // Exibir campo Número da mesa no cardápio
       mesaFieldMode: "select", // select = dropdown com mesas, input = campo livre
       mesaOccupationKeywordValidation: false, // Exige confirmação por palavra-chave no WhatsApp para efetivar ocupação manual
@@ -665,6 +669,12 @@ const FormBuilder = () => {
     : [];
   const triggerMessageFields = deliveryConditionFields.filter((f) =>
     ["select", "radio", "checkbox"].includes(f.fieldType)
+  );
+  const pieceAgainFieldOptions = listPieceAgainStorableFields(
+    (formData.settings?.finalizeFields || []).map((field, index) => ({
+      ...field,
+      order: field.order ?? 2 + index,
+    }))
   );
 
   const tabKeys = isMenuForm
@@ -1528,17 +1538,24 @@ const FormBuilder = () => {
                       control={
                         <Switch
                           checked={!!formData.settings?.enablePieceAgain}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            const storableIds = pieceAgainFieldOptions.map((f) => Number(f.id));
                             setFormData({
                               ...formData,
                               settings: {
                                 ...formData.settings,
-                                enablePieceAgain: e.target.checked,
+                                enablePieceAgain: checked,
                                 pieceAgainMaxOrders: formData.settings?.pieceAgainMaxOrders ?? 5,
                                 pieceAgainMaxItems: formData.settings?.pieceAgainMaxItems ?? 6,
+                                pieceAgainStoredFieldIds: checked
+                                  ? (formData.settings?.pieceAgainStoredFieldIds?.length
+                                      ? formData.settings.pieceAgainStoredFieldIds
+                                      : storableIds)
+                                  : formData.settings?.pieceAgainStoredFieldIds || [],
                               },
-                            })
-                          }
+                            });
+                          }}
                         />
                       }
                       label="Ativar “Peça de novo” (por telefone) e auto-preenchimento"
@@ -1582,6 +1599,61 @@ const FormBuilder = () => {
                       disabled={!formData.settings?.enablePieceAgain}
                     />
                   </Grid>
+
+                  {formData.settings?.enablePieceAgain && (
+                    <Grid item xs={12}>
+                      <Typography variant="subtitle2" style={{ fontWeight: 600, marginBottom: 8 }}>
+                        Campos salvos no histórico (auto-preenchimento)
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary" style={{ marginBottom: 12 }}>
+                        Escolha quais campos da aba Finalizar serão guardados por telefone. Nome, telefone,
+                        e-mail, arquivos e dados sensíveis (CPF, cartão, senha) nunca são armazenados.
+                        Formulários antigos sem seleção explícita salvam todos os campos elegíveis.
+                      </Typography>
+                      {pieceAgainFieldOptions.length === 0 ? (
+                        <Typography variant="body2" color="textSecondary">
+                          Adicione campos na aba Finalizar para configurar o auto-preenchimento.
+                        </Typography>
+                      ) : (
+                        <FormGroup>
+                          {pieceAgainFieldOptions.map((field) => {
+                            const fieldId = Number(field.id);
+                            const configured = formData.settings?.pieceAgainStoredFieldIds;
+                            const effectiveIds = Array.isArray(configured)
+                              ? configured
+                              : pieceAgainFieldOptions.map((f) => Number(f.id));
+                            const checked = effectiveIds.includes(fieldId);
+                            return (
+                              <FormControlLabel
+                                key={field.id}
+                                control={
+                                  <Checkbox
+                                    checked={checked}
+                                    onChange={(e) => {
+                                      const baseIds = Array.isArray(configured)
+                                        ? configured.map(Number)
+                                        : pieceAgainFieldOptions.map((f) => Number(f.id));
+                                      const ids = new Set(baseIds);
+                                      if (e.target.checked) ids.add(fieldId);
+                                      else ids.delete(fieldId);
+                                      setFormData({
+                                        ...formData,
+                                        settings: {
+                                          ...formData.settings,
+                                          pieceAgainStoredFieldIds: Array.from(ids),
+                                        },
+                                      });
+                                    }}
+                                  />
+                                }
+                                label={`${field.label || "Campo"} (${field.fieldType})`}
+                              />
+                            );
+                          })}
+                        </FormGroup>
+                      )}
+                    </Grid>
+                  )}
 
                   <Grid item xs={12}>
                     <TextField

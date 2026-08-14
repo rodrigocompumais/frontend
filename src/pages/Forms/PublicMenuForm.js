@@ -48,7 +48,12 @@ import InputMask from "react-input-mask";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
 import { formatMesaComandaTitle } from "../../helpers/mesaDisplayLabel";
-import { isFieldVisible } from "../../utils/formUtils";
+import { isFieldVisible, pruneHiddenConditionalFields } from "../../utils/formUtils";
+import {
+  buildPieceAgainPrefillFromAnswers,
+  filterPrefillToStoredFields,
+  resolvePieceAgainStoredFieldIds,
+} from "../../utils/pieceAgainUtils";
 import { getFormAppearanceStyles, FONT_IMPORTS } from "../../utils/formAppearanceStyles";
 import evaluateCardapioOrderHours, {
   getCardapioOrderHoursScheduleSummary,
@@ -714,8 +719,6 @@ const PublicMenuForm = ({
     return digits;
   };
   const normalizeLabelKey = (label) => String(label || "").trim().toLowerCase();
-  const isSensitiveLabel = (label) =>
-    /cpf|cart[aã]o|card|senha|password|cvv|cvc|token|c[oó]digo|pin/i.test(String(label || ""));
 
   const decodeMaybeJson = (val) => {
     if (val == null) return "";
@@ -734,17 +737,28 @@ const PublicMenuForm = ({
     return all.filter((f) => !f.metadata?.isAutoField && f.order >= 2);
   };
 
+  const getPieceAgainStoredFieldIds = () =>
+    resolvePieceAgainStoredFieldIds(form?.settings, form?.fields || []);
+
   const applyPrefillByLabel = (prefillByLabel) => {
-    const entries = prefillByLabel && typeof prefillByLabel === "object" ? prefillByLabel : {};
+    const storedFieldIds = getPieceAgainStoredFieldIds();
+    const entries =
+      prefillByLabel && typeof prefillByLabel === "object" ? prefillByLabel : {};
+    const filtered = filterPrefillToStoredFields(
+      entries,
+      form?.fields || [],
+      storedFieldIds
+    );
     const normalizedMap = {};
-    Object.keys(entries).forEach((k) => {
-      normalizedMap[normalizeLabelKey(k)] = entries[k];
+    Object.keys(filtered).forEach((k) => {
+      normalizedMap[normalizeLabelKey(k)] = filtered[k];
     });
     const finalize = getFinalizeFieldsFromForm();
     if (!finalize || finalize.length === 0) return;
     setAnswers((prev) => {
       const next = { ...prev };
       finalize.forEach((field) => {
+        if (!storedFieldIds.includes(Number(field.id))) return;
         const key = normalizeLabelKey(field.label);
         if (!key) return;
         const val = normalizedMap[key];
@@ -1691,15 +1705,20 @@ const PublicMenuForm = ({
   };
 
   const handleFieldChange = (fieldId, value) => {
-    setAnswers((prev) => ({ ...prev, [fieldId]: value }));
-    // Limpar erro do campo
-    if (errors[fieldId]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[fieldId];
-        return newErrors;
+    const allFormFieldsSorted = [...(form.fields || [])].sort((a, b) => a.order - b.order);
+    const nextAnswers = { ...answers, [fieldId]: value };
+    const pruned = pruneHiddenConditionalFields(allFormFieldsSorted, nextAnswers, {});
+    setAnswers(pruned.answers);
+    setErrors((prevErrors) => {
+      const next = { ...prevErrors };
+      delete next[fieldId];
+      allFormFieldsSorted.forEach((field) => {
+        if (field.hasConditional && !isFieldVisible(field, nextAnswers, allFormFieldsSorted)) {
+          delete next[field.id];
+        }
       });
-    }
+      return next;
+    });
   };
 
   const validateForm = () => {
@@ -1883,22 +1902,12 @@ const PublicMenuForm = ({
         const rawPhone = phoneField ? (answers[phoneField.id] || pieceAgainPhone) : pieceAgainPhone;
         const phoneNorm = normalizePhone(rawPhone);
         const nameVal = nameField ? (answers[nameField.id] || "") : "";
-        const prefillByLabel = {};
-        const finalize = getFinalizeFieldsFromForm();
-        finalize.forEach((field) => {
-          const label = String(field.label || "").trim();
-          if (!label || isSensitiveLabel(label)) return;
-          const val = answers[field.id];
-          if (val === undefined || val === null || val === "") return;
-          if (Array.isArray(val)) {
-            if (val.length === 0) return;
-            prefillByLabel[label] = "__json__:" + JSON.stringify(val);
-          } else {
-            const s = String(val);
-            if (!s.trim()) return;
-            prefillByLabel[label] = s;
-          }
-        });
+        const storedFieldIds = getPieceAgainStoredFieldIds();
+        const prefillByLabel = buildPieceAgainPrefillFromAnswers(
+          answers,
+          form?.fields || [],
+          storedFieldIds
+        );
         try {
           setCookie(
             getPieceAgainCookieKey(),
@@ -2115,7 +2124,6 @@ const PublicMenuForm = ({
             placeholder={field.placeholder}
             error={hasError}
             helperText={error || field.helpText}
-            required={field.isRequired}
             label={field.label}
           />
         );
@@ -2142,7 +2150,6 @@ const PublicMenuForm = ({
                 placeholder="55(99)99999-9999"
                 error={hasError}
                 helperText={error || field.helpText}
-                required={field.isRequired}
                 label={field.label}
                 InputProps={{
                   startAdornment: field.metadata?.autoFieldType === "phone" ? (
@@ -2165,7 +2172,6 @@ const PublicMenuForm = ({
             placeholder={field.placeholder}
             error={hasError}
             helperText={error || field.helpText}
-            required={field.isRequired}
             label={field.label}
           />
         );
@@ -2182,14 +2188,13 @@ const PublicMenuForm = ({
             placeholder={field.placeholder}
             error={hasError}
             helperText={error || field.helpText}
-            required={field.isRequired}
             label={field.label}
           />
         );
 
       case "select":
         return (
-          <FormControl fullWidth variant={fieldVariant} error={hasError} required={field.isRequired}>
+          <FormControl fullWidth variant={fieldVariant} error={hasError}>
             <InputLabel>{field.label}</InputLabel>
             <Select
               value={value}
@@ -2210,7 +2215,7 @@ const PublicMenuForm = ({
 
       case "radio":
         return (
-          <FormControl component="fieldset" fullWidth error={hasError} required={field.isRequired}>
+          <FormControl component="fieldset" fullWidth error={hasError}>
             <Typography variant="subtitle2" style={{ marginBottom: 8 }}>
               {field.label}
             </Typography>
@@ -2247,7 +2252,7 @@ const PublicMenuForm = ({
             handleFieldChange(field.id, next);
           };
           return (
-            <FormControl component="fieldset" fullWidth error={hasError} required={field.isRequired}>
+            <FormControl component="fieldset" fullWidth error={hasError}>
               <Typography variant="subtitle2" style={{ marginBottom: 8 }}>
                 {field.label}
               </Typography>
@@ -2279,7 +2284,7 @@ const PublicMenuForm = ({
         // Sem opções: tratar como booleano simples
         const checked = Boolean(answers[field.id]);
         return (
-          <FormControl component="fieldset" fullWidth error={hasError} required={field.isRequired}>
+          <FormControl component="fieldset" fullWidth error={hasError}>
             <FormControlLabel
               control={
                 <Checkbox
