@@ -34,6 +34,7 @@ import {
   People as PeopleIcon,
   Kitchen as KitchenIcon,
   Receipt as ReceiptIcon,
+  GetApp as GetAppIcon,
   } from "@material-ui/icons";
 import { QrCode2 as QrCodeScannerIcon } from "@mui/icons-material";
 import useSound from "use-sound";
@@ -140,6 +141,51 @@ const apenasDespesasProximas = (lista) => {
     const key = d.dataVencimento != null ? String(d.dataVencimento).slice(0, 10) : "";
     return /^\d{4}-\d{2}-\d{2}$/.test(key) && key >= hoje;
   });
+};
+
+const PAYMENT_METHOD_LABELS = {
+  pix: "PIX",
+  dinheiro: "Dinheiro",
+  cartao: "Cartão",
+  carteira_digital: "Carteira digital",
+  outro: "Outro",
+};
+
+const formatPaymentMethodLabel = (metodo) =>
+  PAYMENT_METHOD_LABELS[String(metodo || "outro").toLowerCase()] || String(metodo || "Outro");
+
+const buildStatsDateParams = (filtroInicial, filtroFinal) => {
+  const params = {};
+  if (filtroInicial) params.initialDate = filtroInicial;
+  if (filtroFinal) params.finalDate = filtroFinal;
+  if (!filtroInicial || !filtroFinal) {
+    const now = new Date();
+    const localEnd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const start = new Date(now);
+    start.setDate(start.getDate() - 29);
+    const localStart = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+    if (!filtroInicial) params.initialDate = localStart;
+    if (!filtroFinal) params.finalDate = localEnd;
+  }
+  return params;
+};
+
+const downloadLanchonetesExport = async (type, filtroInicial, filtroFinal) => {
+  const params = { ...buildStatsDateParams(filtroInicial, filtroFinal), type };
+  const response = await api.get("/dashboard/lanchonetes-export", {
+    params,
+    responseType: "blob",
+  });
+  const blob = new Blob([response.data], { type: "text/csv;charset=utf-8;" });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const prefix = type === "entregador" ? "entregas-por-entregador" : "faturamento-por-pagamento";
+  link.href = url;
+  link.setAttribute("download", `${prefix}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
 };
 
 const LanchonetesHub = () => {
@@ -651,6 +697,34 @@ const LanchonetesHub = () => {
                           <Button size="small" variant="outlined" onClick={() => { setFiltroInicial(""); setFiltroFinal(""); }}>
                             Limpar
                           </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<GetAppIcon />}
+                            onClick={async () => {
+                              try {
+                                await downloadLanchonetesExport("pagamento", filtroInicial, filtroFinal);
+                              } catch (err) {
+                                toastError(err);
+                              }
+                            }}
+                          >
+                            Exportar pagamentos
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<GetAppIcon />}
+                            onClick={async () => {
+                              try {
+                                await downloadLanchonetesExport("entregador", filtroInicial, filtroFinal);
+                              } catch (err) {
+                                toastError(err);
+                              }
+                            }}
+                          >
+                            Exportar entregadores
+                          </Button>
                         </Box>
                       </Box>
                     </Paper>
@@ -764,7 +838,7 @@ const LanchonetesHub = () => {
                   <Grid item xs={12} md={6} className={classes.chartCard}>
                     <BarChartComponent
                       data={(lanchonetesStats.faturamentoPorMeioPagamento || []).map((m) => ({
-                        name: (m.metodo || "outro").toUpperCase(),
+                        name: formatPaymentMethodLabel(m.metodo),
                         count: Number(m.total || 0),
                       }))}
                       title="Faturamento por meio de pagamento"

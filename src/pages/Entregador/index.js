@@ -11,12 +11,15 @@ import {
   ListItemText,
   IconButton,
   CircularProgress,
+  TextField,
+  Divider,
 } from "@material-ui/core";
 import LocalShippingIcon from "@material-ui/icons/LocalShipping";
 import AddIcon from "@material-ui/icons/Add";
 import DeleteIcon from "@material-ui/icons/Delete";
 import PlayArrowIcon from "@material-ui/icons/PlayArrow";
 import StopIcon from "@material-ui/icons/Stop";
+import CheckCircleIcon from "@material-ui/icons/CheckCircle";
 import { toast } from "react-toastify";
 import MainContainer from "../../components/MainContainer";
 import api from "../../services/api";
@@ -58,9 +61,41 @@ const useStyles = makeStyles((theme) => ({
   button: {
     marginTop: theme.spacing(1),
   },
+  historyList: {
+    maxHeight: 360,
+    overflowY: "auto",
+  },
+  filterRow: {
+    display: "flex",
+    flexDirection: "column",
+    gap: theme.spacing(1),
+    marginBottom: theme.spacing(2),
+  },
 }));
 
-/** Extrai token do conteúdo escaneado (URL com ?t= ou token puro). */
+const formatCurrency = (value) =>
+  `R$ ${Number(value || 0).toFixed(2).replace(".", ",")}`;
+
+const formatDateBr = (dateStr) => {
+  if (!dateStr) return "—";
+  const key = String(dateStr).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return key;
+  const [y, m, d] = key.split("-");
+  return `${d}/${m}/${y}`;
+};
+
+const defaultHistoryEndDate = () => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+};
+
+const defaultHistoryStartDate = () => {
+  const now = new Date();
+  const start = new Date(now);
+  start.setDate(start.getDate() - 29);
+  return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+};
+
 function extractDeliveryToken(decodedText) {
   const raw = (decodedText || "").trim();
   if (!raw) return null;
@@ -102,6 +137,11 @@ const Entregador = () => {
   const [loading, setLoading] = useState(false);
   const [iniciarLoading, setIniciarLoading] = useState(false);
   const [finalizarLoading, setFinalizarLoading] = useState(false);
+  const [historyStartDate, setHistoryStartDate] = useState(defaultHistoryStartDate);
+  const [historyEndDate, setHistoryEndDate] = useState(defaultHistoryEndDate);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [completedDeliveries, setCompletedDeliveries] = useState([]);
+  const [historyCount, setHistoryCount] = useState(0);
 
   // Conjunto de tokens já consultados na API nesta sessão — evita chamadas duplicadas
   // entre reaperturas do modal (complementa o seenTexts interno do modal)
@@ -123,6 +163,29 @@ const Entregador = () => {
       localStorage.setItem(STORAGE_ROUTE_KEY, String(routeStarted));
     } catch {}
   }, [routeStarted]);
+
+  const loadCompletedDeliveries = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      const params = {};
+      if (historyStartDate) params.initialDate = historyStartDate;
+      if (historyEndDate) params.finalDate = historyEndDate;
+      const { data } = await api.get("/delivery/entregas-concluidas", { params });
+      setCompletedDeliveries(Array.isArray(data?.entregas) ? data.entregas : []);
+      setHistoryCount(Number(data?.count || 0));
+    } catch (err) {
+      toastError(err);
+      setCompletedDeliveries([]);
+      setHistoryCount(0);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [historyStartDate, historyEndDate]);
+
+  useEffect(() => {
+    if (modulesLoading || !hasLanchonetes) return;
+    loadCompletedDeliveries();
+  }, [hasLanchonetes, modulesLoading, loadCompletedDeliveries]);
 
   const handleScan = useCallback(async (decodedText) => {
     const token = extractDeliveryToken(decodedText);
@@ -199,6 +262,7 @@ const Entregador = () => {
       scannedTokensRef.current = new Set();
       setScannedOrders([]);
       setRouteStarted(false);
+      loadCompletedDeliveries();
     } catch (err) {
       toastError(err);
     } finally {
@@ -288,6 +352,91 @@ const Entregador = () => {
               </Button>
             )}
           </Box>
+        </Paper>
+
+        <Paper className={classes.listCard} elevation={0}>
+          <Typography variant="subtitle1" gutterBottom>
+            Entregas concluídas
+          </Typography>
+          <Typography color="textSecondary" variant="body2" gutterBottom>
+            Histórico das entregas finalizadas por você.
+          </Typography>
+
+          <Box className={classes.filterRow}>
+            <TextField
+              label="Data início"
+              type="date"
+              value={historyStartDate}
+              onChange={(e) => setHistoryStartDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              variant="outlined"
+              size="small"
+              fullWidth
+            />
+            <TextField
+              label="Data fim"
+              type="date"
+              value={historyEndDate}
+              onChange={(e) => setHistoryEndDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              variant="outlined"
+              size="small"
+              fullWidth
+            />
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={loadCompletedDeliveries}
+              disabled={historyLoading}
+              fullWidth
+            >
+              {historyLoading ? <CircularProgress size={22} /> : "Filtrar"}
+            </Button>
+          </Box>
+
+          <Divider />
+
+          {historyLoading ? (
+            <Box display="flex" justifyContent="center" py={3}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : completedDeliveries.length === 0 ? (
+            <Typography color="textSecondary" variant="body2" style={{ marginTop: 16 }}>
+              Nenhuma entrega concluída no período selecionado.
+            </Typography>
+          ) : (
+            <>
+              <Typography variant="caption" color="textSecondary" display="block" style={{ marginTop: 12, marginBottom: 8 }}>
+                {historyCount} entrega(s) encontrada(s)
+              </Typography>
+              <List className={classes.historyList} dense>
+                {completedDeliveries.map((delivery) => (
+                  <ListItem key={delivery.id} alignItems="flex-start">
+                    <CheckCircleIcon color="primary" fontSize="small" style={{ marginRight: 8, marginTop: 4 }} />
+                    <ListItemText
+                      primary={`${delivery.protocol || `#${delivery.formResponseId}`} · ${formatCurrency(delivery.valor)}`}
+                      secondary={
+                        <>
+                          <Typography component="span" variant="body2" color="textPrimary" display="block">
+                            {delivery.cliente || "Cliente não informado"}
+                          </Typography>
+                          {delivery.endereco ? (
+                            <Typography component="span" variant="caption" color="textSecondary" display="block">
+                              {delivery.endereco}
+                            </Typography>
+                          ) : null}
+                          <Typography component="span" variant="caption" color="textSecondary" display="block">
+                            {formatDateBr(delivery.dataVenda)}
+                            {delivery.telefone ? ` · ${delivery.telefone}` : ""}
+                          </Typography>
+                        </>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </>
+          )}
         </Paper>
       </Box>
 
