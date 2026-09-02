@@ -59,35 +59,101 @@ export const getAddonRuleLabel = (rules) => {
 
 export const normalizeVariationKey = (value) => String(value || "").trim().toLowerCase();
 
+const stripAccents = (value) =>
+  String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+/** Remove pontuação/espaços e prefixos comuns (Tamanho G, Tam. Grande). */
+const cleanVariationLabel = (value) =>
+  stripAccents(normalizeVariationKey(value))
+    .replace(/[.\-_/]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/^(tamanho|tam|size)/, "");
+
+/**
+ * Equivalência de tamanhos entre cadastros:
+ * P / Pequena  |  M / Média  |  G / Grande  |  GG / Gigante / Família
+ */
+const SIZE_LETTER_KEYS = {
+  p: "p",
+  pp: "p",
+  peq: "p",
+  m: "m",
+  med: "m",
+  g: "g",
+  grd: "g",
+  gg: "gg",
+  ggg: "ggg",
+  xg: "gg",
+  xl: "gg",
+};
+
+const SIZE_WORD_KEYS = [
+  ["extragrande", "gg"],
+  ["gigante", "gg"],
+  ["familiar", "gg"],
+  ["familia", "gg"],
+  ["brotinho", "broto"],
+  ["broto", "broto"],
+  ["individual", "broto"],
+  ["pequena", "p"],
+  ["pequeno", "p"],
+  ["media", "m"],
+  ["medio", "m"],
+  ["grande", "g"],
+];
+
+export const canonicalSizeKey = (label) => {
+  const n = cleanVariationLabel(label);
+  if (!n) return "";
+  if (SIZE_LETTER_KEYS[n]) return SIZE_LETTER_KEYS[n];
+  for (const [word, key] of SIZE_WORD_KEYS) {
+    if (n === word || n.includes(word)) return key;
+  }
+  return n;
+};
+
+export const variationLabelsMatch = (a, b) => {
+  const ca = canonicalSizeKey(a);
+  const cb = canonicalSizeKey(b);
+  return Boolean(ca) && ca === cb;
+};
+
 export const findOptionByVariationLabel = (product, variationLabel) => {
   if (!product?.variations?.length || !variationLabel) return null;
-  const needle = normalizeVariationKey(variationLabel);
   for (const variation of product.variations) {
-    const option = (variation.options || []).find(
-      (opt) => normalizeVariationKey(opt.label) === needle
+    const option = (variation.options || []).find((opt) =>
+      variationLabelsMatch(opt.label, variationLabel)
     );
     if (option) return option;
   }
   return null;
 };
 
+const normalizeGrupoKey = (value) => String(value || "").trim().toLowerCase();
+
 export const productMatchesHalfAndHalfVariation = (
   product,
   baseVariationLabel,
-  baseVariationName = null
+  _baseVariationName = null
 ) => {
   if (!baseVariationLabel) return true;
-  if (!product?.variations?.length) return false;
-  const needleLabel = normalizeVariationKey(baseVariationLabel);
-  const needleName = baseVariationName ? normalizeVariationKey(baseVariationName) : null;
-  return product.variations.some((variation) => {
-    if (needleName && normalizeVariationKey(variation.name) !== needleName) return false;
-    return (variation.options || []).some(
-      (opt) => normalizeVariationKey(opt.label) === needleLabel
-    );
-  });
+  // Sabor sem variação cadastrada ainda pode ser a outra metade
+  if (!product?.variations?.length) return true;
+  return product.variations.some((variation) =>
+    (variation.options || []).some((opt) => variationLabelsMatch(opt.label, baseVariationLabel))
+  );
 };
 
+/**
+ * Lista sabores para a segunda metade.
+ * - Combos nunca entram.
+ * - halfAndHalfGrupo vazio no cadastro = "qualquer grupo": inclui o grupo do
+ *   produto e sabores de outros grupos que também permitem meio a meio.
+ * - Match de tamanho só pelo rótulo da opção (G, M, P), sem exigir o mesmo
+ *   nome da variação ("Tamanho" vs "Tamanhos").
+ */
 export const getFlavorProductsForHalfAndHalf = (
   products,
   baseProduct,
@@ -95,17 +161,18 @@ export const getFlavorProductsForHalfAndHalf = (
   { excludeProductId = null } = {}
 ) => {
   if (!baseProduct) return [];
-  const grupoFilter = baseProduct.halfAndHalfGrupo || baseProduct.grupo || null;
-  const baseVariationName = baseProduct.variations?.[0]?.name || null;
+  const explicitGrupo = String(baseProduct.halfAndHalfGrupo || "").trim();
+  const ownGrupo = String(baseProduct.grupo || "").trim();
   let filtered = (products || []).filter((p) => {
-    if (excludeProductId != null && p.id === excludeProductId) return false;
-    if (grupoFilter) return (p.grupo || "") === grupoFilter;
-    return true;
+    if (!p || (excludeProductId != null && p.id === excludeProductId)) return false;
+    if (p.isCombo) return false;
+    if (explicitGrupo) return normalizeGrupoKey(p.grupo) === normalizeGrupoKey(explicitGrupo);
+    if (!ownGrupo) return true;
+    if (normalizeGrupoKey(p.grupo) === normalizeGrupoKey(ownGrupo)) return true;
+    return p.allowsHalfAndHalf === true;
   });
   if (baseVariationLabel && baseProduct.variations && baseProduct.variations.length > 0) {
-    filtered = filtered.filter((p) =>
-      productMatchesHalfAndHalfVariation(p, baseVariationLabel, baseVariationName)
-    );
+    filtered = filtered.filter((p) => productMatchesHalfAndHalfVariation(p, baseVariationLabel));
   }
   return filtered;
 };

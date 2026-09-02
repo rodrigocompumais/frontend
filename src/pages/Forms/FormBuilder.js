@@ -69,6 +69,9 @@ import CloseIcon from "@material-ui/icons/Close";
 import CloudUploadIcon from "@material-ui/icons/CloudUpload";
 import DeleteOutlineIcon from "@material-ui/icons/DeleteOutline";
 
+import MenuThemePreview from "../../components/MenuThemePreview";
+import { MENU_FONT_OPTIONS } from "../../utils/menuTheme";
+
 const useStyles = makeStyles((theme) => ({
   root: {
     display: "flex",
@@ -2941,7 +2944,8 @@ const FormBuilder = () => {
           <Box className={classes.section} style={{ marginTop: 24 }}>
             {isMenuForm && (
               <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
-                Estilo padrão do cardápio (igual ao Anota Aí). Apenas logo, banner e cor primária.
+                Todo o visual do cardápio é derivado automaticamente da cor primária.
+                Ajuste modo, fonte e fundo abaixo e acompanhe no preview.
               </Typography>
             )}
             <Typography className={classes.sectionTitle}>Cores e logo</Typography>
@@ -3160,6 +3164,121 @@ const FormBuilder = () => {
                 </FormControl>
               </Grid>
             </Grid>
+
+            {isMenuForm && (
+              <>
+                <Typography className={classes.sectionTitle} style={{ marginTop: 32 }}>
+                  Tema do cardápio
+                </Typography>
+                <Typography variant="body2" color="textSecondary" style={{ marginBottom: 16 }}>
+                  A paleta completa (fundos, textos, bordas e botões) é gerada a partir
+                  da cor primária, com contraste automático.
+                </Typography>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} md={7}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={12}>
+                        <Typography variant="subtitle2" color="textSecondary" style={{ marginBottom: 8 }}>
+                          Modo
+                        </Typography>
+                        <Box display="flex" style={{ gap: 8 }}>
+                          <Button
+                            variant={(formData.settings?.menuTheme?.mode || "light") !== "dark" ? "contained" : "outlined"}
+                            color="primary"
+                            size="small"
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                settings: {
+                                  ...formData.settings,
+                                  menuTheme: { ...(formData.settings?.menuTheme || {}), mode: "light" },
+                                },
+                              })
+                            }
+                          >
+                            Claro
+                          </Button>
+                          <Button
+                            variant={formData.settings?.menuTheme?.mode === "dark" ? "contained" : "outlined"}
+                            color="primary"
+                            size="small"
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                settings: {
+                                  ...formData.settings,
+                                  menuTheme: { ...(formData.settings?.menuTheme || {}), mode: "dark" },
+                                },
+                              })
+                            }
+                          >
+                            Escuro
+                          </Button>
+                        </Box>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <FormControl fullWidth variant="outlined">
+                          <InputLabel>Fonte do cardápio</InputLabel>
+                          <Select
+                            value={formData.settings?.menuTheme?.fontFamily || ""}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                settings: {
+                                  ...formData.settings,
+                                  menuTheme: {
+                                    ...(formData.settings?.menuTheme || {}),
+                                    fontFamily: e.target.value,
+                                  },
+                                },
+                              })
+                            }
+                            label="Fonte do cardápio"
+                          >
+                            {MENU_FONT_OPTIONS.map((opt) => (
+                              <MenuItem key={opt.value || "default"} value={opt.value}>
+                                <span style={{ fontFamily: opt.value || "inherit" }}>{opt.label}</span>
+                              </MenuItem>
+                            ))}
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                      <Grid item xs={12}>
+                        <FormControl fullWidth variant="outlined">
+                          <InputLabel>Fundo da página</InputLabel>
+                          <Select
+                            value={formData.settings?.menuTheme?.background || "neutral"}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                settings: {
+                                  ...formData.settings,
+                                  menuTheme: {
+                                    ...(formData.settings?.menuTheme || {}),
+                                    background: e.target.value,
+                                  },
+                                },
+                              })
+                            }
+                            label="Fundo da página"
+                          >
+                            <MenuItem value="neutral">Neutro (cinza suave)</MenuItem>
+                            <MenuItem value="white">Branco</MenuItem>
+                            <MenuItem value="tinted">Tom da marca</MenuItem>
+                          </Select>
+                        </FormControl>
+                      </Grid>
+                    </Grid>
+                  </Grid>
+                  <Grid item xs={12} md={5}>
+                    <Typography variant="subtitle2" color="textSecondary" style={{ marginBottom: 8, textAlign: "center" }}>
+                      Preview ao vivo
+                    </Typography>
+                    <MenuThemePreview form={formData} />
+                  </Grid>
+                </Grid>
+              </>
+            )}
 
             {!isMenuForm && (
               <>

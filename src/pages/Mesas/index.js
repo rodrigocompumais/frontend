@@ -50,6 +50,11 @@ import MesaBulkCreateModal from "../../components/MesaBulkCreateModal";
 import MesaRestoreQrModal from "../../components/MesaRestoreQrModal";
 import MesaPrintQRModal from "../../components/MesaPrintQRModal";
 import { clampMesaQrPrintSize } from "../../utils/printFieldUtils";
+import {
+  findOptionByVariationLabel as findHalfOptionByLabel,
+  getFlavorProductsForHalfAndHalf as listHalfAndHalfFlavors,
+  productMatchesHalfAndHalfVariation as matchHalfVariation,
+} from "../../utils/menuProductHelpers";
 import ConfirmationModal from "../../components/ConfirmationModal";
 import LiberarMesaModal from "../../components/LiberarMesaModal";
 import TrocarNomeMesaDialog from "../../components/TrocarNomeMesaDialog";
@@ -855,55 +860,13 @@ const Mesas = ({ cardapioSlugFromHub }) => {
     setSelectedVariationOptionId(null);
   };
 
-  const normalizeVariationKey = (value) => String(value || "").trim().toLowerCase();
-
-  const findOptionByVariationLabel = (product, variationLabel) => {
-    if (!product?.variations?.length || !variationLabel) return null;
-    const needle = normalizeVariationKey(variationLabel);
-    for (const variation of product.variations) {
-      const option = (variation.options || []).find(
-        (opt) => normalizeVariationKey(opt.label) === needle
-      );
-      if (option) return option;
-    }
-    return null;
-  };
-
-  const productMatchesHalfAndHalfVariation = (product, baseVariationLabel, baseVariationName = null) => {
-    if (!baseVariationLabel) return true;
-    if (!product?.variations?.length) return false;
-    const needleLabel = normalizeVariationKey(baseVariationLabel);
-    const needleName = baseVariationName ? normalizeVariationKey(baseVariationName) : null;
-    return product.variations.some((variation) => {
-      if (needleName && normalizeVariationKey(variation.name) !== needleName) return false;
-      return (variation.options || []).some(
-        (opt) => normalizeVariationKey(opt.label) === needleLabel
-      );
-    });
-  };
-
+  const findOptionByVariationLabel = findHalfOptionByLabel;
+  const productMatchesHalfAndHalfVariation = matchHalfVariation;
   const getFlavorProductsForHalfAndHalf = (
     baseProduct,
     baseVariationLabel = null,
     { excludeProductId = null } = {}
-  ) => {
-    if (!baseProduct) return [];
-    const grupoFilter = baseProduct.halfAndHalfGrupo || baseProduct.grupo || null;
-    const baseVariationName = baseProduct.variations?.[0]?.name || null;
-    let filtered = orderProducts.filter((p) => {
-      if (excludeProductId != null && p.id === excludeProductId) return false;
-      if (grupoFilter) return (p.grupo || "") === grupoFilter;
-      return true;
-    });
-
-    if (baseVariationLabel && baseProduct.variations && baseProduct.variations.length > 0) {
-      filtered = filtered.filter((p) =>
-        productMatchesHalfAndHalfVariation(p, baseVariationLabel, baseVariationName)
-      );
-    }
-
-    return filtered;
-  };
+  ) => listHalfAndHalfFlavors(orderProducts, baseProduct, baseVariationLabel, { excludeProductId });
 
   const computeHalfAndHalfUnitValue = (base, half1, half2, half1OptionId = null, half2OptionId = null, baseVariationLabel = null) => {
     if (!base || !half1 || !half2) return 0;

@@ -810,7 +810,7 @@ const MenuProductPicker = ({
                       {getDetailVariationLabel() ? ` no tamanho ${getDetailVariationLabel()}` : ""}.
                     </Typography>
                   )}
-                  <Box style={{ maxHeight: 260, overflowY: "auto" }}>
+                  <Box>
                     {halfFlavors.map((flavor) => {
                       const selected = detailHalfFlavorId === flavor.id;
                       const flavorOption = findOptionByVariationLabel(flavor, getDetailVariationLabel());

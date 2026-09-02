@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -58,6 +58,13 @@ import { getFormAppearanceStyles, FONT_IMPORTS } from "../../utils/formAppearanc
 import evaluateCardapioOrderHours, {
   getCardapioOrderHoursScheduleSummary,
 } from "../../utils/cardapioOrderHours";
+import { createTheme, ThemeProvider } from "@material-ui/core/styles";
+import { buildMenuTheme, themeToCssVars } from "../../utils/menuTheme";
+import {
+  findOptionByVariationLabel,
+  getFlavorProductsForHalfAndHalf as listHalfAndHalfFlavors,
+  productMatchesHalfAndHalfVariation,
+} from "../../utils/menuProductHelpers";
 
 const useStyles = makeStyles((theme) => ({
   root: {
@@ -65,7 +72,9 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     flexDirection: "column",
     alignItems: "stretch",
-    backgroundColor: "#f5f5f5",
+    backgroundColor: "var(--menu-page-bg, #f5f5f5)",
+    color: "var(--menu-text, #1a1a1a)",
+    fontFamily: "var(--menu-font, inherit)",
     paddingBottom: 72,
   },
   heroBanner: {
@@ -74,7 +83,7 @@ const useStyles = makeStyles((theme) => ({
     minHeight: 200,
     maxHeight: 320,
     objectFit: "cover",
-    backgroundColor: "#eee",
+    backgroundColor: "var(--menu-skeleton, #eee)",
     [theme.breakpoints.down("xs")]: {
       height: "30vh",
       minHeight: 180,
@@ -86,8 +95,8 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     overflowX: "auto",
     gap: 2,
-    backgroundColor: "#fff",
-    borderBottom: "1px solid #eee",
+    backgroundColor: "var(--menu-header-bg, #fff)",
+    borderBottom: "1px solid var(--menu-border, #eee)",
     "&::-webkit-scrollbar": { height: 0 },
   },
   carouselImg: {
@@ -95,7 +104,7 @@ const useStyles = makeStyles((theme) => ({
     width: 160,
     objectFit: "cover",
     flex: "0 0 auto",
-    backgroundColor: "#eee",
+    backgroundColor: "var(--menu-skeleton, #eee)",
   },
   container: {
     maxWidth: "100%",
@@ -108,10 +117,10 @@ const useStyles = makeStyles((theme) => ({
     padding: theme.spacing(2, 3),
     borderRadius: 12,
     boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-    backgroundColor: "#fff",
+    backgroundColor: "var(--menu-card-bg, #fff)",
   },
   storeBar: {
-    backgroundColor: "#fff",
+    backgroundColor: "var(--menu-header-bg, #fff)",
     padding: theme.spacing(1.5, 2),
     display: "flex",
     alignItems: "center",
@@ -124,9 +133,9 @@ const useStyles = makeStyles((theme) => ({
     objectFit: "contain",
   },
   searchBar: {
-    backgroundColor: "#fff",
+    backgroundColor: "var(--menu-header-bg, #fff)",
     padding: theme.spacing(0, 2, 1.5),
-    borderBottom: "1px solid #eee",
+    borderBottom: "1px solid var(--menu-border, #eee)",
   },
   groupPagination: {
     marginTop: theme.spacing(1),
@@ -137,11 +146,11 @@ const useStyles = makeStyles((theme) => ({
     flexWrap: "wrap",
   },
   storeSubInfo: {
-    backgroundColor: "#fff",
+    backgroundColor: "var(--menu-header-bg, #fff)",
     padding: theme.spacing(0, 2, 1.5),
-    color: "#666",
+    color: "var(--menu-text-2, #666)",
     fontSize: "0.875rem",
-    borderBottom: "1px solid #eee",
+    borderBottom: "1px solid var(--menu-border, #eee)",
   },
   promoBanner: {
     margin: theme.spacing(1.5, 2, 0),
@@ -156,7 +165,7 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 700,
   },
   contentSection: {
-    backgroundColor: "#fff",
+    backgroundColor: "var(--menu-card-bg, #fff)",
     padding: theme.spacing(2),
     marginTop: theme.spacing(1.5),
   },
@@ -164,8 +173,8 @@ const useStyles = makeStyles((theme) => ({
     position: "sticky",
     top: 0,
     zIndex: 1000,
-    backgroundColor: "#fff",
-    borderBottom: "1px solid #eee",
+    backgroundColor: "var(--menu-header-bg, #fff)",
+    borderBottom: "1px solid var(--menu-border, #eee)",
   },
   header: {
     textAlign: "center",
@@ -212,18 +221,18 @@ const useStyles = makeStyles((theme) => ({
   productName: {
     fontWeight: 600,
     fontSize: "1rem",
-    color: "#1a1a1a",
+    color: "var(--menu-text, #1a1a1a)",
     marginBottom: theme.spacing(0.5),
   },
   productDescription: {
-    color: "#666",
+    color: "var(--menu-text-2, #666)",
     fontSize: "0.8125rem",
     marginBottom: theme.spacing(1),
   },
   productValue: {
     fontWeight: 700,
     fontSize: "1rem",
-    color: "#1a1a1a",
+    color: "var(--menu-text, #1a1a1a)",
   },
   quantityControl: {
     display: "flex",
@@ -240,7 +249,7 @@ const useStyles = makeStyles((theme) => ({
   summaryCard: {
     marginTop: theme.spacing(2),
     padding: theme.spacing(2),
-    backgroundColor: "#f8f9fa",
+    backgroundColor: "var(--menu-input-bg, #f8f9fa)",
     borderRadius: 10,
   },
   summaryRow: {
@@ -271,8 +280,8 @@ const useStyles = makeStyles((theme) => ({
     left: 0,
     right: 0,
     height: 56,
-    backgroundColor: "#fff",
-    borderTop: "1px solid #e0e0e0",
+    backgroundColor: "var(--menu-header-bg, #fff)",
+    borderTop: "1px solid var(--menu-border, #e0e0e0)",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-around",
@@ -287,16 +296,16 @@ const useStyles = makeStyles((theme) => ({
     flex: 1,
     padding: theme.spacing(1),
     cursor: "pointer",
-    color: "#666",
+    color: "var(--menu-text-2, #666)",
     "&.active": {
-      color: "#1a1a1a",
+      color: "var(--menu-text, #1a1a1a)",
       fontWeight: 600,
     },
   },
   sectionTitle: {
     fontSize: "1rem",
     fontWeight: 700,
-    color: "#1a1a1a",
+    color: "var(--menu-text, #1a1a1a)",
     marginBottom: theme.spacing(1.5),
   },
   mostOrderedScroll: {
@@ -312,7 +321,7 @@ const useStyles = makeStyles((theme) => ({
     flex: "0 0 150px",
     borderRadius: 10,
     overflow: "hidden",
-    backgroundColor: "#fff",
+    backgroundColor: "var(--menu-card-bg, #fff)",
     boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
     display: "flex",
     flexDirection: "column",
@@ -324,7 +333,7 @@ const useStyles = makeStyles((theme) => ({
     width: "100%",
     height: 110,
     objectFit: "cover",
-    backgroundColor: "#eee",
+    backgroundColor: "var(--menu-skeleton, #eee)",
   },
   mostOrderedCardBody: {
     padding: theme.spacing(1),
@@ -335,7 +344,7 @@ const useStyles = makeStyles((theme) => ({
   mostOrderedName: {
     fontSize: "0.8125rem",
     fontWeight: 600,
-    color: "#1a1a1a",
+    color: "var(--menu-text, #1a1a1a)",
     marginBottom: 4,
     lineHeight: 1.2,
     display: "-webkit-box",
@@ -346,7 +355,7 @@ const useStyles = makeStyles((theme) => ({
   mostOrderedPrice: {
     fontSize: "0.875rem",
     fontWeight: 700,
-    color: "#1a1a1a",
+    color: "var(--menu-text, #1a1a1a)",
     marginTop: "auto",
   },
   halfFixedCard: {
@@ -356,15 +365,15 @@ const useStyles = makeStyles((theme) => ({
     marginTop: 8,
     padding: 10,
     borderRadius: 12,
-    border: "1px solid #e5e7eb",
-    backgroundColor: "#f8fafc",
+    border: "1px solid var(--menu-border, #e5e7eb)",
+    backgroundColor: "var(--menu-input-bg, #f8fafc)",
   },
   halfFixedImage: {
     width: 64,
     height: 64,
     borderRadius: 10,
     objectFit: "cover",
-    backgroundColor: "#e5e7eb",
+    backgroundColor: "var(--menu-skeleton, #e5e7eb)",
     flexShrink: 0,
   },
   halfFlavorList: {
@@ -372,8 +381,6 @@ const useStyles = makeStyles((theme) => ({
     flexDirection: "column",
     gap: 8,
     marginTop: 8,
-    maxHeight: 320,
-    overflowY: "auto",
     paddingRight: 2,
   },
   halfFlavorCard: {
@@ -382,8 +389,8 @@ const useStyles = makeStyles((theme) => ({
     gap: 12,
     padding: 10,
     borderRadius: 12,
-    border: "2px solid #e5e7eb",
-    backgroundColor: "#fff",
+    border: "2px solid var(--menu-border, #e5e7eb)",
+    backgroundColor: "var(--menu-card-bg, #fff)",
     cursor: "pointer",
     textAlign: "left",
     width: "100%",
@@ -393,48 +400,48 @@ const useStyles = makeStyles((theme) => ({
     WebkitAppearance: "none",
     transition: "border-color 0.15s, box-shadow 0.15s, background-color 0.15s",
     "&:hover": {
-      borderColor: "#cbd5e1",
+      borderColor: "var(--menu-text-2, #cbd5e1)",
       boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
     },
   },
   halfFlavorCardSelected: {
-    borderColor: "#2563eb",
-    backgroundColor: "#eff6ff",
-    boxShadow: "0 0 0 1px #2563eb",
+    borderColor: "var(--menu-primary, #2563eb)",
+    backgroundColor: "var(--menu-primary-soft, #eff6ff)",
+    boxShadow: "0 0 0 1px var(--menu-primary, #2563eb)",
   },
   halfFlavorImage: {
     width: 72,
     height: 72,
     borderRadius: 10,
     objectFit: "cover",
-    backgroundColor: "#e5e7eb",
+    backgroundColor: "var(--menu-skeleton, #e5e7eb)",
     flexShrink: 0,
   },
   halfFlavorName: {
     fontWeight: 600,
     fontSize: "0.95rem",
-    color: "#1a1a1a",
+    color: "var(--menu-text, #1a1a1a)",
     lineHeight: 1.25,
   },
   halfFlavorMeta: {
     fontSize: "0.8rem",
-    color: "#64748b",
+    color: "var(--menu-text-2, #64748b)",
     marginTop: 2,
   },
   halfFlavorPrice: {
     fontWeight: 700,
     fontSize: "0.95rem",
-    color: "#1a1a1a",
+    color: "var(--menu-text, #1a1a1a)",
     marginTop: 4,
   },
   storeInfoRow: {
-    backgroundColor: "#fff",
+    backgroundColor: "var(--menu-header-bg, #fff)",
     padding: theme.spacing(0.5, 2, 1.25),
     display: "flex",
     alignItems: "center",
     flexWrap: "wrap",
     gap: theme.spacing(1),
-    borderBottom: "1px solid #eee",
+    borderBottom: "1px solid var(--menu-border, #eee)",
   },
   storeInfoChip: {
     display: "inline-flex",
@@ -442,8 +449,8 @@ const useStyles = makeStyles((theme) => ({
     gap: 6,
     fontSize: "0.78rem",
     fontWeight: 600,
-    color: "#475569",
-    backgroundColor: "#f1f5f9",
+    color: "var(--menu-chip-text, #475569)",
+    backgroundColor: "var(--menu-chip-bg, #f1f5f9)",
     borderRadius: 999,
     padding: "4px 10px",
     lineHeight: 1.4,
@@ -459,7 +466,7 @@ const useStyles = makeStyles((theme) => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    color: "#fff",
+    color: "var(--menu-primary-text, #fff)",
     fontWeight: 700,
     cursor: "pointer",
     boxShadow: "0 4px 16px rgba(0,0,0,0.25)",
@@ -469,7 +476,7 @@ const useStyles = makeStyles((theme) => ({
     width: "100%",
     height: 240,
     objectFit: "cover",
-    backgroundColor: "#eee",
+    backgroundColor: "var(--menu-skeleton, #eee)",
     display: "block",
     [theme.breakpoints.down("xs")]: {
       height: 220,
@@ -479,14 +486,14 @@ const useStyles = makeStyles((theme) => ({
     position: "absolute",
     top: 12,
     right: 12,
-    backgroundColor: "rgba(255,255,255,0.92)",
-    "&:hover": { backgroundColor: "#fff" },
+    backgroundColor: "var(--menu-overlay, rgba(255,255,255,0.92))",
+    "&:hover": { backgroundColor: "var(--menu-card-bg, #fff)" },
     boxShadow: "0 1px 6px rgba(0,0,0,0.2)",
   },
   detailSectionTitle: {
     fontWeight: 700,
     fontSize: "0.95rem",
-    color: "#1a1a1a",
+    color: "var(--menu-text, #1a1a1a)",
   },
   addonsSectionBanner: {
     display: "flex",
@@ -515,7 +522,7 @@ const useStyles = makeStyles((theme) => ({
     gap: 2,
     padding: "9px 16px",
     borderRadius: 999,
-    color: "#fff",
+    color: "var(--menu-primary-text, #fff)",
     fontWeight: 700,
     fontSize: "0.82rem",
     cursor: "pointer",
@@ -545,14 +552,14 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: 999,
     padding: "2px 8px",
     marginLeft: 8,
-    backgroundColor: "#f1f5f9",
-    color: "#64748b",
+    backgroundColor: "var(--menu-chip-bg, #f1f5f9)",
+    color: "var(--menu-chip-text, #64748b)",
   },
   detailFooter: {
     position: "sticky",
     bottom: 0,
-    backgroundColor: "#fff",
-    borderTop: "1px solid #eee",
+    backgroundColor: "var(--menu-card-bg, #fff)",
+    borderTop: "1px solid var(--menu-border, #eee)",
     padding: theme.spacing(1.5, 2),
     display: "flex",
     alignItems: "center",
@@ -562,7 +569,7 @@ const useStyles = makeStyles((theme) => ({
   detailStepper: {
     display: "flex",
     alignItems: "center",
-    border: "1px solid #e2e8f0",
+    border: "1px solid var(--menu-border, #e2e8f0)",
     borderRadius: 10,
     padding: "2px 4px",
   },
@@ -572,7 +579,7 @@ const useStyles = makeStyles((theme) => ({
     "100%": { opacity: 1 },
   },
   skeletonBlock: {
-    backgroundColor: "#e2e8f0",
+    backgroundColor: "var(--menu-skeleton, #e2e8f0)",
     borderRadius: 10,
     animation: "$skeletonPulse 1.4s ease-in-out infinite",
   },
@@ -661,7 +668,6 @@ const PublicMenuForm = ({
   // Busca (cardápio)
   const [searchQuery, setSearchQuery] = useState("");
   const searchInputRef = useRef(null);
-  const [groupPage, setGroupPage] = useState(1);
   /** Atualiza a cada 1 min para reavaliar horário do cardápio */
   const [orderHoursTick, setOrderHoursTick] = useState(0);
 
@@ -677,11 +683,25 @@ const PublicMenuForm = ({
 
   const appStyles = form ? getFormAppearanceStyles(form) : null;
   const fieldVariant = appStyles?.fieldVariant || "outlined";
-  /** Cor da marca: deriva botões, destaques e seleções (substitui cores fixas) */
-  const brandPrimary = form?.primaryColor || "#1a1a1a";
-  const brandSoft = `${brandPrimary}14`;
+  /** Tema derivado da identidade do cliente (cor, modo claro/escuro, fonte, fundo) */
+  const menuTheme = useMemo(() => buildMenuTheme(form), [form]);
+  const brandPrimary = menuTheme.primary;
+  const brandSoft = menuTheme.primarySoft;
+  /** Texto legível sobre a cor da marca (branco ou escuro conforme contraste) */
+  const brandText = menuTheme.primaryText;
   const muiTheme = useTheme();
   const detailFullScreen = useMediaQuery(muiTheme.breakpoints.down("xs"));
+  /** Estilo do Box raiz: quando há menuTheme salvo, o tema vence o appearance legado */
+  const rootStyle = form?.settings?.menuTheme
+    ? {
+        ...appStyles?.rootStyle,
+        background: menuTheme.pageBg,
+        fontFamily: menuTheme.fontFamily || appStyles?.rootStyle?.fontFamily,
+      }
+    : appStyles?.rootStyle;
+  const formPaperStyle = form?.settings?.menuTheme
+    ? { ...appStyles?.formPaperStyle, background: menuTheme.cardBg }
+    : appStyles?.formPaperStyle;
   const minOrderValue = Number(form?.settings?.minOrderValue) || 0;
 
   const PIECE_AGAIN_COOKIE_DAYS = 30;
@@ -852,16 +872,19 @@ const PublicMenuForm = ({
 
   useEffect(() => {
     const app = form?.settings?.appearance || {};
-    const fontFamily = app.fontFamily;
-    if (!fontFamily || fontFamily === "inherit") return;
-    const fontImport = FONT_IMPORTS[fontFamily];
-    if (!fontImport) return;
-    const link = document.createElement("link");
-    link.href = fontImport;
-    link.rel = "stylesheet";
-    document.head.appendChild(link);
-    return () => { link.remove(); };
-  }, [form?.settings?.appearance?.fontFamily]);
+    const fonts = [app.fontFamily, form?.settings?.menuTheme?.fontFamily].filter(
+      (f) => f && f !== "inherit" && FONT_IMPORTS[f]
+    );
+    if (fonts.length === 0) return;
+    const links = fonts.map((fontFamily) => {
+      const link = document.createElement("link");
+      link.href = FONT_IMPORTS[fontFamily];
+      link.rel = "stylesheet";
+      document.head.appendChild(link);
+      return link;
+    });
+    return () => { links.forEach((link) => link.remove()); };
+  }, [form?.settings?.appearance?.fontFamily, form?.settings?.menuTheme?.fontFamily]);
 
   useEffect(() => {
     if (initialProducts && initialProducts.length > 0) {
@@ -2318,65 +2341,14 @@ const PublicMenuForm = ({
     });
   };
 
-  const GROUP_ITEMS_PER_PAGE = 12;
   const activeGroupName = groups[activeGroup] || null;
   const activeGroupProducts = activeGroupName ? getProductsByGroup(activeGroupName) : [];
-  const totalGroupPages = Math.max(1, Math.ceil(activeGroupProducts.length / GROUP_ITEMS_PER_PAGE));
-  const paginatedGroupProducts = activeGroupProducts.slice(
-    (groupPage - 1) * GROUP_ITEMS_PER_PAGE,
-    groupPage * GROUP_ITEMS_PER_PAGE
-  );
-
-  const normalizeVariationKey = (value) => String(value || "").trim().toLowerCase();
-
-  const findOptionByVariationLabel = (product, variationLabel) => {
-    if (!product?.variations?.length || !variationLabel) return null;
-    const needle = normalizeVariationKey(variationLabel);
-    for (const variation of product.variations) {
-      const option = (variation.options || []).find(
-        (opt) => normalizeVariationKey(opt.label) === needle
-      );
-      if (option) return option;
-    }
-    return null;
-  };
-
-  const productMatchesHalfAndHalfVariation = (product, baseVariationLabel, baseVariationName = null) => {
-    if (!baseVariationLabel) return true;
-    if (!product?.variations?.length) return false;
-    const needleLabel = normalizeVariationKey(baseVariationLabel);
-    const needleName = baseVariationName ? normalizeVariationKey(baseVariationName) : null;
-    return product.variations.some((variation) => {
-      if (needleName && normalizeVariationKey(variation.name) !== needleName) return false;
-      return (variation.options || []).some(
-        (opt) => normalizeVariationKey(opt.label) === needleLabel
-      );
-    });
-  };
 
   const getFlavorProductsForHalfAndHalf = (
     baseProduct,
     baseVariationLabel = null,
     { excludeProductId = null } = {}
-  ) => {
-    if (!baseProduct) return [];
-    const grupoFilter = baseProduct.halfAndHalfGrupo || baseProduct.grupo || null;
-    const baseVariationName = baseProduct.variations?.[0]?.name || null;
-    let filtered = products.filter((p) => {
-      if (excludeProductId != null && p.id === excludeProductId) return false;
-      if (grupoFilter) return (p.grupo || "") === grupoFilter;
-      return true;
-    });
-
-    // Match string: mesma opção de variação (ex.: G) e, se houver, mesmo nome (ex.: Tamanho)
-    if (baseVariationLabel && baseProduct.variations && baseProduct.variations.length > 0) {
-      filtered = filtered.filter((p) =>
-        productMatchesHalfAndHalfVariation(p, baseVariationLabel, baseVariationName)
-      );
-    }
-
-    return filtered;
-  };
+  ) => listHalfAndHalfFlavors(products, baseProduct, baseVariationLabel, { excludeProductId });
 
   const computeHalfAndHalfUnitValue = (base, half1, half2, half1OptionId = null, half2OptionId = null) => {
     if (!base || !half1 || !half2) return 0;
@@ -2635,10 +2607,6 @@ const PublicMenuForm = ({
   }, [pieceAgainEnabled, pieceAgainModalOpen]);
 
   useEffect(() => {
-    setGroupPage(1);
-  }, [activeGroup, searchQuery, products.length]);
-
-  useEffect(() => {
     const id = setInterval(() => setOrderHoursTick((n) => n + 1), 60000);
     return () => clearInterval(id);
   }, []);
@@ -2646,14 +2614,14 @@ const PublicMenuForm = ({
   if (loading) {
     // Skeleton loading: estrutura do cardápio enquanto os produtos carregam
     return (
-      <Box className={classes.root} style={appStyles?.rootStyle}>
+      <Box className={classes.root} style={rootStyle}>
         <Box className={classes.skeletonBlock} style={{ width: "100%", height: 180, borderRadius: 0 }} />
-        <Box style={{ backgroundColor: "#fff", padding: 16, display: "flex", gap: 12 }}>
+        <Box style={{ backgroundColor: "var(--menu-card-bg, #fff)", padding: 16, display: "flex", gap: 12 }}>
           <Box className={classes.skeletonBlock} style={{ width: 140, height: 28 }} />
           <Box flex={1} />
           <Box className={classes.skeletonBlock} style={{ width: 64, height: 28 }} />
         </Box>
-        <Box style={{ backgroundColor: "#fff", padding: "0 16px 12px", display: "flex", gap: 8 }}>
+        <Box style={{ backgroundColor: "var(--menu-card-bg, #fff)", padding: "0 16px 12px", display: "flex", gap: 8 }}>
           {[0, 1, 2, 3].map((i) => (
             <Box key={i} className={classes.skeletonBlock} style={{ width: 80, height: 32, borderRadius: 999 }} />
           ))}
@@ -2665,7 +2633,7 @@ const PublicMenuForm = ({
               style={{
                 display: "flex",
                 gap: 16,
-                backgroundColor: "#fff",
+                backgroundColor: "var(--menu-card-bg, #fff)",
                 borderRadius: 12,
                 padding: 16,
                 marginBottom: 16,
@@ -2688,10 +2656,10 @@ const PublicMenuForm = ({
   if (form) {
     const orderHoursState = evaluateCardapioOrderHours(form.settings);
     if (!orderHoursState.allowed) {
-      const primary = form.primaryColor || "#1976d2";
+      const primary = brandPrimary;
       const schedule = getCardapioOrderHoursScheduleSummary(form.settings);
       return (
-        <Box className={classes.root} style={appStyles?.rootStyle}>
+        <Box className={classes.root} style={rootStyle}>
           {form?.settings?.bannerUrl ? (
             <img
               src={form.settings.bannerUrl}
@@ -2768,12 +2736,12 @@ const PublicMenuForm = ({
 
   if (submitted && orderData) {
     return (
-      <Box className={classes.root} style={appStyles?.rootStyle}>
-        <Paper className={classes.formPaper} style={appStyles?.formPaperStyle}>
+      <Box className={classes.root} style={rootStyle}>
+        <Paper className={classes.formPaper} style={formPaperStyle}>
           <Box className={classes.successMessage}>
             {/* Título de Confirmação */}
             <Box style={{ textAlign: "center", marginBottom: 32 }}>
-              <Typography variant="h4" gutterBottom style={{ color: form.primaryColor, fontWeight: 600 }}>
+              <Typography variant="h4" gutterBottom style={{ color: brandPrimary, fontWeight: 600 }}>
                 ✅ Pedido Confirmado!
               </Typography>
               <Typography variant="body1" color="textSecondary">
@@ -2809,7 +2777,7 @@ const PublicMenuForm = ({
                     variant="contained"
                     size="small"
                     startIcon={<FileCopyIcon />}
-                    style={{ backgroundColor: brandPrimary, color: "#fff", textTransform: "none" }}
+                    style={{ backgroundColor: brandPrimary, color: brandText, textTransform: "none" }}
                     onClick={() => {
                       if (navigator.clipboard) {
                         navigator.clipboard
@@ -2845,25 +2813,25 @@ const PublicMenuForm = ({
             {orderData.orderType === "delivery" && orderData.averageDeliveryTime && (
               <Box 
                 style={{ 
-                  backgroundColor: form.primaryColor + "20", 
+                  backgroundColor: brandPrimary + "20", 
                   padding: 24, 
                   borderRadius: 12,
                   textAlign: "center",
                   marginBottom: 32,
-                  border: `2px solid ${form.primaryColor}40`
+                  border: `2px solid ${brandPrimary}40`
                 }}
               >
-                <Typography variant="h6" style={{ color: form.primaryColor, marginBottom: 8, fontWeight: 600 }}>
+                <Typography variant="h6" style={{ color: brandPrimary, marginBottom: 8, fontWeight: 600 }}>
                   ⏱️ Tempo Médio de Entrega
                 </Typography>
-                <Typography variant="h4" style={{ color: form.primaryColor, fontWeight: 700 }}>
+                <Typography variant="h4" style={{ color: brandPrimary, fontWeight: 700 }}>
                   {orderData.averageDeliveryTime}
                 </Typography>
               </Box>
             )}
 
             {/* Informações do Cliente */}
-            <Box style={{ marginBottom: 24, padding: 16, backgroundColor: "#f5f5f5", borderRadius: 8 }}>
+            <Box style={{ marginBottom: 24, padding: 16, backgroundColor: "var(--menu-input-bg, #f5f5f5)", borderRadius: 8 }}>
               <Typography variant="h6" gutterBottom style={{ fontWeight: 600, marginBottom: 16 }}>
                 Dados do Cliente
               </Typography>
@@ -2887,14 +2855,14 @@ const PublicMenuForm = ({
                 Itens do Pedido
               </Typography>
               
-              <Paper style={{ padding: 16, backgroundColor: "#fafafa" }}>
+              <Paper style={{ padding: 16, backgroundColor: "var(--menu-input-bg, #fafafa)" }}>
                 {orderData.menuItems.map((item, index) => (
                   <Box 
                     key={index} 
                     style={{ 
                       marginBottom: index < orderData.menuItems.length - 1 ? 16 : 0,
                       paddingBottom: index < orderData.menuItems.length - 1 ? 16 : 0,
-                      borderBottom: index < orderData.menuItems.length - 1 ? "1px solid #e0e0e0" : "none"
+                      borderBottom: index < orderData.menuItems.length - 1 ? "1px solid var(--menu-border, #e0e0e0)" : "none"
                     }}
                   >
                     <Box display="flex" justifyContent="space-between" alignItems="flex-start">
@@ -2928,7 +2896,7 @@ const PublicMenuForm = ({
                           </Typography>
                         )}
                       </Box>
-                      <Typography variant="body1" style={{ fontWeight: 600, color: form.primaryColor, marginLeft: 16 }}>
+                      <Typography variant="body1" style={{ fontWeight: 600, color: brandPrimary, marginLeft: 16 }}>
                         R$ {item.total.toFixed(2).replace(".", ",")}
                       </Typography>
                     </Box>
@@ -2938,7 +2906,7 @@ const PublicMenuForm = ({
             </Box>
 
             {/* Resumo Financeiro */}
-            <Box style={{ marginBottom: 24, padding: 16, backgroundColor: "#f5f5f5", borderRadius: 8 }}>
+            <Box style={{ marginBottom: 24, padding: 16, backgroundColor: "var(--menu-input-bg, #f5f5f5)", borderRadius: 8 }}>
               <Box display="flex" justifyContent="space-between" alignItems="center" style={{ marginBottom: 12 }}>
                 <Typography variant="body1">
                   <strong>Total de itens:</strong>
@@ -2989,7 +2957,7 @@ const PublicMenuForm = ({
                 <Typography variant="h6" style={{ fontWeight: 600 }}>
                   Total do Pedido:
                 </Typography>
-                <Typography variant="h5" style={{ color: form.primaryColor, fontWeight: 700 }}>
+                <Typography variant="h5" style={{ color: brandPrimary, fontWeight: 700 }}>
                   R$ {orderData.total.toFixed(2).replace(".", ",")}
                 </Typography>
               </Box>
@@ -3016,7 +2984,7 @@ const PublicMenuForm = ({
 
             {/* Informações Adicionais */}
             {orderData.customFields && orderData.customFields.length > 0 && orderData.customFields.some(f => f.value) && (
-              <Box style={{ marginBottom: 24, padding: 16, backgroundColor: "#f5f5f5", borderRadius: 8 }}>
+              <Box style={{ marginBottom: 24, padding: 16, backgroundColor: "var(--menu-input-bg, #f5f5f5)", borderRadius: 8 }}>
                 <Typography variant="h6" gutterBottom style={{ fontWeight: 600, marginBottom: 16 }}>
                   Informações Adicionais
                 </Typography>
@@ -3068,8 +3036,8 @@ const PublicMenuForm = ({
 
   if (submitted) {
     return (
-      <Box className={classes.root} style={appStyles?.rootStyle}>
-        <Paper className={classes.formPaper} style={appStyles?.formPaperStyle}>
+      <Box className={classes.root} style={rootStyle}>
+        <Paper className={classes.formPaper} style={formPaperStyle}>
           <Box className={classes.successMessage}>
             <Typography variant="h5" gutterBottom>
               {form.successMessage || "Obrigado! Seu pedido foi enviado com sucesso."}
@@ -3128,7 +3096,7 @@ const PublicMenuForm = ({
     .filter(Boolean);
 
   return (
-    <Box className={classes.root} style={appStyles?.rootStyle}>
+    <Box className={classes.root} style={rootStyle}>
       {/* Banner grande (hero) quando configurado */}
       {bannerUrl && (
         <img
@@ -3447,7 +3415,7 @@ const PublicMenuForm = ({
                   Nenhum item encontrado para esta busca neste grupo.
                 </Typography>
               )}
-              {paginatedGroupProducts.map((product) => {
+              {activeGroupProducts.map((product) => {
                 const itemKey = getItemKey(product);
                 const keysForProduct = getKeysForProduct(product);
                 const quantity = getTotalQuantityForProduct(product);
@@ -3581,37 +3549,6 @@ const PublicMenuForm = ({
                   </Card>
                 );
               })}
-              {activeGroupProducts.length > GROUP_ITEMS_PER_PAGE && (
-                <Box className={classes.groupPagination}>
-                  <Typography variant="body2" color="textSecondary">
-                    Página {groupPage} de {totalGroupPages} ({activeGroupProducts.length} itens)
-                  </Typography>
-                  <Box display="flex" alignItems="center" gridGap={8}>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      disabled={groupPage <= 1}
-                      onClick={() => {
-                        setGroupPage((prev) => Math.max(1, prev - 1));
-                        setTimeout(() => scrollToItemsStart(), 50);
-                      }}
-                    >
-                      Anterior
-                    </Button>
-                    <Button
-                      size="small"
-                      variant="outlined"
-                      disabled={groupPage >= totalGroupPages}
-                      onClick={() => {
-                        setGroupPage((prev) => Math.min(totalGroupPages, prev + 1));
-                        setTimeout(() => scrollToItemsStart(), 50);
-                      }}
-                    >
-                      Próxima
-                    </Button>
-                  </Box>
-                </Box>
-              )}
             </Box>
           )}
 
@@ -3684,7 +3621,7 @@ const PublicMenuForm = ({
                       display="flex"
                       alignItems="center"
                       justifyContent="space-between"
-                      style={{ padding: "10px 0", borderBottom: isLast ? "none" : "1px solid #f0f0f0" }}
+                      style={{ padding: "10px 0", borderBottom: isLast ? "none" : "1px solid var(--menu-border-soft, #f0f0f0)" }}
                     >
                       <Box flex={1} pr={1}>
                         <Typography variant="body2" style={{ fontWeight: 500, lineHeight: 1.3 }}>
@@ -3740,12 +3677,12 @@ const PublicMenuForm = ({
                   if (!items || items.length === 0) return null;
                   const rule = getAddonRuleLabel(rules);
                   return (
-                    <Box key={keyPrefix} mb={1.5} style={{ border: "1px solid #ececec", borderRadius: 12, overflow: "hidden" }}>
+                    <Box key={keyPrefix} mb={1.5} style={{ border: "1px solid var(--menu-border, #ececec)", borderRadius: 12, overflow: "hidden" }}>
                       <Box
                         display="flex"
                         alignItems="center"
                         justifyContent="space-between"
-                        style={{ backgroundColor: "#fafafa", padding: "10px 12px" }}
+                        style={{ backgroundColor: "var(--menu-input-bg, #fafafa)", padding: "10px 12px" }}
                       >
                         <Typography variant="body2" style={{ fontWeight: 700 }}>{title}</Typography>
                         {rule ? (
@@ -3793,7 +3730,7 @@ const PublicMenuForm = ({
               <Button
                 onClick={confirmAddOnModal}
                 variant="contained"
-                style={{ backgroundColor: brandPrimary, color: "#fff" }}
+                style={{ backgroundColor: brandPrimary, color: brandText }}
               >
                 {addOnModalHalfIndex === -1 && addOnModalHalfPending
                   ? "Adicionar ao pedido"
@@ -3841,7 +3778,7 @@ const PublicMenuForm = ({
                     justifyContent="space-between"
                     style={{
                       padding: "10px 0",
-                      borderBottom: isLast ? "none" : "1px solid #f0f0f0",
+                      borderBottom: isLast ? "none" : "1px solid var(--menu-border-soft, #f0f0f0)",
                     }}
                   >
                     <Box flex={1} pr={1}>
@@ -3912,7 +3849,7 @@ const PublicMenuForm = ({
                     key={keyPrefix}
                     mb={1.5}
                     style={{
-                      border: "1px solid #ececec",
+                      border: "1px solid var(--menu-border, #ececec)",
                       borderRadius: 12,
                       overflow: "hidden",
                     }}
@@ -3921,7 +3858,7 @@ const PublicMenuForm = ({
                       display="flex"
                       alignItems="center"
                       justifyContent="space-between"
-                      style={{ backgroundColor: "#fafafa", padding: "10px 12px" }}
+                      style={{ backgroundColor: "var(--menu-input-bg, #fafafa)", padding: "10px 12px" }}
                     >
                       <Typography variant="body2" style={{ fontWeight: 700 }}>
                         {title}
@@ -4067,7 +4004,7 @@ const PublicMenuForm = ({
                         <Box
                           display="flex"
                           style={{
-                            border: "1px solid #ececec",
+                            border: "1px solid var(--menu-border, #ececec)",
                             borderRadius: 10,
                             overflow: "hidden",
                           }}
@@ -4088,7 +4025,7 @@ const PublicMenuForm = ({
                               fontSize: "0.85rem",
                               fontFamily: "inherit",
                               backgroundColor: !detailHalfMode ? brandPrimary : "transparent",
-                              color: !detailHalfMode ? "#fff" : "#666",
+                              color: !detailHalfMode ? brandText : "var(--menu-text-2, #666)",
                             }}
                           >
                             Inteira
@@ -4106,7 +4043,7 @@ const PublicMenuForm = ({
                               fontSize: "0.85rem",
                               fontFamily: "inherit",
                               backgroundColor: detailHalfMode ? brandPrimary : "transparent",
-                              color: detailHalfMode ? "#fff" : "#666",
+                              color: detailHalfMode ? brandText : "var(--menu-text-2, #666)",
                             }}
                           >
                             2 sabores (meio a meio)
@@ -4124,13 +4061,17 @@ const PublicMenuForm = ({
                               Metade 1: <strong>{detailProduct.name}</strong>
                               {getDetailVariationLabel() ? ` (${getDetailVariationLabel()})` : ""}
                             </Typography>
-                            {halfFlavors.length === 0 && (
+                            {halfFlavors.length === 0 ? (
                               <Typography variant="body2" color="textSecondary">
                                 Nenhum outro sabor disponível
                                 {getDetailVariationLabel() ? ` no tamanho ${getDetailVariationLabel()}` : ""}.
                               </Typography>
+                            ) : (
+                              <Typography variant="caption" color="textSecondary" style={{ display: "block", marginBottom: 6 }}>
+                                {halfFlavors.length} {halfFlavors.length === 1 ? "sabor disponível" : "sabores disponíveis"}
+                              </Typography>
                             )}
-                            <Box style={{ maxHeight: 260, overflowY: "auto" }}>
+                            <Box className={classes.halfFlavorList}>
                               {halfFlavors.map((flavor) => {
                                 const selected = detailHalfFlavorId === flavor.id;
                                 const flavorOption = findOptionByVariationLabel(flavor, getDetailVariationLabel());
@@ -4298,7 +4239,7 @@ const PublicMenuForm = ({
                       style={{
                         backgroundColor:
                           detailHalfMode && detailHalfFlavorId == null ? "#bdbdbd" : brandPrimary,
-                        color: "#fff",
+                        color: detailHalfMode && detailHalfFlavorId == null ? "#fff" : brandText,
                         fontWeight: 700,
                         textTransform: "none",
                         borderRadius: 10,
@@ -4721,4 +4662,45 @@ const PublicMenuForm = ({
   );
 };
 
-export default PublicMenuForm;
+/**
+ * Wrapper que aplica o tema derivado da identidade do cliente:
+ * - CSS variables no documentElement (alcançam também os Dialogs em portais)
+ * - ThemeProvider MUI (modo claro/escuro, cor primária, fonte) para
+ *   Typography, Paper, TextField etc.
+ */
+const PublicMenuFormThemed = (props) => {
+  const menuTheme = useMemo(() => buildMenuTheme(props.form), [props.form]);
+
+  const muiMenuTheme = useMemo(
+    () =>
+      createTheme({
+        palette: {
+          type: menuTheme.mode,
+          primary: { main: menuTheme.primary },
+          background: { default: menuTheme.pageBg, paper: menuTheme.cardBg },
+          text: { primary: menuTheme.textPrimary, secondary: menuTheme.textSecondary },
+        },
+        ...(menuTheme.fontFamily
+          ? { typography: { fontFamily: menuTheme.fontFamily } }
+          : {}),
+      }),
+    [menuTheme]
+  );
+
+  useEffect(() => {
+    const vars = themeToCssVars(menuTheme);
+    const rootEl = document.documentElement;
+    Object.entries(vars).forEach(([key, value]) => rootEl.style.setProperty(key, value));
+    return () => {
+      Object.keys(vars).forEach((key) => rootEl.style.removeProperty(key));
+    };
+  }, [menuTheme]);
+
+  return (
+    <ThemeProvider theme={muiMenuTheme}>
+      <PublicMenuForm {...props} />
+    </ThemeProvider>
+  );
+};
+
+export default PublicMenuFormThemed;
