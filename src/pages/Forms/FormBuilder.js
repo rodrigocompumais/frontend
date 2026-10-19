@@ -261,6 +261,7 @@ const FormBuilder = () => {
       pieceAgainStoredFieldIds: [], // IDs dos campos customizados a persistir no histórico
       showMesaField: false, // Exibir campo Número da mesa no cardápio
       mesaFieldMode: "select", // select = dropdown com mesas, input = campo livre
+      mesaOccupationAskPhone: false, // POS pede telefone opcional ao ocupar mesa/comanda
       mesaOccupationKeywordValidation: false, // Exige confirmação por palavra-chave no WhatsApp para efetivar ocupação manual
       autoAdvanceInterval: 0, // Avançar por todos os estágios a cada X segundos (0 = desativado)
       appearance: {
@@ -363,6 +364,7 @@ const FormBuilder = () => {
           printDeviceId: null,
           orderTriggerMessages: [],
           averageDeliveryTime: "",
+          mesaOccupationAskPhone: false,
           mesaOccupationKeywordValidation: false,
           appearance: {
             fontFamily: "inherit",
@@ -410,6 +412,7 @@ const FormBuilder = () => {
         mesaPrintConfig: data.settings?.mesaPrintConfig ?? (data.settings?.printDeviceId ? [{ printDeviceId: data.settings.printDeviceId, groupNames: ["*"] }] : []),
         deliveryPrintDeviceIds: Array.isArray(data.settings?.deliveryPrintDeviceIds) ? data.settings.deliveryPrintDeviceIds : (data.settings?.printDeviceId ? [data.settings.printDeviceId] : []),
         orderTriggerMessages: Array.isArray(data.settings?.orderTriggerMessages) ? data.settings.orderTriggerMessages : [],
+        mesaOccupationAskPhone: data.settings?.mesaOccupationAskPhone === true,
         mesaOccupationKeywordValidation: data.settings?.mesaOccupationKeywordValidation === true,
       };
       // Garantir defaults do cardápio para mesa (evitar que mesaFieldMode ausente mostre input em vez de select)
@@ -1227,6 +1230,25 @@ const FormBuilder = () => {
                         />
                       }
                       label="Exigir confirmação de ocupação por palavra-chave (WhatsApp)"
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <FormControlLabel
+                      control={
+                        <Switch
+                          checked={!!formData.settings?.mesaOccupationAskPhone}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              settings: {
+                                ...formData.settings,
+                                mesaOccupationAskPhone: e.target.checked,
+                              },
+                            })
+                          }
+                        />
+                      }
+                      label="Pedir telefone ao ocupar mesa/comanda no POS"
                     />
                   </Grid>
                   <Grid item xs={12} md={6}>
