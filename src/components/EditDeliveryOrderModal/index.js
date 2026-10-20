@@ -33,6 +33,8 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [menuItems, setMenuItems] = useState([]);
   const [responderName, setResponderName] = useState("");
+  const [mode, setMode] = useState("delivery");
+  const [configuredFee, setConfiguredFee] = useState(0);
   const [address, setAddress] = useState({
     endereco: "",
     endereconumero: "",
@@ -43,7 +45,7 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
 
   const formId = order?.formId || order?.form?.id;
   const orderId = order?.id;
-  const isPickup = order?.metadata?.fulfillmentMode === "pickup";
+  const isPickup = mode === "pickup";
 
   useEffect(() => {
     if (!open || !orderId || !formId) return;
@@ -58,6 +60,12 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
         const meta = responseData.metadata || order.metadata || {};
         setMenuItems(cloneItems(meta.menuItems || []));
         setResponderName(responseData.responderName || meta.customerName || "");
+        setMode(
+          meta.fulfillmentMode === "pickup" || meta.pickup === true || meta.retirada === true
+            ? "pickup"
+            : "delivery"
+        );
+        setConfiguredFee(Number(formData.settings?.deliveryFee) || 0);
         setAddress({
           endereco: meta.endereco || "",
           endereconumero: meta.endereconumero || "",
@@ -84,7 +92,16 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
     load();
   }, [open, orderId, formId, order, onClose]);
 
-  const deliveryFee = Number(order?.metadata?.deliveryFee) || 0;
+  const storedFee = Number(order?.metadata?.deliveryFee) || 0;
+  const startedAsPickup =
+    order?.metadata?.fulfillmentMode === "pickup" ||
+    order?.metadata?.pickup === true ||
+    order?.metadata?.retirada === true;
+  const deliveryFee = isPickup
+    ? 0
+    : startedAsPickup
+      ? (configuredFee || storedFee)
+      : (storedFee || configuredFee);
   const couponDiscount = Number(order?.metadata?.couponDiscount) || 0;
 
   const subtotal = useMemo(
@@ -135,6 +152,7 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
     try {
       const payload = {
         responderName: responderName.trim(),
+        fulfillmentMode: mode,
         menuItems: menuItems.map((it) => ({
           ...it,
           quantity: Number(it.quantity) || 1,
@@ -184,6 +202,24 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
               margin="dense"
               variant="outlined"
             />
+
+            <Box display="flex" mt={2} mb={1}>
+              <Button
+                variant={mode === "delivery" ? "contained" : "outlined"}
+                color="primary"
+                onClick={() => setMode("delivery")}
+                style={{ marginRight: 8 }}
+              >
+                Delivery
+              </Button>
+              <Button
+                variant={mode === "pickup" ? "contained" : "outlined"}
+                color="primary"
+                onClick={() => setMode("pickup")}
+              >
+                Retirada no balcão
+              </Button>
+            </Box>
 
             {!isPickup && (
               <Box mt={2}>
@@ -245,7 +281,12 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
 
             {isPickup && (
               <Typography variant="body2" color="textSecondary" style={{ marginTop: 12 }}>
-                Pedido de retirada — endereço não é obrigatório.
+                Retirada no balcão — a taxa de entrega sai do pedido.
+              </Typography>
+            )}
+            {!isPickup && startedAsPickup && configuredFee > 0 && (
+              <Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
+                Taxa de entrega de R$ {configuredFee.toFixed(2).replace(".", ",")} será adicionada.
               </Typography>
             )}
 
