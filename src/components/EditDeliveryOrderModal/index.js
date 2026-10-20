@@ -35,6 +35,7 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
   const [responderName, setResponderName] = useState("");
   const [mode, setMode] = useState("delivery");
   const [configuredFee, setConfiguredFee] = useState(0);
+  const [feeWaived, setFeeWaived] = useState(false);
   const [address, setAddress] = useState({
     endereco: "",
     endereconumero: "",
@@ -60,11 +61,10 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
         const meta = responseData.metadata || order.metadata || {};
         setMenuItems(cloneItems(meta.menuItems || []));
         setResponderName(responseData.responderName || meta.customerName || "");
-        setMode(
-          meta.fulfillmentMode === "pickup" || meta.pickup === true || meta.retirada === true
-            ? "pickup"
-            : "delivery"
-        );
+        const pickup =
+          meta.fulfillmentMode === "pickup" || meta.pickup === true || meta.retirada === true;
+        setMode(pickup ? "pickup" : "delivery");
+        setFeeWaived(!pickup && meta.deliveryFeeWaived === true);
         setConfiguredFee(Number(formData.settings?.deliveryFee) || 0);
         setAddress({
           endereco: meta.endereco || "",
@@ -97,11 +97,12 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
     order?.metadata?.fulfillmentMode === "pickup" ||
     order?.metadata?.pickup === true ||
     order?.metadata?.retirada === true;
-  const deliveryFee = isPickup
+  const deliveryFee = isPickup || feeWaived
     ? 0
     : startedAsPickup
       ? (configuredFee || storedFee)
       : (storedFee || configuredFee);
+  const canWaiveFee = !isPickup && (deliveryFee > 0 || feeWaived || configuredFee > 0 || storedFee > 0);
   const couponDiscount = Number(order?.metadata?.couponDiscount) || 0;
 
   const subtotal = useMemo(
@@ -153,6 +154,7 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
       const payload = {
         responderName: responderName.trim(),
         fulfillmentMode: mode,
+        waiveDeliveryFee: !isPickup && feeWaived,
         menuItems: menuItems.map((it) => ({
           ...it,
           quantity: Number(it.quantity) || 1,
@@ -215,7 +217,10 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
               <Button
                 variant={mode === "pickup" ? "contained" : "outlined"}
                 color="primary"
-                onClick={() => setMode("pickup")}
+                onClick={() => {
+                  setMode("pickup");
+                  setFeeWaived(false);
+                }}
               >
                 Retirada no balcão
               </Button>
@@ -284,10 +289,27 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
                 Retirada no balcão — a taxa de entrega sai do pedido.
               </Typography>
             )}
-            {!isPickup && startedAsPickup && configuredFee > 0 && (
+            {!isPickup && startedAsPickup && !feeWaived && configuredFee > 0 && (
               <Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
                 Taxa de entrega de R$ {configuredFee.toFixed(2).replace(".", ",")} será adicionada.
               </Typography>
+            )}
+            {canWaiveFee && (
+              <Box mt={1}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="secondary"
+                  onClick={() => setFeeWaived((current) => !current)}
+                >
+                  {feeWaived ? "Restaurar taxa de entrega" : "Remover taxa de entrega"}
+                </Button>
+                {feeWaived && (
+                  <Typography variant="body2" color="textSecondary" style={{ marginTop: 8 }}>
+                    Taxa de entrega removida. O pedido continua como delivery.
+                  </Typography>
+                )}
+              </Box>
             )}
 
             <Divider style={{ margin: "16px 0" }} />
