@@ -441,7 +441,9 @@ const FormResponses = () => {
                     <>
                       <TableCell>
                         <Typography variant="body2">
-                          {(response.metadata?.tableNumber || response.metadata?.tableId)
+                          {(response.metadata?.orderType === "delivery" ||
+                            response.metadata?.tableNumber ||
+                            response.metadata?.tableId)
                             ? formatMetadataTableDisplay(response.metadata)
                             : "-"}
                         </Typography>
@@ -603,9 +605,14 @@ const FormResponses = () => {
                     )}
                   </Typography>
                 </Box>
-                {isCardapioForm && (selectedResponse.metadata?.tableNumber || selectedResponse.metadata?.tableId) && (
+                {isCardapioForm &&
+                  (selectedResponse.metadata?.orderType === "delivery" ||
+                    selectedResponse.metadata?.tableNumber ||
+                    selectedResponse.metadata?.tableId) && (
                   <Box className={classes.fieldAnswer}>
-                    <Typography className={classes.fieldLabel}>Mesa / comanda</Typography>
+                    <Typography className={classes.fieldLabel}>
+                      {selectedResponse.metadata?.orderType === "delivery" ? "Tipo" : "Mesa / comanda"}
+                    </Typography>
                     <Typography className={classes.fieldValue}>
                       {formatMetadataTableDisplay(selectedResponse.metadata)}
                     </Typography>

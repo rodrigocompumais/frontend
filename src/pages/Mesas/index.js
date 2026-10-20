@@ -61,7 +61,7 @@ import TrocarNomeMesaDialog from "../../components/TrocarNomeMesaDialog";
 import OrderNotificationPopup from "../../components/OrderNotificationPopup";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
-import { formatMesaComandaTitle, formatOrderTableBadge } from "../../helpers/mesaDisplayLabel";
+import { formatDeliveryKindLabel, formatMesaComandaTitle, formatOrderTableBadge } from "../../helpers/mesaDisplayLabel";
 import useCompanyModules from "../../hooks/useCompanyModules";
 import { i18n } from "../../translate/i18n";
 import { SocketContext } from "../../context/Socket/SocketContext";
@@ -2475,7 +2475,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                 const total = getOrderTotal(order);
                 const mesaLabel =
                   order.metadata?.orderType === "delivery"
-                    ? "Delivery"
+                    ? formatDeliveryKindLabel(order.metadata, true)
                     : formatOrderTableBadge(order.metadata) ||
                       order.metadata?.tableNumber ||
                       order.metadata?.tableId ||
@@ -2545,7 +2545,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
                 </Typography>
                 <Typography variant="body2">
                   {selectedPendingOrder.metadata?.orderType === "delivery"
-                    ? "Delivery"
+                    ? formatDeliveryKindLabel(selectedPendingOrder.metadata, true)
                     : formatOrderTableBadge(selectedPendingOrder.metadata) || "—"}
                 </Typography>
               </Box>

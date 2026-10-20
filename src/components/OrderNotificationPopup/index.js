@@ -12,7 +12,7 @@ import {
 } from "@material-ui/core";
 import ShoppingCartIcon from "@material-ui/icons/ShoppingCart";
 import EventSeatIcon from "@material-ui/icons/EventSeat";
-import { formatOrderTableBadge } from "../../helpers/mesaDisplayLabel";
+import { formatDeliveryKindLabel, formatOrderTableBadge } from "../../helpers/mesaDisplayLabel";
 
 const useStyles = makeStyles((theme) => ({
   dialogContent: {
@@ -64,7 +64,7 @@ const OrderNotificationPopup = ({ open, order, onView, onClose }) => {
   const menuItems = metadata.menuItems || [];
   const lugarMesa =
     metadata.orderType === "delivery"
-      ? "Delivery"
+      ? formatDeliveryKindLabel(metadata, true)
       : formatOrderTableBadge(metadata) || metadata.tableNumber || metadata.tableId || "N/A";
   const total = metadata.total != null 
     ? Number(metadata.total) 

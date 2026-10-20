@@ -18,9 +18,24 @@ export function formatMesaComandaTitle(mesa) {
   return alreadyHasPrefix ? displayName : expectedPrefix + displayName;
 }
 
-/** Texto curto no card de pedido (ao lado do protocolo): Delivery | Mesa | Comanda */
+export function isPickupOrder(metadata) {
+  if (!metadata) return false;
+  return (
+    metadata.fulfillmentMode === "pickup" ||
+    metadata.pickup === true ||
+    metadata.retirada === true
+  );
+}
+
+/** Delivery ou retirada. `long` usa "Retirada no balcão" no detalhe do pedido. */
+export function formatDeliveryKindLabel(metadata, long = false) {
+  if (isPickupOrder(metadata)) return long ? "Retirada no balcão" : "Retirada";
+  return "Delivery";
+}
+
+/** Texto curto no card de pedido (ao lado do protocolo): Delivery | Retirada | Mesa | Comanda */
 export function formatOrderKindShort(metadata) {
-  if (!metadata || metadata.orderType === "delivery") return "Delivery";
+  if (!metadata || metadata.orderType === "delivery") return formatDeliveryKindLabel(metadata);
   const raw = String(metadata.tableNumber ?? "").trim().toLowerCase();
   if (raw.startsWith("comanda")) return "Comanda";
   if (raw.startsWith("mesa")) return "Mesa";
@@ -48,7 +63,7 @@ export function formatOrderTableBadge(metadata) {
 /** Respostas / detalhe: uma linha sem prefixo duplicado */
 export function formatMetadataTableDisplay(metadata) {
   if (!metadata) return "-";
-  if (metadata.orderType === "delivery") return "Delivery";
+  if (metadata.orderType === "delivery") return formatDeliveryKindLabel(metadata, true);
   const t = formatOrderTableBadge(metadata);
   return t || String(metadata.tableId ?? "-");
 }

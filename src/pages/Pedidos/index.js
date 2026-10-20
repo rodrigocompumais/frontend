@@ -45,7 +45,7 @@ import useCompanyModules from "../../hooks/useCompanyModules";
 import { i18n } from "../../translate/i18n";
 import PedidoKanbanCard from "../../components/PedidoKanbanCard";
 import EditDeliveryOrderModal from "../../components/EditDeliveryOrderModal";
-import { formatMesaComandaTitle, formatOrderTableBadge } from "../../helpers/mesaDisplayLabel";
+import { formatDeliveryKindLabel, formatMesaComandaTitle, formatOrderTableBadge } from "../../helpers/mesaDisplayLabel";
 
 // Pedidos mesa: Novo, Confirmado, Em preparo, Pronto, Entregue, Cancelado
 const MESA_ORDER_STAGES = [
@@ -855,7 +855,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                   <Typography variant="subtitle2" color="textSecondary" gutterBottom>Tipo</Typography>
                   <Typography variant="body2">
                     {selectedOrder.metadata?.orderType === "delivery"
-                      ? "Delivery"
+                      ? formatDeliveryKindLabel(selectedOrder.metadata, true)
                       : formatOrderTableBadge(selectedOrder.metadata) || "—"}
                   </Typography>
                 </Box>
@@ -1075,7 +1075,7 @@ const Pedidos = ({ orderTypeFilter, minimal = false }) => {
                 </Typography>
                 <Typography variant="body2">
                   {selectedOrder.metadata?.orderType === "delivery"
-                    ? "Delivery"
+                    ? formatDeliveryKindLabel(selectedOrder.metadata, true)
                     : formatOrderTableBadge(selectedOrder.metadata) || "—"}
                 </Typography>
               </Box>
