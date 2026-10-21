@@ -160,6 +160,25 @@ const useStyles = makeStyles((theme) => ({
     fontWeight: 600,
     fontSize: "0.95rem",
   },
+  menuProductPicker: {
+    width: "100%",
+    maxHeight: 380,
+    overflowY: "auto",
+    border: `1px solid ${theme.palette.divider}`,
+    borderRadius: theme.shape.borderRadius,
+  },
+  menuProductGroup: {
+    position: "sticky",
+    top: 0,
+    zIndex: 1,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: theme.spacing(0.75, 1.5),
+    backgroundColor: theme.palette.type === "dark" ? theme.palette.grey[800] : theme.palette.grey[100],
+    fontWeight: 600,
+    fontSize: "0.8rem",
+  },
 }));
 
 const fieldTypes = [
@@ -215,6 +234,9 @@ const FormBuilder = () => {
   const { hasLanchonetes, hasAgendamento } = useCompanyModules();
   const [printDevices, setPrintDevices] = useState([]);
   const [productGroups, setProductGroups] = useState([]);
+  const [menuCatalogProducts, setMenuCatalogProducts] = useState([]);
+  const [menuCatalogSearch, setMenuCatalogSearch] = useState("");
+  const [loadingMenuCatalog, setLoadingMenuCatalog] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [bannerUploading, setBannerUploading] = useState(false);
   const logoInputRef = useRef(null);
@@ -321,6 +343,42 @@ const FormBuilder = () => {
     };
     fetchGroups();
   }, [hasLanchonetes]);
+
+  useEffect(() => {
+    if (!hasLanchonetes || formData.settings?.formType !== "cardapio") return undefined;
+    let cancelled = false;
+    const loadMenuCatalog = async () => {
+      setLoadingMenuCatalog(true);
+      try {
+        const all = [];
+        let page = 1;
+        let hasMore = true;
+        while (hasMore && page <= 50) {
+          const { data } = await api.get("/products", {
+            params: { pageNumber: String(page), isMenuProduct: "true" },
+          });
+          all.push(...(data.products || []));
+          hasMore = Boolean(data.hasMore);
+          page += 1;
+        }
+        if (cancelled) return;
+        all.sort((a, b) => {
+          const byGroup = String(a.grupo || "Outros").localeCompare(String(b.grupo || "Outros"), "pt-BR");
+          if (byGroup !== 0) return byGroup;
+          return String(a.name || "").localeCompare(String(b.name || ""), "pt-BR");
+        });
+        setMenuCatalogProducts(all);
+      } catch (err) {
+        if (!cancelled) setMenuCatalogProducts([]);
+      } finally {
+        if (!cancelled) setLoadingMenuCatalog(false);
+      }
+    };
+    loadMenuCatalog();
+    return () => {
+      cancelled = true;
+    };
+  }, [hasLanchonetes, formData.settings?.formType]);
 
   useEffect(() => {
     // Se o ID mudou, resetar todas as flags
@@ -508,6 +566,14 @@ const FormBuilder = () => {
             ? formData.settings.deliveryPrintDeviceIds.filter(id => id && id > 0)
             : [],
           orderTriggerMessages,
+          menuCatalogMode: formData.settings?.menuCatalogMode === "custom" ? "custom" : "all",
+          menuProductIds: Array.isArray(formData.settings?.menuProductIds)
+            ? Array.from(new Set(
+              formData.settings.menuProductIds
+                .map((id) => Number(id))
+                .filter((id) => Number.isInteger(id) && id > 0)
+            ))
+            : [],
         },
       };
 
@@ -681,6 +747,59 @@ const FormBuilder = () => {
 
   const isQuotationForm = formData.settings?.formType === "quotation";
   const isMenuForm = formData.settings?.formType === "cardapio";
+  const menuCatalogCustom = formData.settings?.menuCatalogMode === "custom";
+  const selectedMenuProductIds = new Set(
+    (Array.isArray(formData.settings?.menuProductIds) ? formData.settings.menuProductIds : [])
+      .map((id) => Number(id))
+      .filter((id) => Number.isInteger(id) && id > 0)
+  );
+  const menuCatalogQuery = menuCatalogSearch.trim().toLowerCase();
+  const visibleMenuCatalog = menuCatalogProducts.filter((product) => {
+    if (!menuCatalogQuery) return true;
+    const hay = `${product.name || ""} ${product.grupo || ""} ${product.description || ""}`.toLowerCase();
+    return hay.includes(menuCatalogQuery);
+  });
+  const menuCatalogGroups = [];
+  const menuCatalogByGroup = new Map();
+  visibleMenuCatalog.forEach((product) => {
+    const group = String(product.grupo || "").trim() || "Outros";
+    if (!menuCatalogByGroup.has(group)) {
+      menuCatalogByGroup.set(group, []);
+      menuCatalogGroups.push(group);
+    }
+    menuCatalogByGroup.get(group).push(product);
+  });
+
+  const replaceMenuProductIds = (ids) => {
+    setFormData((prev) => ({
+      ...prev,
+      settings: {
+        ...(prev.settings || {}),
+        menuProductIds: Array.from(new Set(ids)),
+      },
+    }));
+  };
+
+  const toggleMenuProduct = (productId) => {
+    const next = new Set(selectedMenuProductIds);
+    if (next.has(productId)) next.delete(productId);
+    else next.add(productId);
+    replaceMenuProductIds(Array.from(next));
+  };
+
+  const toggleMenuGroup = (productsInGroup) => {
+    const ids = productsInGroup.map((product) => product.id);
+    const allOn = ids.length > 0 && ids.every((id) => selectedMenuProductIds.has(id));
+    const next = new Set(selectedMenuProductIds);
+    ids.forEach((id) => {
+      if (allOn) next.delete(id);
+      else next.add(id);
+    });
+    replaceMenuProductIds(Array.from(next));
+  };
+
+  const formatCatalogPrice = (value) =>
+    `R$ ${Number(value || 0).toFixed(2).replace(".", ",")}`;
   const deliveryConditionFields = isMenuForm
     ? (formData.settings?.finalizeFields || []).filter((f) => f && f.id)
     : [];
@@ -1166,6 +1285,140 @@ const FormBuilder = () => {
                     />
                   </Grid>
                     </Grid>
+                      </AccordionDetails>
+                    </Accordion>
+
+                    <Accordion className={classes.settingsAccordion}>
+                      <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                        <Box display="flex" alignItems="center" style={{ gap: 8 }}>
+                          <Typography className={classes.accordionTitle}>Produtos deste cardápio</Typography>
+                          <Chip
+                            size="small"
+                            color={menuCatalogCustom ? "primary" : "default"}
+                            label={menuCatalogCustom ? `${selectedMenuProductIds.size} selecionados` : "Todos"}
+                          />
+                        </Box>
+                      </AccordionSummary>
+                      <AccordionDetails>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12}>
+                            <FormControlLabel
+                              control={
+                                <Switch
+                                  checked={menuCatalogCustom}
+                                  onChange={(e) =>
+                                    setFormData((prev) => ({
+                                      ...prev,
+                                      settings: {
+                                        ...(prev.settings || {}),
+                                        menuCatalogMode: e.target.checked ? "custom" : "all",
+                                      },
+                                    }))
+                                  }
+                                />
+                              }
+                              label="Escolher produtos específicos para este cardápio"
+                            />
+                            <Typography variant="caption" color="textSecondary" display="block">
+                              Desligado, este cardápio mostra todos os produtos marcados como cardápio no cadastro.
+                              Ligado, só entram os itens marcados abaixo. O produto precisa continuar marcado como cardápio no cadastro.
+                            </Typography>
+                          </Grid>
+                          {menuCatalogCustom && (
+                            <>
+                              <Grid item xs={12} md={8}>
+                                <TextField
+                                  fullWidth
+                                  variant="outlined"
+                                  size="small"
+                                  label="Buscar produto"
+                                  value={menuCatalogSearch}
+                                  onChange={(e) => setMenuCatalogSearch(e.target.value)}
+                                />
+                              </Grid>
+                              <Grid item xs={12} md={4}>
+                                <Box display="flex" style={{ gap: 8 }}>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => {
+                                      const next = new Set(selectedMenuProductIds);
+                                      visibleMenuCatalog.forEach((product) => next.add(product.id));
+                                      replaceMenuProductIds(Array.from(next));
+                                    }}
+                                    disabled={visibleMenuCatalog.length === 0}
+                                  >
+                                    Marcar visíveis
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    variant="outlined"
+                                    onClick={() => {
+                                      const hide = new Set(visibleMenuCatalog.map((product) => product.id));
+                                      replaceMenuProductIds(
+                                        Array.from(selectedMenuProductIds).filter((id) => !hide.has(id))
+                                      );
+                                    }}
+                                    disabled={visibleMenuCatalog.length === 0}
+                                  >
+                                    Desmarcar visíveis
+                                  </Button>
+                                </Box>
+                              </Grid>
+                              <Grid item xs={12}>
+                                {loadingMenuCatalog ? (
+                                  <Typography variant="body2" color="textSecondary">Carregando produtos...</Typography>
+                                ) : menuCatalogProducts.length === 0 ? (
+                                  <Typography variant="body2" color="textSecondary">
+                                    Nenhum produto está marcado como cardápio. Essa opção fica no cadastro do produto.
+                                  </Typography>
+                                ) : visibleMenuCatalog.length === 0 ? (
+                                  <Typography variant="body2" color="textSecondary">
+                                    Nenhum produto encontrado para essa busca.
+                                  </Typography>
+                                ) : (
+                                  <Box className={classes.menuProductPicker}>
+                                    {menuCatalogGroups.map((group) => {
+                                      const productsInGroup = menuCatalogByGroup.get(group) || [];
+                                      const selectedInGroup = productsInGroup.filter((product) =>
+                                        selectedMenuProductIds.has(product.id)
+                                      ).length;
+                                      return (
+                                        <Box key={group}>
+                                          <Box className={classes.menuProductGroup}>
+                                            <span>{group} ({selectedInGroup}/{productsInGroup.length})</span>
+                                            <Button size="small" onClick={() => toggleMenuGroup(productsInGroup)}>
+                                              {selectedInGroup === productsInGroup.length ? "Desmarcar grupo" : "Marcar grupo"}
+                                            </Button>
+                                          </Box>
+                                          {productsInGroup.map((product) => (
+                                            <FormControlLabel
+                                              key={product.id}
+                                              style={{ display: "flex", marginLeft: 8, marginRight: 8 }}
+                                              control={
+                                                <Checkbox
+                                                  color="primary"
+                                                  checked={selectedMenuProductIds.has(product.id)}
+                                                  onChange={() => toggleMenuProduct(product.id)}
+                                                />
+                                              }
+                                              label={`${product.name} — ${formatCatalogPrice(product.value)}`}
+                                            />
+                                          ))}
+                                        </Box>
+                                      );
+                                    })}
+                                  </Box>
+                                )}
+                                {menuCatalogCustom && selectedMenuProductIds.size === 0 && (
+                                  <Typography variant="caption" color="error" display="block" style={{ marginTop: 8 }}>
+                                    Nenhum produto marcado. Este cardápio ficará vazio até você selecionar itens.
+                                  </Typography>
+                                )}
+                              </Grid>
+                            </>
+                          )}
+                        </Grid>
                       </AccordionDetails>
                     </Accordion>
 
