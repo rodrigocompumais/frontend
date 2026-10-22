@@ -61,6 +61,7 @@ import evaluateCardapioOrderHours, {
 import { createTheme, ThemeProvider } from "@material-ui/core/styles";
 import { buildMenuTheme, themeToCssVars } from "../../utils/menuTheme";
 import {
+  filterProductsByMenuCatalog,
   findOptionByVariationLabel,
   getFlavorProductsForHalfAndHalf as listHalfAndHalfFlavors,
   productMatchesHalfAndHalfVariation,
@@ -888,7 +889,8 @@ const PublicMenuForm = ({
 
   useEffect(() => {
     if (initialProducts && initialProducts.length > 0) {
-      const filtered = initialProducts.filter((p) => !p.variablePrice || (p.variations && p.variations.length > 0));
+      const catalogProducts = filterProductsByMenuCatalog(initialProducts, form?.settings);
+      const filtered = catalogProducts.filter((p) => !p.variablePrice || (p.variations && p.variations.length > 0));
       setProducts(filtered);
       const groupsMap = {};
       filtered.forEach((p) => {
@@ -1044,7 +1046,7 @@ const PublicMenuForm = ({
       // Buscar produtos de cardápio via rota pública usando o slug do formulário
       const { data } = await api.get(`/public/forms/${slug}/products`);
 
-      const allProducts = data.products || [];
+      const allProducts = filterProductsByMenuCatalog(data.products || [], form?.settings);
       const filtered = allProducts.filter((p) => !p.variablePrice || (p.variations && p.variations.length > 0));
       setProducts(filtered);
 

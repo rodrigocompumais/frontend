@@ -771,24 +771,36 @@ const FormBuilder = () => {
   });
 
   const replaceMenuProductIds = (ids) => {
+    const normalized = Array.from(
+      new Set(
+        (ids || [])
+          .map((id) => Number(id))
+          .filter((id) => Number.isInteger(id) && id > 0)
+      )
+    );
     setFormData((prev) => ({
       ...prev,
       settings: {
         ...(prev.settings || {}),
-        menuProductIds: Array.from(new Set(ids)),
+        menuCatalogMode: "custom",
+        menuProductIds: normalized,
       },
     }));
   };
 
   const toggleMenuProduct = (productId) => {
+    const id = Number(productId);
+    if (!Number.isInteger(id) || id <= 0) return;
     const next = new Set(selectedMenuProductIds);
-    if (next.has(productId)) next.delete(productId);
-    else next.add(productId);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
     replaceMenuProductIds(Array.from(next));
   };
 
   const toggleMenuGroup = (productsInGroup) => {
-    const ids = productsInGroup.map((product) => product.id);
+    const ids = productsInGroup
+      .map((product) => Number(product.id))
+      .filter((id) => Number.isInteger(id) && id > 0);
     const allOn = ids.length > 0 && ids.every((id) => selectedMenuProductIds.has(id));
     const next = new Set(selectedMenuProductIds);
     ids.forEach((id) => {
@@ -1343,7 +1355,7 @@ const FormBuilder = () => {
                                     variant="outlined"
                                     onClick={() => {
                                       const next = new Set(selectedMenuProductIds);
-                                      visibleMenuCatalog.forEach((product) => next.add(product.id));
+                                      visibleMenuCatalog.forEach((product) => next.add(Number(product.id)));
                                       replaceMenuProductIds(Array.from(next));
                                     }}
                                     disabled={visibleMenuCatalog.length === 0}
@@ -1354,7 +1366,11 @@ const FormBuilder = () => {
                                     size="small"
                                     variant="outlined"
                                     onClick={() => {
-                                      const hide = new Set(visibleMenuCatalog.map((product) => product.id));
+                                      const hide = new Set(
+                                        visibleMenuCatalog
+                                          .map((product) => Number(product.id))
+                                          .filter((id) => Number.isInteger(id) && id > 0)
+                                      );
                                       replaceMenuProductIds(
                                         Array.from(selectedMenuProductIds).filter((id) => !hide.has(id))
                                       );
@@ -1381,7 +1397,7 @@ const FormBuilder = () => {
                                     {menuCatalogGroups.map((group) => {
                                       const productsInGroup = menuCatalogByGroup.get(group) || [];
                                       const selectedInGroup = productsInGroup.filter((product) =>
-                                        selectedMenuProductIds.has(product.id)
+                                        selectedMenuProductIds.has(Number(product.id))
                                       ).length;
                                       return (
                                         <Box key={group}>
@@ -1398,7 +1414,7 @@ const FormBuilder = () => {
                                               control={
                                                 <Checkbox
                                                   color="primary"
-                                                  checked={selectedMenuProductIds.has(product.id)}
+                                                  checked={selectedMenuProductIds.has(Number(product.id))}
                                                   onChange={() => toggleMenuProduct(product.id)}
                                                 />
                                               }

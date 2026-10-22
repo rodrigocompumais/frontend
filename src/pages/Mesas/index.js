@@ -51,6 +51,7 @@ import MesaRestoreQrModal from "../../components/MesaRestoreQrModal";
 import MesaPrintQRModal from "../../components/MesaPrintQRModal";
 import { clampMesaQrPrintSize } from "../../utils/printFieldUtils";
 import {
+  filterProductsByMenuCatalog,
   findOptionByVariationLabel as findHalfOptionByLabel,
   getFlavorProductsForHalfAndHalf as listHalfAndHalfFlavors,
   productMatchesHalfAndHalfVariation as matchHalfVariation,
@@ -592,7 +593,7 @@ const Mesas = ({ cardapioSlugFromHub }) => {
           return;
         }
         setOrderForm(form);
-        setOrderProducts(productsData?.products || []);
+        setOrderProducts(filterProductsByMenuCatalog(productsData?.products || [], form.settings));
       } catch (err) {
         if (!cancelled) toastError(err);
       } finally {

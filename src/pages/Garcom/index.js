@@ -49,6 +49,7 @@ import TrocarNomeMesaDialog from "../../components/TrocarNomeMesaDialog";
 import OrderNotificationPopup from "../../components/OrderNotificationPopup";
 import { formatMesaComandaTitle } from "../../helpers/mesaDisplayLabel";
 import {
+  filterProductsByMenuCatalog,
   findOptionByVariationLabel as findHalfOptionByLabel,
   getFlavorProductsForHalfAndHalf as listHalfAndHalfFlavors,
   productMatchesHalfAndHalfVariation as matchHalfVariation,
@@ -419,7 +420,7 @@ const Garcom = () => {
         setForm(firstForm || null);
         if (firstForm?.publicId) {
           const { data } = await api.get(`/public/forms/${firstForm.publicId}/products`);
-          setProducts(data.products || []);
+          setProducts(filterProductsByMenuCatalog(data.products || [], firstForm.settings));
         }
       } catch (err) {
         toastError(err);
@@ -460,7 +461,7 @@ const Garcom = () => {
         setForm(formToUse);
         if (formToUse.publicId) {
           const { data } = await api.get(`/public/forms/${formToUse.publicId}/products`);
-          if (!cancelled) setProducts(data.products || []);
+          if (!cancelled) setProducts(filterProductsByMenuCatalog(data.products || [], formToUse.settings));
         }
       } catch (err) {
         if (!cancelled) toastError(err);

@@ -52,6 +52,7 @@ import {
 import DescontoCheckoutFields, { useDescontoTotals } from "../../components/DescontoCheckoutFields";
 import MeioPagamentoSelector from "../../components/MeioPagamentoSelector";
 import { buildDescontoPayload } from "../../helpers/gourmetOrderTotals";
+import { filterProductsByMenuCatalog } from "../../utils/menuProductHelpers";
 
 const SIDEBAR_WIDTH = 320;
 const BOTTOM_BAR_HEIGHT = 72;
@@ -700,11 +701,15 @@ const Pdv = () => {
       setLoadingProducts(true);
       try {
         const { data: formsData } = await api.get("/forms?formType=cardapio");
-        let publicId = formsData?.forms?.[0]?.publicId;
+        const cardapioForms = formsData?.forms || [];
+        let cardapioForm = cardapioForms[0] || null;
+        let publicId = cardapioForm?.publicId;
         if (!publicId) {
           try {
             const { data: defaultData } = await api.get("/mesas/default-cardapio-form");
             publicId = defaultData?.publicId;
+            cardapioForm =
+              cardapioForms.find((form) => form.publicId === publicId) || cardapioForm;
           } catch (_) {
             /* sem cardápio padrão */
           }
@@ -714,7 +719,10 @@ const Pdv = () => {
           return;
         }
         const { data } = await api.get(`/public/forms/${publicId}/products`);
-        const allProducts = data.products || [];
+        const allProducts = filterProductsByMenuCatalog(
+          data.products || [],
+          cardapioForm?.settings
+        );
         allProducts.sort((a, b) => {
           const grupoA = (a.grupo || "").trim() || "Outros";
           const grupoB = (b.grupo || "").trim() || "Outros";

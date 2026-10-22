@@ -13,7 +13,7 @@ import {
   Typography,
 } from "@material-ui/core";
 import MenuProductPicker from "../MenuProductPicker";
-import { filterMenuProducts, formatMoney } from "../../utils/menuProductHelpers";
+import { filterMenuProducts, filterProductsByMenuCatalog, formatMoney } from "../../utils/menuProductHelpers";
 import { Add as AddIcon, Delete as DeleteIcon, Remove as RemoveIcon } from "@material-ui/icons";
 import api from "../../services/api";
 import toastError from "../../errors/toastError";
@@ -77,7 +77,11 @@ const EditDeliveryOrderModal = ({ open, order, onClose, onSaved }) => {
         const publicId = formData.publicId;
         if (publicId) {
           const { data: prodData } = await api.get(`/public/forms/${publicId}/products`);
-          setProducts(filterMenuProducts(prodData.products || []));
+          setProducts(
+            filterMenuProducts(
+              filterProductsByMenuCatalog(prodData.products || [], formData.settings)
+            )
+          );
         } else {
           setProducts([]);
         }

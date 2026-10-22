@@ -3,6 +3,39 @@ export const filterMenuProducts = (products) =>
     (p) => p.isMenuProduct !== false && (!p.variablePrice || (p.variations && p.variations.length > 0))
   );
 
+const parseMenuSettings = (settings) => {
+  let value = settings;
+  if (typeof value === "string") {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      return null;
+    }
+  }
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value;
+};
+
+/** null = cardápio completo. [] = personalizado sem itens. */
+export const menuProductIdsForSettings = (settings) => {
+  const raw = parseMenuSettings(settings);
+  if (!raw) return null;
+  if (String(raw.menuCatalogMode || "").trim().toLowerCase() !== "custom") return null;
+  if (!Array.isArray(raw.menuProductIds)) return [];
+  const ids = raw.menuProductIds
+    .map((id) => Number(id))
+    .filter((id) => Number.isInteger(id) && id > 0);
+  return Array.from(new Set(ids));
+};
+
+export const filterProductsByMenuCatalog = (products, settings) => {
+  const ids = menuProductIdsForSettings(settings);
+  if (ids == null) return products || [];
+  if (ids.length === 0) return [];
+  const allowed = new Set(ids);
+  return (products || []).filter((product) => allowed.has(Number(product.id)));
+};
+
 export const hasAddonsToShow = (product) => {
   if (product?.isCombo) return false;
   const g = product?.addOnGroup;
